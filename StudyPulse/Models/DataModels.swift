@@ -1,0 +1,77 @@
+//
+//  DataModels.swift
+//  StudyPulse
+//
+//  Created by Chenkai Gao on 2026/3/21.
+//
+
+import Foundation
+
+struct Subject: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var enabled: Bool
+    
+    init(name: String, enabled: Bool = true) {
+        self.name = name
+        self.enabled = enabled
+    }
+}
+
+struct Grade: Identifiable, Codable {
+    var id = UUID()
+    var subject: String
+    var score: Double
+    var rawScore: Double? // 赋分时的卷面分
+    var ranking: Int?
+    var importance: Int // 1-5星
+    var image: Data? // 卷面图片
+    var date: Date
+    var examName: String
+    
+    init(subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
+         importance: Int = 3, image: Data? = nil, date: Date = Date(), examName: String = "") {
+        self.subject = subject
+        self.score = score
+        self.rawScore = rawScore
+        self.ranking = ranking
+        self.importance = min(max(importance, 1), 5)
+        self.image = image
+        self.date = date
+        self.examName = examName
+    }
+}
+
+struct MistakeNote: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var originalQuestion: String
+    var source: String
+    var date: Date
+    var errorReason: String
+    var wrongSolution: String
+    var correctSolution: String
+    var images: [Data] // 原题、错解、正解的图片
+    
+    init(title: String, originalQuestion: String, source: String, date: Date = Date(),
+         errorReason: String, wrongSolution: String, correctSolution: String, images: [Data] = []) {
+        self.title = title
+        self.originalQuestion = originalQuestion
+        self.source = source
+        self.date = date
+        self.errorReason = errorReason
+        self.wrongSolution = wrongSolution
+        self.correctSolution = correctSolution
+        self.images = images
+    }
+}
+
+struct UserProfile: Codable {
+    var username: String = "Student"
+    var age: Int = 16
+    var educationLevel: String = "High School"
+    var educationSystem: String = "National Curriculum"
+    var region: String = "China"
+    var selectedSubjects: [Subject] = []
+    var theme: String = "Auto" // Auto, Light, Dark
+}
