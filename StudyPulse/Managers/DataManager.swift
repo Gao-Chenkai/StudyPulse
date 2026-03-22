@@ -32,7 +32,12 @@ class DataManager: ObservableObject {
                 Subject(name: "Biology", enabled: true),
                 Subject(name: "History", enabled: true),
                 Subject(name: "Geography", enabled: true),
-                Subject(name: "Politics", enabled: true)
+                Subject(name: "Politics", enabled: true),
+                Subject(name: "Information Technology", enabled: true),
+                Subject(name: "General Technology", enabled: true),
+                Subject(name: "Art", enabled: true),
+                Subject(name: "Music", enabled: true),
+                Subject(name: "PE & Health", enabled: true)
             ]
         }
     }

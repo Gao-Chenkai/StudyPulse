@@ -24,7 +24,7 @@ struct HomeView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Welcome back!")
-                                .font(.title2)
+                                .font(.title)
                                 .fontWeight(.semibold)
                             
                             Text("Here's your academic progress")

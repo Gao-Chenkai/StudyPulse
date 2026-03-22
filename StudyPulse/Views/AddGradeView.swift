@@ -19,11 +19,21 @@ struct AddGradeView: View {
     @State private var importance = 3
     @State private var examName = ""
     
+    // 1. 新增日期状态变量，默认为今天
+    @State private var selectedDate = Date()
+    
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Exam Details")) {
                     TextField("Exam Name", text: $examName)
+                    
+                    // 2. 新增日期选择器
+                    DatePicker(
+                        "Exam Date",
+                        selection: $selectedDate,
+                        displayedComponents: .date // 只显示日期，不显示时间
+                    )
                     
                     Picker("Subject", selection: $subject) {
                         ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { sub in
@@ -96,7 +106,7 @@ struct AddGradeView: View {
                             rawScore: useRawScore ? rawScore : nil,
                             ranking: ranking,
                             importance: importance,
-                            date: Date(),
+                            date: selectedDate, // 3. 使用选择的日期
                             examName: examName
                         )
                         

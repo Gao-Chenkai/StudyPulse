@@ -24,11 +24,11 @@ struct ContentView: View {
                     Text("Trends")
                 }
             
-            MistakeView()
-                .tabItem {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                    Text("Mistakes")
-                }
+//            MistakeView()
+//                .tabItem {
+//                    Image(systemName: "exclamationmark.triangle.fill")
+//                    Text("Mistakes")
+//                }
             
             SettingsView()
                 .tabItem {
