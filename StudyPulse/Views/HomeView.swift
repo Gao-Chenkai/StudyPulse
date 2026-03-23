@@ -116,7 +116,7 @@ struct HomeView: View {
                                 .fontWeight(.bold)
                             
                             ForEach(recentGrades) { grade in
-                                // ✅ 修改点 1: 调用重命名后的 GradeDetailView
+                                // 修改点 1: 调用重命名后的 GradeDetailView
                                 NavigationLink(destination: GradeDetailView(grade: grade)) {
                                     HStack {
                                         VStack(alignment: .leading) {
@@ -181,7 +181,7 @@ struct StatCardView: View {
     }
 }
 
-// ✅ 修改点 2: 重命名结构体为 GradeDetailView
+// 修改点 2: 重命名结构体为 GradeDetailView
 struct GradeDetailView: View {
     let grade: Grade
     

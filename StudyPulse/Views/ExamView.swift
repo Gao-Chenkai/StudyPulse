@@ -12,7 +12,7 @@ struct ExamView: View {
     @State private var showingNewExamSet = false
     @State private var selectedExamForDetail: Exam? = nil
     
-    // ✅ 优化：简化分组逻辑，帮助编译器推断
+    // 优化：简化分组逻辑，帮助编译器推断
     private var groupedExams: [(sectionTitle: String, exams: [Exam])] {
         let now = Date()
         guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
