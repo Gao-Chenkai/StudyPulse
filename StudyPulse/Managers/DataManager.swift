@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 class DataManager: ObservableObject {
     @Published var grades: [Grade] = []
@@ -116,6 +117,39 @@ class DataManager: ObservableObject {
             } catch {
                 print("Error loading mistakes: \(error)")
             }
+        }
+    }
+    
+    // ✅ 新增：添加错题的方法
+    func addMistake(_ mistake: MistakeNote) {
+        mistakeSets.append(mistake)
+        saveMistakeSets()
+    }
+    
+    // ✅ 可选：删除错题的方法（方便后续扩展）
+    func deleteMistake(at offsets: IndexSet, in set: inout [MistakeNote]) {
+        set.remove(atOffsets: offsets)
+        saveMistakeSets()
+    }
+    
+    func deleteMistake(_ mistake: MistakeNote) {
+        if let index = mistakeSets.firstIndex(where: { $0.title == mistake.title && $0.date == mistake.date }) {
+            mistakeSets.remove(at: index)
+            saveMistakeSets()
+        }
+    }
+    
+    // ✅ 新增：更新错题的方法
+    func updateMistake(_ updatedMistake: MistakeNote) {
+        // 查找原数据在数组中的位置 (假设通过 title 和 date 唯一标识，或者你有 id)
+        // ⚠️ 注意：如果你的 MistakeNote 有唯一的 id 属性，请用 id 查找，更稳妥
+        if let index = mistakeSets.firstIndex(where: {
+            $0.title == updatedMistake.title && $0.date == updatedMistake.date
+        }) {
+            mistakeSets[index] = updatedMistake
+            saveMistakeSets() // 保存到新文件
+        } else {
+            print("⚠️ Warning: Could not find the mistake to update.")
         }
     }
 }

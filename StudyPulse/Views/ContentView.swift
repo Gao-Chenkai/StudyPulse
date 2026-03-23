@@ -29,18 +29,20 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            //            MistakeView()
-            //                .tabItem {
-            //                    Image(systemName: "exclamationmark.triangle.fill")
-            //                    Text("Mistakes")
-            //                }
+            MistakeView()
+                .tabItem {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("Mistakes")
+                }
+                .tag(2)
+            
             
             SettingsView()
                 .tabItem {
                     Image(systemName: "gearshape.fill")
                     Text("Settings")
                 }
-                .tag(2)
+                .tag(3)
             
         }
         

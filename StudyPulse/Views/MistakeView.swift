@@ -5,7 +5,6 @@
 //  Created by Chenkai Gao on 2026/3/21.
 //
 
-
 import SwiftUI
 import Combine
 
@@ -53,7 +52,7 @@ struct MistakeView: View {
 struct MistakeSetDetailView: View {
     let mistakeSet: MistakeNote
     @EnvironmentObject var dataManager: DataManager
-    @State private var showingNewMistake = false
+    @State private var showingEditSheet = false // ✅ 1. 使用布尔值控制显示
     
     var body: some View {
         List {
@@ -86,16 +85,20 @@ struct MistakeSetDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Edit") {
-                    showingNewMistake = true
+                    showingEditSheet = true // ✅ 2. 切换布尔值触发 Sheet
                 }
             }
         }
-        .sheet(item: Binding(
-            get: { mistakeSet },
-            set: { _ in }
-        )) { _ in
+        // ✅ 3. 改用 isPresented 绑定布尔值，逻辑更简单可靠
+        .sheet(isPresented: $showingEditSheet) {
+            // 假设你的编辑视图叫 MistakeDetailEditView
+            // 请确保这个视图已经存在，并且初始化参数正确
             MistakeDetailEditView(dataManager: dataManager, mistakeSet: mistakeSet)
-                    }
         }
-    }
+    } // ✅ 4. 补全了缺失的闭合大括号
+}
 
+#Preview {
+    MistakeView()
+        .environmentObject(DataManager())
+}

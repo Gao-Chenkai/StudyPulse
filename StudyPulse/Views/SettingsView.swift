@@ -459,3 +459,8 @@ struct SectionHeader: View {
             .padding(.top, 10)
     }
 }
+
+#Preview {
+    SettingsView()
+        .environmentObject(DataManager())
+}
