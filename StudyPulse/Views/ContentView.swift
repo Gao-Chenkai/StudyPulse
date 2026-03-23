@@ -36,13 +36,19 @@ struct ContentView: View {
                 }
                 .tag(2)
             
+            ExamView()
+                .tabItem {
+                    Image(systemName: "list.bullet.clipboard")
+                    Text("Exams")
+                }
+                .tag(3)
             
             SettingsView()
                 .tabItem {
                     Image(systemName: "gearshape.fill")
                     Text("Settings")
                 }
-                .tag(3)
+                .tag(4)
             
         }
         
@@ -70,6 +76,9 @@ struct ContentView: View {
     }
 }
 
-
+#Preview {
+    ContentView()
+        .environmentObject(DataManager())
+}
 
 

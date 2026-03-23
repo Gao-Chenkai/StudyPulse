@@ -120,3 +120,8 @@ struct AddGradeView: View {
         }
     }
 }
+
+#Preview {
+    AddGradeView()
+        .environmentObject(DataManager())
+}

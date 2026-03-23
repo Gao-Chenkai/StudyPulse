@@ -33,7 +33,6 @@ struct HomeView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
                         Spacer()
                     }
                     .padding()
@@ -41,8 +40,8 @@ struct HomeView: View {
                     // 快速统计卡片
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 15), count: 2), spacing: 15) {
                         StatCardView(title: "Total Exams", value: "\(dataManager.grades.count)")
-                        StatCardView(title: "Subjects", value: "\(dataManager.subjects.filter { $0.enabled }.count)")
-                        
+                        StatCardView(title: "Upcoming Exams", value: "\(dataManager.examSets.count)")
+
                         if let overallAvg = calculateOverallAverage() {
                             StatCardView(title: "Overall Average", value: String(format: "%.1f", overallAvg))
                         } else {
@@ -109,15 +108,16 @@ struct HomeView: View {
                             .padding()
                     }
                     
-                    // 最近考试
+                    // 最近考试 (这里指向成绩详情)
                     if !recentGrades.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Recent Exams")
+                            Text("Recent Grades")
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
                             ForEach(recentGrades) { grade in
-                                NavigationLink(destination: ExamDetailView(grade: grade)) {
+                                // ✅ 修改点 1: 调用重命名后的 GradeDetailView
+                                NavigationLink(destination: GradeDetailView(grade: grade)) {
                                     HStack {
                                         VStack(alignment: .leading) {
                                             Text(grade.examName.isEmpty ? "Exam" : grade.examName)
@@ -181,7 +181,8 @@ struct StatCardView: View {
     }
 }
 
-struct ExamDetailView: View {
+// ✅ 修改点 2: 重命名结构体为 GradeDetailView
+struct GradeDetailView: View {
     let grade: Grade
     
     var body: some View {
@@ -225,7 +226,7 @@ struct ExamDetailView: View {
                 }
             }
         }
-        .navigationTitle("Exam Detail")
+        .navigationTitle("Grade Detail")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

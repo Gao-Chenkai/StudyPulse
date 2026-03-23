@@ -14,34 +14,35 @@ struct MistakeView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(dataManager.mistakeSets) { mistakeSet in
-                    NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistakeSet)) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(mistakeSet.title)
-                                .font(.headline)
-                            
-                            Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                List {
+                    ForEach(dataManager.mistakeSets) { mistakeSet in
+                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistakeSet)) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(mistakeSet.title)
+                                    .font(.headline)
+                                
+                                Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .onDelete(perform: deleteMistakeSets)
+                }
+                .navigationTitle("Mistakes")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {showingNewMistakeSet = true}) {
+                            Image(systemName: "plus")
                         }
                     }
                 }
-                .onDelete(perform: deleteMistakeSets)
-            }
-            .navigationTitle("Mistakes")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        showingNewMistakeSet = true
-                    }
+                .sheet(isPresented: $showingNewMistakeSet) {
+                    NewMistakeSetView()
                 }
             }
-            .sheet(isPresented: $showingNewMistakeSet) {
-                NewMistakeSetView()
-            }
         }
-    }
+
     
     private func deleteMistakeSets(offsets: IndexSet) {
         dataManager.mistakeSets.remove(atOffsets: offsets)

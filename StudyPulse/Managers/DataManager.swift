@@ -13,32 +13,42 @@ class DataManager: ObservableObject {
     @Published var grades: [Grade] = []
     @Published var subjects: [Subject] = []
     @Published var mistakeSets: [MistakeNote] = []
+    @Published var examSets: [Exam] = []
     @Published var profile: UserProfile = UserProfile()
     
     init() {
         loadProfile()
         loadGrades()
         loadMistakeSets()
+        loadExamSets()
         initializeDefaultSubjects()
     }
     
     private func initializeDefaultSubjects() {
         if subjects.isEmpty {
             subjects = [
+                Subject(name: "GROUP: All the Subjects", enabled: true),
+                Subject(name: "GROUP: Chinese, Maths, English", enabled: true),
+                Subject(name: "GROUP: Main Subjects", enabled: true),
+                Subject(name: "GROUP: Elective Subjects", enabled: true),
+                Subject(name: "GROUP: 3 Liberal Arts Subjects", enabled: false),
+                Subject(name: "GROUP: 3 Science Subjects", enabled: true),
                 Subject(name: "Chinese", enabled: true),
                 Subject(name: "Mathematics", enabled: true),
                 Subject(name: "English", enabled: true),
+                Subject(name: "Science", enabled: false),
+                Subject(name: "History & Society", enabled: false),
                 Subject(name: "Physics", enabled: true),
                 Subject(name: "Chemistry", enabled: true),
                 Subject(name: "Biology", enabled: true),
                 Subject(name: "History", enabled: true),
                 Subject(name: "Geography", enabled: true),
                 Subject(name: "Politics", enabled: true),
-                Subject(name: "Information Technology", enabled: true),
-                Subject(name: "General Technology", enabled: true),
-                Subject(name: "Art", enabled: true),
-                Subject(name: "Music", enabled: true),
-                Subject(name: "PE & Health", enabled: true)
+                Subject(name: "Information Technology", enabled: false),
+                Subject(name: "General Technology", enabled: false),
+                Subject(name: "Art", enabled: false),
+                Subject(name: "Music", enabled: false),
+                Subject(name: "PE & Health", enabled: false)
             ]
         }
     }
@@ -150,6 +160,37 @@ class DataManager: ObservableObject {
             saveMistakeSets() // 保存到新文件
         } else {
             print("⚠️ Warning: Could not find the mistake to update.")
+        }
+    }
+    
+    // ✅ 新增：保存考试集合
+    func saveExamSets() {
+        let encoder = JSONEncoder()
+        // 设置日期编码策略，防止 Date 序列化问题
+        encoder.dateEncodingStrategy = .iso8601
+        do {
+            let data = try encoder.encode(examSets)
+            let url = getDocumentsDirectory().appendingPathComponent("exams.json")
+            try data.write(to: url)
+            print("✅ Exams saved successfully.")
+        } catch {
+            print("❌ Error saving exams: \(error)")
+        }
+    }
+    
+    // ✅ 新增：加载考试集合 (建议在 init 中调用)
+    func loadExamSets() {
+        let url = getDocumentsDirectory().appendingPathComponent("exams.json")
+        if FileManager.default.fileExists(atPath: url.path) {
+            do {
+                let data = try Data(contentsOf: url)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                examSets = try decoder.decode([Exam].self, from: data)
+                print("✅ Exams loaded successfully.")
+            } catch {
+                print("❌ Error loading exams: \(error)")
+            }
         }
     }
 }

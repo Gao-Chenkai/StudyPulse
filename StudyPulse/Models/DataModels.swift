@@ -75,3 +75,22 @@ struct UserProfile: Codable {
     var selectedSubjects: [Subject] = []
     var theme: String = "Auto" // Auto, Light, Dark
 }
+
+struct Exam: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String
+    var examDate: Date
+    var importance: Int
+    var subject: String
+    var examName: String
+    var masteryDegree: Int
+    
+    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int) {
+        self.name = name
+        self.examDate = date
+        self.importance = importance
+        self.subject = subject
+        self.examName = examName
+        self.masteryDegree = masteryDegree
+    }
+}
