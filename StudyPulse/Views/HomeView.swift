@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import UIKit
 
 struct HomeView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -17,6 +18,7 @@ struct HomeView: View {
     }
     
     var body: some View {
+        let haptic = UIImpactFeedbackGenerator(style: .rigid)
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
@@ -58,6 +60,8 @@ struct HomeView: View {
                     // 登记成绩按钮
                     Button(action: {
                         showingAddGradeSheet = true
+                        haptic.prepare()
+                        haptic.impactOccurred()
                     }) {
                         HStack {
                             Image(systemName: "plus.circle")
