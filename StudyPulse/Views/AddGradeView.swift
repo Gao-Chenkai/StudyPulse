@@ -26,8 +26,12 @@ struct AddGradeView: View {
         NavigationView {
             Form {
                 Section(header: Text("Exam Details")) {
-                    TextField("Exam Name", text: $examName)
-                    
+                    HStack {
+                        Text("Exam Name")
+                        TextField("Exam Name", text: $examName)
+                            .multilineTextAlignment(.trailing)
+                    }
+                                        
                     // 2. 新增日期选择器
                     DatePicker(
                         "Exam Date",
