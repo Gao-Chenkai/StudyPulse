@@ -18,6 +18,7 @@ struct AddGradeView: View {
     @State private var ranking: Int?
     @State private var importance = 3
     @State private var examName = ""
+    @StateObject private var subjectInfo = SubjectInfo()
     
     // 1. 新增日期状态变量，默认为今天
     @State private var selectedDate = Date()
@@ -50,7 +51,14 @@ struct AddGradeView: View {
                 Section(header: Text("Scores")) {
                     VStack {
                         Text("Score: \(String(format: "%.1f", score))")
-                        Slider(value: $score, in: 0...150, step: 0.5)
+                        Slider(
+                            value: $score,
+                            in: 0...Double(subjectInfo.getMaxScore(
+                                level: dataManager.profile.educationLevel,
+                                subject: subject
+                            )),
+                            step: 0.5
+                        )
                     }
                     
                     Toggle("Use Raw Score", isOn: $useRawScore)
@@ -59,10 +67,17 @@ struct AddGradeView: View {
                     if useRawScore {
                         VStack {
                             Text("Raw Score: \(rawScore != nil ? String(format: "%.1f", rawScore!) : "Not set")")
-                            Slider(value: Binding(
-                                get: { rawScore ?? 85.0 },
-                                set: { rawScore = $0 }
-                            ), in: 0...150, step: 1)
+                            Slider(
+                                value: Binding(
+                                    get: { rawScore ?? 85.0 },
+                                    set: { rawScore = $0 }
+                                ),
+                                in: 0...Double(subjectInfo.getMaxScore(
+                                    level: dataManager.profile.educationLevel,
+                                    subject: subject
+                                )), // 这里动态计算最大值
+                                step: 0.5
+                            )
                         }
                     }
                     

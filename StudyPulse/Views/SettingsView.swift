@@ -168,9 +168,31 @@ struct ProfileEditView: View {
                 }
                 
                 Section(header: Text("Academic Info")) {
-                    TextField("Education Level", text: $educationLevel)
-                    TextField("Education System", text: $educationSystem)
-                    TextField("Region", text: $region)
+//                    TextField("Education Level", text: $educationLevel)
+                    Picker("Education Level", selection: $educationLevel) {
+                        Text("Primary School")
+                            .tag("Primary School")
+                        Text("Middle School")
+                            .tag("Middle School")
+                        Text("High School")
+                            .tag("High School")
+                    }
+                    
+                    HStack {
+                        Text("Education System")
+                        TextField("Education System", text: $educationSystem)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    
+                    Picker("Region", selection: $region) {
+                        Text("China")
+                            .tag("China")
+                        Text("US")
+                            .tag("US")
+                        Text("UK")
+                            .tag("UK")
+                    }
+
                 }
                                 
             }
