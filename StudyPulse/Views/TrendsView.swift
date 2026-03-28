@@ -7,11 +7,11 @@
 
 import SwiftUI
 import Charts
+import Combine
 
 struct TrendsView: View {
     @EnvironmentObject var dataManager: DataManager
     
-    // 获取所有有成绩的科目列表，避免在 ForEach 中重复计算
     var activeSubjects: [String] {
         dataManager.subjects
             .filter { $0.enabled }
@@ -20,27 +20,22 @@ struct TrendsView: View {
     }
     
     var body: some View {
-        // 1. 使用 NavigationStack 替代 NavigationView (iOS 16+)
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     ForEach(activeSubjects, id: \.self) { subjectName in
-                        // 2. 简化 NavigationLink
-                        // 只传递 value (subjectName)，目标视图由 navigationDestination 处理
                         NavigationLink(value: subjectName) {
                             SubjectCardView(
                                 subject: subjectName,
                                 latestGrade: getLatestGrade(for: subjectName)
                             )
                         }
-                        .buttonStyle(.plain) // 移除默认点击高亮，保持卡片样式
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding()
             }
             .navigationTitle("Trends")
-            // 3. 注册路由处理器
-            // 当 NavigationLink 传递 String 类型的 value 时，自动构建 SubjectDetailView
             .navigationDestination(for: String.self) { subjectName in
                 SubjectDetailView(subject: subjectName)
                     .environmentObject(dataManager)
@@ -49,75 +44,77 @@ struct TrendsView: View {
     }
     
     private func hasGrades(for subject: String) -> Bool {
-        return dataManager.grades.contains { $0.subject == subject }
+        dataManager.grades.contains { $0.subject == subject }
     }
     
     private func getLatestGrade(for subject: String) -> Grade? {
-        return dataManager.grades
+        dataManager.grades
             .filter { $0.subject == subject }
-            .max { $0.date < $1.date }
+            .sorted { $0.date < $1.date }
+            .last
     }
 }
 
-// --- 详情页 ---
-
+// MARK: - 详情页（修复刷新+删除）
 struct SubjectDetailView: View {
     let subject: String
     @EnvironmentObject var dataManager: DataManager
     
+    @State private var selectedRange: TimeRange = .all
+    enum TimeRange: String, CaseIterable {
+        case all = "All"
+        case last3Months = "3 Months"
+        case last6Months = "6 Months"
+        case lastYear = "1 Year"
+    }
+    
     var filteredGrades: [Grade] {
-        dataManager.grades
+        let base = dataManager.grades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
+        
+        let now = Date()
+        let calendar = Calendar.current
+        
+        switch selectedRange {
+        case .all:
+            return base
+        case .last3Months:
+            return base.filter { $0.date >= calendar.date(byAdding: .month, value: -3, to: now)! }
+        case .last6Months:
+            return base.filter { $0.date >= calendar.date(byAdding: .month, value: -6, to: now)! }
+        case .lastYear:
+            return base.filter { $0.date >= calendar.date(byAdding: .year, value: -1, to: now)! }
+        }
     }
     
     var averageScore: Double {
-        guard !filteredGrades.isEmpty else { return 0.0 }
-        let total = filteredGrades.map { $0.score }.reduce(0, +)
-        return total / Double(filteredGrades.count)
+        guard !filteredGrades.isEmpty else { return 0 }
+        return filteredGrades.map{$0.score}.reduce(0,+)/Double(filteredGrades.count)
     }
     
     var body: some View {
-        // 4. 详情页不再需要 NavigationView 或 navigationTitle
-        // 标题由 NavigationStack 根据 push 状态自动管理
         ScrollView {
-            VStack {
-                // 科目统计信息卡片
+            VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text(subject)
-                            .font(.title)
-                            .fontWeight(.bold)
-                        Spacer()
-                    }
+                    Text(subject).font(.title).fontWeight(.bold)
                     
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Average Score")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            Text("Average Score").font(.subheadline).foregroundColor(.secondary)
                             Text(String(format: "%.1f", averageScore))
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(filteredGrades.isEmpty ? .secondary : scoreColor(averageScore))
+                                .font(.title2).bold()
+                                .foregroundColor(scoreColor(averageScore))
                         }
-                        
                         Spacer()
-                        
                         VStack(alignment: .trailing) {
-                            Text("Latest")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
+                            Text("Latest").font(.subheadline).foregroundColor(.secondary)
                             if let latest = filteredGrades.last {
                                 Text(String(format: "%.1f", latest.score))
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                    .font(.title2).bold()
                                     .foregroundColor(scoreColor(latest.score))
                             } else {
-                                Text("N/A")
-                                    .font(.title2)
-                                    .foregroundColor(.secondary)
+                                Text("N/A").foregroundColor(.secondary)
                             }
                         }
                     }
@@ -125,163 +122,121 @@ struct SubjectDetailView: View {
                 .padding()
                 .background(Color(UIColor.systemBackground))
                 .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.05), radius: 5)
                 
-                // 成绩图表
-                Group {
-                    if !filteredGrades.isEmpty {
-                        Chart(filteredGrades) { grade in
-                            LineMark(
-                                x: .value("Date", grade.date),
-                                y: .value("Score", grade.score)
-                            )
-                            .foregroundStyle(.blue)
-                            .interpolationMethod(.catmullRom) // 让线条更平滑
-                            
-                            PointMark(
-                                x: .value("Date", grade.date),
-                                y: .value("Score", grade.score)
-                            )
-                            .foregroundStyle(.blue)
-                            .symbolSize(60)
-                        }
-                        .frame(height: 300)
-                        .padding(.horizontal, 4)
-                    } else {
-                        ContentUnavailableView(
-                            "No Data",
-                            systemImage: "chart.line.xaxis.dashed",
-                            description: Text("No grades recorded for \(subject) yet.")
-                        )
-                        .frame(height: 300)
-                    }
+                // 时间分段选择器
+                Picker("Time Range", selection: $selectedRange) {
+                    ForEach(TimeRange.allCases, id:\.self) { Text($0.rawValue) }
                 }
-                .background(Color(UIColor.systemBackground))
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
                 
-                // 成绩列表
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("History")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    if !filteredGrades.isEmpty {
-                        ForEach(filteredGrades.reversed()) { grade in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(grade.examName.isEmpty ? "Unnamed Exam" : grade.examName)
-                                        .fontWeight(.medium)
-                                    Text(grade.date.formatted(date: .abbreviated, time: .omitted))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Text(String(format: "%.1f", grade.score))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(scoreColor(grade.score))
+                // 固定高度图表
+                if !filteredGrades.isEmpty {
+                    Chart(filteredGrades) { grade in
+                        LineMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
+                            .foregroundStyle(.blue)
+                            .interpolationMethod(.catmullRom)
+                        PointMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
+                            .foregroundStyle(.blue).symbolSize(60)
+                    }
+                    .frame(height:300)
+                } else {
+                    ContentUnavailableView("No Data", systemImage: "chart.line.xaxis.dashed")
+                        .frame(height:300)
+                }
+                
+                // 历史+侧滑删除
+                VStack(alignment:.leading, spacing:12) {
+                    Text("History").font(.title2).bold()
+                    ForEach(filteredGrades.reversed()) { grade in
+                        HStack {
+                            VStack(alignment:.leading) {
+                                Text(grade.examName.isEmpty ? "Unnamed Exam" : grade.examName)
+                                Text(grade.date.formatted(date:.abbreviated, time:.omitted))
+                                    .font(.caption).foregroundColor(.secondary)
                             }
-                            .padding()
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(10)
+                            Spacer()
+                            Text(String(format:"%.1f",grade.score))
+                                .bold().foregroundColor(scoreColor(grade.score))
                         }
-                    } else {
-                        Text("No records found.")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 20)
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(10)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteGrade(grade)
+                            } label: {
+                                Label("Delete", systemImage:"trash.fill")
+                            }
+                        }
                     }
                 }
             }
             .padding()
         }
-        // 5. 设置导航栏显示模式
         .navigationBarTitleDisplayMode(.large)
+        // 强制切换时间刷新UI
+        .onChange(of: selectedRange) { _ in }
     }
     
-    // 辅助函数：根据分数返回颜色
-    private func scoreColor(_ score: Double) -> Color {
-        if score >= 90 { return .green }
-        if score >= 60 { return .orange }
-        return .red
+    // 删除核心：手动触发发布者刷新UI
+    private func deleteGrade(_ grade:Grade) {
+        if let idx = dataManager.grades.firstIndex(where:{$0.id == grade.id}) {
+            dataManager.grades.remove(at: idx)
+            dataManager.saveGrades()
+            dataManager.objectWillChange.send()
+        }
+    }
+    
+    private func scoreColor(_ score:Double) -> Color {
+        score>=90 ? .green : score>=60 ? .orange : .red
     }
 }
-
-// --- 卡片组件 (保持不变，微调样式) ---
 
 struct SubjectCardView: View {
     let subject: String
     let latestGrade: Grade?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment:.leading, spacing:10) {
             HStack {
-                Text(subject)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
+                Text(subject).font(.headline).bold()
                 Spacer()
-                
-                if let grade = latestGrade {
-                    Text(String(format: "%.1f", grade.score))
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(scoreColor(grade.score))
+                if let g = latestGrade {
+                    Text(String(format:"%.1f",g.score))
+                        .font(.title3).bold().foregroundColor(scoreColor(g.score))
                 } else {
-                    Text("--")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+                    Text("--").foregroundColor(.secondary)
                 }
             }
-            
             Divider()
-            
-            if let grade = latestGrade {
+            if let g = latestGrade {
                 HStack {
-                    HStack(spacing: 2) {
-                        ForEach(0..<min(grade.importance, 5), id: \.self) { _ in
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                                .imageScale(.small)
-                        }
-                        if grade.importance > 5 {
-                            Text("+")
-                                .font(.caption2)
-                                .foregroundColor(.yellow)
+                    HStack(spacing:2) {
+                        ForEach(0..<min(g.importance,5), id:\.self) { _ in
+                            Image(systemName:"star.fill").foregroundColor(.yellow)
                         }
                     }
-                    
                     Spacer()
-                    
-                    Text(grade.date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text(g.date.formatted(date:.abbreviated, time:.omitted))
+                        .font(.caption).foregroundColor(.secondary)
                 }
             } else {
-                Text("No data available")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("No data available").font(.caption).foregroundColor(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(UIColor.systemBackground))
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .shadow(color:Color.black.opacity(0.05), radius:8)
     }
     
-    private func scoreColor(_ score: Double) -> Color {
-        if score >= 120 { return .blue }
-        else if score >= 90 { return .green }
-        else if score >= 60 { return .orange }
-        return .red
+    private func scoreColor(_ score:Double) -> Color {
+        score>=120 ? .blue : score>=90 ? .green : score>=60 ? .orange : .red
     }
 }
 
 #Preview {
-    TrendsView()
-        .environmentObject(DataManager())
+    TrendsView().environmentObject(DataManager())
 }

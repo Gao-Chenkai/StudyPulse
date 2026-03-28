@@ -15,6 +15,7 @@ class DataManager: ObservableObject {
     @Published var mistakeSets: [MistakeNote] = []
     @Published var examSets: [Exam] = []
     @Published var profile: UserProfile = UserProfile()
+    @Published var comprehensiveExamSets: [comprehensiveExam] = []
     
     init() {
         loadProfile()
@@ -22,33 +23,29 @@ class DataManager: ObservableObject {
         loadMistakeSets()
         loadExamSets()
         initializeDefaultSubjects()
+        loadComprehensiveExams()
+        loadSubjects()
     }
     
     private func initializeDefaultSubjects() {
         if subjects.isEmpty {
             subjects = [
-                Subject(name: "GROUP: All the Subjects", enabled: true),
-                Subject(name: "GROUP: Chinese, Maths, English", enabled: true),
-                Subject(name: "GROUP: Main Subjects", enabled: true),
-                Subject(name: "GROUP: Elective Subjects", enabled: true),
-                Subject(name: "GROUP: 3 Liberal Arts Subjects", enabled: false),
-                Subject(name: "GROUP: 3 Science Subjects", enabled: true),
-                Subject(name: "Chinese", enabled: true),
-                Subject(name: "Mathematics", enabled: true),
-                Subject(name: "English", enabled: true),
-                Subject(name: "Science", enabled: false),
-                Subject(name: "History & Society", enabled: false),
-                Subject(name: "Physics", enabled: true),
-                Subject(name: "Chemistry", enabled: true),
-                Subject(name: "Biology", enabled: true),
-                Subject(name: "History", enabled: true),
-                Subject(name: "Geography", enabled: true),
-                Subject(name: "Politics", enabled: true),
-                Subject(name: "Information Technology", enabled: false),
-                Subject(name: "General Technology", enabled: false),
-                Subject(name: "Art", enabled: false),
-                Subject(name: "Music", enabled: false),
-                Subject(name: "PE & Health", enabled: false)
+                Subject(name: "Chinese"),
+                Subject(name: "Mathematics"),
+                Subject(name: "English"),
+                Subject(name: "Science"),
+                Subject(name: "History & Society"),
+                Subject(name: "Physics"),
+                Subject(name: "Chemistry"),
+                Subject(name: "Biology"),
+                Subject(name: "History"),
+                Subject(name: "Geography"),
+                Subject(name: "Politics"),
+                Subject(name: "Information Technology"),
+                Subject(name: "General Technology"),
+                Subject(name: "Art"),
+                Subject(name: "Music"),
+                Subject(name: "PE & Health")
             ]
         }
     }
@@ -193,4 +190,56 @@ class DataManager: ObservableObject {
             }
         }
     }
+    
+    func saveComprehensiveExams() {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            do {
+                let data = try encoder.encode(comprehensiveExamSets)
+                let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
+                try data.write(to: url)
+                print("✅ 综合考试已保存")
+            } catch {
+                print("保存综合考试失败: \(error)")
+            }
+        }
+        
+    func loadComprehensiveExams() {
+            let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            do {
+                let data = try Data(contentsOf: url)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                comprehensiveExamSets = try decoder.decode([comprehensiveExam].self, from: data)
+                print("✅ 综合考试已加载")
+            } catch {
+                print("加载综合考试失败: \(error)")
+            }
+        }
+    
+    func saveSubjects() {
+        let encoder = JSONEncoder()
+        do {
+            let data = try encoder.encode(subjects)
+            let url = getDocumentsDirectory().appendingPathComponent("subjects.json")
+            try data.write(to: url)
+        } catch {
+            print("保存科目失败: \(error)")
+        }
+    }
+
+    func loadSubjects() {
+        let url = getDocumentsDirectory().appendingPathComponent("subjects.json")
+        if FileManager.default.fileExists(atPath: url.path) {
+            do {
+                let data = try Data(contentsOf: url)
+                let decoder = JSONDecoder()
+                subjects = try decoder.decode([Subject].self, from: data)
+            } catch {
+                print("加载科目失败: \(error)")
+            }
+        }
+    }
+    
 }

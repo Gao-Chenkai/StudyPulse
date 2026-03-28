@@ -122,6 +122,7 @@ struct EditSubjectsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onDisappear {
                 dataManager.saveProfile()
+                dataManager.saveSubjects()
             }
         }
     }

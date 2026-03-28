@@ -11,31 +11,105 @@ struct NewExamSetView: View {
     // ✅ 从环境中自动获取 DataManager，不需要在 init 中传参
     @EnvironmentObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
     
     // 表单状态
     @State private var name = ""
     @State private var selectedSubject = "Mathematics"
+    @State private var isComprehensiveExam = false
     @State private var examDate = Date()
     @State private var importance = 3
     @State private var masteryDegree = 50
     @State private var examNote = ""
     
+    // 单科选择（String）
+    @State private var selectedSingleSubject: String = ""
+    // 多科目选择（[String]，用来存多选结果）
+    @State private var selectedMultipleSubjects: [String] = []
+    
+    var enabledSubjects: [Subject] {
+        dataManager.subjects.filter {
+            $0.enabled && !$0.name.starts(with: "GROUP:")
+        }
+    }
+    
+    // 👇 【动态高度】每个科目 80pt
+    var dynamicListHeight: CGFloat {
+        // 科目数量 × 80
+        CGFloat(enabledSubjects.count * 80)
+    }
+    
+    // 只拿科目名称
+    var availableSubjectNames: [String] {
+        enabledSubjects.map { $0.name }
+    }
+    
     // 获取可用科目
     private var availableSubjects: [String] {
         dataManager.subjects.filter { $0.enabled }.map { $0.name }
     }
-
+    
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Basic Info")) {
                     TextField("Exam Name (e.g., Midterm)", text: $name)
                     
-                    Picker("Subject", selection: $selectedSubject) {
-                        ForEach(availableSubjects, id: \.self) { subject in
-                            Text(subject).tag(subject)
+                    VStack {
+                        Picker("Exam Numbers", selection: $isComprehensiveExam) {
+                            Text("Single Subject")
+                                .tag(false)
+                            Text("Comprehensive Exam")
+                                .tag(true)
                         }
+                        .pickerStyle(.segmented)
+                        
+
+                        
+                        if !isComprehensiveExam {
+                            Picker("Select Subject", selection: $selectedSingleSubject) {
+                                ForEach(availableSubjects, id: \.self) { subject in
+                                    Text(subject).tag(subject)
+                                }
+                            }
+                            .padding(.top, 8)
+                        } else {
+                            List {
+                                Text("Select Multiple Subjects")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                ForEach(availableSubjects, id: \.self) { subject in
+                                    HStack {
+                                        Text(subject)
+                                        Spacer()
+                                        if selectedMultipleSubjects.contains(subject) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        if selectedMultipleSubjects.contains(subject) {
+                                            selectedMultipleSubjects.removeAll { $0 == subject }
+                                        } else {
+                                            selectedMultipleSubjects.append(subject)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(height: dynamicListHeight)
+                            .listStyle(.plain)
+                        }
+
                     }
+                                        
+                                        
+//                    Picker("！Subject！", selection: $selectedSubject) {
+//                        ForEach(availableSubjects, id: \.self) { subject in
+//                            Text(subject).tag(subject)
+//                        }
+//                    }
                     
                     DatePicker("Date", selection: $examDate, displayedComponents: .date)
                 }
@@ -92,6 +166,8 @@ struct NewExamSetView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveExam()
+                        
+                        dismiss()
                     }
                     .fontWeight(.semibold)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -100,29 +176,50 @@ struct NewExamSetView: View {
         }
     }
     
+    
     private func saveExam() {
-        let newExam = Exam(
-            name: name.trimmingCharacters(in: .whitespaces),
-            date: examDate,
-            importance: importance,
-            subject: selectedSubject,
-            examName: examNote.trimmingCharacters(in: .whitespaces),
-            masteryDegree: masteryDegree
-        )
+        guard !name.isEmpty, !name.isEmpty else { return }
         
-        dataManager.examSets.append(newExam)
-        dataManager.saveExamSets() // 确保 DataManager 里有这个方法
-        
-        presentationMode.wrappedValue.dismiss()
+        if isComprehensiveExam {
+            // 综合考试 -> 存入综合数组并持久化
+            let newCompExam = comprehensiveExam(
+                name: name,
+                date: examDate,
+                importance: importance,
+                subject: selectedMultipleSubjects,
+                examName: name, // 这里也帮你修正为 examName（更合理）
+                masteryDegree: masteryDegree
+            )
+            // ❌ 错误：$dataManager
+            // ✅ 正确：dataManager
+            dataManager.comprehensiveExamSets.append(newCompExam)
+            dataManager.saveComprehensiveExams()
+            
+        } else {
+            // 单科考试校验+保存
+            guard !selectedSingleSubject.isEmpty else { return }
+            let newExam = Exam(
+                name: name,
+                date: examDate,
+                importance: importance,
+                subject: selectedSingleSubject,
+                examName: name,
+                masteryDegree: masteryDegree
+            )
+            dataManager.examSets.append(newExam)
+            dataManager.saveExamSets()
+        }
     }
 }
 
 #Preview {
-    // ✅ 修复点：删除了 <#Exam#> 占位符，直接调用无参构造
+    // ✅ 修复点：删除占位符，直接调用无参构造
     let mockManager = DataManager()
     mockManager.subjects = [
         Subject(name: "Mathematics", enabled: true),
-        Subject(name: "Physics", enabled: true)
+        Subject(name: "Physics", enabled: true),
+        Subject(name: "Swift", enabled: true),
+
     ]
     
     return NewExamSetView()
