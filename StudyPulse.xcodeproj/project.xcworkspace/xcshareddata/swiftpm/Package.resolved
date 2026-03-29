@@ -1,0 +1,15 @@
+{
+  "originHash" : "3fd3a0af28b91808351de883efb89083f6bb11959cf0e3391c7f45c0c5cce48b",
+  "pins" : [
+    {
+      "identity" : "wsonboarding",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Jewel591/WSOnBoarding",
+      "state" : {
+        "branch" : "main",
+        "revision" : "8b74f40f173284af26f6a1e14035f6ad66ef2230"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WSOnBoarding
 
 @main
 struct StudyPulseApp: App {
@@ -15,6 +16,10 @@ struct StudyPulseApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(dataManager)
+                .wsWelcomeView(
+                                    config: WSWelcomeConfig.welcomeInfo, // 要显示的应用信息
+                                    style: .standard // 预设的外观风格（.standard 或 .immersive）
+                                )
         }
     }
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		275736DC2F78F7F8007FDCCB /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 275736DB2F78F7F8007FDCCB /* WSOnBoarding */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		2743C83E2F6EAEA000CC1EED /* StudyPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudyPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				275736DC2F78F7F8007FDCCB /* WSOnBoarding in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = StudyPulse;
 			packageProductDependencies = (
+				275736DB2F78F7F8007FDCCB /* WSOnBoarding */,
 			);
 			productName = StudyPulse;
 			productReference = 2743C83E2F6EAEA000CC1EED /* StudyPulse.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 2743C8352F6EAEA000CC1EED;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2743C83F2F6EAEA000CC1EED /* Products */;
 			projectDirPath = "";
@@ -342,6 +351,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Jewel591/WSOnBoarding";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		275736DB2F78F7F8007FDCCB /* WSOnBoarding */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */;
+			productName = WSOnBoarding;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2743C8362F6EAEA000CC1EED /* Project object */;
 }
