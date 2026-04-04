@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 struct NewExamSetView: View {
     // ✅ 从环境中自动获取 DataManager，不需要在 init 中传参
@@ -179,6 +180,9 @@ struct NewExamSetView: View {
     
     private func saveExam() {
         guard !name.isEmpty, !name.isEmpty else { return }
+        
+        // 4.4新增：考试临近通知
+        ExamPrepareNotifications.shared.scheduleNotifications(for: name, date: examDate)
         
         if isComprehensiveExam {
             // 综合考试 -> 存入综合数组并持久化

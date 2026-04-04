@@ -4,7 +4,7 @@
 //
 //  Created by Chenkai Gao on 2026/3/21.
 //
-
+ 
 import SwiftUI
 
 struct AddGradeView: View {
@@ -130,7 +130,7 @@ struct AddGradeView: View {
                 // MARK: 成绩录入（修复版：用 $subjectScore 直接绑定）
                 if !subjectScores.isEmpty {
                     ForEach($subjectScores) { $subjectScore in
-                        Section(header: Text("Score: \(subjectScore.subject)")) {
+                        Section(header: Text("Score \(subjectScore.subject)")) {
                             let maxScore = subjectInfo.getMaxScore(
                                 level: dataManager.profile.educationLevel,
                                 subject: subjectScore.subject

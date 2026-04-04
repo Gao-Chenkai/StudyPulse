@@ -63,15 +63,15 @@ struct ContentView: View {
     }
     
     private func triggerHaptic() {
-        print("震动引擎准备 (Prepare)")
-        impactFeedback.prepare()
+        // 1. 使用轻量级的通知，而不是沉重的 Impact (可选优化)
+        // let generator = UINotificationFeedbackGenerator()
+        // generator.notificationOccurred(.success)
         
-        print("震动发生 (Impact Occurred)")
-        impactFeedback.impactOccurred()
-        
-        // 强制延迟一点打印，确保你看得到顺序
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("震动指令已发送")
+        // 2. 将震动逻辑放入后台队列，或者稍微延迟一点点，让 UI 先渲染出来
+        // 这样用户看到的是界面先切过去，然后手震一下，感觉会流畅很多
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            impactFeedback.prepare()
+            impactFeedback.impactOccurred()
         }
     }
 }

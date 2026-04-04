@@ -6,13 +6,15 @@
 //
 
 import SwiftUI
+import UserNotifications 
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingProfileEdit = false
     @State private var showingAbout = false
     @State private var showingCopyright = false
-
+    
+    @State private var showingTestAlert = false
     
     var body: some View {
         NavigationView {
@@ -91,6 +93,10 @@ struct SettingsView: View {
                     Button("Copyright") {
                         showingCopyright = true
                     }
+                    Button("Send Test Notification in 5 Seconds") {
+                        sendTestNotification()
+                        showingTestAlert = true
+                    }
 
                 }
             }
@@ -103,6 +109,53 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingCopyright) {
                 CopyrightView()
+            }
+            .alert("Test Notification Sent", isPresented: $showingTestAlert) {
+                Button("OK") { }
+            } message: {
+                Text("Check your notification center in 5 seconds!")
+            }
+        }
+    }
+    
+    private func sendTestNotification() {
+        print("🚀 开始发送暴力测试通知...")
+        
+        // 1. 强制导入（虽然文件顶部应该已经有了）
+        
+        let center = UNUserNotificationCenter.current()
+        
+        // 2. 创建内容
+        let content = UNMutableNotificationContent()
+        content.title = "🚨 强制测试"
+        content.body = "这是第 \(Int.random(in: 1000...9999)) 号测试" // 加随机数防止折叠
+        content.subtitle = "如果看到这行字，说明通知到了" // 增加显示层级
+        content.badge = 1 // 强制图标显示角标
+        content.sound = .defaultCritical // 使用 Critical Sound (需要后台模式，如果不行会自动降级为 default)
+        
+        // 3. 关键：设置 Interruption Level (仅 iOS 15+ 有效，但无害)
+        // 这里我们用最基础的 Trigger 测试
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        
+        // 4. 强制唯一 Identifier
+        let identifier = "FORCE_TEST_\(UUID().uuidString)"
+        print("🔑 使用 ID: $identifier)")
+        
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        // 5. 移除旧的所有请求，防止冲突
+        center.removeAllPendingNotificationRequests()
+        
+        center.add(request) { error in
+            DispatchQueue.main.async {
+                if error != nil {
+                    print("💀 发送失败: $error.localizedDescription)")
+                    self.showingTestAlert = true // 弹窗报错
+                } else {
+                    print("💥 发送成功！请查看主屏幕图标角标或等待1秒")
+                    // 即使发送成功也弹窗，确认代码确实跑通了
+                    self.showingTestAlert = true
+                }
             }
         }
     }

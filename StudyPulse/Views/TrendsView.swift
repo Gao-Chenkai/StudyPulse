@@ -177,7 +177,10 @@ struct SubjectDetailView: View {
         }
         .navigationBarTitleDisplayMode(.large)
         // 强制切换时间刷新UI
-        .onChange(of: selectedRange) { _ in }
+        .onChange(of: selectedRange) { oldValue, newValue in
+                    // 这里不需要写代码，只要属性变化就会自动触发 View 重绘
+                    // 如果以后需要处理逻辑，可以使用 print("范围从 \(oldValue) 变为 \(newValue)")
+        }
     }
     
     // 删除核心：手动触发发布者刷新UI

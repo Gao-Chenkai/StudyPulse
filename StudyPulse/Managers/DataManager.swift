@@ -175,7 +175,7 @@ class DataManager: ObservableObject {
         }
     }
     
-    // ✅ 新增：加载考试集合 (建议在 init 中调用)
+    // ✅ 修改：加载考试集合 (确保主线程更新)
     func loadExamSets() {
         let url = getDocumentsDirectory().appendingPathComponent("exams.json")
         if FileManager.default.fileExists(atPath: url.path) {
@@ -183,8 +183,13 @@ class DataManager: ObservableObject {
                 let data = try Data(contentsOf: url)
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                examSets = try decoder.decode([Exam].self, from: data)
-                print("✅ Exams loaded successfully.")
+                let loadedData = try decoder.decode([Exam].self, from: data)
+                
+                // 👇 关键修改：确保在主线程更新 @Published 变量
+                DispatchQueue.main.async {
+                    self.examSets = loadedData
+                    print("✅ Exams loaded successfully.")
+                }
             } catch {
                 print("❌ Error loading exams: \(error)")
             }
@@ -192,31 +197,37 @@ class DataManager: ObservableObject {
     }
     
     func saveComprehensiveExams() {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            do {
-                let data = try encoder.encode(comprehensiveExamSets)
-                let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
-                try data.write(to: url)
-                print("✅ 综合考试已保存")
-            } catch {
-                print("保存综合考试失败: \(error)")
-            }
-        }
-        
-    func loadComprehensiveExams() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        do {
+            let data = try encoder.encode(comprehensiveExamSets)
             let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
-            guard FileManager.default.fileExists(atPath: url.path) else { return }
-            do {
-                let data = try Data(contentsOf: url)
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                comprehensiveExamSets = try decoder.decode([comprehensiveExam].self, from: data)
-                print("✅ 综合考试已加载")
-            } catch {
-                print("加载综合考试失败: \(error)")
-            }
+            try data.write(to: url)
+            print("✅ 综合考试已保存")
+        } catch {
+            print("保存综合考试失败: \(error)")
         }
+    }
+    
+    // ✅ 修改：加载综合考试 (确保主线程更新)
+    func loadComprehensiveExams() {
+        let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let loadedData = try decoder.decode([comprehensiveExam].self, from: data)
+            
+            // 👇 关键修改：确保在主线程更新
+            DispatchQueue.main.async {
+                self.comprehensiveExamSets = loadedData
+                print("✅ 综合考试已加载")
+            }
+        } catch {
+            print("加载综合考试失败: \(error)")
+        }
+    }
     
     func saveSubjects() {
         let encoder = JSONEncoder()
