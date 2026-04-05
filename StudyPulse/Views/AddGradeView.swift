@@ -87,7 +87,7 @@ struct AddGradeView: View {
                         if !isComprehensiveExam {
                             Picker("Select Subject", selection: $selectedSingleSubject) {
                                 ForEach(availableSubjects, id: \.self) { subject in
-                                    Text(subject).tag(subject)
+                                    Text(subject.localized()).tag(subject)
                                 }
                             }
                             .padding(.top, 10)
@@ -103,7 +103,7 @@ struct AddGradeView: View {
                                 
                                 ForEach(availableSubjects, id: \.self) { subject in
                                     HStack {
-                                        Text(subject)
+                                        Text(subject.localized())
                                         Spacer()
                                         if selectedMultipleSubjects.contains(subject) {
                                             Image(systemName: "checkmark.circle.fill")

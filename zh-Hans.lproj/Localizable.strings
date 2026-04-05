@@ -1,0 +1,108 @@
+//
+//  Localizable.strings
+//  StudyPulse
+//
+//  Created by Chenkai Gao on 2026/4/5.
+//
+//  Chinese (Simplified)
+
+// AddGradeView.swift
+"GROUP:" = "组：";
+"Exam Details" = "考试详情";
+"Exam Name" = "考试名称";
+"Exam Date" = "考试日期";
+"Exam Type" = "考试类型";
+"Single Subject" = "单科";
+"Comprehensive Exam" = "综合考试";
+"Select Subject" = "选择科目";
+"Select Multiple Subjects" = "多选科目";
+"Score" = "分数";
+"Socre:" = "分数：";
+"Use Raw Score" = "启用原始分";
+"Raw Score:" = "原始分：";
+"Ranking" = "排名";
+"Enter ranking" = "输入排名";
+"Importance" = "重要程度";
+"Add New Grade" = "登记新成绩";
+"Cancel" = "取消";
+"Save" = "保存";
+
+// ContentView.swift
+"Home" = "主页";
+"Trends" = "趋势";
+"Mistakes" = "错题";
+"Exams" = "考试";
+"Settings" = "设置";
+
+// ExamView.swift
+"Within 1 Week" = "一周内";
+"Within 1 Month" = "一个月内";
+"Later" = "后续";
+"No Exams" = "暂无考试";
+"Tap '+' to add a new exam." = "点击 + 号添加考试";
+"Delete" = "删除";
+"Time Left" = "剩余时间";
+"Mastery" = "掌握程度";
+
+// HomeView.swift
+"Welcome back!" = "欢迎回来！";
+"Here's your academic progress" = "你的近期学习概况";
+"Total Exams" = "考试总次数";
+"Upcoming Exams" = "即将到来的考试";
+"Overall Average" = "整体平均分";
+"Lastest Grade" = "最新成绩";
+"Upcoming Exams (2 Weeks)" = "两周内考试";
+"Recent Grades Trend" = "近期成绩趋势";
+"Date" = "日期";
+"No recent grades to display" = "暂无近期成绩";
+"Recent Grades" = "近期成绩";
+"Dashboard" = "数据概览";
+
+// SettingsView.swift
+"User Information" = "用户档案";
+"Username" = "用户名";
+"Age" = "年龄";
+"Education Level" = "教育阶段";
+"Academic Info" = "学业信息";
+"Education System" = "教育体系";
+"Region" = "国家与地区";
+"Edit Profile" = "编辑档案";
+"Edit Subjects" = "编辑科目";
+"About" = "关于应用";
+"Copyright" = "版权信息";
+"Personal Info" = "个人信息";
+"Copyright & License" = "版权与许可";
+
+// About App Description
+"StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulse 是一款综合性学习管理应用，旨在帮助学生追踪学业表现、分析学习趋势，并高效管理学习资料。";
+
+// Features
+"Features" = "功能特色：";
+"- Track grades across multiple subjects" = "- 追踪多门科目的成绩";
+"- Visualize progress with interactive charts" = "- 通过交互式图表可视化学习进度";
+"- Manage mistake collections with detailed analysis" = "- 管理错题集并进行详细分析";
+"- Personalized learning recommendations" = "- 个性化学习推荐";
+"- Support for photo uploads for exam papers and mistakes" = "- 支持上传试卷和错题照片";
+
+// GitHub & License
+"Click to View the Repository on Github" = "点击查看 GitHub 仓库";
+"This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License." = "本作品采用知识共享署名-非商业性使用-相同方式共享 4.0 国际许可协议进行许可。";
+
+// Subjects
+/* 学科名称 */
+"Chinese" = "语文";
+"Mathematics" = "数学";
+"English" = "英语";
+"Science" = "科学";
+"History & Society" = "历史与社会";
+"Physics" = "物理";
+"Chemistry" = "化学";
+"Biology" = "生物";
+"History" = "历史";
+"Geography" = "地理";
+"Politics" = "政治";
+"Information Technology" = "信息技术";
+"General Technology" = "通用技术";
+"Art" = "美术";
+"Music" = "音乐";
+"PE & Health" = "体育与健康";

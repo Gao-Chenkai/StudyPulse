@@ -205,7 +205,7 @@ struct EditSubjectsView: View {
         NavigationView {
             List {
                 ForEach($dataManager.subjects) { $subject in
-                    Toggle(subject.name, isOn: $subject.enabled)
+                    Toggle(subject.name.localized(), isOn: $subject.enabled)
                 }
             }
             .navigationTitle("Edit Subjects")

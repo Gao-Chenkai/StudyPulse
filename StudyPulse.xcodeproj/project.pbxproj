@@ -8,10 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		275736DC2F78F7F8007FDCCB /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 275736DB2F78F7F8007FDCCB /* WSOnBoarding */; };
+		27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2743C83E2F6EAEA000CC1EED /* StudyPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudyPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		27E4AFAC2F824DA300D2D7C9 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		27E4AFAF2F824DB400D2D7C9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +40,7 @@
 		2743C8352F6EAEA000CC1EED = {
 			isa = PBXGroup;
 			children = (
+				27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */,
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
 				2743C83F2F6EAEA000CC1EED /* Products */,
 			);
@@ -97,6 +101,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 2743C8352F6EAEA000CC1EED;
 			minimizedProjectReferenceProxies = 1;
@@ -118,6 +123,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -132,6 +138,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				27E4AFAC2F824DA300D2D7C9 /* zh-Hans */,
+				27E4AFAF2F824DB400D2D7C9 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		2743C8472F6EAEA100CC1EED /* Debug */ = {
