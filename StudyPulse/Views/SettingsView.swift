@@ -11,6 +11,7 @@ import UserNotifications
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingProfileEdit = false
+    @State private var showingSubjectsEdit = false
     @State private var showingAbout = false
     @State private var showingCopyright = false
     
@@ -80,22 +81,55 @@ struct SettingsView: View {
                         showingProfileEdit = true
                     }
                     
-                    NavigationLink("Edit Subjects") {
-                        EditSubjectsView()
+                    Button("Edit Subjects") {
+                        showingSubjectsEdit = true
                     }
+                    
+//                    NavigationLink("Edit Subjects") {
+//                        EditSubjectsView()
+//                    }
                 }
                 
                 Section(header: Text("About")) {
-                    Button("About StudyPulse") {
-                        showingAbout = true
+//                    Button("About StudyPulse") {
+//                        showingAbout = true
+//                    }
+                    
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                            .frame(width: 30)
+                        Button("About StudyPulse") {
+                            showingAbout = true
+                        }.foregroundColor(.black)
                     }
                     
-                    Button("Copyright") {
-                        showingCopyright = true
+//                    Button("Copyright") {
+//                        showingCopyright = true
+//                    }.foregroundColor(.black)
+                    
+                    HStack {
+                        Image(systemName: "checkmark.shield")
+                            .foregroundColor(.yellow)
+                            .frame(width: 30)
+                        Button("Copyright") {
+                            showingCopyright = true
+                        }.foregroundColor(.black)
                     }
-                    Button("Send Test Notification in 5 Seconds") {
-                        sendTestNotification()
-                        showingTestAlert = true
+                    
+//                    Button("Send Test Notification in 5 Seconds") {
+//                        sendTestNotification()
+//                        showingTestAlert = true
+//                    }
+                    
+                    HStack {
+                        Image(systemName: "message")
+                            .foregroundColor(.green)
+                            .frame(width: 30)
+                        Button("Send Test Notification in 5 Seconds") {
+                            sendTestNotification()
+                            showingTestAlert = true
+                        }.foregroundColor(.black)
                     }
 
                 }
@@ -103,6 +137,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .sheet(isPresented: $showingProfileEdit) {
                 ProfileEditView()
+            }
+            .sheet(isPresented: $showingSubjectsEdit) {
+                EditSubjectsView()
             }
             .sheet(isPresented: $showingAbout) {
                 AboutView()
@@ -297,7 +334,7 @@ struct AboutView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                     
-                    Text("Version beta 7AD0187")
+                    Text("Version beta 0.0.1")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     

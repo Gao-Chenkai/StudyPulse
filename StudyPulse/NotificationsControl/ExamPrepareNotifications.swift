@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 class ExamPrepareNotifications {
     static let shared = ExamPrepareNotifications()
