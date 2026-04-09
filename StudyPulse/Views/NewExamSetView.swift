@@ -9,7 +9,7 @@ import SwiftUI
 import UserNotifications
 
 struct NewExamSetView: View {
-    // ✅ 从环境中自动获取 DataManager，不需要在 init 中传参
+    // 从环境中自动获取 DataManager，不需要在 init 中传参
     @EnvironmentObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.dismiss) private var dismiss
@@ -34,7 +34,7 @@ struct NewExamSetView: View {
         }
     }
     
-    // 👇 【动态高度】每个科目 80pt
+    // 【动态高度】每个科目 80pt
     var dynamicListHeight: CGFloat {
         // 科目数量 × 80
         CGFloat(enabledSubjects.count * 80)
@@ -191,11 +191,9 @@ struct NewExamSetView: View {
                 date: examDate,
                 importance: importance,
                 subject: selectedMultipleSubjects,
-                examName: name, // 这里也帮你修正为 examName（更合理）
+                examName: name,
                 masteryDegree: masteryDegree
             )
-            // ❌ 错误：$dataManager
-            // ✅ 正确：dataManager
             dataManager.comprehensiveExamSets.append(newCompExam)
             dataManager.saveComprehensiveExams()
             
@@ -217,7 +215,6 @@ struct NewExamSetView: View {
 }
 
 #Preview {
-    // ✅ 修复点：删除占位符，直接调用无参构造
     let mockManager = DataManager()
     mockManager.subjects = [
         Subject(name: "Mathematics", enabled: true),

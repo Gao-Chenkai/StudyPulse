@@ -38,7 +38,7 @@ struct SettingsView: View {
                             .frame(width: 30) // 固定宽度，防止图标挤压文字
                         Text("Age")
                             .foregroundColor(.primary)
-                            .lineLimit(1) // 👈 关键：限制为一行
+                            .lineLimit(1) // 关键：限制为一行
                         Spacer()
                         Text("\(dataManager.profile.age)")
                     }
@@ -49,7 +49,7 @@ struct SettingsView: View {
                             .frame(width: 30)            // 固定宽度，防止图标挤压文字
                         Text("Education Level")
                             .foregroundColor(.primary)
-                            .lineLimit(1) // 👈 关键：限制为一行
+                            .lineLimit(1) // 关键：限制为一行
                         Spacer()
                         Text(dataManager.profile.educationLevel)
                     }
@@ -158,39 +158,36 @@ struct SettingsView: View {
     private func sendTestNotification() {
         print("🚀 开始发送暴力测试通知...")
         
-        // 1. 强制导入（虽然文件顶部应该已经有了）
-        
         let center = UNUserNotificationCenter.current()
         
-        // 2. 创建内容
+        // 创建通知内容
         let content = UNMutableNotificationContent()
         content.title = "🚨 强制测试"
-        content.body = "这是第 \(Int.random(in: 1000...9999)) 号测试" // 加随机数防止折叠
-        content.subtitle = "如果看到这行字，说明通知到了" // 增加显示层级
-        content.badge = 1 // 强制图标显示角标
-        content.sound = .defaultCritical // 使用 Critical Sound (需要后台模式，如果不行会自动降级为 default)
+        content.body = "这是第 \(Int.random(in: 1000...9999)) 号测试"
+        content.subtitle = "如果看到这行字，说明通知到了"
+        content.badge = 1
+        content.sound = .defaultCritical
         
-        // 3. 关键：设置 Interruption Level (仅 iOS 15+ 有效，但无害)
-        // 这里我们用最基础的 Trigger 测试
+        // 设置触发器（5秒后触发）
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         
-        // 4. 强制唯一 Identifier
+        // 创建唯一标识符
         let identifier = "FORCE_TEST_\(UUID().uuidString)"
-        print("🔑 使用 ID: $identifier)")
+        print("🔑 使用 ID: \(identifier)")
         
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         
-        // 5. 移除旧的所有请求，防止冲突
+        // 移除所有待处理的通知请求
         center.removeAllPendingNotificationRequests()
         
+        // 添加新的通知请求
         center.add(request) { error in
             DispatchQueue.main.async {
-                if error != nil {
-                    print("💀 发送失败: $error.localizedDescription)")
-                    self.showingTestAlert = true // 弹窗报错
+                if let error = error {
+                    print("ERROR发送失败: \(error.localizedDescription)")
+                    self.showingTestAlert = true
                 } else {
-                    print("💥 发送成功！请查看主屏幕图标角标或等待1秒")
-                    // 即使发送成功也弹窗，确认代码确实跑通了
+                    print("SUCCESS发送成功！查看主屏幕图标角标或等待5秒")
                     self.showingTestAlert = true
                 }
             }

@@ -61,7 +61,6 @@ struct StudyPulseApp: App {
                     config: WSWelcomeConfig.welcomeInfo,
                     style: .standard
                 )
-                .preferredColorScheme(.light)
         }
     }
 }

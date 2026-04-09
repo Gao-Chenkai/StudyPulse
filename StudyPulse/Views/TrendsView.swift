@@ -35,6 +35,7 @@ struct TrendsView: View {
                 }
                 .padding()
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Trends")
             .navigationDestination(for: String.self) { subjectName in
                 SubjectDetailView(subject: subjectName)
@@ -98,29 +99,30 @@ struct SubjectDetailView: View {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(subject).font(.title).fontWeight(.bold)
+                        .foregroundColor(Color(.label))
                     
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Average Score").font(.subheadline).foregroundColor(.secondary)
+                            Text("Average Score").font(.subheadline).foregroundColor(Color(.secondaryLabel))
                             Text(String(format: "%.1f", averageScore))
                                 .font(.title2).bold()
                                 .foregroundColor(scoreColor(averageScore))
                         }
                         Spacer()
                         VStack(alignment: .trailing) {
-                            Text("Latest").font(.subheadline).foregroundColor(.secondary)
+                            Text("Latest").font(.subheadline).foregroundColor(Color(.secondaryLabel))
                             if let latest = filteredGrades.last {
                                 Text(String(format: "%.1f", latest.score))
                                     .font(.title2).bold()
                                     .foregroundColor(scoreColor(latest.score))
                             } else {
-                                Text("N/A").foregroundColor(.secondary)
+                                Text("N/A").foregroundColor(Color(.secondaryLabel))
                             }
                         }
                     }
                 }
                 .padding()
-                .background(Color(UIColor.systemBackground))
+                .background(Color(.systemBackground))
                 .cornerRadius(12)
                 .shadow(color: Color.black.opacity(0.05), radius: 5)
                 
@@ -135,10 +137,10 @@ struct SubjectDetailView: View {
                 if !filteredGrades.isEmpty {
                     Chart(filteredGrades) { grade in
                         LineMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color(.systemBlue))
                             .interpolationMethod(.catmullRom)
                         PointMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
-                            .foregroundStyle(.blue).symbolSize(60)
+                            .foregroundStyle(Color(.systemBlue)).symbolSize(60)
                     }
                     .frame(height:300)
                 } else {
@@ -149,25 +151,38 @@ struct SubjectDetailView: View {
                 // 历史+侧滑删除
                 VStack(alignment:.leading, spacing:12) {
                     Text("History").font(.title2).bold()
-                    ForEach(filteredGrades.reversed()) { grade in
-                        HStack {
-                            VStack(alignment:.leading) {
-                                Text(grade.examName.isEmpty ? "Unnamed Exam" : grade.examName)
-                                Text(grade.date.formatted(date:.abbreviated, time:.omitted))
-                                    .font(.caption).foregroundColor(.secondary)
+                        .foregroundColor(Color(.label))
+                    
+                    if filteredGrades.isEmpty {
+                        Text("No grades available")
+                            .foregroundColor(Color(.secondaryLabel))
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(10)
+                    } else {
+                        ForEach(filteredGrades.reversed()) { grade in
+                            HStack {
+                                VStack(alignment:.leading) {
+                                    Text(grade.examName.isEmpty ? "Unnamed Exam" : grade.examName)
+                                        .foregroundColor(Color(.label))
+                                    Text(grade.date.formatted(date:.abbreviated, time:.omitted))
+                                        .font(.caption).foregroundColor(Color(.secondaryLabel))
+                                }
+                                Spacer()
+                                Text(String(format:"%.1f",grade.score))
+                                    .bold().foregroundColor(scoreColor(grade.score))
                             }
-                            Spacer()
-                            Text(String(format:"%.1f",grade.score))
-                                .bold().foregroundColor(scoreColor(grade.score))
-                        }
-                        .padding()
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(10)
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                deleteGrade(grade)
-                            } label: {
-                                Label("Delete", systemImage:"trash.fill")
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(10)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteGrade(grade)
+                                } label: {
+                                    Label("Delete", systemImage:"trash.fill")
+                                }
+                                .tint(Color(.systemRed))
                             }
                         }
                     }
@@ -175,12 +190,8 @@ struct SubjectDetailView: View {
             }
             .padding()
         }
+        .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.large)
-        // 强制切换时间刷新UI
-        .onChange(of: selectedRange) { oldValue, newValue in
-                    // 这里不需要写代码，只要属性变化就会自动触发 View 重绘
-                    // 如果以后需要处理逻辑，可以使用 print("范围从 \(oldValue) 变为 \(newValue)")
-        }
     }
     
     // 删除核心：手动触发发布者刷新UI
@@ -193,7 +204,7 @@ struct SubjectDetailView: View {
     }
     
     private func scoreColor(_ score:Double) -> Color {
-        score>=90 ? .green : score>=60 ? .orange : .red
+        score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
     }
 }
 
@@ -205,12 +216,13 @@ struct SubjectCardView: View {
         VStack(alignment:.leading, spacing:10) {
             HStack {
                 Text(subject).font(.headline).bold()
+                    .foregroundColor(Color(.label))
                 Spacer()
                 if let g = latestGrade {
                     Text(String(format:"%.1f",g.score))
                         .font(.title3).bold().foregroundColor(scoreColor(g.score))
                 } else {
-                    Text("--").foregroundColor(.secondary)
+                    Text("--").foregroundColor(Color(.secondaryLabel))
                 }
             }
             Divider()
@@ -223,23 +235,29 @@ struct SubjectCardView: View {
                     }
                     Spacer()
                     Text(g.date.formatted(date:.abbreviated, time:.omitted))
-                        .font(.caption).foregroundColor(.secondary)
+                        .font(.caption).foregroundColor(Color(.secondaryLabel))
                 }
             } else {
-                Text("No data available").font(.caption).foregroundColor(.secondary)
+                Text("No data available").font(.caption).foregroundColor(Color(.secondaryLabel))
             }
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color:Color.black.opacity(0.05), radius:8)
     }
     
     private func scoreColor(_ score:Double) -> Color {
-        score>=120 ? .blue : score>=90 ? .green : score>=60 ? .orange : .red
+        score>=120 ? Color(.systemBlue) : score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
     }
 }
 
 #Preview {
     TrendsView().environmentObject(DataManager())
+}
+
+#Preview("Dark Mode") {
+    TrendsView()
+        .environmentObject(DataManager())
+        .preferredColorScheme(.dark)
 }

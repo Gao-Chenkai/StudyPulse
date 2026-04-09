@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// ✅ 重构点 1: 将枚举移出 View 结构体，定义为全局枚举
+// 重构点 1: 将枚举移出 View 结构体，定义为全局枚举
 // 这能显著减轻编译器的嵌套类型推导负担，解决 "unable to type-check" 错误
 enum EditSection: String, CaseIterable, Identifiable {
     case question = "Question"
@@ -17,7 +17,7 @@ enum EditSection: String, CaseIterable, Identifiable {
     
     var id: String { self.rawValue }
     
-    // ✅ 重构点 2: 使用线性 if-else 直接返回字面量
+    // 重构点 2: 使用线性 if-else 直接返回字面量
     // 避免使用 switch 或 字典初始化，这是编译速度最快的方式
     var icon: String {
         if self == .question { return "doc.text" }

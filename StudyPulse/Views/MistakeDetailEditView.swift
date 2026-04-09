@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 struct MistakeDetailEditView: View {
-    // ✅ 建议：如果父视图通过 .environmentObject 传入，这里也用 @EnvironmentObject
+    // 如果父视图通过 .environmentObject 传入，这里也用 @EnvironmentObject
     // 如果父视图是直接传参 init(dataManager: ...)，则保持 @ObservedObject 也可以
     @ObservedObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
@@ -263,7 +263,7 @@ struct MistakeDetailEditView: View {
         }
     }
     
-    // ✅ 新增：保存逻辑
+    // 保存逻辑
     private func saveChanges() {
         // 1. 基于原始对象创建一个新的可变副本
         var updatedMistake = mistakeSet

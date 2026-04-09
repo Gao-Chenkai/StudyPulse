@@ -65,15 +65,21 @@ struct ExamView: View {
                         systemImage: "calendar.badge.exclamationmark",
                         description: Text("Tap '+' to add a new exam.")
                     )
+                    .background(Color(.systemBackground))
                 } else {
                     List {
                         ForEach(groupedExams, id: \.0) { sectionTitle, exams in
-                            Section(header: Text(sectionTitle)) {
+                            Section(header: Text(sectionTitle)
+                                .foregroundColor(Color(.secondaryLabel))
+                                .font(.subheadline)
+                                .textCase(.none)
+                            ) {
                                 ForEach(exams.indices, id: \.self) { index in
                                     let item = exams[index]
                                     
                                     if let exam = item as? Exam {
                                         ExamRowView(exam: exam)
+                                            .listRowBackground(Color(.secondarySystemGroupedBackground))
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 selectedExamForDetail = exam
@@ -84,10 +90,12 @@ struct ExamView: View {
                                                 } label: {
                                                     Label("Delete", systemImage: "trash")
                                                 }
+                                                .tint(Color(.systemRed))
                                             }
                                     } else if let comprehensive = item as? comprehensiveExam {
                                         // 综合考试行（多科目逗号分隔）
                                         ComprehensiveExamRowView(exam: comprehensive)
+                                            .listRowBackground(Color(.secondarySystemGroupedBackground))
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 selectedComprehensiveExam = comprehensive
@@ -98,19 +106,24 @@ struct ExamView: View {
                                                 } label: {
                                                     Label("Delete", systemImage: "trash")
                                                 }
+                                                .tint(Color(.systemRed))
                                             }
                                     }
                                 }
                             }
                         }
                     }
+                    .background(Color(.systemGroupedBackground))
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Exams")
+            .background(Color(.systemGroupedBackground))
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewExamSet = true }) {
                         Image(systemName: "plus")
+                            .foregroundColor(Color(.systemBlue))
                     }
                 }
             }
@@ -120,12 +133,15 @@ struct ExamView: View {
             // 普通考试详情
             .navigationDestination(item: $selectedExamForDetail) { exam in
                 ExamDetailView(exam: exam)
+                    .background(Color(.systemBackground))
             }
-            // 综合考试详情（你可以自己做页面，我先占位）
+            // 综合考试详情
             .navigationDestination(item: $selectedComprehensiveExam) { exam in
                 Text("Comprehensive Exam: \(exam.name)")
+                    .background(Color(.systemBackground))
             }
         }
+        .background(Color(.systemGroupedBackground))
     }
     
     // 删除普通考试
@@ -155,59 +171,88 @@ struct ExamRowView: View {
             HStack {
                 Text(exam.name)
                     .font(.headline)
+                    .foregroundColor(Color(.label))
                 Spacer()
-                Text(exam.subject)
+                Text(exam.subject.localized())
                     .font(.caption)
                     .padding(4)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
+                    .background(Color(.systemBlue).opacity(0.15))
+                    .foregroundColor(Color(.systemBlue))
                     .cornerRadius(4)
             }
             
             Text("\(exam.examDate, style: .date)")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(.secondaryLabel))
             
             HStack(spacing: 15) {
                 VStack(alignment: .leading) {
                     Text("Time Left")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: calculateTimeProgress(), total: 1.0)
-                        .tint(daysRemaining <= 3 ? .red : (daysRemaining <= 7 ? .orange : .green))
+                        .tint(timeLeftColor)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
-                        .foregroundColor(daysRemaining > 2 ? .secondary : .red)
+                        .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
                 }
                 
                 VStack(alignment: .leading) {
                     Text("Mastery")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
-                        .tint(exam.masteryDegree <= 20 ? .red : (exam.masteryDegree <= 60 ? .orange : .green))
+                        .tint(masteryColor)
 
                     Text("\(exam.masteryDegree)%")
                         .font(.caption2)
-                        .foregroundColor(exam.masteryDegree <= 5 ? .red : .secondary)
+                        .foregroundColor(exam.masteryDegree <= 5 ? Color(.systemRed) : Color(.secondaryLabel))
                 }
             }
             .padding(.top, 4)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(10)
+        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
         .onAppear {
             calculateDays()
         }
     }
     
+    // 计算剩余天数
     private func calculateDays() {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         daysRemaining = max(0, components.day ?? 0)
     }
     
+    // 计算时间进度
     private func calculateTimeProgress() -> Double {
         let maxDays = 30.0
         return min(Double(daysRemaining) / maxDays, 1.0)
+    }
+    
+    // 根据剩余天数确定颜色
+    private var timeLeftColor: Color {
+        if daysRemaining <= 3 {
+            return Color(.systemRed)
+        } else if daysRemaining <= 7 {
+            return Color(.systemOrange)
+        } else {
+            return Color(.systemGreen)
+        }
+    }
+    
+    // 根据掌握程度确定颜色
+    private var masteryColor: Color {
+        if exam.masteryDegree <= 20 {
+            return Color(.systemRed)
+        } else if exam.masteryDegree <= 60 {
+            return Color(.systemOrange)
+        } else {
+            return Color(.systemGreen)
+        }
     }
 }
 
@@ -226,46 +271,51 @@ struct ComprehensiveExamRowView: View {
             HStack {
                 Text(exam.name)
                     .font(.headline)
+                    .foregroundColor(Color(.label))
                 Spacer()
                 Text(subjectText)
                     .font(.caption)
                     .padding(4)
-                    .background(Color.purple.opacity(0.1))
-                    .foregroundColor(.purple)
+                    .background(Color(.systemPurple).opacity(0.15))
+                    .foregroundColor(Color(.systemPurple))
                     .cornerRadius(4)
             }
             
             Text("\(exam.examDate, style: .date)")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(.secondaryLabel))
             
             HStack(spacing: 15) {
                 VStack(alignment: .leading) {
                     Text("Time Left")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: calculateTimeProgress(), total: 1.0)
-                        .tint(daysRemaining <= 3 ? .red : (daysRemaining <= 7 ? .orange : .green))
+                        .tint(timeLeftColor)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
-                        .foregroundColor(daysRemaining > 2 ? .secondary : .red)
+                        .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
                 }
                 
                 VStack(alignment: .leading) {
                     Text("Mastery")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
-                        .tint(exam.masteryDegree <= 20 ? .red : (exam.masteryDegree <= 60 ? .orange : .green))
+                        .tint(masteryColor)
 
                     Text("\(exam.masteryDegree)%")
                         .font(.caption2)
-                        .foregroundColor(exam.masteryDegree <= 5 ? .red : .secondary)
+                        .foregroundColor(exam.masteryDegree <= 5 ? Color(.systemRed) : Color(.secondaryLabel))
                 }
             }
             .padding(.top, 4)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(10)
+        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
         .onAppear {
             calculateDays()
         }
@@ -280,9 +330,37 @@ struct ComprehensiveExamRowView: View {
         let maxDays = 30.0
         return min(Double(daysRemaining) / maxDays, 1.0)
     }
+    
+    // 根据剩余天数确定颜色
+    private var timeLeftColor: Color {
+        if daysRemaining <= 3 {
+            return Color(.systemRed)
+        } else if daysRemaining <= 7 {
+            return Color(.systemOrange)
+        } else {
+            return Color(.systemGreen)
+        }
+    }
+    
+    // 根据掌握程度确定颜色
+    private var masteryColor: Color {
+        if exam.masteryDegree <= 20 {
+            return Color(.systemRed)
+        } else if exam.masteryDegree <= 60 {
+            return Color(.systemOrange)
+        } else {
+            return Color(.systemGreen)
+        }
+    }
 }
 
 #Preview {
     ExamView()
         .environmentObject(DataManager())
+}
+
+#Preview("Dark Mode") {
+    ExamView()
+        .environmentObject(DataManager())
+        .preferredColorScheme(.dark)
 }

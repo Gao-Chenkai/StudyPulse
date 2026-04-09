@@ -53,22 +53,18 @@ struct ContentView: View {
         }
         
         .onChange(of: selectedTab) { oldValue, newValue in
-            print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)") // 1. 确认这里打印了没
-            
+            print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)")            
             if oldValue != newValue {
-                print("准备触发震动...") // 2. 确认这里打印了没
+                print("准备触发震动...")
                 triggerHaptic()
             }
         }
     }
     
     private func triggerHaptic() {
-        // 1. 使用轻量级的通知，而不是沉重的 Impact (可选优化)
-        // let generator = UINotificationFeedbackGenerator()
-        // generator.notificationOccurred(.success)
-        
-        // 2. 将震动逻辑放入后台队列，或者稍微延迟一点点，让 UI 先渲染出来
+        // 将震动逻辑放入后台队列，或者稍微延迟一点点，让UI先渲染出来
         // 这样用户看到的是界面先切过去，然后手震一下，感觉会流畅很多
+        // 上面两行是AI写的，本来想解决更新完打开APP时首次点击Tab栏的卡顿，但现在看起来并无什么卵用
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             impactFeedback.prepare()
             impactFeedback.impactOccurred()

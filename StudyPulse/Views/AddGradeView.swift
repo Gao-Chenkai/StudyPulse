@@ -76,7 +76,7 @@ struct AddGradeView: View {
                         displayedComponents: .date
                     )
                     
-                    // MARK: 🔥 Segmented Picker（与 NewExamSetView 一致）
+                    // MARK: Segmented Picker（与 NewExamSetView 一致）
                     VStack(spacing: 8) {
                         Picker("Exam Type", selection: $isComprehensiveExam) {
                             Text("Single Subject").tag(false)
