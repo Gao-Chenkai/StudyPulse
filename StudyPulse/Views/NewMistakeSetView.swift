@@ -5,6 +5,8 @@
 //  Created by Chenkai Gao on 2026/3/21.
 //
 
+// 4.11: 改不动了 下次再改只能重新手写了
+
 import SwiftUI
 
 // 重构点 1: 将枚举移出 View 结构体，定义为全局枚举
@@ -62,22 +64,87 @@ struct NewMistakeSetView: View {
     // MARK: - Body
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
+            List {
+                Section(header: Text("Basic Info")) {
+                    HStack {
+                        Image(systemName: "rectangle.and.pencil.and.ellipsis")
+                            .foregroundColor(.yellow)
+                            .frame(width: 30)
+                        
+                        Text ("Exam Name")
+                        
+                        TextField("Exam Name", text: $editedTitle)
+                            .multilineTextAlignment(.trailing)
+                        Spacer()
+                    }
                     
-                    // 1. 基础信息卡片
-                    buildBasicInfo()
+                    HStack {
+                        Image(systemName: "list.bullet.clipboard")
+                            .foregroundColor(.green)
+                            .frame(width: 30)
+                        
+                        Text ("Source")
+                        
+                        TextField("Source", text: $editedSource)
+                            .multilineTextAlignment(.trailing)
+                        Spacer()
+                    }
                     
-                    // 2. 分段控制器 (Segmented Control)
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.pink)
+                        Text("Date")
+                        Spacer()
+                        
+                        DatePicker("", selection: $editedDate, displayedComponents: .date)
+                            .labelsHidden()
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                }
+                
+                ScrollView {
                     buildSegmentedControl()
                     
-                    // 3. 编辑器区域
                     buildEditorArea()
                     
                     Spacer(minLength: 40)
                 }
-                .padding(.top, 8)
+        
             }
+            
+            
+            
+//            ScrollView {
+//                VStack(spacing: 20) {
+//                    
+//                    // 1. 基础信息卡片
+//                    buildBasicInfo()
+//                    
+//                    List {
+//                        Section(header: Text("Basic Info")) {
+//                            HStack {
+//                                Image(systemName: "person.fill")
+//                                    .foregroundColor(.yellow)
+//                                    .frame(width: 30)
+//                                Text("Username")
+//                                    .foregroundColor(.primary)
+//                                    .lineLimit(1) // 👈 关键：限制为一行
+//                                Spacer()
+//                                Text(dataManager.profile.username)
+//                            }
+//                        }
+//                    }
+//                    
+//                    // 2. 分段控制器 (Segmented Control)
+//                    buildSegmentedControl()
+//                    
+//                    // 3. 编辑器区域
+//                    buildEditorArea()
+//                    
+//                    Spacer(minLength: 40)
+//                }
+//                .padding(.top, 8)
+//            }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("New Mistake")
             .navigationBarTitleDisplayMode(.inline)
@@ -217,13 +284,13 @@ struct NewMistakeSetView: View {
         VStack(alignment: .leading, spacing: 12) {
             
             TextEditor(text: currentBinding)
-                .frame(minHeight: 350)
+                .frame(minHeight: 355)
                 .font(.body)
                 .padding(8)
                 .background(Color(.systemBackground))
                 .cornerRadius(8)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 15)
                         .stroke(selectedSection.color.opacity(0.5), lineWidth: 2)
                 )
                 .padding(.horizontal)

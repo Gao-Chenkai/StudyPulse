@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 struct MistakeView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -14,34 +15,47 @@ struct MistakeView: View {
     
     var body: some View {
         NavigationView {
-                List {
-                    ForEach(dataManager.mistakeSets) { mistakeSet in
-                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistakeSet)) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(mistakeSet.title)
-                                    .font(.headline)
-                                
-                                Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+            Group {
+                if dataManager.mistakeSets.isEmpty {
+                    ContentUnavailableView(
+                        "No Mistakes",
+                        systemImage: "calendar.badge.exclamationmark",
+                        description: Text("Tap '+' to add a new mistake.")
+                    )
+                    .background(Color(.systemGroupedBackground))
+                    
+                } else {
+                    List {
+                        ForEach(dataManager.mistakeSets) { mistakeSet in
+                            NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistakeSet)) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(mistakeSet.title)
+                                        .font(.headline)
+                                    
+                                    Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
+                        .onDelete(perform: deleteMistakeSets)
                     }
-                    .onDelete(perform: deleteMistakeSets)
-                }
-                .navigationTitle("Mistakes")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {showingNewMistakeSet = true}) {
-                            Image(systemName: "plus")
-                        }
-                    }
-                }
-                .sheet(isPresented: $showingNewMistakeSet) {
-                    NewMistakeSetView()
                 }
             }
+            .navigationTitle("Mistakes")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {showingNewMistakeSet = true}) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingNewMistakeSet) {
+                NewMistakeSetView()
+            }
+            .background(Color(.systemGroupedBackground))
         }
+    }
 
     
     private func deleteMistakeSets(offsets: IndexSet) {

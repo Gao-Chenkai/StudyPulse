@@ -123,7 +123,6 @@ struct ExamView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewExamSet = true }) {
                         Image(systemName: "plus")
-                            .foregroundColor(Color(.systemBlue))
                     }
                 }
             }
