@@ -51,6 +51,8 @@ struct ContentView: View {
                 .tag(4)
             
         }
+        .tint(.cyan)
+        
         
         .onChange(of: selectedTab) { oldValue, newValue in
             print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)")            

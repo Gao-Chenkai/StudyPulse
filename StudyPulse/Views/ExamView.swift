@@ -65,7 +65,7 @@ struct ExamView: View {
                         systemImage: "calendar.badge.exclamationmark",
                         description: Text("Tap '+' to add a new exam.")
                     )
-                    .background(Color(.systemBackground))
+                    .background(Color(.systemGroupedBackground))
                 } else {
                     List {
                         ForEach(groupedExams, id: \.0) { sectionTitle, exams in

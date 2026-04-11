@@ -71,12 +71,14 @@ struct HomeView: View {
                                 .font(.caption)
                                 .foregroundColor(Color(.secondaryLabel))
                         }
+                        
                         Spacer()
                     }
                     .padding()
                     .background(Color(.systemBackground))
                     .cornerRadius(12)
                     .padding(.horizontal)
+                    
                     
                     // 每日励志语录卡片
                     DailyQuoteCard(quote: dailyQuote)
@@ -116,7 +118,7 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemBlue))
+                        .background(Color(.cyan))
                         .cornerRadius(10)
                     }
                     .padding(.horizontal)
@@ -258,7 +260,7 @@ struct DailyQuoteCard: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "quote.bubble.fill")
                     .font(.title2)
-                    .foregroundColor(Color(.systemOrange))
+                    .foregroundColor(Color(.cyan))
                     .scaleEffect(isAnimating ? 1.1 : 1.0)
                 
                 VStack(alignment: .leading, spacing: 8) {
@@ -298,7 +300,7 @@ struct DailyQuoteCard: View {
         .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(.systemOrange).opacity(0.3), lineWidth: 1)
+                .stroke(Color(.cyan).opacity(0.3), lineWidth: 1)
         )
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
@@ -326,8 +328,12 @@ struct StatCardView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
-        .cornerRadius(10)
+        .cornerRadius(11)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .overlay(
+            RoundedRectangle(cornerRadius: 11)
+                .stroke(Color(.cyan).opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -512,6 +518,7 @@ struct UpcomingExamCard: View {
 #Preview {
     HomeView()
         .environmentObject(DataManager())
+        .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
