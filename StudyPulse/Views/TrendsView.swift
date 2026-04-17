@@ -98,7 +98,7 @@ struct SubjectDetailView: View {
         ScrollView {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(subject).font(.title).fontWeight(.bold)
+                    Text(subject.localized()).font(.title).fontWeight(.bold)
                         .foregroundColor(Color(.label))
                     
                     HStack {

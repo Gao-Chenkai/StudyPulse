@@ -29,12 +29,12 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            MistakeView()
-                .tabItem {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                    Text("Mistakes")
-                }
-                .tag(2)
+//            MistakeView()
+//                .tabItem {
+//                    Image(systemName: "exclamationmark.triangle.fill")
+//                    Text("Mistakes")
+//                }
+//                .tag(2)
             
             ExamView()
                 .tabItem {

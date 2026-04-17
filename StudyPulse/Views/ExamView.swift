@@ -268,11 +268,11 @@ struct ComprehensiveExamRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(exam.name)
+                Text(exam.name.localized())
                     .font(.headline)
                     .foregroundColor(Color(.label))
                 Spacer()
-                Text(subjectText)
+                Text(subjectText.localized())
                     .font(.caption)
                     .padding(4)
                     .background(Color(.systemPurple).opacity(0.15))
@@ -356,6 +356,7 @@ struct ComprehensiveExamRowView: View {
 #Preview {
     ExamView()
         .environmentObject(DataManager())
+        .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
