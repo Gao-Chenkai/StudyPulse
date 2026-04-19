@@ -9,28 +9,43 @@ import SwiftUI
 import Charts
 import UIKit
 
+// ========== GLOBE VARS & LETS ==========
+let dailyQuotes = [
+    "学习不是一场比赛，而是一场马拉松，坚持到最后的人才是赢家。",
+    "每一次的努力，都是未来的你在向现在的你招手。",
+    "知识就像海洋，越深入越发现自己的渺小，但也越接近真理。",
+    "今天的汗水，是明天的收获；今天的坚持，是未来的成功。",
+    "学习就像爬山，虽然过程艰辛，但登顶后的风景值得一切努力。",
+    "不要因为一次失败就放弃，每一次挫折都是成长的机会。",
+    "知识是最好的投资，时间是最宝贵的资源。",
+    "学习的路上没有捷径，只有一步一个脚印的坚持。",
+    "你的潜力超乎你的想象，只要不放弃，一切皆有可能。",
+    "成功不是终点，而是不断学习和成长的过程。",
+    "每天进步一点点，一年后你会感谢今天的自己。",
+    "学习是照亮未来的灯塔，坚持是到达彼岸的船桨。",
+    "因为歧路上有迷人的风景，看着、看着，就忍不住走进去了，走着、走着，就再也走不出来了。",
+    "要成功，先发疯，下定决心往前冲!",
+]
+
+// 每日变化的励志语录（基于日期）
+var dailyQuote: String {
+    let calendar = Calendar.current
+    let dayOfYear = calendar.ordinality(of: .day, in: .year, for: Date()) ?? 0
+    let index = dayOfYear % dailyQuotes.count
+    return dailyQuotes[index]
+}
+// ========== GLOBE VARS & LETS ==========
+
+
+
+
+
+// ========== MAIN VIEW ==========
 struct HomeView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingAddGradeSheet = false
     @State private var currentQuoteIndex = 0
     
-    // 每日励志语录
-    private let dailyQuotes = [
-        "学习不是一场比赛，而是一场马拉松，坚持到最后的人才是赢家。",
-        "每一次的努力，都是未来的你在向现在的你招手。",
-        "知识就像海洋，越深入越发现自己的渺小，但也越接近真理。",
-        "今天的汗水，是明天的收获；今天的坚持，是未来的成功。",
-        "学习就像爬山，虽然过程艰辛，但登顶后的风景值得一切努力。",
-        "不要因为一次失败就放弃，每一次挫折都是成长的机会。",
-        "知识是最好的投资，时间是最宝贵的资源。",
-        "学习的路上没有捷径，只有一步一个脚印的坚持。",
-        "你的潜力超乎你的想象，只要不放弃，一切皆有可能。",
-        "成功不是终点，而是不断学习和成长的过程。",
-        "每天进步一点点，一年后你会感谢今天的自己。",
-        "学习是照亮未来的灯塔，坚持是到达彼岸的船桨。",
-        "因为歧路上有迷人的风景，看着、看着，就忍不住走进去了，走着、走着，就再也走不出来了。",
-        "要成功，先发疯，下定决心往前冲!",
-    ]
     
     var recentGrades: [Grade] {
         return Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(5))
@@ -47,181 +62,11 @@ struct HomeView: View {
             .sorted { $0.examDate < $1.examDate }
     }
     
-    // 每日变化的励志语录（基于日期）
-    private var dailyQuote: String {
-        let calendar = Calendar.current
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: Date()) ?? 0
-        let index = dayOfYear % dailyQuotes.count
-        return dailyQuotes[index]
-    }
-
+    // ========== BODY ==========
     var body: some View {
-        let haptic = UIImpactFeedbackGenerator(style: .rigid)
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    // 欢迎横幅
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Welcome back!")
-                                .font(.title)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color(.label))
-                            Text("Here's your academic progress")
-                                .font(.caption)
-                                .foregroundColor(Color(.secondaryLabel))
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    
-                    
-                    // 每日励志语录卡片
-                    DailyQuoteCard(quote: dailyQuote)
-                        .padding(.horizontal)
-                    
-                    // 快速统计卡片
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 15), count: 2), spacing: 15) {
-                        StatCardView(title: "Total Exams", value: "\(dataManager.grades.count)")
-                        StatCardView(title: "Upcoming Exams", value: "\(upcomingExams.count)")
-                        if let overallAvg = calculateOverallAverage() {
-                            StatCardView(title: "Overall Average", value: String(format: "%.1f", overallAvg))
-                        } else {
-                            StatCardView(title: "Overall Average", value: "N/A")
-                        }
-                        
-                        if let latestGrade = dataManager.grades.max(by: { $0.date < $1.date }) {
-                            StatCardView(title: "Latest Grade", value: String(format: "%.1f", latestGrade.score))
-                        } else {
-                            StatCardView(title: "Latest Grade", value: "N/A")
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // 登记成绩按钮
-                    Button(action: {
-                        showingAddGradeSheet = true
-                        haptic.prepare()
-                        haptic.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                            Text("Add New Grade")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.cyan))
-                        .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    
-                    // 即将到来的考试 (未来两周)
-                    if !upcomingExams.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Upcoming Exams (2 Weeks)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color(.label))
-                                Spacer()
-                                Text("\(upcomingExams.count)")
-                                    .font(.caption)
-                                    .foregroundColor(Color(.secondaryLabel))
-                                    .padding(4)
-                                    .background(Color(.systemGray5))
-                                    .cornerRadius(4)
-                            }
-                            
-                            ForEach(upcomingExams) { exam in
-                                UpcomingExamCard(exam: exam)
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                    }
-                    
-                    // 成绩趋势图表
-                    if !recentGrades.isEmpty {
-                        VStack(alignment: .leading) {
-                            Text("Recent Grades Trend")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color(.label))
-                            Chart(recentGrades.reversed()) { grade in
-                                LineMark(
-                                    x: .value("Date", grade.date),
-                                    y: .value("Score", grade.score)
-                                )
-                                .foregroundStyle(Color(.systemBlue))
-                                PointMark(
-                                    x: .value("Date", grade.date),
-                                    y: .value("Score", grade.score)
-                                )
-                                .foregroundStyle(Color(.systemBlue))
-                            }
-                            .frame(height: 200)
-                        }
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                    } else {
-                        VStack {
-                            Text("No recent grades to display")
-                                .foregroundColor(Color(.secondaryLabel))
-                                .frame(maxWidth: .infinity, maxHeight: 200)
-                                .background(Color(.systemBackground))
-                                .cornerRadius(10)
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // 最近成绩列表
-                    if !recentGrades.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Recent Grades")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color(.label))
-                            ForEach(recentGrades) { grade in
-                                NavigationLink(destination: GradeDetailView(grade: grade)) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(grade.examName.isEmpty ? "Exam" : grade.examName)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(Color(.label))
-                                            Text(grade.subject)
-                                                .font(.caption)
-                                                .foregroundColor(Color(.secondaryLabel))
-                                        }
-                                        Spacer()
-                                        Text(String(format: "%.1f", grade.score))
-                                            .fontWeight(.bold)
-                                            .foregroundColor(scoreColor(grade.score))
-                                    }
-                                    .padding()
-                                    .background(Color(.secondarySystemGroupedBackground))
-                                    .cornerRadius(10)
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                    }
-                }
-                .padding(.vertical)
+                WelcomeCardView()
             }
             .background(Color(.systemGray6)) // 修改为与SettingsView一致的灰白色背景
             .navigationTitle("Dashboard")
@@ -232,25 +77,17 @@ struct HomeView: View {
             }
         }
     }
-    
-    private func calculateOverallAverage() -> Double? {
-        guard !dataManager.grades.isEmpty else { return nil }
-        let total = dataManager.grades.reduce(0) { $0 + $1.score }
-        return total / Double(dataManager.grades.count)
-    }
-    
-    private func scoreColor(_ score: Double) -> Color {
-        if score >= 90 {
-            return Color(.systemGreen)
-        } else if score >= 60 {
-            return Color(.systemOrange)
-        } else {
-            return Color(.systemRed)
-        }
-    }
+    // ========== ENDD ==========
 }
+// ========== MAIN VIEW ==========
 
-// 每日励志语录卡片
+
+
+
+
+// ========== DAILY QUOTE CARD ==========
+// 鸡汤组件
+// 被调用：WelcomeCardView -> HomeView
 struct DailyQuoteCard: View {
     let quote: String
     @State private var isAnimating = false
@@ -309,7 +146,15 @@ struct DailyQuoteCard: View {
         }
     }
 }
+// ========== DAILY QUOTE CARD ==========
 
+
+
+
+
+// ========== STAT CARD VIEW ==========
+// 快速统计卡片
+// 被调用: WelcomeCardView -> HomeView
 struct StatCardView: View {
     let title: String
     let value: String
@@ -336,7 +181,15 @@ struct StatCardView: View {
         )
     }
 }
+// ========== STAT CARD VIEW ==========
 
+
+
+
+
+// ========== GRADE DETAIL VIEW ==========
+// 最近成绩列表
+// 被调用: WelcomeCardView -> HomeView
 struct GradeDetailView: View {
     let grade: Grade
     
@@ -412,8 +265,15 @@ struct GradeDetailView: View {
         }
     }
 }
+// ========== GRADE DETAIL VIEW ==========
 
-// 即将到来的考试卡片组件
+
+
+
+
+// ========== UPCOMING EXAM CARD ==========
+// 即将到来的考试
+// 被调用: WelcomeCardView -> HomeView
 struct UpcomingExamCard: View {
     let exam: Exam
     @State private var daysRemaining: Int = 0
@@ -514,6 +374,221 @@ struct UpcomingExamCard: View {
         }
     }
 }
+// ========== UPCOMING EXAM CARD ==========
+
+
+
+
+
+// ========== WELCOME CARD VIEW ==========
+// 主要视图，从HomeView剥离
+// 被调用: HomeView
+struct WelcomeCardView: View {
+    @EnvironmentObject var dataManager: DataManager
+    @State private var showingAddGradeSheet = false
+    @State private var currentQuoteIndex = 0
+    
+    
+    var recentGrades: [Grade] {
+        return Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(5))
+    }
+    
+    // 过滤未来 14 天内的考试
+    var upcomingExams: [Exam] {
+        let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
+        
+        return dataManager.examSets
+            .filter { exam in
+                return exam.examDate > Date() && exam.examDate <= twoWeeksFromNow
+            }
+            .sorted { $0.examDate < $1.examDate }
+    }
+    
+    var body: some View {
+        let haptic = UIImpactFeedbackGenerator(style: .rigid)
+        VStack(spacing: 20) {
+            // 欢迎横幅
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Welcome back!")
+                        .font(.title)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(.label))
+                    Text("Here's your academic progress")
+                        .font(.caption)
+                        .foregroundColor(Color(.secondaryLabel))
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .padding(.horizontal)
+            
+            
+            // 每日励志语录卡片
+            DailyQuoteCard(quote: dailyQuote)
+                .padding(.horizontal)
+            
+            // 快速统计卡片
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 15), count: 2), spacing: 15) {
+                StatCardView(title: "Total Exams", value: "\(dataManager.grades.count)")
+                StatCardView(title: "Upcoming Exams", value: "\(upcomingExams.count)")
+                if let overallAvg = calculateOverallAverage() {
+                    StatCardView(title: "Overall Average", value: String(format: "%.1f", overallAvg))
+                } else {
+                    StatCardView(title: "Overall Average", value: "N/A")
+                }
+                
+                if let latestGrade = dataManager.grades.max(by: { $0.date < $1.date }) {
+                    StatCardView(title: "Latest Grade", value: String(format: "%.1f", latestGrade.score))
+                } else {
+                    StatCardView(title: "Latest Grade", value: "N/A")
+                }
+            }
+            .padding(.horizontal)
+            
+            // 登记成绩按钮
+            Button(action: {
+                showingAddGradeSheet = true
+                haptic.prepare()
+                haptic.impactOccurred()
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                    Text("Add New Grade")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.cyan))
+                .cornerRadius(10)
+            }
+            .padding(.horizontal)
+            
+            // 即将到来的考试 (未来两周)
+            if !upcomingExams.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Upcoming Exams (2 Weeks)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color(.label))
+                        Spacer()
+                        Text("\(upcomingExams.count)")
+                            .font(.caption)
+                            .foregroundColor(Color(.secondaryLabel))
+                            .padding(4)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(4)
+                    }
+                    
+                    ForEach(upcomingExams) { exam in
+                        UpcomingExamCard(exam: exam)
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal)
+            }
+            
+            // 成绩趋势图表
+            if !recentGrades.isEmpty {
+                VStack(alignment: .leading) {
+                    Text("Recent Grades Trend")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(.label))
+                    Chart(recentGrades.reversed()) { grade in
+                        LineMark(
+                            x: .value("Date", grade.date),
+                            y: .value("Score", grade.score)
+                        )
+                        .foregroundStyle(Color(.systemBlue))
+                        PointMark(
+                            x: .value("Date", grade.date),
+                            y: .value("Score", grade.score)
+                        )
+                        .foregroundStyle(Color(.systemBlue))
+                    }
+                    .frame(height: 200)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal)
+            } else {
+                VStack {
+                    Text("No recent grades to display")
+                        .foregroundColor(Color(.secondaryLabel))
+                        .frame(maxWidth: .infinity, maxHeight: 200)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal)
+            }
+            
+            // 最近成绩列表
+            if !recentGrades.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Recent Grades")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(.label))
+                    ForEach(recentGrades) { grade in
+                        NavigationLink(destination: GradeDetailView(grade: grade)) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(grade.examName.isEmpty ? "Exam" : grade.examName)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color(.label))
+                                    Text(grade.subject)
+                                        .font(.caption)
+                                        .foregroundColor(Color(.secondaryLabel))
+                                }
+                                Spacer()
+                                Text(String(format: "%.1f", grade.score))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(scoreColor(grade.score))
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(10)
+                        }
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal)
+            }
+        }
+    }
+    
+    
+    private func calculateOverallAverage() -> Double? {
+        guard !dataManager.grades.isEmpty else { return nil }
+        let total = dataManager.grades.reduce(0) { $0 + $1.score }
+        return total / Double(dataManager.grades.count)
+    }
+    
+    private func scoreColor(_ score: Double) -> Color {
+        if score >= 90 {
+            return Color(.systemGreen)
+        } else if score >= 60 {
+            return Color(.systemOrange)
+        } else {
+            return Color(.systemRed)
+        }
+    }
+    
+}
+// ========== WELCOME CARD VIEW ==========
 
 #Preview {
     HomeView()

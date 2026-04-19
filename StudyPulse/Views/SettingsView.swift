@@ -101,7 +101,7 @@ struct SettingsView: View {
                             .frame(width: 30)
                         Button("About StudyPulse") {
                             showingAbout = true
-                        }.foregroundColor(.black)
+                        } 
                     }
                     
 //                    Button("Copyright") {
@@ -114,7 +114,7 @@ struct SettingsView: View {
                             .frame(width: 30)
                         Button("Copyright") {
                             showingCopyright = true
-                        }.foregroundColor(.black)
+                        }
                     }
                     
 //                    Button("Send Test Notification in 5 Seconds") {
@@ -129,7 +129,7 @@ struct SettingsView: View {
                         Button("Send Test Notification in 5 Seconds") {
                             sendTestNotification()
                             showingTestAlert = true
-                        }.foregroundColor(.black)
+                        }
                     }
 
                 }
