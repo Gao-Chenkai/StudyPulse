@@ -43,7 +43,6 @@ var dailyQuote: String {
 // ========== MAIN VIEW ==========
 struct HomeView: View {
     @EnvironmentObject var dataManager: DataManager
-    @State private var showingAddGradeSheet = false
     @State private var currentQuoteIndex = 0
     
     
@@ -71,10 +70,7 @@ struct HomeView: View {
             .background(Color(.systemGray6)) // 修改为与SettingsView一致的灰白色背景
             .navigationTitle("Dashboard")
             .navigationBarHidden(true)
-            .sheet(isPresented: $showingAddGradeSheet) {
-                AddGradeView()
-                    .environmentObject(dataManager)
-            }
+
         }
     }
     // ========== ENDD ==========
@@ -406,23 +402,27 @@ struct WelcomeCardView: View {
     
     var body: some View {
         let haptic = UIImpactFeedbackGenerator(style: .rigid)
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
+            
+            Spacer(minLength: 20)
+            
             // 欢迎横幅
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Welcome back!")
-                        .font(.title)
+                        .font(.largeTitle)
+                        .bold()
                         .fontWeight(.semibold)
                         .foregroundColor(Color(.label))
                     Text("Here's your academic progress")
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundColor(Color(.secondaryLabel))
                 }
                 
                 Spacer()
             }
             .padding()
-            .background(Color(.systemBackground))
+//            .background(Color(.systemBackground))
             .cornerRadius(12)
             .padding(.horizontal)
             
@@ -567,6 +567,10 @@ struct WelcomeCardView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
             }
+        }
+        .sheet(isPresented: $showingAddGradeSheet) {
+            AddGradeView()
+                .environmentObject(dataManager)
         }
     }
     

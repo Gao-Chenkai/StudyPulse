@@ -7,6 +7,14 @@
 
 import Foundation
 
+// MARK: - 图表数据点 (补全了原代码缺失的部分)
+struct ChartDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let score: Double
+    let scoreRate: Double // 得分率 (0.0 - 1.0)
+}
+
 struct Subject: Identifiable, Codable {
     var id = UUID()
     var name: String
@@ -28,6 +36,13 @@ struct Grade: Identifiable, Codable {
     var image: Data? // 卷面图片
     var date: Date
     var examName: String
+    
+    var scoreRate: Double {
+            // 这里简单假设满分是150，你可以根据 subject 动态判断
+            let fullScore: Double = 150.0
+            return score / fullScore
+    }
+    
     
     init(subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
          importance: Int = 3, image: Data? = nil, date: Date = Date(), examName: String = "") {

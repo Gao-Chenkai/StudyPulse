@@ -11,6 +11,7 @@ import Combine
 
 struct TrendsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @State private var showingAddGrade = false
     
     var activeSubjects: [String] {
         dataManager.subjects
@@ -25,9 +26,11 @@ struct TrendsView: View {
                 LazyVStack(spacing: 20) {
                     ForEach(activeSubjects, id: \.self) { subjectName in
                         NavigationLink(value: subjectName) {
-                            SubjectCardView(
+                            // 👉 这里已经完美接入新的 SubjectScoreCard
+                            SubjectScoreCard(
                                 subject: subjectName,
-                                latestGrade: getLatestGrade(for: subjectName)
+                                latestGrade: getLatestGrade(for: subjectName),
+                                history: getGradeHistory(for: subjectName)
                             )
                         }
                         .buttonStyle(.plain)
@@ -41,18 +44,37 @@ struct TrendsView: View {
                 SubjectDetailView(subject: subjectName)
                     .environmentObject(dataManager)
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddGrade = true }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAddGrade) {
+                AddGradeView()
+            }
         }
     }
     
+    // 判断是否有成绩
     private func hasGrades(for subject: String) -> Bool {
         dataManager.grades.contains { $0.subject == subject }
     }
     
+    // 获取最新成绩
     private func getLatestGrade(for subject: String) -> Grade? {
         dataManager.grades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
             .last
+    }
+    
+    // 👉 新增：获取该科目所有历史成绩（给迷你图表用）
+    private func getGradeHistory(for subject: String) -> [Grade] {
+        dataManager.grades
+            .filter { $0.subject == subject }
+            .sorted { $0.date < $1.date }
     }
 }
 
@@ -61,7 +83,9 @@ struct SubjectDetailView: View {
     let subject: String
     @EnvironmentObject var dataManager: DataManager
     
+    
     @State private var selectedRange: TimeRange = .all
+    @State private var showingAddGrade = false
     enum TimeRange: String, CaseIterable {
         case all = "All"
         case last3Months = "3 Months"
@@ -138,7 +162,6 @@ struct SubjectDetailView: View {
                     Chart(filteredGrades) { grade in
                         LineMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
                             .foregroundStyle(Color(.systemBlue))
-                            .interpolationMethod(.catmullRom)
                         PointMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
                             .foregroundStyle(Color(.systemBlue)).symbolSize(60)
                     }
@@ -192,6 +215,16 @@ struct SubjectDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingAddGrade = true }) {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddGrade) {
+            AddGradeView()
+        }
     }
     
     // 删除核心：手动触发发布者刷新UI
@@ -208,49 +241,49 @@ struct SubjectDetailView: View {
     }
 }
 
-struct SubjectCardView: View {
-    let subject: String
-    let latestGrade: Grade?
-    
-    var body: some View {
-        VStack(alignment:.leading, spacing:10) {
-            HStack {
-                Text(subject).font(.headline).bold()
-                    .foregroundColor(Color(.label))
-                Spacer()
-                if let g = latestGrade {
-                    Text(String(format:"%.1f",g.score))
-                        .font(.title3).bold().foregroundColor(scoreColor(g.score))
-                } else {
-                    Text("--").foregroundColor(Color(.secondaryLabel))
-                }
-            }
-            Divider()
-            if let g = latestGrade {
-                HStack {
-                    HStack(spacing:2) {
-                        ForEach(0..<min(g.importance,5), id:\.self) { _ in
-                            Image(systemName:"star.fill").foregroundColor(.yellow)
-                        }
-                    }
-                    Spacer()
-                    Text(g.date.formatted(date:.abbreviated, time:.omitted))
-                        .font(.caption).foregroundColor(Color(.secondaryLabel))
-                }
-            } else {
-                Text("No data available").font(.caption).foregroundColor(Color(.secondaryLabel))
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color:Color.black.opacity(0.05), radius:8)
-    }
-    
-    private func scoreColor(_ score:Double) -> Color {
-        score>=120 ? Color(.systemBlue) : score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
-    }
-}
+// 旧卡片已废弃，直接删除即可（保留也不影响）
+//struct SubjectCardView: View {
+//    let subject: String
+//    let latestGrade: Grade?
+//
+//    var body: some View {
+//        VStack(alignment:.leading, spacing:10) {
+//            HStack {
+//                Text(subject).font(.headline).bold()
+//                    .foregroundColor(Color(.label))
+//                Spacer()
+//                if let g = latestGrade {
+//                    Text(String(format:"%.1f",g.score))
+//                        .font(.title3).bold().foregroundColor(scoreColor(g.score))
+//                } else {
+//                    Text("--").foregroundColor(Color(.secondaryLabel))
+//                }
+//            }
+//            Divider()
+//            if let g = latestGrade {
+//                HStack(spacing:2) {
+//                    ForEach(0..<min(g.importance,5), id:\.self) { _ in
+//                        Image(systemName:"star.fill").foregroundColor(.yellow)
+//                    }
+//                    Spacer()
+//                    Text(g.date.formatted(date:.abbreviated, time:.omitted))
+//                        .font(.caption).foregroundColor(Color(.secondaryLabel))
+//                }
+//            } else {
+//                Text("No data available").font(.caption).foregroundColor(Color(.secondaryLabel))
+//            }
+//        }
+//        .padding()
+//        .background(Color(.systemBackground))
+//        .cornerRadius(12)
+//        .shadow(color:Color.black.opacity(0.05), radius:8)
+//    }
+//
+//    private func scoreColor(_ score:Double) -> Color {
+//        score>=120 ? Color(.systemBlue) : score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
+//    }
+//}
+
 
 #Preview {
     TrendsView().environmentObject(DataManager())
