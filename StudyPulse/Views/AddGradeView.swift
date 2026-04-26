@@ -27,7 +27,7 @@ struct AddGradeView: View {
         let subject: String
         var score: Double = 85.0
         var useRawScore: Bool = false
-        var rawScore: Double?
+        var rawScore: Double = 85.0
         var ranking: Int?
     }
     @State private var subjectScores: [SubjectScore] = []
@@ -65,7 +65,7 @@ struct AddGradeView: View {
                 Section(header: Text("Exam Details")) {
                     HStack {
                         Text("Exam Name")
-                        TextField("Exam Name", text: $examName)
+                        TextField("Name", text: $examName)
                             .multilineTextAlignment(.trailing)
                     }
                     
@@ -137,34 +137,152 @@ struct AddGradeView: View {
                             )
                             
                             VStack {
-                                Text("Score: \(String(format: "%.1f", subjectScore.score)) / \(maxScore)")
+                                // 👇 就在这里加标题！
+                                Text("Score")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack {
+                                    Button {
+                                        withAnimation {
+                                            if subjectScore.score <= 0 {
+                                                print("Cannot be minus")
+                                            } else {
+                                                if subjectScore.score == 0.5 {
+                                                    subjectScore.score -= 0.5
+                                                } else {
+                                                    subjectScore.score -= 1.0
+                                                }
+                                            }
+                                        }
+                                    } label: {
+                                        if subjectScore.score <= 0 {
+                                            Image(systemName: "minus.circle")
+                                                .font(.system(size: 20, weight: .semibold))
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            Image(systemName: "minus.circle")
+                                                .font(.system(size: 20, weight: .semibold))
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .contentShape(Rectangle())
+                                    
+                                    Text(String(format: "%.1f", subjectScore.score))
+                                        .contentTransition(.numericText(value: subjectScore.score))
+                                        .font(.system(size: 40, weight: .bold, design: .monospaced))
+                                        .foregroundColor(scoreColor(subjectScore.score))
+                                    
+                                    Button {
+                                        withAnimation {
+                                            if subjectScore.score >= maxScore {
+                                                print("Max now!")
+                                            } else {
+                                                if subjectScore.score == maxScore - 0.5 {
+                                                    subjectScore.score += 0.5
+                                                } else {
+                                                    subjectScore.score += 1.0
+                                                }
+                                            }
+                                        }
+                                    } label: {
+                                        if subjectScore.score >= maxScore {
+                                            Image(systemName: "plus.circle")
+                                                .font(.system(size: 20, weight: .semibold))
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            Image(systemName: "plus.circle")
+                                                .font(.system(size: 20, weight: .semibold))
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .contentShape(Rectangle())
+                                }
+                                
                                 Slider(value: $subjectScore.score, in: 0...Double(maxScore), step: 0.5)
+                                    .tint(scoreColor(subjectScore.score))
                             }
                             
-                            // ✅ 修复：直接绑定 $subjectScore.useRawScore，不再用手动 Binding
                             Toggle("Use Raw Score", isOn: $subjectScore.useRawScore)
                             
                             if subjectScore.useRawScore {
                                 VStack {
-                                    Text("Raw Score: \(String(format: "%.1f", subjectScore.rawScore ?? 85.0))")
-                                    Slider(
-                                        value: Binding(
-                                            get: { subjectScore.rawScore ?? 85.0 },
-                                            set: { subjectScore.rawScore = $0 }
-                                        ),
-                                        in: 0...Double(maxScore),
-                                        step: 0.5
-                                    )
+                                    // 👇 Raw Score 上方也加标题！
+                                    Text("Raw Score")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                    
+                                    HStack {
+                                        Button {
+                                            withAnimation {
+                                                if subjectScore.rawScore <= 0 {
+                                                    print("Cannot be minus")
+                                                } else {
+                                                    if subjectScore.rawScore == 0.5 {
+                                                        subjectScore.rawScore -= 0.5
+                                                    } else {
+                                                        subjectScore.rawScore -= 1.0
+                                                    }
+                                                }
+                                            }
+                                        } label: {
+                                            if subjectScore.rawScore <= 0 {
+                                                Image(systemName: "minus.circle")
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(.gray)
+                                            } else {
+                                                Image(systemName: "minus.circle")
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        .contentShape(Rectangle())
+                                        
+                                        Text(String(format: "%.1f", subjectScore.rawScore))
+                                            .contentTransition(.numericText(value: subjectScore.rawScore))
+                                            .font(.system(size: 40, weight: .bold, design: .monospaced))
+                                            .foregroundColor(scoreColor(subjectScore.rawScore))
+                                        
+                                        Button {
+                                            withAnimation {
+                                                if subjectScore.rawScore >= maxScore {
+                                                    print("Max now!")
+                                                } else {
+                                                    if subjectScore.rawScore == maxScore - 0.5 {
+                                                        subjectScore.rawScore += 0.5
+                                                    } else {
+                                                        subjectScore.rawScore += 1.0
+                                                    }
+                                                }
+
+                                            }
+                                        } label: {
+                                            if subjectScore.rawScore >= maxScore {
+                                                Image(systemName: "plus.circle")
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(.gray)
+                                            } else {
+                                                Image(systemName: "plus.circle")
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        .contentShape(Rectangle())
+                                    }
+                                    
+                                    Slider(value: $subjectScore.rawScore, in: 0...Double(maxScore), step: 0.5)
+                                        .tint(scoreColor(subjectScore.rawScore))
                                 }
                             }
                             
                             HStack {
                                 Text("Ranking")
                                 Spacer()
-                                TextField("Enter ranking", value: Binding(
-                                    get: { subjectScore.ranking ?? 0 },
-                                    set: { subjectScore.ranking = $0 == 0 ? nil : $0 }
-                                ), formatter: NumberFormatter())
+                                TextField("Enter ranking", value: $subjectScore.ranking, format: .number)
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                             }

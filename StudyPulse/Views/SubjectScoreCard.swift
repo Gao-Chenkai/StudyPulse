@@ -71,10 +71,10 @@ struct SubjectScoreCard: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8)
     }
     
-    private func scoreColor(_ score: Double) -> Color {
-        // 假设满分150，如果满分不同可自行调整阈值
-        score >= 120 ? Color(.systemBlue) : score >= 90 ? Color(.systemGreen) : score >= 60 ? Color(.systemOrange) : Color(.systemRed)
-    }
+//    private func scoreColor(_ score: Double) -> Color {
+//        // 假设满分150，如果满分不同可自行调整阈值
+//        score >= 120 ? Color(.systemBlue) : score >= 90 ? Color(.systemGreen) : score >= 60 ? Color(.systemOrange) : Color(.systemRed)
+//    }
     
     private func subjectIcon(_ subject: String) -> String {
         switch subject {

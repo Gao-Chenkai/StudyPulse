@@ -505,11 +505,11 @@ struct WelcomeCardView: View {
                         .fontWeight(.bold)
                         .foregroundColor(Color(.label))
                     Chart(recentGrades.reversed()) { grade in
-                        LineMark(
-                            x: .value("Date", grade.date),
-                            y: .value("Score", grade.score)
-                        )
-                        .foregroundStyle(Color(.systemBlue))
+//                        LineMark(
+//                            x: .value("Date", grade.date),
+//                            y: .value("Score", grade.score)
+//                        )
+//                        .foregroundStyle(Color(.systemBlue))
                         PointMark(
                             x: .value("Date", grade.date),
                             y: .value("Score", grade.score)
@@ -526,9 +526,9 @@ struct WelcomeCardView: View {
                 VStack {
                     Text("No recent grades to display")
                         .foregroundColor(Color(.secondaryLabel))
-                        .frame(maxWidth: .infinity, maxHeight: 200)
+                        .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40)
                         .background(Color(.systemBackground))
-                        .cornerRadius(10)
+                        .cornerRadius(12)
                 }
                 .padding(.horizontal)
             }
