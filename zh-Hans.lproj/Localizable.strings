@@ -18,7 +18,8 @@
 "Select Multiple Subjects" = "多选科目";
 "Score" = "分数";
 "Socre:" = "分数：";
-"Use Raw Score" = "启用原始分";
+"Use Raw Score" = "启用原始分（卷面得分）";
+"Use Ranking" = "启用排名";
 "Raw Score:" = "原始分：";
 "Ranking" = "排名";
 "Enter ranking" = "输入排名";
@@ -68,8 +69,9 @@
 "Region" = "国家与地区";
 "Edit Profile" = "编辑档案";
 "Edit Subjects" = "编辑科目";
-"About" = "关于应用";
+"About StudyPulse" = "关于 StudyPulse";
 "Copyright" = "版权信息";
+"Send Test Notification in 5 Seconds" = "在 5 秒后进行本地通知接收测试";
 "Personal Info" = "个人信息";
 "Copyright & License" = "版权与许可";
 
