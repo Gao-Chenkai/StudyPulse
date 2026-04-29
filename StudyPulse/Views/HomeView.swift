@@ -42,6 +42,7 @@ var dailyQuote: String {
 
 // ========== MAIN VIEW ==========
 struct HomeView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var dataManager: DataManager
     @State private var currentQuoteIndex = 0
     
@@ -67,7 +68,7 @@ struct HomeView: View {
             ScrollView {
                 WelcomeCardView()
             }
-            .background(Color(.systemGray6)) // 修改为与SettingsView一致的灰白色背景
+            .background(getBackgroundColor(colorScheme)) // 修改为与SettingsView一致的灰白色背景
             .navigationTitle("Dashboard")
             .navigationBarHidden(true)
 
@@ -122,8 +123,8 @@ struct DailyQuoteCard: View {
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(.systemBackground),
-                    Color(.systemBackground).opacity(0.95)
+                    Color(.secondarySystemGroupedBackground),
+                    Color(.secondarySystemGroupedBackground).opacity(0.95)
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -168,7 +169,7 @@ struct StatCardView: View {
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(11)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
         .overlay(
@@ -246,7 +247,7 @@ struct GradeDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGray6)) // 修改为与SettingsView一致的灰白色背景
+        .background(Color(.systemBackground)) // 修改为与SettingsView一致的灰白色背景
         .navigationTitle("Grade Detail")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -492,7 +493,7 @@ struct WelcomeCardView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(12)
                 .padding(.horizontal)
             }
@@ -505,21 +506,30 @@ struct WelcomeCardView: View {
                         .fontWeight(.bold)
                         .foregroundColor(Color(.label))
                     Chart(recentGrades.reversed()) { grade in
-//                        LineMark(
-//                            x: .value("Date", grade.date),
-//                            y: .value("Score", grade.score)
-//                        )
-//                        .foregroundStyle(Color(.systemBlue))
+                    //    LineMark(
+                    //        x: .value("Date", grade.date),
+                    //        y: .value("Score", grade.score)
+                    //    )
+                    //    .foregroundStyle(Color(.systemBlue))
                         PointMark(
                             x: .value("Date", grade.date),
                             y: .value("Score", grade.score)
                         )
-                        .foregroundStyle(Color(.systemBlue))
+                        .symbol {
+                            Circle()
+                                .fill(Color(.secondarySystemGroupedBackground)) // 填充白色，制造空心效果
+                                .frame(width: 8, height: 8) // 控制空心点的大小
+                                .overlay {
+                                    Circle()
+                                        .stroke(scoreColor(grade.score), lineWidth: 2) // 描边使用原本的动态颜色
+                                }
+                        }
+                        // .foregroundStyle(scoreColor(grade.score)) // 颜色已经放在描边里了，这行可以去掉
                     }
                     .frame(height: 200)
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(12)
                 .padding(.horizontal)
             } else {
@@ -527,7 +537,7 @@ struct WelcomeCardView: View {
                     Text("No recent grades to display")
                         .foregroundColor(Color(.secondaryLabel))
                         .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40)
-                        .background(Color(.systemBackground))
+                        .background(Color(.secondarySystemGroupedBackground))
                         .cornerRadius(12)
                 }
                 .padding(.horizontal)
@@ -563,7 +573,7 @@ struct WelcomeCardView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemBackground))
+                .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(12)
                 .padding(.horizontal)
             }

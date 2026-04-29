@@ -162,8 +162,18 @@ struct SubjectDetailView: View {
                     Chart(filteredGrades) { grade in
                         LineMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
                             .foregroundStyle(Color(.systemBlue))
+                        
                         PointMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
-                            .foregroundStyle(Color(.systemBlue)).symbolSize(60)
+                            .symbol {
+                                Circle()
+                                    .fill(Color.systemBackground) // 填充白色，制造空心效果
+                                    .frame(width: 10, height: 10) // 控制空心点的大小（替代原本的 symbolSize(60)）
+                                    .overlay {
+                                        Circle()
+                                            .stroke(scoreColor(grade.score), lineWidth: 2) // 描边使用原本的动态颜色
+                                    }
+                            }
+                            // .foregroundStyle(scoreColor(grade.score)) // 颜色已移至描边，这行可以去掉
                     }
                     .frame(height:300)
                 } else {

@@ -66,7 +66,7 @@ struct SubjectScoreCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(18)
         .shadow(color: Color.black.opacity(0.05), radius: 8)
     }
@@ -136,12 +136,20 @@ struct miniChartView: View {
 
                     
                     // 绘制数据点（折线统计图标配）
+                    // 绘制空心数据点
                     PointMark(
                         x: .value("时间", p.date),
                         y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score)
                     )
-                    .foregroundStyle(s.color)
-                    .symbolSize(20) // 数据点的大小
+                    .symbol {
+                        Circle()
+                            .fill(Color(.secondarySystemGroupedBackground)) // 1. 填充白色（制造“空心”的视觉效果）
+                            .frame(width: 8, height: 8) // 2. 控制空心点的大小（替代原本的 symbolSize）
+                            .overlay {
+                                Circle()
+                                    .stroke(scoreColor(p.score), lineWidth: 2) // 3. 叠加描边，边框使用原本的数据系列颜色
+                            }
+                    }
                 }
             }
         }

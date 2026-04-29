@@ -214,7 +214,7 @@ struct ExamRowView: View {
         .padding(.horizontal, 4)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
-        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
+//        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
         .onAppear {
             calculateDays()
         }
@@ -314,7 +314,7 @@ struct ComprehensiveExamRowView: View {
         .padding(.horizontal, 4)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
-        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
+//        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
         .onAppear {
             calculateDays()
         }
