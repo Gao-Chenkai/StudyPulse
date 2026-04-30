@@ -8,9 +8,16 @@
 import SwiftUI
 import Charts
 
+ //假设你已有 ChartDataPoint 定义，若没有请取消注释下面这段
+ struct ChartDataPoint: Identifiable {
+     let id = UUID()
+     let date: Date
+     let score: Double
+     let scoreRate: Double
+     let ranking: Int?
+ }
+
 struct SubjectScoreCard: View {
-    
-    // 补全了 Series 结构体，去掉了不存在的 type，增加了 color 以便区分系列
     struct Series: Identifiable {
         let id = UUID()
         let name: String
@@ -20,14 +27,16 @@ struct SubjectScoreCard: View {
     
     let subject: String
     let latestGrade: Grade?
-    let history: [Grade] // 新增：传入历史成绩用于绘制图表
+    let history: [Grade]
+    let displayMode: String // 新增：接收显示模式
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: subjectIcon(subject))
                     .foregroundColor(.blue)
-                Text(subject).font(.headline).bold()
+                Text(subject.localized()) // 本地化科目名
+                    .font(.headline).bold()
                     .foregroundColor(Color(.label))
                 Spacer()
                 if let g = latestGrade {
@@ -39,7 +48,7 @@ struct SubjectScoreCard: View {
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                     }
-                                    } else {
+                } else {
                     Text("--").foregroundColor(Color(.secondaryLabel))
                 }
             }
@@ -47,22 +56,59 @@ struct SubjectScoreCard: View {
             if let g = latestGrade {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text(String(format: "%.1f", g.score))
-                            .font(.title).bold().foregroundColor(scoreColor(g.score))
-                        if let rank = g.ranking {
-                            Text("Rank: \(rank) =ChartDemo=v0425=").font(.caption).foregroundColor(.secondary)
-                            
+                        // 根据模式切换显示内容
+                        if displayMode == "score" {
+                            Text(String(format: "%.1f", g.score))
+                                .font(.title).bold()
+                                .foregroundColor(scoreColor(g.score))
+                            if let rank = g.ranking {
+                                Text("Rank: \(rank)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            if let rank = g.ranking, rank > 0 {
+                                Text("\(rank)")
+                                    .font(.title).bold()
+                                    .foregroundColor(scoreColor(g.score))
+                                Text(String(format: "%.1f", g.score))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("N/A")
+                                    .font(.title).bold()
+                                    .foregroundColor(.indigo)
+                                Text(String(format: "%.1f", g.score))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     Spacer()
-                    // 传递参数给 miniChartView
-                    miniChartView(series: [
-                        Series(name: subject, dataPoints: history.map { ChartDataPoint(date: $0.date, score: $0.score, scoreRate: $0.scoreRate) }, color: .blue)
-                    ])
-                    .frame(width: 80, height: 50) // 限制迷你图表大小
+                    // 传递模式给迷你图表
+                    miniChartView(
+                        series: [
+                            Series(
+                                name: subject,
+                                dataPoints: history.map {
+                                    ChartDataPoint(
+                                        date: $0.date,
+                                        score: $0.score,
+                                        scoreRate: $0.scoreRate,
+                                        ranking: $0.ranking
+                                    )
+                                },
+                                color: displayMode == "score" ? .blue : .indigo
+                            )
+                        ],
+                        displayMode: displayMode
+                    )
+                    .frame(width: 80, height: 50)
                 }
             } else {
-                Text("No data available").font(.caption).foregroundColor(Color(.secondaryLabel))
+                Text("No data available")
+                    .font(.caption)
+                    .foregroundColor(Color(.secondaryLabel))
             }
         }
         .padding()
@@ -71,94 +117,95 @@ struct SubjectScoreCard: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8)
     }
     
-//    private func scoreColor(_ score: Double) -> Color {
-//        // 假设满分150，如果满分不同可自行调整阈值
-//        score >= 120 ? Color(.systemBlue) : score >= 90 ? Color(.systemGreen) : score >= 60 ? Color(.systemOrange) : Color(.systemRed)
-//    }
-    
     private func subjectIcon(_ subject: String) -> String {
         switch subject {
-        case "Chinese":
-            return "character.textbox" // 或者用 "pencil.and.ruler.fill"
-        case "Mathematics":
-            return "function"
-        case "English":
-            return "textformat.abc"
-        case "Science":
-            return "atom"
-        case "Physics":
-            return "magnet"
-        case "Chemistry":
-            return "flask.fill"
-        case "Biology":
-            return "leaf.fill"
-        case "History":
-            return "hourglass"
-        case "Geography":
-            return "globe.europe.africa.fill"
-        case "Politics":
-            return "building.columns.fill"
-        case "History & Society":
-            return "book.and.wrench" // 综合学科用组合图标
-        case "Information Technology":
-            return "laptopcomputer"
-        case "General Technology":
-            return "hammer.fill"
-        case "Art":
-            return "paintpalette.fill"
-        case "Music":
-            return "music.note.list"
-        case "PE & Health":
-            return "figure.run" // 或者用 "heart.fill" 代表健康
-        default:
-            return "book.fill"
+        case "Chinese": return "character.textbox"
+        case "Mathematics": return "function"
+        case "English": return "textformat.abc"
+        case "Science": return "atom"
+        case "Physics": return "magnet"
+        case "Chemistry": return "flask.fill"
+        case "Biology": return "leaf.fill"
+        case "History": return "hourglass"
+        case "Geography": return "globe.europe.africa.fill"
+        case "Politics": return "building.columns.fill"
+        case "History & Society": return "book.and.wrench"
+        case "Information Technology": return "laptopcomputer"
+        case "General Technology": return "hammer.fill"
+        case "Art": return "paintpalette.fill"
+        case "Music": return "music.note.list"
+        case "PE & Health": return "figure.run"
+        default: return "book.fill"
         }
     }
 }
 
-// MARK: - 迷你折线统计图视图
+// MARK: - 迷你折线图（支持分数/排名切换）
 struct miniChartView: View {
     var series: [SubjectScoreCard.Series]
     var showYAxisAsPercentage: Bool = false
-
+    var displayMode: String // 新增：接收显示模式
+    
     var body: some View {
         Chart {
             ForEach(series) { s in
                 ForEach(s.dataPoints) { p in
-                    // 绘制折线
-                    LineMark(
-                        x: .value("时间", p.date),
-                        y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score),
-                        series: .value("科目", s.name) // 加上系列区分，方便多科目对比
-                    )
-                    .foregroundStyle(s.color)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-
-                    
-                    // 绘制数据点（折线统计图标配）
-                    // 绘制空心数据点
-                    PointMark(
-                        x: .value("时间", p.date),
-                        y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score)
-                    )
-                    .symbol {
-                        Circle()
-                            .fill(Color(.secondarySystemGroupedBackground)) // 1. 填充白色（制造“空心”的视觉效果）
-                            .frame(width: 8, height: 8) // 2. 控制空心点的大小（替代原本的 symbolSize）
-                            .overlay {
+                    if displayMode == "score" {
+                        // 分数图表
+                        LineMark(
+                            x: .value("时间", p.date),
+                            y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score),
+                            series: .value("科目", s.name)
+                        )
+                        .foregroundStyle(s.color)
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        
+                        PointMark(
+                            x: .value("时间", p.date),
+                            y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score)
+                        )
+                        .symbol {
+                            Circle()
+                                .fill(Color(.secondarySystemGroupedBackground))
+                                .frame(width: 8, height: 8)
+                                .overlay {
+                                    Circle().stroke(scoreColor(p.score), lineWidth: 2)
+                                }
+                        }
+                    } else {
+                        // 排名图表（只画有效排名）
+                        if let rank = p.ranking, rank > 0 {
+                            LineMark(
+                                x: .value("时间", p.date),
+                                y: .value("排名", rank),
+                                series: .value("科目", s.name)
+                            )
+                            .foregroundStyle(s.color)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            
+                            PointMark(
+                                x: .value("时间", p.date),
+                                y: .value("排名", rank)
+                            )
+                            .symbol {
                                 Circle()
-                                    .stroke(scoreColor(p.score), lineWidth: 2) // 3. 叠加描边，边框使用原本的数据系列颜色
+                                    .fill(Color(.secondarySystemGroupedBackground))
+                                    .frame(width: 8, height: 8)
+                                    .overlay {
+                                        Circle().stroke(scoreColor(p.score), lineWidth: 2)
+                                    }
                             }
+                        }
                     }
                 }
             }
         }
-        .chartXAxis(.hidden) // 迷你图隐藏X轴，保持界面简洁
-        .chartYAxis(.hidden) // 迷你图隐藏Y轴
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
     }
 }
 
-// MARK: - 预览数据
+// MARK: - 预览
 #Preview {
     VStack {
         SubjectScoreCard(
@@ -168,7 +215,8 @@ struct miniChartView: View {
                 Grade(subject: "Chinese", score: 98.0, date: Date().addingTimeInterval(-86400 * 10)),
                 Grade(subject: "Chinese", score: 105.0, date: Date().addingTimeInterval(-86400 * 5)),
                 Grade(subject: "Chinese", score: 112.0, date: Date())
-            ]
+            ],
+            displayMode: "score"
         )
         
         SubjectScoreCard(
@@ -178,7 +226,8 @@ struct miniChartView: View {
                 Grade(subject: "Mathematics", score: 120.0, date: Date().addingTimeInterval(-86400 * 10)),
                 Grade(subject: "Mathematics", score: 100.0, date: Date().addingTimeInterval(-86400 * 5)),
                 Grade(subject: "Mathematics", score: 89.0, date: Date())
-            ]
+            ],
+            displayMode: "ranking"
         )
     }
     .padding()

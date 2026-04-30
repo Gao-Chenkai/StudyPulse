@@ -13,6 +13,10 @@ struct TrendsView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingAddGrade = false
     
+    // 显示模式：score = 分数模式，ranking = 排名模式
+    @State var trendsShowingMode = "score"
+    
+    // 获取已启用且有成绩的科目
     var activeSubjects: [String] {
         dataManager.subjects
             .filter { $0.enabled }
@@ -26,11 +30,12 @@ struct TrendsView: View {
                 LazyVStack(spacing: 20) {
                     ForEach(activeSubjects, id: \.self) { subjectName in
                         NavigationLink(value: subjectName) {
-                            // 👉 这里已经完美接入新的 SubjectScoreCard
+                            // 修复1：传入 displayMode 给外部 SubjectScoreCard
                             SubjectScoreCard(
                                 subject: subjectName,
                                 latestGrade: getLatestGrade(for: subjectName),
-                                history: getGradeHistory(for: subjectName)
+                                history: getGradeHistory(for: subjectName),
+                                displayMode: trendsShowingMode
                             )
                         }
                         .buttonStyle(.plain)
@@ -40,11 +45,42 @@ struct TrendsView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Trends")
+            
+            // 跳转到科目详情页
             .navigationDestination(for: String.self) { subjectName in
-                SubjectDetailView(subject: subjectName)
-                    .environmentObject(dataManager)
+                SubjectDetailView(
+                    subject: subjectName,
+                    displayMode: $trendsShowingMode
+                )
+                .environmentObject(dataManager)
             }
             .toolbar {
+                // 分数 / 排名 切换菜单
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button {
+                            trendsShowingMode = "score"
+                        } label: {
+                            Label("分数", systemImage: "chart.bar.fill")
+                        }
+                        
+                        Button {
+                            trendsShowingMode = "ranking"
+                        } label: {
+                            Label("排名", systemImage: "trophy.fill")
+                        }
+                    } label: {
+                        if trendsShowingMode == "score" {
+                            Image(systemName: "chart.bar.fill")
+                                .symbolVariant(.circle.fill)
+                        } else {
+                            Image(systemName: "trophy.fill")
+                                .symbolVariant(.circle.fill)
+                        }
+                    }
+                }
+                
+                // 添加成绩按钮
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddGrade = true }) {
                         Image(systemName: "plus")
@@ -57,12 +93,12 @@ struct TrendsView: View {
         }
     }
     
-    // 判断是否有成绩
+    // 判断指定科目是否存在成绩
     private func hasGrades(for subject: String) -> Bool {
         dataManager.grades.contains { $0.subject == subject }
     }
     
-    // 获取最新成绩
+    // 获取指定科目的最新一次成绩
     private func getLatestGrade(for subject: String) -> Grade? {
         dataManager.grades
             .filter { $0.subject == subject }
@@ -70,7 +106,7 @@ struct TrendsView: View {
             .last
     }
     
-    // 👉 新增：获取该科目所有历史成绩（给迷你图表用）
+    // 获取指定科目的全部历史成绩（按时间排序）
     private func getGradeHistory(for subject: String) -> [Grade] {
         dataManager.grades
             .filter { $0.subject == subject }
@@ -78,14 +114,15 @@ struct TrendsView: View {
     }
 }
 
-// MARK: - 详情页（修复刷新+删除）
+// MARK: - 科目详情页
 struct SubjectDetailView: View {
     let subject: String
     @EnvironmentObject var dataManager: DataManager
-    
+    @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明
     
     @State private var selectedRange: TimeRange = .all
     @State private var showingAddGrade = false
+
     enum TimeRange: String, CaseIterable {
         case all = "All"
         case last3Months = "3 Months"
@@ -93,6 +130,7 @@ struct SubjectDetailView: View {
         case lastYear = "1 Year"
     }
     
+    // 根据时间范围筛选成绩
     var filteredGrades: [Grade] {
         let base = dataManager.grades
             .filter { $0.subject == subject }
@@ -113,34 +151,76 @@ struct SubjectDetailView: View {
         }
     }
     
+    // 平均分计算
     var averageScore: Double {
         guard !filteredGrades.isEmpty else { return 0 }
         return filteredGrades.map{$0.score}.reduce(0,+)/Double(filteredGrades.count)
+    }
+    
+    // 平均排名计算（修复3：安全处理可选值）
+    var averageRank: Int {
+        let validGrades = filteredGrades.filter { ($0.ranking ?? 0) > 0 }
+        guard !validGrades.isEmpty else { return 0 }
+        let totalRank = validGrades.compactMap { $0.ranking }.reduce(0, +)
+        return totalRank / validGrades.count
     }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(subject.localized()).font(.title).fontWeight(.bold)
+                    // 科目名称（本地化显示）
+                    Text(subject.localized())
+                        .font(.title)
+                        .fontWeight(.bold)
                         .foregroundColor(Color(.label))
                     
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Average Score").font(.subheadline).foregroundColor(Color(.secondaryLabel))
-                            Text(String(format: "%.1f", averageScore))
-                                .font(.title2).bold()
-                                .foregroundColor(scoreColor(averageScore))
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Latest").font(.subheadline).foregroundColor(Color(.secondaryLabel))
-                            if let latest = filteredGrades.last {
-                                Text(String(format: "%.1f", latest.score))
-                                    .font(.title2).bold()
-                                    .foregroundColor(scoreColor(latest.score))
+                            // 根据显示模式切换标题
+                            if displayMode == "score" {
+                                Text("Average Score")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(.secondaryLabel))
+                                Text(String(format: "%.1f", averageScore))
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(scoreColor(averageScore))
                             } else {
-                                Text("N/A").foregroundColor(Color(.secondaryLabel))
+                                Text("Average Rank")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(.secondaryLabel))
+                                Text(averageRank == 0 ? "N/A" : "\(averageRank)")
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(.indigo)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing) {
+                            Text("Latest")
+                                .font(.subheadline)
+                                .foregroundColor(Color(.secondaryLabel))
+                            
+                            if let latest = filteredGrades.last {
+                                // 根据模式显示最新分数或排名（修复4：安全解包）
+                                if displayMode == "score" {
+                                    Text(String(format: "%.1f", latest.score))
+                                        .font(.title2)
+                                        .bold()
+                                        .foregroundColor(scoreColor(latest.score))
+                                } else {
+                                    let rank = latest.ranking ?? 0
+                                    Text(rank == 0 ? "N/A" : "\(rank)")
+                                        .font(.title2)
+                                        .bold()
+                                        .foregroundColor(.indigo)
+                                }
+                            } else {
+                                Text("N/A")
+                                    .foregroundColor(Color(.secondaryLabel))
                             }
                         }
                     }
@@ -150,40 +230,74 @@ struct SubjectDetailView: View {
                 .cornerRadius(12)
                 .shadow(color: Color.black.opacity(0.05), radius: 5)
                 
-                // 时间分段选择器
+                // 时间范围选择器
                 Picker("Time Range", selection: $selectedRange) {
-                    ForEach(TimeRange.allCases, id:\.self) { Text($0.rawValue) }
+                    ForEach(TimeRange.allCases, id:\.self) {
+                        Text($0.rawValue)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
                 
-                // 固定高度图表
+                // 核心图表：根据 displayMode 切换分数/排名
                 if !filteredGrades.isEmpty {
                     Chart(filteredGrades) { grade in
-                        LineMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
+                        // 分数图表
+                        if displayMode == "score" {
+                            LineMark(
+                                x: .value("Date", grade.date),
+                                y: .value("Score", grade.score)
+                            )
                             .foregroundStyle(Color(.systemBlue))
-                        
-                        PointMark(x: .value("Date", grade.date), y: .value("Score", grade.score))
+                            
+                            PointMark(
+                                x: .value("Date", grade.date),
+                                y: .value("Score", grade.score)
+                            )
                             .symbol {
                                 Circle()
-                                    .fill(Color.systemBackground) // 填充白色，制造空心效果
-                                    .frame(width: 10, height: 10) // 控制空心点的大小（替代原本的 symbolSize(60)）
+                                    .fill(Color.systemBackground)
+                                    .frame(width: 10, height: 10)
                                     .overlay {
-                                        Circle()
-                                            .stroke(scoreColor(grade.score), lineWidth: 2) // 描边使用原本的动态颜色
+                                        Circle().stroke(scoreColor(grade.score), lineWidth: 2)
                                     }
                             }
-                            // .foregroundStyle(scoreColor(grade.score)) // 颜色已移至描边，这行可以去掉
+                        }
+                        // 排名图表（只绘制有效排名，修复5：安全解包）
+                        else {
+                            if let rank = grade.ranking, rank > 0 {
+                                LineMark(
+                                    x: .value("Date", grade.date),
+                                    y: .value("Rank", rank)
+                                )
+                                .foregroundStyle(Color(.indigo))
+                                
+                                PointMark(
+                                    x: .value("Date", grade.date),
+                                    y: .value("Rank", rank)
+                                )
+                                .symbol {
+                                    Circle()
+                                        .fill(Color.systemBackground)
+                                        .frame(width: 10, height: 10)
+                                        .overlay {
+                                            Circle().stroke(scoreColor(grade.score), lineWidth: 2)
+                                        }
+                                }
+                            }
+                        }
                     }
-                    .frame(height:300)
+                    .frame(height: 300)
                 } else {
                     ContentUnavailableView("No Data", systemImage: "chart.line.xaxis.dashed")
-                        .frame(height:300)
+                        .frame(height: 300)
                 }
                 
-                // 历史+侧滑删除
+                // 历史记录列表
                 VStack(alignment:.leading, spacing:12) {
-                    Text("History").font(.title2).bold()
+                    Text("History")
+                        .font(.title2)
+                        .bold()
                         .foregroundColor(Color(.label))
                     
                     if filteredGrades.isEmpty {
@@ -200,11 +314,23 @@ struct SubjectDetailView: View {
                                     Text(grade.examName.isEmpty ? "Unnamed Exam" : grade.examName)
                                         .foregroundColor(Color(.label))
                                     Text(grade.date.formatted(date:.abbreviated, time:.omitted))
-                                        .font(.caption).foregroundColor(Color(.secondaryLabel))
+                                        .font(.caption)
+                                        .foregroundColor(Color(.secondaryLabel))
                                 }
+                                
                                 Spacer()
-                                Text(String(format:"%.1f",grade.score))
-                                    .bold().foregroundColor(scoreColor(grade.score))
+                                
+                                // 根据显示模式展示分数或排名（修复6：安全解包）
+                                if displayMode == "score" {
+                                    Text(String(format: "%.1f", grade.score))
+                                        .bold()
+                                        .foregroundColor(scoreColor(grade.score))
+                                } else {
+                                    let rank = grade.ranking ?? 0
+                                    Text(rank == 0 ? "N/A" : "\(rank)")
+                                        .bold()
+                                        .foregroundColor(.indigo)
+                                }
                             }
                             .padding()
                             .background(Color(.secondarySystemGroupedBackground))
@@ -237,63 +363,15 @@ struct SubjectDetailView: View {
         }
     }
     
-    // 删除核心：手动触发发布者刷新UI
-    private func deleteGrade(_ grade:Grade) {
-        if let idx = dataManager.grades.firstIndex(where:{$0.id == grade.id}) {
-            dataManager.grades.remove(at: idx)
+    // 删除成绩并保存
+    private func deleteGrade(_ grade: Grade) {
+        if let index = dataManager.grades.firstIndex(where: { $0.id == grade.id }) {
+            dataManager.grades.remove(at: index)
             dataManager.saveGrades()
             dataManager.objectWillChange.send()
         }
     }
-    
-    private func scoreColor(_ score:Double) -> Color {
-        score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
-    }
 }
-
-// 旧卡片已废弃，直接删除即可（保留也不影响）
-//struct SubjectCardView: View {
-//    let subject: String
-//    let latestGrade: Grade?
-//
-//    var body: some View {
-//        VStack(alignment:.leading, spacing:10) {
-//            HStack {
-//                Text(subject).font(.headline).bold()
-//                    .foregroundColor(Color(.label))
-//                Spacer()
-//                if let g = latestGrade {
-//                    Text(String(format:"%.1f",g.score))
-//                        .font(.title3).bold().foregroundColor(scoreColor(g.score))
-//                } else {
-//                    Text("--").foregroundColor(Color(.secondaryLabel))
-//                }
-//            }
-//            Divider()
-//            if let g = latestGrade {
-//                HStack(spacing:2) {
-//                    ForEach(0..<min(g.importance,5), id:\.self) { _ in
-//                        Image(systemName:"star.fill").foregroundColor(.yellow)
-//                    }
-//                    Spacer()
-//                    Text(g.date.formatted(date:.abbreviated, time:.omitted))
-//                        .font(.caption).foregroundColor(Color(.secondaryLabel))
-//                }
-//            } else {
-//                Text("No data available").font(.caption).foregroundColor(Color(.secondaryLabel))
-//            }
-//        }
-//        .padding()
-//        .background(Color(.systemBackground))
-//        .cornerRadius(12)
-//        .shadow(color:Color.black.opacity(0.05), radius:8)
-//    }
-//
-//    private func scoreColor(_ score:Double) -> Color {
-//        score>=120 ? Color(.systemBlue) : score>=90 ? Color(.systemGreen) : score>=60 ? Color(.systemOrange) : Color(.systemRed)
-//    }
-//}
-
 
 #Preview {
     TrendsView().environmentObject(DataManager())

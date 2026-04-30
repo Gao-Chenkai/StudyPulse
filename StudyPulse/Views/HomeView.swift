@@ -591,16 +591,6 @@ struct WelcomeCardView: View {
         return total / Double(dataManager.grades.count)
     }
     
-    private func scoreColor(_ score: Double) -> Color {
-        if score >= 90 {
-            return Color(.systemGreen)
-        } else if score >= 60 {
-            return Color(.systemOrange)
-        } else {
-            return Color(.systemRed)
-        }
-    }
-    
 }
 // ========== WELCOME CARD VIEW ==========
 

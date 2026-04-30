@@ -8,12 +8,12 @@
 import Foundation
 
 // MARK: - 图表数据点 (补全了原代码缺失的部分)
-struct ChartDataPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let score: Double
-    let scoreRate: Double // 得分率 (0.0 - 1.0)
-}
+//struct ChartDataPoint: Identifiable {
+//    let id = UUID()
+//    let date: Date
+//    let score: Double
+//    let scoreRate: Double // 得分率 (0.0 - 1.0)
+//}
 
 struct Subject: Identifiable, Codable {
     var id = UUID()
