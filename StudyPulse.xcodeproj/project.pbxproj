@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		275736DC2F78F7F8007FDCCB /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 275736DB2F78F7F8007FDCCB /* WSOnBoarding */; };
+		278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 278969412FD313BE00BEC710 /* WSOnBoarding */; };
+		278969452FD318B800BEC710 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 278969442FD318B800BEC710 /* MarkdownUI */; };
 		27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
@@ -30,7 +31,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				275736DC2F78F7F8007FDCCB /* WSOnBoarding in Frameworks */,
+				278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */,
+				278969452FD318B800BEC710 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,7 +76,8 @@
 			);
 			name = StudyPulse;
 			packageProductDependencies = (
-				275736DB2F78F7F8007FDCCB /* WSOnBoarding */,
+				278969412FD313BE00BEC710 /* WSOnBoarding */,
+				278969442FD318B800BEC710 /* MarkdownUI */,
 			);
 			productName = StudyPulse;
 			productReference = 2743C83E2F6EAEA000CC1EED /* StudyPulse.app */;
@@ -106,7 +109,8 @@
 			mainGroup = 2743C8352F6EAEA000CC1EED;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */,
+				278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */,
+				278969432FD318B800BEC710 /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2743C83F2F6EAEA000CC1EED /* Products */;
@@ -288,6 +292,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -325,6 +332,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -374,22 +384,25 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Jewel591/WSOnBoarding";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Packages/WSOnBoarding-main";
 		};
-/* End XCRemoteSwiftPackageReference section */
+		278969432FD318B800BEC710 /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Packages/swift-markdown-ui-main";
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		275736DB2F78F7F8007FDCCB /* WSOnBoarding */ = {
+		278969412FD313BE00BEC710 /* WSOnBoarding */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 275736DA2F78F7F8007FDCCB /* XCRemoteSwiftPackageReference "WSOnBoarding" */;
 			productName = WSOnBoarding;
+		};
+		278969442FD318B800BEC710 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -23,6 +23,11 @@ struct NewExamSetView: View {
     @State private var masteryDegree = 50
     @State private var examNote = ""
     
+    // 日历
+    @State private var addToCalendarToggle = true
+    @State private var showingCalendarAlert = false
+    @State private var calendarAlertMessage = ""
+    
     // 单科选择（String）
     @State private var selectedSingleSubject: String = ""
     // 多科目选择（[String]，用来存多选结果）
@@ -155,6 +160,11 @@ struct NewExamSetView: View {
                 Section(header: Text("Notes"), footer: Text("Optional details.")) {
                     TextField("Specific Exam Title or Notes", text: $examNote)
                 }
+                
+                // 添加到日历选项
+                Section(header: Text("Calendar"), footer: Text("Add this exam to your system calendar with a 1-day advance reminder.")) {
+                    Toggle("Add to Calendar", isOn: $addToCalendarToggle)
+                }
             }
             .navigationTitle("New Exam")
             .navigationBarTitleDisplayMode(.inline)
@@ -167,13 +177,16 @@ struct NewExamSetView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveExam()
-                        
-                        dismiss()
                     }
                     .fontWeight(.semibold)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+        }
+        .alert("Calendar", isPresented: $showingCalendarAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text(calendarAlertMessage)
         }
     }
     
@@ -183,6 +196,14 @@ struct NewExamSetView: View {
         
         // 4.4新增：考试临近通知
         ExamPrepareNotifications.shared.scheduleNotifications(for: name, date: examDate)
+        
+        // 确定科目名称（用于日历）
+        var calendarSubject = ""
+        if isComprehensiveExam {
+            calendarSubject = selectedMultipleSubjects.joined(separator: ", ")
+        } else {
+            calendarSubject = selectedSingleSubject
+        }
         
         if isComprehensiveExam {
             // 综合考试 -> 存入综合数组并持久化
@@ -210,6 +231,31 @@ struct NewExamSetView: View {
             )
             dataManager.examSets.append(newExam)
             dataManager.saveExamSets()
+        }
+        
+        // 如果勾选了添加到日历
+        if addToCalendarToggle {
+            Task {
+                do {
+                    try await CalendarManager.shared.addExamToCalendar(
+                        examName: name,
+                        subject: calendarSubject,
+                        examDate: examDate,
+                        note: examNote.isEmpty ? nil : examNote
+                    )
+                    await MainActor.run {
+                        calendarAlertMessage = "Successfully added to calendar!"
+                        showingCalendarAlert = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        calendarAlertMessage = error.localizedDescription
+                        showingCalendarAlert = true
+                    }
+                }
+            }
+        } else {
+            dismiss()
         }
     }
 }

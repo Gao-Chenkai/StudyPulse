@@ -6,11 +6,14 @@
 //
 
 import SwiftUI
+import EventKit
 
 struct ExamDetailView: View {
     let exam: Exam
     @EnvironmentObject var dataManager: DataManager
     @State private var showingEditSheet = false
+    @State private var showingCalendarAlert = false
+    @State private var calendarAlertMessage = ""
     
     var body: some View {
         Form {
@@ -74,6 +77,23 @@ struct ExamDetailView: View {
                 }
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
+            
+            // MARK: - 添加到日历
+            Section {
+                Button(action: { addToCalendar() }) {
+                    HStack {
+                        Image(systemName: "calendar.badge.plus")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                        Text("Add to Calendar")
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            } footer: {
+                Text("Will create an all-day event with a 1-day advance reminder in your system calendar.")
+                    .foregroundColor(.secondary)
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
@@ -90,6 +110,33 @@ struct ExamDetailView: View {
         .sheet(isPresented: $showingEditSheet) {
             ExamDetailEditView(exam: exam)
                 .environmentObject(dataManager)
+        }
+        .alert("Calendar", isPresented: $showingCalendarAlert) {
+            Button("OK") { }
+        } message: {
+            Text(calendarAlertMessage)
+        }
+    }
+    
+    private func addToCalendar() {
+        Task {
+            do {
+                try await CalendarManager.shared.addExamToCalendar(
+                    examName: exam.name,
+                    subject: exam.subject,
+                    examDate: exam.examDate,
+                    note: exam.examName.isEmpty ? nil : exam.examName
+                )
+                await MainActor.run {
+                    calendarAlertMessage = "Successfully added to calendar!"
+                    showingCalendarAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    calendarAlertMessage = error.localizedDescription
+                    showingCalendarAlert = true
+                }
+            }
         }
     }
     

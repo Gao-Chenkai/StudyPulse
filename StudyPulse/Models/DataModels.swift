@@ -60,24 +60,34 @@ struct Grade: Identifiable, Codable {
 struct MistakeNote: Identifiable, Codable {
     var id = UUID()
     var title: String
+    var subject: String // 科目
     var originalQuestion: String
     var source: String
     var date: Date
     var errorReason: String
     var wrongSolution: String
     var correctSolution: String
-    var images: [Data] // 原题、错解、正解的图片
+    var questionImages: [Data]      // 题目图片
+    var reasonImages: [Data]        // 错因图片
+    var wrongSolutionImages: [Data] // 错误解法图片
+    var correctSolutionImages: [Data] // 正确解法图片
     
-    init(title: String, originalQuestion: String, source: String, date: Date = Date(),
-         errorReason: String, wrongSolution: String, correctSolution: String, images: [Data] = []) {
+    init(title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
+         errorReason: String, wrongSolution: String, correctSolution: String,
+         questionImages: [Data] = [], reasonImages: [Data] = [],
+         wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = []) {
         self.title = title
+        self.subject = subject
         self.originalQuestion = originalQuestion
         self.source = source
         self.date = date
         self.errorReason = errorReason
         self.wrongSolution = wrongSolution
         self.correctSolution = correctSolution
-        self.images = images
+        self.questionImages = questionImages
+        self.reasonImages = reasonImages
+        self.wrongSolutionImages = wrongSolutionImages
+        self.correctSolutionImages = correctSolutionImages
     }
 }
 

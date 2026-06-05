@@ -6,17 +6,16 @@
 //
 
 import SwiftUI
-import Combine
+import MarkdownUI
 
 struct MistakeDetailEditView: View {
-    // 如果父视图通过 .environmentObject 传入，这里也用 @EnvironmentObject
-    // 如果父视图是直接传参 init(dataManager: ...)，则保持 @ObservedObject 也可以
     @ObservedObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
     let mistakeSet: MistakeNote
     
     // 编辑状态变量
     @State private var editedTitle = ""
+    @State private var selectedSubject = ""
     @State private var editedOriginalQuestion = ""
     @State private var editedSource = ""
     @State private var editedErrorReason = ""
@@ -24,46 +23,24 @@ struct MistakeDetailEditView: View {
     @State private var editedCorrectSolution = ""
     @State private var editedDate = Date()
     
+    // Image states
+    @State private var questionImages: [UIImage] = []
+    @State private var reasonImages: [UIImage] = []
+    @State private var wrongSolutionImages: [UIImage] = []
+    @State private var correctSolutionImages: [UIImage] = []
+    
+    // Image picker states
+    @State private var showingImagePicker = false
+    @State private var showingPhotoCapture = false
+    
     // 控制当前显示哪个编辑区域的状态
     @State private var selectedSection: EditSection = .question
-
-    // 定义四个部分的枚举配置
-    enum EditSection: String, CaseIterable, Identifiable {
-        case question = "Question"
-        case reason = "Reason"
-        case wrong = "Wrong"
-        case correct = "Correct"
-        
-        var id: String { self.rawValue }
-        
-        var icon: String {
-            switch self {
-            case .question: return "doc.text"
-            case .reason: return "exclamationmark.triangle"
-            case .wrong: return "xmark.circle"
-            case .correct: return "checkmark.circle"
-            }
-        }
-        
-        var title: String {
-            switch self {
-            case .question: return "题目"
-            case .reason: return "错因"
-            case .wrong: return "错解"
-            case .correct: return "正解"
-            }
-        }
-        
-        var color: Color {
-            switch self {
-            case .question: return .blue
-            case .reason: return .orange
-            case .wrong: return .red
-            case .correct: return .green
-            }
-        }
-    }
-
+    
+    @State private var showMarkdownPreview = false
+    @State private var isProcessingOCR = false
+    @State private var showingOCRAlert = false
+    @State private var ocrErrorMessage = ""
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -86,52 +63,36 @@ struct MistakeDetailEditView: View {
                             let iconLabelSpacing: CGFloat = 12
                             
                             // Title
+                            buildInfoRow(icon: "rectangle.and.pencil.and.ellipsis", color: .yellow, label: "Title", text: $editedTitle, leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
+                            
+                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
+                            
+                            // Subject
                             HStack(spacing: iconLabelSpacing) {
-                                Image(systemName: "rectangle.and.pencil.and.ellipsis")
-                                    .foregroundColor(.yellow)
+                                Image(systemName: "book.fill")
+                                    .foregroundColor(.purple)
                                     .frame(width: iconWidth, alignment: .center)
-                                Text("Title")
+                                Text("Subject")
                                     .frame(width: labelWidth, alignment: .leading)
-                                TextField("Title", text: $editedTitle)
-                                    .multilineTextAlignment(.trailing)
+                                Picker("", selection: $selectedSubject) {
+                                    Text("Select").tag("")
+                                    ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
+                                        Text(subject.name.localized()).tag(subject.name)
+                                    }
+                                }
+                                .labelsHidden()
                             }
                             .padding(leftPadding)
                             
-                            Divider()
-                                .padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
+                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
                             
                             // Source
-                            HStack(spacing: iconLabelSpacing) {
-                                Image(systemName: "list.bullet.clipboard")
-                                    .foregroundColor(.green)
-                                    .frame(width: iconWidth, alignment: .center)
-                                Text("Source")
-                                    .frame(width: labelWidth, alignment: .leading)
-                                TextField("Source", text: $editedSource)
-                                    .multilineTextAlignment(.trailing)
-                            }
-                            .padding(leftPadding)
+                            buildInfoRow(icon: "list.bullet.clipboard", color: .green, label: "Source", text: $editedSource, leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
                             
-                            Divider()
-                                .padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
+                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
                             
                             // Date
-                            HStack(spacing: iconLabelSpacing) {
-                                Image(systemName: "calendar")
-                                    .foregroundColor(.pink)
-                                    .frame(width: iconWidth, alignment: .center)
-                                Text("Date")
-                                    .frame(width: labelWidth, alignment: .leading)
-                                Spacer()
-                                DatePicker(
-                                    "",
-                                    selection: $editedDate,
-                                    displayedComponents: .date
-                                )
-                                .labelsHidden()
-                                .fixedSize(horizontal: true, vertical: false)
-                            }
-                            .padding(leftPadding)
+                            buildDateRow(leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
                         }
                         .background(Color(.systemBackground))
                         .cornerRadius(10)
@@ -177,57 +138,61 @@ struct MistakeDetailEditView: View {
                     }
                     .padding(.horizontal)
 
-                    // --- 第三部分：下方输入区域 ---
+                    // --- 第三部分：下方输入区域 (Split: Input + Preview) ---
                     VStack(alignment: .leading, spacing: 12) {
-                        Group {
-                            if selectedSection == .question {
-                                TextEditor(text: $editedOriginalQuestion)
-                                    .frame(minHeight: 350)
-                                    .font(.body)
-                                    .padding(8)
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedSection == .question ? Color.blue.opacity(0.5) : Color.gray.opacity(0.2), lineWidth: selectedSection == .question ? 2 : 1)
-                                    )
-                            } else if selectedSection == .reason {
-                                TextEditor(text: $editedErrorReason)
-                                    .frame(minHeight: 350)
-                                    .font(.body)
-                                    .padding(8)
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedSection == .reason ? Color.orange.opacity(0.5) : Color.gray.opacity(0.2), lineWidth: selectedSection == .reason ? 2 : 1)
-                                    )
-                            } else if selectedSection == .wrong {
-                                TextEditor(text: $editedWrongSolution)
-                                    .frame(minHeight: 350)
-                                    .font(.body)
-                                    .padding(8)
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedSection == .wrong ? Color.red.opacity(0.5) : Color.gray.opacity(0.2), lineWidth: selectedSection == .wrong ? 2 : 1)
-                                    )
-                            } else if selectedSection == .correct {
-                                TextEditor(text: $editedCorrectSolution)
-                                    .frame(minHeight: 350)
-                                    .font(.body)
-                                    .padding(8)
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedSection == .correct ? Color.green.opacity(0.5) : Color.gray.opacity(0.2), lineWidth: selectedSection == .correct ? 2 : 1)
-                                    )
+                        // Toolbar: OCR + Preview toggle
+                        HStack {
+                            Button(action: { showMarkdownPreview.toggle() }) {
+                                Label(showMarkdownPreview ? "Hide Preview" : "Show Preview", systemImage: showMarkdownPreview ? "eye.slash" : "eye")
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(selectedSection.color)
                             }
+                            Spacer()
+                            Button(action: { triggerOCR() }) {
+                                Label("OCR", systemImage: "text.viewfinder")
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.orange)
+                            }
+                            .disabled(currentSectionImages.wrappedValue.isEmpty)
                         }
                         .padding(.horizontal)
+                        
+                        // Text Input (Top)
+                        TextEditor(text: currentBinding)
+                            .frame(minHeight: 180)
+                            .font(.body)
+                            .padding(8)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(selectedSection.color.opacity(0.5), lineWidth: 2)
+                            )
+                            .padding(.horizontal)
+                        
+                        // Live Markdown Preview (Bottom)
+                        if showMarkdownPreview {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Preview")
+                                    .font(.callout)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                
+                                MarkdownPreviewView(text: currentBinding.wrappedValue)
+                                    .frame(minHeight: 120)
+                                    .padding(8)
+                                    .background(Color(.systemGroupedBackground))
+                                    .cornerRadius(8)
+                            }
+                            .padding(.horizontal)
+                        }
+                        
+                        // Image section
+                        imageSectionForCurrentSection
                     }
+                    .padding(.horizontal)
                     
                     Spacer(minLength: 40)
                 }
@@ -237,14 +202,7 @@ struct MistakeDetailEditView: View {
             .navigationTitle("Edit Mistake")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                // 初始化数据
-                editedTitle = mistakeSet.title
-                editedOriginalQuestion = mistakeSet.originalQuestion
-                editedSource = mistakeSet.source
-                editedErrorReason = mistakeSet.errorReason
-                editedWrongSolution = mistakeSet.wrongSolution
-                editedCorrectSolution = mistakeSet.correctSolution
-                editedDate = mistakeSet.date
+                initializeData()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -255,59 +213,255 @@ struct MistakeDetailEditView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        saveChanges() // ✅ 调用保存逻辑
+                        saveChanges()
                     }
                     .fontWeight(.semibold)
+                }
+            }
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePickerWithCompletion(onDismiss: { image in
+                    if let image = image {
+                        addImageToCurrentSection(image)
+                    }
+                })
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showingPhotoCapture) {
+                PhotoCaptureWithCompletion(onDismiss: { image in
+                    if let image = image {
+                        addImageToCurrentSection(image)
+                    }
+                })
+                .ignoresSafeArea()
+            }
+            .alert("OCR Error", isPresented: $showingOCRAlert) {
+                Button("OK") { }
+            } message: {
+                Text(ocrErrorMessage)
+            }
+            .overlay {
+                if isProcessingOCR {
+                    ProgressView("Recognizing text...")
+                        .padding(20)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .shadow(radius: 10)
                 }
             }
         }
     }
     
+    // MARK: - Image Section Builder
+    @ViewBuilder
+    private var imageSectionForCurrentSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Images")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                Spacer()
+                HStack(spacing: 12) {
+                    Button(action: {
+                        showingImagePicker = true
+                    }) {
+                        Label("Library", systemImage: "photo.on.rectangle.angled")
+                            .foregroundColor(selectedSection.color)
+                    }
+                    Button(action: {
+                        showingPhotoCapture = true
+                    }) {
+                        Label("Camera", systemImage: "camera.fill")
+                            .foregroundColor(selectedSection.color)
+                    }
+                }
+            }
+            
+            // Display images for current section
+            if currentSectionImages.isEmpty {
+                Text("No images added")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .italic()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(currentSectionImages.indices, id: \.self) { index in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: currentSectionImages.wrappedValue[index])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 100, height: 100)
+                                    .clipped()
+                                    .cornerRadius(8)
+                                
+                                Button(action: {
+                                    currentSectionImages.wrappedValue.remove(at: index)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.red)
+                                        .background(Circle().fill(Color.white))
+                                }
+                                .padding(4)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+    
+    // MARK: - Image Helpers
+    private var currentSectionImages: Binding<[UIImage]> {
+        switch selectedSection {
+        case .question: return $questionImages
+        case .reason: return $reasonImages
+        case .wrong: return $wrongSolutionImages
+        case .correct: return $correctSolutionImages
+        }
+    }
+    
+    private func addImageToCurrentSection(_ image: UIImage) {
+        switch selectedSection {
+        case .question: questionImages.append(image)
+        case .reason: reasonImages.append(image)
+        case .wrong: wrongSolutionImages.append(image)
+        case .correct: correctSolutionImages.append(image)
+        }
+    }
+    
+    private func triggerOCR() {
+        guard let lastImage = currentSectionImages.wrappedValue.last else { return }
+        isProcessingOCR = true
+        
+        Task {
+            do {
+                let recognizedText = try await OCRManager.recognizeText(in: lastImage)
+                if !recognizedText.isEmpty {
+                    if !currentBinding.wrappedValue.isEmpty {
+                        currentBinding.wrappedValue += "\n\n" + recognizedText
+                    } else {
+                        currentBinding.wrappedValue = recognizedText
+                    }
+                }
+            } catch {
+                ocrErrorMessage = error.localizedDescription
+                showingOCRAlert = true
+            }
+            isProcessingOCR = false
+        }
+    }
+    
+    private func initializeData() {
+        editedTitle = mistakeSet.title
+        selectedSubject = mistakeSet.subject
+        editedOriginalQuestion = mistakeSet.originalQuestion
+        editedSource = mistakeSet.source
+        editedErrorReason = mistakeSet.errorReason
+        editedWrongSolution = mistakeSet.wrongSolution
+        editedCorrectSolution = mistakeSet.correctSolution
+        editedDate = mistakeSet.date
+        
+        // Load existing images
+        questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
+        reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
+        wrongSolutionImages = mistakeSet.wrongSolutionImages.compactMap { UIImage(data: $0) }
+        correctSolutionImages = mistakeSet.correctSolutionImages.compactMap { UIImage(data: $0) }
+    }
+    
     // 保存逻辑
     private func saveChanges() {
-        // 1. 基于原始对象创建一个新的可变副本
         var updatedMistake = mistakeSet
-        
-        // 2. 将编辑后的值赋给副本
         updatedMistake.title = editedTitle
+        updatedMistake.subject = selectedSubject
         updatedMistake.originalQuestion = editedOriginalQuestion
         updatedMistake.source = editedSource
         updatedMistake.errorReason = editedErrorReason
         updatedMistake.wrongSolution = editedWrongSolution
         updatedMistake.correctSolution = editedCorrectSolution
         updatedMistake.date = editedDate
-        // 注意：images 数组保持不变，如果需要编辑图片需额外逻辑
         
-        // 3. 调用 DataManager 的更新方法
-        // 这会自动查找数组中的旧项并替换，同时触发 @Published 刷新 UI 和保存到磁盘
+        // Save images
+        updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+        updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+        updatedMistake.wrongSolutionImages = wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+        updatedMistake.correctSolutionImages = correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+        
         dataManager.updateMistake(updatedMistake)
-        
-        // 4. 关闭弹窗
         presentationMode.wrappedValue.dismiss()
+    }
+    
+    // MARK: - Subviews
+    
+    private func buildInfoRow(icon: String, color: Color, label: String, text: Binding<String>, leftPadding: CGFloat, labelWidth: CGFloat, iconWidth: CGFloat, iconLabelSpacing: CGFloat) -> some View {
+        HStack(spacing: iconLabelSpacing) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .frame(width: iconWidth, alignment: .center)
+            
+            Text(label)
+                .frame(width: labelWidth, alignment: .leading)
+            
+            TextField(label, text: text)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(leftPadding)
+    }
+    
+    private func buildDateRow(leftPadding: CGFloat, labelWidth: CGFloat, iconWidth: CGFloat, iconLabelSpacing: CGFloat) -> some View {
+        HStack(spacing: iconLabelSpacing) {
+            Image(systemName: "calendar")
+                .foregroundColor(.pink)
+                .frame(width: iconWidth, alignment: .center)
+            
+            Text("Date")
+                .frame(width: labelWidth, alignment: .leading)
+            
+            Spacer()
+            
+            DatePicker("", selection: $editedDate, displayedComponents: .date)
+                .labelsHidden()
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(leftPadding)
+    }
+    
+    private var currentBinding: Binding<String> {
+        switch selectedSection {
+        case .question: return $editedOriginalQuestion
+        case .reason: return $editedErrorReason
+        case .wrong: return $editedWrongSolution
+        case .correct: return $editedCorrectSolution
+        }
     }
 }
 
-// MARK: - Preview
-#if DEBUG
-struct MistakeDetailEditView_Previews: PreviewProvider {
-    static var previews: some View {
-        let mockDataManager = DataManager()
-        
-        let mockMistake = MistakeNote(
-            title: "微积分错题示例",
-            originalQuestion: "求函数 f(x) = x^2 在 x=2 处的导数。",
-            source: "2023 期中考试卷",
-            date: Date(),
-            errorReason: "公式记忆混淆，把幂函数求导记错了。",
-            wrongSolution: "f'(x) = x^3 / 3",
-            correctSolution: "f'(x) = 2x, 所以 f'(2) = 4",
-            images: []
-        )
-        
-        return MistakeDetailEditView(
-            dataManager: mockDataManager,
-            mistakeSet: mockMistake
-        )
-    }
+#Preview {
+    let mockDataManager = DataManager()
+    
+    let mockMistake = MistakeNote(
+        title: "Calculus Example",
+        subject: "Mathematics",
+        originalQuestion: "Find the derivative of f(x) = x^2 at x=2.",
+        source: "2023 Midterm Exam",
+        date: Date(),
+        errorReason: "Confused the power rule formula.",
+        wrongSolution: "f'(x) = x^3 / 3",
+        correctSolution: "f'(x) = 2x, so f'(2) = 4",
+        questionImages: [],
+        reasonImages: [],
+        wrongSolutionImages: [],
+        correctSolutionImages: []
+    )
+    
+    return MistakeDetailEditView(
+        dataManager: mockDataManager,
+        mistakeSet: mockMistake
+    )
 }
-#endif

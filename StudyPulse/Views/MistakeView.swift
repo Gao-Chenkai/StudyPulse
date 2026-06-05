@@ -12,105 +12,261 @@ import UIKit
 struct MistakeView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingNewMistakeSet = false
+    @State private var searchText = ""
+    
+    var filteredMistakes: [MistakeNote] {
+        if searchText.isEmpty {
+            return dataManager.mistakeSets.sorted { $0.date > $1.date }
+        }
+        return dataManager.mistakeSets.filter {
+            $0.title.localizedCaseInsensitiveContains(searchText) ||
+            $0.originalQuestion.localizedCaseInsensitiveContains(searchText) ||
+            $0.source.localizedCaseInsensitiveContains(searchText) ||
+            $0.subject.localizedCaseInsensitiveContains(searchText)
+        }.sorted { $0.date > $1.date }
+    }
     
     var body: some View {
         NavigationView {
             Group {
-                if dataManager.mistakeSets.isEmpty {
+                if filteredMistakes.isEmpty {
                     ContentUnavailableView(
-                        "No Mistakes",
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Tap '+' to add a new mistake.")
+                        searchText.isEmpty ? "No Mistakes" : "No Results",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(searchText.isEmpty ? "Tap '+' to add a new mistake note." : "Try adjusting your search.")
                     )
                     .background(Color(.systemGroupedBackground))
                     
                 } else {
                     List {
-                        ForEach(dataManager.mistakeSets) { mistakeSet in
-                            NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistakeSet)) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(mistakeSet.title)
-                                        .font(.headline)
-                                    
-                                    Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                        ForEach(filteredMistakes) { mistake in
+                            NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
+                                MistakeCardView(mistake: mistake)
                             }
                         }
                         .onDelete(perform: deleteMistakeSets)
                     }
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Mistakes")
+            .searchable(text: $searchText, prompt: "Search mistakes...")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {showingNewMistakeSet = true}) {
+                    Button(action: { showingNewMistakeSet = true }) {
                         Image(systemName: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showingNewMistakeSet) {
                 NewMistakeSetView()
+                    .environmentObject(dataManager)
             }
             .background(Color(.systemGroupedBackground))
         }
     }
-
     
     private func deleteMistakeSets(offsets: IndexSet) {
-        dataManager.mistakeSets.remove(atOffsets: offsets)
-        dataManager.saveMistakeSets()
+        for index in offsets {
+            let mistake = filteredMistakes[index]
+            dataManager.deleteMistake(mistake)
+        }
     }
 }
 
-struct MistakeSetDetailView: View {
-    let mistakeSet: MistakeNote
-    @EnvironmentObject var dataManager: DataManager
-    @State private var showingEditSheet = false // 1.使用布尔值控制显示
+// MARK: - Mistake Card View
+struct MistakeCardView: View {
+    let mistake: MistakeNote
+    
+    var totalImageCount: Int {
+        mistake.questionImages.count + mistake.reasonImages.count +
+        mistake.wrongSolutionImages.count + mistake.correctSolutionImages.count
+    }
     
     var body: some View {
-        List {
-            Section(header: Text("Details")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(mistakeSet.originalQuestion)
-                        .font(.body)
+        VStack(alignment: .leading, spacing: 8) {
+            // Title and date row
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(mistake.title)
+                        .font(.headline)
+                        .lineLimit(1)
                     
-                    Text("Source: \(mistakeSet.source)")
+                    if !mistake.subject.isEmpty {
+                        Text(mistake.subject.localized())
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(.systemPurple).opacity(0.15))
+                            .foregroundColor(Color(.systemPurple))
+                            .cornerRadius(4)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(mistake.date.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    if totalImageCount > 0 {
+                        Label("\(totalImageCount)", systemImage: "photo")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             
-            Section(header: Text("Analysis")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("**Error Reason:**")
+            // Preview of original question
+            if !mistake.originalQuestion.isEmpty {
+                Text(mistake.originalQuestion)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            
+            // Source
+            if !mistake.source.isEmpty {
+                Text("Source: \(mistake.source)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Mistake Detail View
+struct MistakeSetDetailView: View {
+    let mistakeSet: MistakeNote
+    @EnvironmentObject var dataManager: DataManager
+    @State private var showingEditSheet = false
+    
+    var body: some View {
+        List {
+            // Basic Info Section
+            Section(header: Text("Details")) {
+                HStack {
+                    Text("Title")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(mistakeSet.title)
+                        .fontWeight(.medium)
+                }
+                
+                if !mistakeSet.subject.isEmpty {
+                    HStack {
+                        Text("Subject")
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(mistakeSet.subject.localized())
+                            .fontWeight(.medium)
+                    }
+                }
+                
+                if !mistakeSet.source.isEmpty {
+                    HStack {
+                        Text("Source")
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(mistakeSet.source)
+                    }
+                }
+                
+                HStack {
+                    Text("Date")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
+                }
+            }
+            
+            // Question Section
+            if !mistakeSet.originalQuestion.isEmpty {
+                Section(header: Text("Original Question")) {
+                    if #available(iOS 15.0, *) {
+                        Text(mistakeSet.originalQuestion)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(mistakeSet.originalQuestion)
+                    }
+                    
+                    if !mistakeSet.questionImages.isEmpty {
+                        imageScrollView(images: mistakeSet.questionImages)
+                    }
+                }
+            }
+            
+            // Error Reason Section
+            if !mistakeSet.errorReason.isEmpty {
+                Section(header: Text("Error Reason")) {
                     Text(mistakeSet.errorReason)
+                        .fixedSize(horizontal: false, vertical: true)
                     
-                    Text("**Wrong Solution:**")
+                    if !mistakeSet.reasonImages.isEmpty {
+                        imageScrollView(images: mistakeSet.reasonImages)
+                    }
+                }
+            }
+            
+            // Wrong Solution Section
+            if !mistakeSet.wrongSolution.isEmpty {
+                Section(header: Text("Wrong Solution")) {
                     Text(mistakeSet.wrongSolution)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundColor(.red)
                     
-                    Text("**Correct Solution:**")
+                    if !mistakeSet.wrongSolutionImages.isEmpty {
+                        imageScrollView(images: mistakeSet.wrongSolutionImages)
+                    }
+                }
+            }
+            
+            // Correct Solution Section
+            if !mistakeSet.correctSolution.isEmpty {
+                Section(header: Text("Correct Solution")) {
                     Text(mistakeSet.correctSolution)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundColor(.green)
+                    
+                    if !mistakeSet.correctSolutionImages.isEmpty {
+                        imageScrollView(images: mistakeSet.correctSolutionImages)
+                    }
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(mistakeSet.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Edit") {
-                    showingEditSheet = true // 2.切换布尔值触发 Sheet
+                    showingEditSheet = true
                 }
             }
         }
-        // 3.改用 isPresented 绑定布尔值，逻辑更简单可靠
         .sheet(isPresented: $showingEditSheet) {
-            // 假设你的编辑视图叫 MistakeDetailEditView
-            // 请确保这个视图已经存在，并且初始化参数正确
             MistakeDetailEditView(dataManager: dataManager, mistakeSet: mistakeSet)
         }
-    } // 4.补全了缺失的闭合大括号
+    }
+    
+    @ViewBuilder
+    private func imageScrollView(images: [Data]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(images.indices, id: \.self) { index in
+                    if let uiImage = UIImage(data: images[index]) {
+                        ZoomableImageView(image: uiImage)
+                            .frame(width: 150, height: 150)
+                            .clipped()
+                            .cornerRadius(8)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
 }
 
 #Preview {
