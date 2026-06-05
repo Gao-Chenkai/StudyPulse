@@ -7,13 +7,14 @@
 
 import SwiftUI
 
+/// 考试列表主视图
 struct ExamView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingNewExamSet = false
     @State private var selectedExamForDetail: Exam? = nil
     @State private var selectedComprehensiveExam: comprehensiveExam? = nil
 
-    // 合并两种考试，并按时间排序
+    /// 合并所有类型的考试，并按时间排序
     private var allExams: [Any] {
         var exams: [Any] = []
         exams.append(contentsOf: dataManager.examSets)
@@ -26,7 +27,7 @@ struct ExamView: View {
         }
     }
     
-    // 优化：简化分组逻辑，帮助编译器推断
+    /// 将考试按时间范围分组
     private var groupedExams: [(sectionTitle: String, exams: [Any])] {
         let now = Date()
         guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
@@ -34,7 +35,7 @@ struct ExamView: View {
             return []
         }
         
-        // 分组
+        // 分别筛选不同时间段的考试
         let week = allExams.filter { item in
             let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
             return date <= oneWeekLater
@@ -59,6 +60,7 @@ struct ExamView: View {
     var body: some View {
         NavigationView {
             Group {
+                // 当没有任何考试时显示占位视图
                 if dataManager.examSets.isEmpty && dataManager.comprehensiveExamSets.isEmpty {
                     ContentUnavailableView(
                         "No Exams",
@@ -67,6 +69,7 @@ struct ExamView: View {
                     )
                     .background(Color(.systemGroupedBackground))
                 } else {
+                    // 渲染考试列表
                     List {
                         ForEach(groupedExams, id: \.0) { sectionTitle, exams in
                             Section(header: Text(sectionTitle)
@@ -77,6 +80,7 @@ struct ExamView: View {
                                 ForEach(exams.indices, id: \.self) { index in
                                     let item = exams[index]
                                     
+                                    // 渲染普通考试行
                                     if let exam = item as? Exam {
                                         ExamRowView(exam: exam)
                                             .listRowBackground(Color(.secondarySystemGroupedBackground))
@@ -92,8 +96,9 @@ struct ExamView: View {
                                                 }
                                                 .tint(Color(.systemRed))
                                             }
-                                    } else if let comprehensive = item as? comprehensiveExam {
-                                        // 综合考试行（多科目逗号分隔）
+                                    }
+                                    // 渲染综合考试行
+                                    else if let comprehensive = item as? comprehensiveExam {
                                         ComprehensiveExamRowView(exam: comprehensive)
                                             .listRowBackground(Color(.secondarySystemGroupedBackground))
                                             .contentShape(Rectangle())
@@ -129,12 +134,12 @@ struct ExamView: View {
             .sheet(isPresented: $showingNewExamSet) {
                 NewExamSetView()
             }
-            // 普通考试详情
+            // 普通考试详情导航
             .navigationDestination(item: $selectedExamForDetail) { exam in
                 ExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
             }
-            // 综合考试详情
+            // 综合考试详情导航
             .navigationDestination(item: $selectedComprehensiveExam) { exam in
                 Text("Comprehensive Exam: \(exam.name)")
                     .background(Color(.systemBackground))
@@ -143,7 +148,7 @@ struct ExamView: View {
         .background(Color(.systemGroupedBackground))
     }
     
-    // 删除普通考试
+    /// 删除普通考试
     private func deleteExam(_ exam: Exam) {
         if let index = dataManager.examSets.firstIndex(where: { $0.id == exam.id }) {
             dataManager.examSets.remove(at: index)
@@ -151,7 +156,7 @@ struct ExamView: View {
         }
     }
     
-    // 删除综合考试
+    /// 删除综合考试
     private func deleteComprehensiveExam(_ exam: comprehensiveExam) {
         if let index = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
             dataManager.comprehensiveExamSets.remove(at: index)
@@ -160,7 +165,9 @@ struct ExamView: View {
     }
 }
 
-// --- 子视图：普通考试行 ---
+// MARK: - 子视图：普通考试行
+
+/// 普通考试列表项视图
 struct ExamRowView: View {
     let exam: Exam
     @State private var daysRemaining: Int = 0
@@ -220,19 +227,19 @@ struct ExamRowView: View {
         }
     }
     
-    // 计算剩余天数
+    /// 计算距离考试日期的剩余天数
     private func calculateDays() {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         daysRemaining = max(0, components.day ?? 0)
     }
     
-    // 计算时间进度
+    /// 计算时间进度比例
     private func calculateTimeProgress() -> Double {
         let maxDays = 30.0
         return min(Double(daysRemaining) / maxDays, 1.0)
     }
     
-    // 根据剩余天数确定颜色
+    /// 根据剩余天数确定进度条颜色
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)
@@ -243,7 +250,7 @@ struct ExamRowView: View {
         }
     }
     
-    // 根据掌握程度确定颜色
+    /// 根据掌握程度确定进度条颜色
     private var masteryColor: Color {
         if exam.masteryDegree <= 20 {
             return Color(.systemRed)
@@ -255,12 +262,14 @@ struct ExamRowView: View {
     }
 }
 
-// --- 子视图：综合考试行（多科目逗号分隔）---
+// MARK: - 子视图：综合考试行
+
+/// 综合考试列表项视图
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
     @State private var daysRemaining: Int = 0
     
-    // 多科目拼接成逗号分隔
+    /// 将多个考试科目拼接成逗号分隔的字符串
     private var subjectText: String {
         exam.subject.joined(separator: ", ")
     }
@@ -320,17 +329,19 @@ struct ComprehensiveExamRowView: View {
         }
     }
     
+    /// 计算距离考试日期的剩余天数
     private func calculateDays() {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         daysRemaining = max(0, components.day ?? 0)
     }
     
+    /// 计算时间进度比例
     private func calculateTimeProgress() -> Double {
         let maxDays = 30.0
         return min(Double(daysRemaining) / maxDays, 1.0)
     }
     
-    // 根据剩余天数确定颜色
+    /// 根据剩余天数确定进度条颜色
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)
@@ -341,7 +352,7 @@ struct ComprehensiveExamRowView: View {
         }
     }
     
-    // 根据掌握程度确定颜色
+    /// 根据掌握程度确定进度条颜色
     private var masteryColor: Color {
         if exam.masteryDegree <= 20 {
             return Color(.systemRed)
