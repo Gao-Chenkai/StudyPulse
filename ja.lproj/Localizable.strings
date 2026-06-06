@@ -1,0 +1,126 @@
+//
+//  Localizable.strings
+//  StudyPulse
+//
+//  Created by Chenkai Gao on 2026/4/5.
+//
+//  Japanese
+
+// AddGradeView.swift
+"GROUP:" = "グループ：";
+"Exam Details" = "試験詳細";
+"Exam Name" = "試験名";
+"Exam Date" = "試験日";
+"Exam Type" = "試験タイプ";
+"Single Subject" = "単一科目";
+"Comprehensive Exam" = "総合試験";
+"Select Subject" = "科目を選択";
+"Select Multiple Subjects" = "複数科目を選択";
+"Score" = "点数";
+"Socre:" = "点数：";
+"Use Raw Score" = "素点（卷面得分）を使用";
+"Use Ranking" = "順位を使用";
+"Raw Score:" = "素点：";
+"Ranking" = "順位";
+"Enter ranking" = "順位を入力";
+"Importance" = "重要度";
+"Add New Grade" = "新しい成績を登録";
+"Cancel" = "キャンセル";
+"Save" = "保存";
+"Done" = "完了";
+"OK" = "OK";
+"Test Notification Sent" = "テスト通知を送信しました";
+"Check your notification center in 5 seconds!" = "通知センターを確認してください（5秒後）！";
+
+// ContentView.swift
+"Home" = "ホーム";
+"Trends" = "推移";
+"Mistakes" = "错题ノート";
+"Exams" = "試験";
+"Settings" = "設定";
+
+// ExamView.swift
+"Within 1 Week" = "1週間以内";
+"Within 1 Month" = "1ヶ月以内";
+"Later" = "あとで";
+"No Exams" = "試験なし";
+"Tap '+' to add a new exam." = "「+」をタップして試験を追加";
+"Delete" = "削除";
+"Time Left" = "残り時間";
+"Mastery" = "習熟度";
+
+// HomeView.swift
+"Welcome back!" = "おかえりなさい！";
+"Here's your academic progress" = "最近の学習状況";
+"Total Exams" = "試験総数";
+"Upcoming Exams" = "今後の試験";
+"Overall Average" = "総合平均";
+"Lastest Grade" = "最新の成績";
+"Upcoming Exams (2 Weeks)" = "向こう2週間の試験";
+"Recent Grades Trend" = "最近の成績推移";
+"Date" = "日付";
+"No recent grades to display" = "最近の成績はありません";
+"Recent Grades" = "最近の成績";
+"Dashboard" = "ダッシュボード";
+
+// SettingsView.swift
+"User Information" = "ユーザープロフィール";
+"Username" = "ユーザー名";
+"Age" = "年齢";
+"Education Level" = "教育段階";
+"Academic Info" = "学習情報";
+"Education System" = "教育制度";
+"Region" = "国と地域";
+"Edit Profile" = "プロフィールを編集";
+"Edit Subjects" = "科目を編集";
+"About StudyPulse" = "StudyPulse について";
+"Copyright" = "著作権情報";
+"Send Test Notification in 5 Seconds" = "5秒後にローカル通知の受信テストを実行";
+"Personal Info" = "個人情報";
+"Copyright & License" = "著作権とライセンス";
+"Preferences" = "アプリの設定";
+"App Preferences" = "アプリの設定";
+"Appearance" = "外観";
+"Choose your preferred color scheme." = "希望のカラースキームを選択してください";
+"Theme" = "テーマ";
+"Language" = "言語";
+"App language can be changed here independently of the system language." = "システム言語とは別に、ここでアプリの言語を変更できます";
+"Follow System" = "システムに従う";
+"Light" = "ライト";
+"Dark" = "ダーク";
+"Restart Now" = "今すぐ再起動";
+"Language changes require app restart to take full effect." = "言語の変更はアプリを再起動すると完全に反映されます";
+
+// About App Description
+"StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulseは、学生が学業の進捗を追跡し、傾向を分析し、学習教材を効果的に管理できるように設計された総合的な学習管理アプリケーションです。";
+
+// Features
+"Features" = "機能：";
+"- Track grades across multiple subjects" = "- 複数科目の成績を追跡";
+"- Visualize progress with interactive charts" = "- インタラクティブなチャートで学習进度を可視化";
+"- Manage mistake collections with detailed analysis" = "- 错题コレクションを管理し詳細に分析";
+"- Personalized learning recommendations" = "- パーソナライズされた学習レコメンデーション";
+"- Support for photo uploads for exam papers and mistakes" = "- 試験問題と错题の写真アップロードに対応";
+
+// GitHub & License
+"Click to View the Repository on Github" = "GitHub リポジトリを表示";
+"This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License." = "この作品はクリエイティブ・コモンズ 表示-非営利-継承 4.0 国際ライセンスの下に提供されています。";
+
+// Subjects
+/* 科目名 */
+"Chinese" = "中国語";
+"Mathematics" = "数学";
+"English" = "英語";
+"Science" = "理科";
+"History & Society" = "歴史と社会";
+"Physics" = "物理";
+"Chemistry" = "化学";
+"Biology" = "生物";
+"History" = "歴史";
+"Geography" = "地理";
+"Politics" = "政治";
+"Information Technology" = "情報技術";
+"General Technology" = "総合技術";
+"Art" = "美術";
+"Music" = "音楽";
+"PE & Health" = "体育と健康";

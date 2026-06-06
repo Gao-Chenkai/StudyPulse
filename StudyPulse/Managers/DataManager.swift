@@ -9,7 +9,35 @@ import Foundation
 import Combine
 import SwiftUI
 
+/// 后台线程安全的文件 I/O 工具（放在独立类型中避免 @MainActor 推断）
+nonisolated enum DataFileIO {
+    static func getDocsDir() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
+    
+    static func getImagesDir() -> URL {
+        let url = getDocsDir().appendingPathComponent("images")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        }
+        return url
+    }
+    
+    static func load<T: Codable>(url: URL, decoder: JSONDecoder = JSONDecoder()) -> T? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            let data = try Data(contentsOf: url)
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            print("Error loading \(url.lastPathComponent): \(error)")
+            return nil
+        }
+    }
+}
+
 class DataManager: ObservableObject {
+    static let shared = DataManager()
+    
     @Published var grades: [Grade] = []
     @Published var subjects: [Subject] = []
     @Published var mistakeSets: [MistakeNote] = []
@@ -25,6 +53,57 @@ class DataManager: ObservableObject {
         initializeDefaultSubjects()
         loadComprehensiveExams()
         loadSubjects()
+    }
+    
+    /// 异步初始化：在后台线程加载所有数据，避免阻塞主线程
+    func asyncInit() {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self = self else { return }
+            let docsDir = DataFileIO.getDocsDir()
+            let imagesDir = DataFileIO.getImagesDir()
+            
+            // 非主线程加载数据
+            let profile: UserProfile? = DataFileIO.load(url: docsDir.appendingPathComponent("profile.json"))
+            let grades: [Grade]? = DataFileIO.load(url: docsDir.appendingPathComponent("grades.json"))
+            let mistakes: [MistakeNote]? = DataFileIO.load(url: docsDir.appendingPathComponent("mistakes.json"))
+            let examsDecoder = JSONDecoder()
+            examsDecoder.dateDecodingStrategy = .iso8601
+            let exams: [Exam]? = DataFileIO.load(url: docsDir.appendingPathComponent("exams.json"), decoder: examsDecoder)
+            let compExams: [comprehensiveExam]? = DataFileIO.load(url: docsDir.appendingPathComponent("comprehensiveExams.json"), decoder: examsDecoder)
+            let subjects: [Subject]? = DataFileIO.load(url: docsDir.appendingPathComponent("subjects.json"))
+            
+            // 迁移内嵌图片
+            var migratedGrades = grades ?? []
+            var needsSave = false
+            for i in 0..<migratedGrades.count {
+                let grade = migratedGrades[i]
+                if let imageData = grade.image, grade.imageFileName == nil {
+                    let filename = "grade_\(grade.id.uuidString).jpg"
+                    let url = imagesDir.appendingPathComponent(filename)
+                    try? imageData.write(to: url)
+                    migratedGrades[i].imageFileName = filename
+                    migratedGrades[i].image = nil
+                    needsSave = true
+                }
+            }
+            if needsSave {
+                let encoder = JSONEncoder()
+                if let data = try? encoder.encode(migratedGrades) {
+                    try? data.write(to: docsDir.appendingPathComponent("grades.json"))
+                }
+            }
+            
+            // 回到主线程更新 @Published
+            await MainActor.run {
+                if let p = profile { self.profile = p }
+                self.grades = migratedGrades
+                if let m = mistakes { self.mistakeSets = m }
+                if let e = exams { self.examSets = e }
+                if let c = compExams { self.comprehensiveExamSets = c }
+                if let s = subjects { self.subjects = s }
+                self.initializeDefaultSubjects()
+            }
+        }
     }
     
     private func initializeDefaultSubjects() {
@@ -55,6 +134,40 @@ class DataManager: ObservableObject {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
     
+    /// 获取图片存储目录
+    private func getImagesDirectory() -> URL {
+        let url = getDocumentsDirectory().appendingPathComponent("images")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        }
+        return url
+    }
+    
+    /// 保存 Grade 图片到文件系统，返回相对路径
+    func saveGradeImage(_ data: Data, gradeId: UUID) -> String? {
+        let filename = "grade_\(gradeId.uuidString).jpg"
+        let url = getImagesDirectory().appendingPathComponent(filename)
+        do {
+            try data.write(to: url)
+            return filename
+        } catch {
+            print("Error saving grade image: \(error)")
+            return nil
+        }
+    }
+    
+    /// 从文件系统加载 Grade 图片
+    func loadGradeImage(filename: String) -> Data? {
+        let url = getImagesDirectory().appendingPathComponent(filename)
+        return try? Data(contentsOf: url)
+    }
+    
+    /// 删除 Grade 图片文件
+    func deleteGradeImage(filename: String) {
+        let url = getImagesDirectory().appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+    }
+    
     func saveProfile() {
         let encoder = JSONEncoder()
         do {
@@ -79,7 +192,31 @@ class DataManager: ObservableObject {
         }
     }
     
+    /// 异步加载 profile
+    func loadProfileAsync() async {
+        let url = getDocumentsDirectory().appendingPathComponent("profile.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
+            let loaded = try decoder.decode(UserProfile.self, from: data)
+            await MainActor.run { profile = loaded }
+        } catch {
+            print("Error loading profile: \(error)")
+        }
+    }
+    
     func saveGrades() {
+        // 迁移：将内嵌图片写入文件系统
+        for i in 0..<grades.count {
+            if let imageData = grades[i].image, grades[i].imageFileName == nil {
+                if let filename = saveGradeImage(imageData, gradeId: grades[i].id) {
+                    grades[i].imageFileName = filename
+                    grades[i].image = nil // 清除内嵌数据，减小 JSON 体积
+                }
+            }
+        }
+        
         let encoder = JSONEncoder()
         do {
             let data = try encoder.encode(grades)
@@ -97,9 +234,36 @@ class DataManager: ObservableObject {
                 let data = try Data(contentsOf: url)
                 let decoder = JSONDecoder()
                 grades = try decoder.decode([Grade].self, from: data)
+                
+                // 迁移：将旧数据的内嵌图片写入文件系统
+                var needsSave = false
+                for i in 0..<grades.count {
+                    if let imageData = grades[i].image, grades[i].imageFileName == nil {
+                        if let filename = saveGradeImage(imageData, gradeId: grades[i].id) {
+                            grades[i].imageFileName = filename
+                            grades[i].image = nil
+                            needsSave = true
+                        }
+                    }
+                }
+                if needsSave { saveGrades() }
             } catch {
                 print("Error loading grades: \(error)")
             }
+        }
+    }
+    
+    /// 异步加载 grades
+    func loadGradesAsync() async {
+        let url = getDocumentsDirectory().appendingPathComponent("grades.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
+            let loaded = try decoder.decode([Grade].self, from: data)
+            await MainActor.run { grades = loaded }
+        } catch {
+            print("Error loading grades: \(error)")
         }
     }
     
@@ -127,6 +291,20 @@ class DataManager: ObservableObject {
         }
     }
     
+    /// 异步加载 mistakes
+    func loadMistakeSetsAsync() async {
+        let url = getDocumentsDirectory().appendingPathComponent("mistakes.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
+            let loaded = try decoder.decode([MistakeNote].self, from: data)
+            await MainActor.run { mistakeSets = loaded }
+        } catch {
+            print("Error loading mistakes: \(error)")
+        }
+    }
+    
     // ✅ 新增：添加错题的方法
     func addMistake(_ mistake: MistakeNote) {
         mistakeSets.append(mistake)
@@ -140,7 +318,7 @@ class DataManager: ObservableObject {
     }
     
     func deleteMistake(_ mistake: MistakeNote) {
-        if let index = mistakeSets.firstIndex(where: { $0.title == mistake.title && $0.date == mistake.date }) {
+        if let index = mistakeSets.firstIndex(where: { $0.id == mistake.id }) {
             mistakeSets.remove(at: index)
             saveMistakeSets()
         }

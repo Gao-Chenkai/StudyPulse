@@ -265,7 +265,16 @@ struct GradeDetailView: View {
 // 被调用: WelcomeCardView -> HomeView
 struct UpcomingExamCard: View {
     let exam: Exam
-    @State private var daysRemaining: Int = 0
+    
+    /// 计算属性替代 @State + onAppear
+    private var daysRemaining: Int {
+        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
+        return max(0, components.day ?? 0)
+    }
+    
+    private var timeProgress: Double {
+        min(Double(daysRemaining) / 30.0, 1.0)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -298,7 +307,7 @@ struct UpcomingExamCard: View {
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     
-                    ProgressView(value: calculateTimeProgress(), total: 1.0)
+                    ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
                     
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
@@ -328,19 +337,6 @@ struct UpcomingExamCard: View {
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .onAppear {
-            calculateDays()
-        }
-    }
-    
-    private func calculateDays() {
-        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
-        daysRemaining = max(0, components.day ?? 0)
-    }
-    
-    private func calculateTimeProgress() -> Double {
-        let maxDays = 30.0
-        return min(Double(daysRemaining) / maxDays, 1.0)
     }
     
     private var timeLeftColor: Color {

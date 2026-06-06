@@ -256,16 +256,49 @@ struct MistakeSetDetailView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(images.indices, id: \.self) { index in
-                    if let uiImage = UIImage(data: images[index]) {
-                        ZoomableImageView(image: uiImage)
-                            .frame(width: 150, height: 150)
-                            .clipped()
-                            .cornerRadius(8)
-                    }
+                    ThumbnailImageView(data: images[index])
+                        .frame(width: 150, height: 150)
+                        .clipped()
+                        .cornerRadius(8)
                 }
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// 缩略图组件：使用缓存避免重复解码
+struct ThumbnailImageView: View {
+    let data: Data
+    @State private var uiImage: UIImage?
+    
+    var body: some View {
+        Group {
+            if let image = uiImage {
+                ZoomableImageView(image: image)
+            } else {
+                ProgressView()
+                    .task {
+                        await loadImage()
+                    }
+            }
+        }
+    }
+    
+    private func loadImage() async {
+        // 先查缓存
+        if let cached = ImageCache.shared.getImage(data) {
+            uiImage = cached
+            return
+        }
+        // 后台生成缩略图
+        let task = Task.detached(priority: .userInitiated) {
+            ImageCache.thumbnail(from: data, maxDimension: 300)
+        }
+        let thumbnail = await task.value
+        guard let thumb = thumbnail else { return }
+        ImageCache.shared.putImage(thumb, data)
+        await MainActor.run { uiImage = thumb }
     }
 }
 

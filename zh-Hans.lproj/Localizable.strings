@@ -27,6 +27,10 @@
 "Add New Grade" = "登记新成绩";
 "Cancel" = "取消";
 "Save" = "保存";
+"Done" = "完成";
+"OK" = "确定";
+"Test Notification Sent" = "测试通知已发送";
+"Check your notification center in 5 seconds!" = "请检查通知中心（5秒后）！";
 
 // ContentView.swift
 "Home" = "主页";
@@ -74,6 +78,18 @@
 "Send Test Notification in 5 Seconds" = "在 5 秒后进行本地通知接收测试";
 "Personal Info" = "个人信息";
 "Copyright & License" = "版权与许可";
+"Preferences" = "应用偏好";
+"App Preferences" = "应用偏好";
+"Appearance" = "外观";
+"Choose your preferred color scheme." = "选择你偏好的颜色方案";
+"Theme" = "主题";
+"Language" = "语言";
+"App language can be changed here independently of the system language." = "可在此处独立于系统语言更改应用语言";
+"Follow System" = "跟随系统";
+"Light" = "浅色";
+"Dark" = "深色";
+"Restart Now" = "立即重启";
+"Language changes require app restart to take full effect." = "语言更改需要重启应用才能完全生效";
 
 // About App Description
 "StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulse 是一款综合性学习管理应用，旨在帮助学生追踪学业表现、分析学习趋势，并高效管理学习资料。";

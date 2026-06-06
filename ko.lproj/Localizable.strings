@@ -1,0 +1,126 @@
+//
+//  Localizable.strings
+//  StudyPulse
+//
+//  Created by Chenkai Gao on 2026/4/5.
+//
+//  Korean
+
+// AddGradeView.swift
+"GROUP:" = "그룹：";
+"Exam Details" = "시험 상세";
+"Exam Name" = "시험 이름";
+"Exam Date" = "시험 날짜";
+"Exam Type" = "시험 유형";
+"Single Subject" = "단일 과목";
+"Comprehensive Exam" = "통합 시험";
+"Select Subject" = "과목 선택";
+"Select Multiple Subjects" = "다중 과목 선택";
+"Score" = "점수";
+"Socre:" = "점수：";
+"Use Raw Score" = "원점수(卷面得分) 사용";
+"Use Ranking" = "석차 사용";
+"Raw Score:" = "원점수：";
+"Ranking" = "석차";
+"Enter ranking" = "석차 입력";
+"Importance" = "중요도";
+"Add New Grade" = "새 성적 등록";
+"Cancel" = "취소";
+"Save" = "저장";
+"Done" = "완료";
+"OK" = "확인";
+"Test Notification Sent" = "테스트 알림이 전송되었습니다";
+"Check your notification center in 5 seconds!" = "알림 센터를 확인하세요（5초 후）！";
+
+// ContentView.swift
+"Home" = "홈";
+"Trends" = "추세";
+"Mistakes" = "오답노트";
+"Exams" = "시험";
+"Settings" = "설정";
+
+// ExamView.swift
+"Within 1 Week" = "1주 이내";
+"Within 1 Month" = "1개월 이내";
+"Later" = "나중에";
+"No Exams" = "시험 없음";
+"Tap '+' to add a new exam." = "'+'를 탭하여 시험 추가";
+"Delete" = "삭제";
+"Time Left" = "남은 시간";
+"Mastery" = "숙달도";
+
+// HomeView.swift
+"Welcome back!" = "다시 오신 것을 환영합니다！";
+"Here's your academic progress" = "최근 학습 현황";
+"Total Exams" = "총 시험 횟수";
+"Upcoming Exams" = "예정된 시험";
+"Overall Average" = "전체 평균";
+"Lastest Grade" = "최근 성적";
+"Upcoming Exams (2 Weeks)" = "향후 2주 시험";
+"Recent Grades Trend" = "최근 성적 추세";
+"Date" = "날짜";
+"No recent grades to display" = "최근 성적이 없습니다";
+"Recent Grades" = "최근 성적";
+"Dashboard" = "대시보드";
+
+// SettingsView.swift
+"User Information" = "사용자 프로필";
+"Username" = "사용자 이름";
+"Age" = "나이";
+"Education Level" = "교육 단계";
+"Academic Info" = "학업 정보";
+"Education System" = "교육 제도";
+"Region" = "국가 및 지역";
+"Edit Profile" = "프로필 편집";
+"Edit Subjects" = "과목 편집";
+"About StudyPulse" = "StudyPulse 소개";
+"Copyright" = "저작권 정보";
+"Send Test Notification in 5 Seconds" = "5초 후 로컬 알림 수신 테스트 실행";
+"Personal Info" = "개인 정보";
+"Copyright & License" = "저작권 및 라이선스";
+"Preferences" = "앱 환경설정";
+"App Preferences" = "앱 환경설정";
+"Appearance" = "모양";
+"Choose your preferred color scheme." = "선호하는 색상 구성을 선택하세요";
+"Theme" = "테마";
+"Language" = "언어";
+"App language can be changed here independently of the system language." = "시스템 언어와 별도로 여기서 앱 언어를 변경할 수 있습니다";
+"Follow System" = "시스템 설정 따름";
+"Light" = "라이트";
+"Dark" = "다크";
+"Restart Now" = "지금 재시작";
+"Language changes require app restart to take full effect." = "언어 변경은 앱을 재시작해야 완전히 적용됩니다";
+
+// About App Description
+"StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulse는 학생들이 학업 성과를 추적하고 추세를 분석하며 학습 자료를 효과적으로 관리할 수 있도록 설계된 종합 학습 관리 애플리케이션입니다.";
+
+// Features
+"Features" = "기능：";
+"- Track grades across multiple subjects" = "- 여러 과목의 성적 추적";
+"- Visualize progress with interactive charts" = "- 인터랙티브 차트로 학습 진행 상황 시각화";
+"- Manage mistake collections with detailed analysis" = "- 오답 컬렉션을 관리하고 상세 분석";
+"- Personalized learning recommendations" = "- 맞춤 학습 추천";
+"- Support for photo uploads for exam papers and mistakes" = "- 시험지와 오답 사진 업로드 지원";
+
+// GitHub & License
+"Click to View the Repository on Github" = "GitHub 저장소 보기";
+"This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License." = "이 저작물은 크리에이티브 커먼즈 저작자표시-비영리-동일조건변경허락 4.0 국제 라이선스에 따라 제공됩니다.";
+
+// Subjects
+/* 과목 이름 */
+"Chinese" = "중국어";
+"Mathematics" = "수학";
+"English" = "영어";
+"Science" = "과학";
+"History & Society" = "역사와 사회";
+"Physics" = "물리";
+"Chemistry" = "화학";
+"Biology" = "생물";
+"History" = "역사";
+"Geography" = "지리";
+"Politics" = "정치";
+"Information Technology" = "정보 기술";
+"General Technology" = "일반 기술";
+"Art" = "미술";
+"Music" = "음악";
+"PE & Health" = "체육과 건강";

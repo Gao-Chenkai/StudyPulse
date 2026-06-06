@@ -1,0 +1,126 @@
+//
+//  Localizable.strings
+//  StudyPulse
+//
+//  Created by Chenkai Gao on 2026/4/5.
+//
+//  Chinese (Traditional)
+
+// AddGradeView.swift
+"GROUP:" = "組：";
+"Exam Details" = "考試詳情";
+"Exam Name" = "考試名稱";
+"Exam Date" = "考試日期";
+"Exam Type" = "考試類型";
+"Single Subject" = "單科";
+"Comprehensive Exam" = "綜合考試";
+"Select Subject" = "選擇科目";
+"Select Multiple Subjects" = "多選科目";
+"Score" = "分數";
+"Socre:" = "分數：";
+"Use Raw Score" = "啟用原始分（卷面得分）";
+"Use Ranking" = "啟用排名";
+"Raw Score:" = "原始分：";
+"Ranking" = "排名";
+"Enter ranking" = "輸入排名";
+"Importance" = "重要程度";
+"Add New Grade" = "登記新成績";
+"Cancel" = "取消";
+"Save" = "儲存";
+"Done" = "完成";
+"OK" = "確定";
+"Test Notification Sent" = "測試通知已傳送";
+"Check your notification center in 5 seconds!" = "請檢查通知中心（5秒後）！";
+
+// ContentView.swift
+"Home" = "首頁";
+"Trends" = "趨勢";
+"Mistakes" = "錯題";
+"Exams" = "考試";
+"Settings" = "設定";
+
+// ExamView.swift
+"Within 1 Week" = "一週內";
+"Within 1 Month" = "一個月內";
+"Later" = "稍後";
+"No Exams" = "暫無考試";
+"Tap '+' to add a new exam." = "點擊 + 號新增考試";
+"Delete" = "刪除";
+"Time Left" = "剩餘時間";
+"Mastery" = "掌握程度";
+
+// HomeView.swift
+"Welcome back!" = "歡迎回來！";
+"Here's your academic progress" = "你的近期學習概況";
+"Total Exams" = "考試總次數";
+"Upcoming Exams" = "即將到來的考試";
+"Overall Average" = "整體平均分";
+"Lastest Grade" = "最新成績";
+"Upcoming Exams (2 Weeks)" = "兩週內考試";
+"Recent Grades Trend" = "近期成績趨勢";
+"Date" = "日期";
+"No recent grades to display" = "暫無近期成績";
+"Recent Grades" = "近期成績";
+"Dashboard" = "資料總覽";
+
+// SettingsView.swift
+"User Information" = "使用者檔案";
+"Username" = "使用者名稱";
+"Age" = "年齡";
+"Education Level" = "教育階段";
+"Academic Info" = "學業資訊";
+"Education System" = "教育體制";
+"Region" = "國家與地區";
+"Edit Profile" = "編輯檔案";
+"Edit Subjects" = "編輯科目";
+"About StudyPulse" = "關於 StudyPulse";
+"Copyright" = "版權資訊";
+"Send Test Notification in 5 Seconds" = "在 5 秒後進行本地通知接收測試";
+"Personal Info" = "個人資訊";
+"Copyright & License" = "版權與授權";
+"Preferences" = "應用程式偏好";
+"App Preferences" = "應用程式偏好";
+"Appearance" = "外觀";
+"Choose your preferred color scheme." = "選擇你偏好的色彩配置";
+"Theme" = "主題";
+"Language" = "語言";
+"App language can be changed here independently of the system language." = "可在此處獨立於系統語言變更應用程式語言";
+"Follow System" = "跟隨系統";
+"Light" = "淺色";
+"Dark" = "深色";
+"Restart Now" = "立即重新啟動";
+"Language changes require app restart to take full effect." = "語言變更需要重新啟動應用程式才能完全生效";
+
+// About App Description
+"StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulse 是一款綜合性學習管理應用程式，旨在幫助學生追蹤學業表現、分析學習趨勢，並高效管理學習資料。";
+
+// Features
+"Features" = "功能特色：";
+"- Track grades across multiple subjects" = "- 追蹤多門科目的成績";
+"- Visualize progress with interactive charts" = "- 透過互動式圖表視覺化學習進度";
+"- Manage mistake collections with detailed analysis" = "- 管理錯題集並進行詳細分析";
+"- Personalized learning recommendations" = "- 個人化學習推薦";
+"- Support for photo uploads for exam papers and mistakes" = "- 支援上傳試卷和錯題照片";
+
+// GitHub & License
+"Click to View the Repository on Github" = "點擊查看 GitHub 專案";
+"This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License." = "本作品採用創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際授權條款授權。";
+
+// Subjects
+/* 學科名稱 */
+"Chinese" = "國文";
+"Mathematics" = "數學";
+"English" = "英文";
+"Science" = "自然";
+"History & Society" = "歷史與社會";
+"Physics" = "物理";
+"Chemistry" = "化學";
+"Biology" = "生物";
+"History" = "歷史";
+"Geography" = "地理";
+"Politics" = "公民";
+"Information Technology" = "資訊科技";
+"General Technology" = "生活科技";
+"Art" = "視覺藝術";
+"Music" = "音樂";
+"PE & Health" = "體育與健康";

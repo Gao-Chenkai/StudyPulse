@@ -34,6 +34,7 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct StudyPulseApp: App {
     @StateObject private var dataManager = DataManager()
+    @StateObject private var envManager = AppEnvironmentManager.shared
     
     // 👇 2. 声明协调器实例
     private let notificationCoordinator = NotificationCoordinator()
@@ -51,16 +52,25 @@ struct StudyPulseApp: App {
         
         // 启动时清除角标
         UNUserNotificationCenter.current().setBadgeCount(0)
+        
+        // 应用已保存的语言偏好
+        AppEnvironmentManager.shared.applyLanguageOnLaunch()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(dataManager)
+                .environmentObject(envManager)
+                .preferredColorScheme(envManager.effectiveColorScheme)
                 .wsWelcomeView(
                     config: WSWelcomeConfig.welcomeInfo,
                     style: .standard
                 )
+                .task {
+                    // 后台异步加载所有数据，避免阻塞主线程
+                    dataManager.asyncInit()
+                }
         }
     }
 }

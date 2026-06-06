@@ -15,7 +15,7 @@ import Foundation
 //    let scoreRate: Double // 得分率 (0.0 - 1.0)
 //}
 
-struct Subject: Identifiable, Codable {
+nonisolated struct Subject: Identifiable, Codable {
     var id = UUID()
     var name: String
     var enabled: Bool
@@ -26,14 +26,15 @@ struct Subject: Identifiable, Codable {
     }
 }
 
-struct Grade: Identifiable, Codable {
+nonisolated struct Grade: Identifiable, Codable {
     var id = UUID()
     var subject: String
     var score: Double
     var rawScore: Double? // 赋分时的卷面分
     var ranking: Int?
     var importance: Int // 1-5星
-    var image: Data? // 卷面图片
+    var image: Data? // 卷面图片（兼容旧数据，新数据使用 imageFileName）
+    var imageFileName: String? // 图片文件路径（新方案，存文件系统）
     var date: Date
     var examName: String
     
@@ -55,9 +56,17 @@ struct Grade: Identifiable, Codable {
         self.date = date
         self.examName = examName
     }
+    
+    /// 获取图片数据：优先从 imageFileName 加载，回退到内嵌 image
+    @MainActor func getImage() -> Data? {
+        if let fileName = imageFileName {
+            return DataManager.shared.loadGradeImage(filename: fileName)
+        }
+        return image
+    }
 }
 
-struct MistakeNote: Identifiable, Codable {
+nonisolated struct MistakeNote: Identifiable, Codable {
     var id = UUID()
     var title: String
     var subject: String // 科目
@@ -91,7 +100,7 @@ struct MistakeNote: Identifiable, Codable {
     }
 }
 
-struct UserProfile: Codable {
+nonisolated struct UserProfile: Codable {
     var username: String = "Student"
     var age: Int = 16
     var educationLevel: String = "High School"
@@ -101,7 +110,7 @@ struct UserProfile: Codable {
     var theme: String = "Auto" // Auto, Light, Dark
 }
 
-struct Exam: Identifiable, Codable, Hashable {
+nonisolated struct Exam: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
     var examDate: Date
@@ -120,7 +129,7 @@ struct Exam: Identifiable, Codable, Hashable {
     }
 }
 
-struct comprehensiveExam: Identifiable, Codable, Hashable {
+nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
     var examDate: Date

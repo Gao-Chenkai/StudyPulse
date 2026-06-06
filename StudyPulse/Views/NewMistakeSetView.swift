@@ -349,13 +349,12 @@ struct NewMistakeSetView: View {
     }
     
     private func addImageToCurrentSection(_ image: UIImage) {
-        if let imageData = image.jpegData(compressionQuality: 0.8) {
-            switch selectedSection {
-            case .question: questionImages.append(image)
-            case .reason: reasonImages.append(image)
-            case .wrong: wrongSolutionImages.append(image)
-            case .correct: correctSolutionImages.append(image)
-            }
+        _ = image.jpegData(compressionQuality: 0.8)
+        switch selectedSection {
+        case .question: questionImages.append(image)
+        case .reason: reasonImages.append(image)
+        case .wrong: wrongSolutionImages.append(image)
+        case .correct: correctSolutionImages.append(image)
         }
     }
     

@@ -170,7 +170,16 @@ struct ExamView: View {
 /// 普通考试列表项视图
 struct ExamRowView: View {
     let exam: Exam
-    @State private var daysRemaining: Int = 0
+    
+    /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
+    private var daysRemaining: Int {
+        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
+        return max(0, components.day ?? 0)
+    }
+    
+    private var timeProgress: Double {
+        min(Double(daysRemaining) / 30.0, 1.0)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -196,7 +205,7 @@ struct ExamRowView: View {
                     Text("Time Left")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
-                    ProgressView(value: calculateTimeProgress(), total: 1.0)
+                    ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
@@ -222,21 +231,6 @@ struct ExamRowView: View {
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
 //        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
-        .onAppear {
-            calculateDays()
-        }
-    }
-    
-    /// 计算距离考试日期的剩余天数
-    private func calculateDays() {
-        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
-        daysRemaining = max(0, components.day ?? 0)
-    }
-    
-    /// 计算时间进度比例
-    private func calculateTimeProgress() -> Double {
-        let maxDays = 30.0
-        return min(Double(daysRemaining) / maxDays, 1.0)
     }
     
     /// 根据剩余天数确定进度条颜色
@@ -267,7 +261,16 @@ struct ExamRowView: View {
 /// 综合考试列表项视图
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
-    @State private var daysRemaining: Int = 0
+    
+    /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
+    private var daysRemaining: Int {
+        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
+        return max(0, components.day ?? 0)
+    }
+    
+    private var timeProgress: Double {
+        min(Double(daysRemaining) / 30.0, 1.0)
+    }
     
     /// 将多个考试科目拼接成逗号分隔的字符串
     private var subjectText: String {
@@ -298,7 +301,7 @@ struct ComprehensiveExamRowView: View {
                     Text("Time Left")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
-                    ProgressView(value: calculateTimeProgress(), total: 1.0)
+                    ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
@@ -324,21 +327,6 @@ struct ComprehensiveExamRowView: View {
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
 //        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
-        .onAppear {
-            calculateDays()
-        }
-    }
-    
-    /// 计算距离考试日期的剩余天数
-    private func calculateDays() {
-        let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
-        daysRemaining = max(0, components.day ?? 0)
-    }
-    
-    /// 计算时间进度比例
-    private func calculateTimeProgress() -> Double {
-        let maxDays = 30.0
-        return min(Double(daysRemaining) / maxDays, 1.0)
     }
     
     /// 根据剩余天数确定进度条颜色

@@ -5,3 +5,122 @@
 //  Created by Chenkai Gao on 2026/4/5.
 //
 
+// AddGradeView.swift
+"GROUP:" = "GROUP:";
+"Exam Details" = "Exam Details";
+"Exam Name" = "Exam Name";
+"Exam Date" = "Exam Date";
+"Exam Type" = "Exam Type";
+"Single Subject" = "Single Subject";
+"Comprehensive Exam" = "Comprehensive Exam";
+"Select Subject" = "Select Subject";
+"Select Multiple Subjects" = "Select Multiple Subjects";
+"Score" = "Score";
+"Socre:" = "Score:";
+"Use Raw Score" = "Use Raw Score";
+"Use Ranking" = "Use Ranking";
+"Raw Score:" = "Raw Score:";
+"Ranking" = "Ranking";
+"Enter ranking" = "Enter ranking";
+"Importance" = "Importance";
+"Add New Grade" = "Add New Grade";
+"Cancel" = "Cancel";
+"Save" = "Save";
+"Done" = "Done";
+"OK" = "OK";
+"Test Notification Sent" = "Test Notification Sent";
+"Check your notification center in 5 seconds!" = "Check your notification center in 5 seconds!";
+
+// ContentView.swift
+"Home" = "Home";
+"Trends" = "Trends";
+"Mistakes" = "Mistakes";
+"Exams" = "Exams";
+"Settings" = "Settings";
+
+// ExamView.swift
+"Within 1 Week" = "Within 1 Week";
+"Within 1 Month" = "Within 1 Month";
+"Later" = "Later";
+"No Exams" = "No Exams";
+"Tap '+' to add a new exam." = "Tap '+' to add a new exam.";
+"Delete" = "Delete";
+"Time Left" = "Time Left";
+"Mastery" = "Mastery";
+
+// HomeView.swift
+"Welcome back!" = "Welcome back!";
+"Here's your academic progress" = "Here's your academic progress";
+"Total Exams" = "Total Exams";
+"Upcoming Exams" = "Upcoming Exams";
+"Overall Average" = "Overall Average";
+"Lastest Grade" = "Latest Grade";
+"Upcoming Exams (2 Weeks)" = "Upcoming Exams (2 Weeks)";
+"Recent Grades Trend" = "Recent Grades Trend";
+"Date" = "Date";
+"No recent grades to display" = "No recent grades to display";
+"Recent Grades" = "Recent Grades";
+"Dashboard" = "Dashboard";
+
+// SettingsView.swift
+"User Information" = "User Information";
+"Username" = "Username";
+"Age" = "Age";
+"Education Level" = "Education Level";
+"Academic Info" = "Academic Info";
+"Education System" = "Education System";
+"Region" = "Region";
+"Edit Profile" = "Edit Profile";
+"Edit Subjects" = "Edit Subjects";
+"About StudyPulse" = "About StudyPulse";
+"Copyright" = "Copyright";
+"Send Test Notification in 5 Seconds" = "Send Test Notification in 5 Seconds";
+"Personal Info" = "Personal Info";
+"Copyright & License" = "Copyright & License";
+
+// Preferences
+"Preferences" = "Preferences";
+"App Preferences" = "App Preferences";
+"Appearance" = "Appearance";
+"Choose your preferred color scheme." = "Choose your preferred color scheme.";
+"Theme" = "Theme";
+"Language" = "Language";
+"App language can be changed here independently of the system language." = "App language can be changed here independently of the system language.";
+"Follow System" = "Follow System";
+"Light" = "Light";
+"Dark" = "Dark";
+"Restart Now" = "Restart Now";
+"Language changes require app restart to take full effect." = "Language changes require app restart to take full effect.";
+
+// About App Description
+"StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively." = "StudyPulse is a comprehensive learning management application designed to help students track their academic performance, analyze trends, and manage their study materials effectively.";
+
+// Features
+"Features" = "Features";
+"- Track grades across multiple subjects" = "- Track grades across multiple subjects";
+"- Visualize progress with interactive charts" = "- Visualize progress with interactive charts";
+"- Manage mistake collections with detailed analysis" = "- Manage mistake collections with detailed analysis";
+"- Personalized learning recommendations" = "- Personalized learning recommendations";
+"- Support for photo uploads for exam papers and mistakes" = "- Support for photo uploads for exam papers and mistakes";
+
+// GitHub & License
+"Click to View the Repository on Github" = "Click to View the Repository on Github";
+"This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License." = "This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.";
+
+// Subjects
+"Chinese" = "Chinese";
+"Mathematics" = "Mathematics";
+"English" = "English";
+"Science" = "Science";
+"History & Society" = "History & Society";
+"Physics" = "Physics";
+"Chemistry" = "Chemistry";
+"Biology" = "Biology";
+"History" = "History";
+"Geography" = "Geography";
+"Politics" = "Politics";
+"Information Technology" = "Information Technology";
+"General Technology" = "General Technology";
+"Art" = "Art";
+"Music" = "Music";
+"PE & Health" = "PE & Health";

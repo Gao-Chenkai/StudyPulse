@@ -121,7 +121,7 @@ struct ExamDetailView: View {
     private func addToCalendar() {
         Task {
             do {
-                try await CalendarManager.shared.addExamToCalendar(
+                _ = try await CalendarManager.shared.addExamToCalendar(
                     examName: exam.name,
                     subject: exam.subject,
                     examDate: exam.examDate,

@@ -10,24 +10,26 @@ import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingProfileEdit = false
     @State private var showingSubjectsEdit = false
     @State private var showingAbout = false
     @State private var showingCopyright = false
+    @State private var showingPreferences = false
     
     @State private var showingTestAlert = false
     
     var body: some View {
         NavigationView {
             List {
-                Section(header: Text("User Information")) {
+                Section(header: Text("User Information".localized())) {
                     HStack {
                         Image(systemName: "person.fill")
                             .foregroundColor(.yellow)
                             .frame(width: 30)
-                        Text("Username")
+                        Text("Username".localized())
                             .foregroundColor(.primary)
-                            .lineLimit(1) // 👈 关键：限制为一行
+                            .lineLimit(1)
                         Spacer()
                         Text(dataManager.profile.username)
                     }
@@ -35,10 +37,10 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.pink)
-                            .frame(width: 30) // 固定宽度，防止图标挤压文字
-                        Text("Age")
+                            .frame(width: 30)
+                        Text("Age".localized())
                             .foregroundColor(.primary)
-                            .lineLimit(1) // 关键：限制为一行
+                            .lineLimit(1)
                         Spacer()
                         Text("\(dataManager.profile.age)")
                     }
@@ -46,21 +48,21 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "graduationcap")
                             .foregroundColor(.green)
-                            .frame(width: 30)            // 固定宽度，防止图标挤压文字
-                        Text("Education Level")
+                            .frame(width: 30)
+                        Text("Education Level".localized())
                             .foregroundColor(.primary)
-                            .lineLimit(1) // 关键：限制为一行
+                            .lineLimit(1)
                         Spacer()
-                        Text(dataManager.profile.educationLevel)
+                        Text(dataManager.profile.educationLevel.localized())
                     }
                 }
                 
-                Section(header: Text("Academic Info")) {
+                Section(header: Text("Academic Info".localized())) {
                     HStack {
                         Image(systemName: "building.columns")
                             .foregroundColor(.orange)
                             .frame(width: 30)
-                        Text("Education System")
+                        Text("Education System".localized())
                         Spacer()
                         Text(dataManager.profile.educationSystem)
                     }
@@ -69,32 +71,29 @@ struct SettingsView: View {
                         Image(systemName: "globe")
                             .foregroundColor(.blue)
                             .frame(width: 30)
-                        Text("Region")
+                        Text("Region".localized())
                         Spacer()
-                        Text(dataManager.profile.region)
+                        Text(dataManager.profile.region.localized())
                     }
-                    
                 }
                 
                 Section(header: Text("Edit")) {
-                    Button("Edit Profile") {
+                    Button("Edit Profile".localized()) {
                         showingProfileEdit = true
                     }
                     
-                    Button("Edit Subjects") {
+                    Button("Edit Subjects".localized()) {
                         showingSubjectsEdit = true
                     }
-                    
-//                    NavigationLink("Edit Subjects") {
-//                        EditSubjectsView()
-//                    }
+                }
+                
+                Section(header: Text("Preferences")) {
+                    NavigationLink(destination: PreferencesView()) {
+                        Label("App Preferences", systemImage: "gearshape")
+                    }
                 }
                 
                 Section(header: Text("About")) {
-//                    Button("About StudyPulse") {
-//                        showingAbout = true
-//                    }
-                    
                     HStack {
                         Image(systemName: "info.circle")
                             .foregroundColor(.blue)
@@ -103,10 +102,6 @@ struct SettingsView: View {
                             showingAbout = true
                         } 
                     }
-                    
-//                    Button("Copyright") {
-//                        showingCopyright = true
-//                    }.foregroundColor(.black)
                     
                     HStack {
                         Image(systemName: "checkmark.shield")
@@ -117,21 +112,15 @@ struct SettingsView: View {
                         }
                     }
                     
-//                    Button("Send Test Notification in 5 Seconds") {
-//                        sendTestNotification()
-//                        showingTestAlert = true
-//                    }
-                    
                     HStack {
                         Image(systemName: "message")
                             .foregroundColor(.green)
                             .frame(width: 30)
-                        Button("Send Test Notification in 5 Seconds") {
+                        Button("Send Test Notification in 5 Seconds".localized()) {
                             sendTestNotification()
                             showingTestAlert = true
                         }
                     }
-
                 }
             }
             .navigationTitle("Settings")

@@ -237,7 +237,7 @@ struct NewExamSetView: View {
         if addToCalendarToggle {
             Task {
                 do {
-                    try await CalendarManager.shared.addExamToCalendar(
+                    _ = try await CalendarManager.shared.addExamToCalendar(
                         examName: name,
                         subject: calendarSubject,
                         examDate: examDate,

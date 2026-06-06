@@ -14,11 +14,15 @@
 ```
 StudyPulse/
 ├── Models/
-│   └── DataModels.swift          # Grade, MistakeNote, Exam, Subject, UserProfile
+│   ├── DataModels.swift          # Grade, MistakeNote, Exam, Subject, UserProfile (all nonisolated)
+│   └── AppPreferences.swift      # Language + theme preference model
 ├── Managers/
-│   ├── DataManager.swift         # Central data layer + JSON persistence
+│   ├── DataManager.swift         # Central data layer + JSON persistence + async loading
+│   ├── AppEnvironmentManager.swift # Global language & theme management
+│   ├── DataFileIO.swift          # Non-MainActor file I/O helpers (enum)
 │   ├── CalendarManager.swift     # EventKit calendar integration
 │   ├── OCRManager.swift          # Vision framework text recognition
+│   ├── ImageCache.swift          # NSCache + thumbnail generation (nonisolated)
 │   ├── SubjectInfo.swift         # Subject display names & colors
 │   └── StringsLocalized.swift    # String localization extension
 ├── Views/
@@ -29,7 +33,7 @@ StudyPulse/
 │   ├── ExamDetailView.swift      # Single exam detail + calendar button
 │   ├── ExamDetailEditView.swift  # Exam editing
 │   ├── NewExamSetView.swift      # New exam form (single/comprehensive)
-│   ├── MistakeView.swift         # Mistake notebook list + search
+│   ├── MistakeView.swift         # Mistake notebook list + search + thumbnail cache
 │   ├── MistakeDetailEditView.swift # Mistake editing with OCR
 │   ├── NewMistakeSetView.swift   # New mistake form with photo + OCR
 │   ├── AddGradeView.swift        # Grade entry form
@@ -69,12 +73,20 @@ Central shared state manager. All views access it via `@EnvironmentObject`.
 
 **Persistence:** All data saved as JSON files in `~/Documents/`:
 - `profile.json`, `grades.json`, `mistakes.json`, `exams.json`, `comprehensiveExams.json`, `subjects.json`
+- `images/` directory for Grade image files (migrated from inline Data)
+
+**Performance patterns:**
+- `asyncInit()` loads all data on background thread via `Task.detached`
+- `load*Async()` variants for each data type (non-blocking)
+- Grade images stored as separate files, not embedded in JSON
+- `deleteMistake` uses `id` matching (not `title+date`)
 
 ## Key Models
 
 ### Grade
-- `subject`, `score`, `rawScore` (卷面分), `ranking`, `importance` (1-5), `image`, `date`, `examName`
+- `subject`, `score`, `rawScore` (卷面分), `ranking`, `importance` (1-5), `image` (legacy), `imageFileName` (new), `date`, `examName`
 - `scoreRate` computed property: assumes 150 full score (hardcoded, known issue)
+- `getImage()` method: checks `imageFileName` first, falls back to inline `image` for backward compatibility
 
 ### MistakeNote
 - `title`, `subject`, `originalQuestion`, `source`, `date`
@@ -84,6 +96,28 @@ Central shared state manager. All views access it via `@EnvironmentObject`.
 ### Exam / comprehensiveExam
 - `name`, `examDate`, `importance` (1-5), `masteryDegree` (0-100)
 - `Exam.subject: String` vs `comprehensiveExam.subject: [String]`
+
+## App Preferences
+
+### AppPreferences (Codable, persisted in UserDefaults)
+- `appLanguage: String?` — Language code (`"en"`, `"zh-Hans"`, or `nil` for system)
+- `colorScheme: ColorSchemeOption` — `.system`, `.light`, `.dark`
+
+### AppEnvironmentManager (ObservableObject)
+- `@Published var preferences: AppPreferences` — auto-saves to UserDefaults
+- `effectiveColorScheme: ColorScheme?` — computed for `.preferredColorScheme()`
+- `setLanguage(_:)` — switches via `UserDefaults AppleLanguages` key
+- `setColorScheme(_:)` — updates published property, triggers UI update
+
+### SettingsView
+- **Appearance** section: inline picker with Light / Dark / Follow System options
+- **Language** section: picker with English / 简体中文 / Follow System
+
+## Swift 6 Concurrency Notes
+- All model structs (`Grade`, `MistakeNote`, `Exam`, etc.) are marked `nonisolated`
+- `ImageCache` class is marked `nonisolated`
+- `DataFileIO` enum is `nonisolated` for background-thread file access
+- `DataManager` remains `@MainActor`-isolated via `ObservableObject` inference
 
 ## Dependencies
 
@@ -117,6 +151,7 @@ Central shared state manager. All views access it via `@EnvironmentObject`.
 - Editor has split layout: TextEditor on top, `Markdown()` preview toggles below
 - Searchable by title, question, source, subject
 - Tap any image thumbnail to open `ZoomableImageView` (pinch-to-zoom, double-tap)
+- Thumbnails cached via `ImageCache` (NSCache, max 50, 300px max dimension)
 
 ### Exam Module
 - Supports single-subject and comprehensive (multi-subject) exams
@@ -134,12 +169,12 @@ Central shared state manager. All views access it via `@EnvironmentObject`.
 ## Known Issues / TODOs
 
 1. `Grade.scoreRate` hardcodes 150 full score — should be dynamic per subject
-2. `DataManager.deleteMistake(_:)` uses `title+date` for lookup (unreliable, should use `id`)
-3. `DataManager.addGrade()` method doesn't exist — add directly to `grades` array
-4. `NewMistakeSheet.swift` and `Sheets/` directory are legacy/unused code
-5. No iCloud sync — data is local-only
-6. No data export/import (CSV, Excel)
-7. No grade deletion confirmation dialog
+2. `DataManager.addGrade()` method doesn't exist — add directly to `grades` array
+3. `NewMistakeSheet.swift` and `Sheets/` directory are legacy/unused code
+4. No iCloud sync — data is local-only
+5. No data export/import (CSV, Excel)
+6. No grade deletion confirmation dialog
+7. `DataManager` uses `static let shared` AND is injected via `@EnvironmentObject` — potential for inconsistency
 
 ## Build Commands
 
@@ -157,3 +192,20 @@ Central shared state manager. All views access it via `@EnvironmentObject`.
 - Chinese localization via `String.localized()` extension (reads from `Localizable.strings`)
 - `EditSection` enum drives the 4-section mistake editor (Question/Reason/Wrong/Correct)
 - Manager classes use `static let shared` singleton pattern
+
+## Performance Patterns (Post-Optimization)
+
+### Data Loading
+- App launch uses `asyncInit()` in `.task` modifier — no main-thread blocking
+- Legacy sync `load*()` methods kept for backward compatibility
+
+### Image Handling
+- `ImageCache` provides NSCache-backed thumbnail cache (max 50 entries)
+- `ThumbnailImageView` loads images asynchronously with `ProgressView` placeholder
+- Grade images stored as separate files in `images/` directory, not in JSON
+- Old inline `image` Data automatically migrated to files on save/load
+
+### View Optimization
+- `ExamRowView` and `ComprehensiveExamRowView` use computed properties instead of `@State` + `onAppear` for `daysRemaining`
+- `UpcomingExamCard` uses computed properties — no side-effect mutations
+- Eliminated unnecessary view re-renders from state mutation in `onAppear`
