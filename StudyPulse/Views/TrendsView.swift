@@ -24,24 +24,76 @@ struct TrendsView: View {
             .filter { hasGrades(for: $0) }
     }
     
+    // 需要引起重视的科目
+    var subjectsNeedingAttention: [String] {
+        activeSubjects.filter { subject in
+            let grades = getGradeHistory(for: subject)
+            guard grades.count >= 2 else { return false }
+            
+            let recentGrades = Array(grades.suffix(3))
+            let avgScore = recentGrades.map { $0.score }.reduce(0, +) / Double(recentGrades.count)
+            
+            // 平均分低于70或最近成绩有下降趋势
+            if avgScore < 70 {
+                return true
+            }
+            
+            if recentGrades.count >= 2 {
+                let first = recentGrades.first!.score
+                let last = recentGrades.last!.score
+                if last < first - 15 {
+                    return true
+                }
+            }
+            
+            return false
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(spacing: 20) {
-                    ForEach(activeSubjects, id: \.self) { subjectName in
-                        NavigationLink(value: subjectName) {
-                            // 修复1：传入 displayMode 给外部 SubjectScoreCard
-                            SubjectScoreCard(
-                                subject: subjectName,
-                                latestGrade: getLatestGrade(for: subjectName),
-                                history: getGradeHistory(for: subjectName),
-                                displayMode: trendsShowingMode
-                            )
+                VStack(spacing: 20) {
+                    // 需要引起重视的科目提示
+                    if !subjectsNeedingAttention.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                Text("Subjects Needing Attention")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(subjectsNeedingAttention, id: \.self) { subjectName in
+                                        NavigationLink(value: subjectName) {
+                                            AttentionSubjectCard(subjectName: subjectName, grades: getGradeHistory(for: subjectName))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding()
                     }
+                    
+                    LazyVStack(spacing: 20) {
+                        ForEach(activeSubjects, id: \.self) { subjectName in
+                            NavigationLink(value: subjectName) {
+                                SubjectScoreCard(
+                                    subject: subjectName,
+                                    latestGrade: getLatestGrade(for: subjectName),
+                                    history: getGradeHistory(for: subjectName),
+                                    displayMode: trendsShowingMode
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Trends")
@@ -168,67 +220,99 @@ struct SubjectDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
                     // 科目名称（本地化显示）
                     Text(subject.localized())
-                        .font(.title)
-                        .fontWeight(.bold)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(Color(.label))
                     
-                    HStack {
-                        VStack(alignment: .leading) {
+                    HStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
                             // 根据显示模式切换标题
                             if displayMode == "score" {
                                 Text("Average Score")
                                     .font(.subheadline)
                                     .foregroundColor(Color(.secondaryLabel))
+                                    .tracking(0.5)
                                 Text(String(format: "%.1f", averageScore))
-                                    .font(.title2)
-                                    .bold()
-                                    .foregroundColor(scoreColor(averageScore))
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(scoreColor(averageScore))
                             } else {
                                 Text("Average Rank")
                                     .font(.subheadline)
                                     .foregroundColor(Color(.secondaryLabel))
+                                    .tracking(0.5)
                                 Text(averageRank == 0 ? "N/A" : "\(averageRank)")
-                                    .font(.title2)
-                                    .bold()
-                                    .foregroundColor(.indigo)
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [.indigo, .purple],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        Spacer()
-                        
-                        VStack(alignment: .trailing) {
+                        VStack(alignment: .trailing, spacing: 8) {
                             Text("Latest")
                                 .font(.subheadline)
                                 .foregroundColor(Color(.secondaryLabel))
+                                .tracking(0.5)
                             
                             if let latest = filteredGrades.last {
                                 // 根据模式显示最新分数或排名（修复4：安全解包）
                                 if displayMode == "score" {
                                     Text(String(format: "%.1f", latest.score))
-                                        .font(.title2)
-                                        .bold()
-                                        .foregroundColor(scoreColor(latest.score))
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundStyle(scoreColor(latest.score))
                                 } else {
                                     let rank = latest.ranking ?? 0
                                     Text(rank == 0 ? "N/A" : "\(rank)")
-                                        .font(.title2)
-                                        .bold()
-                                        .foregroundColor(.indigo)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [.indigo, .purple],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
                                 }
                             } else {
                                 Text("N/A")
                                     .foregroundColor(Color(.secondaryLabel))
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                 }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 5)
+                .padding(18)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                        
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color(.systemBlue).opacity(0.3),
+                                        Color(.systemBlue).opacity(0.1)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.2
+                            )
+                    }
+                )
+                .shadow(
+                    color: Color.black.opacity(0.06),
+                    radius: 10,
+                    x: 0,
+                    y: 5
+                )
                 
                 // 时间范围选择器
                 Picker("Time Range", selection: $selectedRange) {
@@ -256,7 +340,7 @@ struct SubjectDetailView: View {
                             )
                             .symbol {
                                 Circle()
-                                    .fill(Color.systemBackground)
+                                    .fill(Color(.systemBackground))
                                     .frame(width: 10, height: 10)
                                     .overlay {
                                         Circle().stroke(scoreColor(grade.score), lineWidth: 2)
@@ -278,7 +362,7 @@ struct SubjectDetailView: View {
                                 )
                                 .symbol {
                                     Circle()
-                                        .fill(Color.systemBackground)
+                                        .fill(Color(.systemBackground))
                                         .frame(width: 10, height: 10)
                                         .overlay {
                                             Circle().stroke(scoreColor(grade.score), lineWidth: 2)
@@ -373,8 +457,107 @@ struct SubjectDetailView: View {
     }
 }
 
+// MARK: - 需要引起重视的科目卡片
+struct AttentionSubjectCard: View {
+    let subjectName: String
+    let grades: [Grade]
+    @State private var animateIn = false
+    
+    var recentGrades: [Grade] {
+        Array(grades.sorted { $0.date > $1.date }.prefix(3))
+    }
+    
+    var averageScore: Double {
+        guard !grades.isEmpty else { return 0 }
+        return grades.map { $0.score }.reduce(0, +) / Double(grades.count)
+    }
+    
+    var trend: String {
+        guard grades.count >= 2 else { return "N/A" }
+        let sorted = grades.sorted { $0.date < $1.date }
+        let oldScore = sorted.first!.score
+        let newScore = sorted.last!.score
+        
+        if newScore > oldScore + 5 {
+            return "📈 Improving"
+        } else if newScore < oldScore - 5 {
+            return "📉 Declining"
+        } else {
+            return "➡️ Stable"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(subjectName.localized())
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+            }
+            
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Avg Score")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f", averageScore))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(scoreColor(averageScore))
+                }
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Trend")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(trend)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+            }
+            
+            if !recentGrades.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(recentGrades) { grade in
+                        Text(String(format: "%.0f", grade.score))
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(scoreColor(grade.score).opacity(0.2))
+                            .cornerRadius(4)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 200)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(.systemOrange).opacity(0.3), lineWidth: 1.5)
+        )
+        .opacity(animateIn ? 1 : 0)
+        .offset(x: animateIn ? 0 : -20)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.1)) {
+                animateIn = true
+            }
+        }
+    }
+}
+
 #Preview {
-    TrendsView().environmentObject(DataManager())
+    TrendsView()
+        .environmentObject(DataManager())
 }
 
 #Preview("Dark Mode") {

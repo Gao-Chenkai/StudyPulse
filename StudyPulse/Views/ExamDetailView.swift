@@ -15,6 +15,13 @@ struct ExamDetailView: View {
     @State private var showingCalendarAlert = false
     @State private var calendarAlertMessage = ""
     
+    // 关联的错题
+    var relatedMistakes: [MistakeNote] {
+        dataManager.mistakeSets
+            .filter { $0.subject == exam.subject }
+            .sorted { $0.date > $1.date }
+    }
+    
     var body: some View {
         Form {
             Section(header: Text("Overview")
@@ -94,6 +101,39 @@ struct ExamDetailView: View {
                     .foregroundColor(.secondary)
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
+            
+            // MARK: - 关联的错题
+            Section(header: Text("Related Mistakes")
+                .foregroundColor(Color(.secondaryLabel))
+            ) {
+                if relatedMistakes.isEmpty {
+                    HStack {
+                        Image(systemName: "doc.text")
+                            .foregroundColor(.secondary)
+                        Text("No related mistakes for this subject")
+                            .foregroundColor(.secondary)
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                } else {
+                    ForEach(relatedMistakes.prefix(4)) { mistake in
+                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake).environmentObject(dataManager)) {
+                            RelatedMistakeCard(mistake: mistake)
+                        }
+                    }
+                    
+                    if relatedMistakes.count > 4 {
+                        HStack {
+                            Spacer()
+                            Text("+ \(relatedMistakes.count - 4) more mistakes")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
+                    }
+                }
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
@@ -169,6 +209,90 @@ struct ExamDetailView: View {
     dm.examSets = [testExam]
     return ExamDetailView(exam: testExam)
         .environmentObject(dm)
+}
+
+// MARK: - 关联的错题卡片
+struct RelatedMistakeCard: View {
+    let mistake: MistakeNote
+    @State private var animateIn = false
+    
+    var totalImages: Int {
+        mistake.questionImages.count + mistake.reasonImages.count +
+        mistake.wrongSolutionImages.count + mistake.correctSolutionImages.count
+    }
+    
+    var daysSinceAdded: String {
+        let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
+        let days = components.day ?? 0
+        if days == 0 {
+            return "Today"
+        } else if days == 1 {
+            return "Yesterday"
+        } else if days < 7 {
+            return "\(days) days ago"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            return formatter.string(from: mistake.date)
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(mistake.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                if !mistake.originalQuestion.isEmpty {
+                    Text(mistake.originalQuestion)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                HStack(spacing: 8) {
+                    if !mistake.subject.isEmpty {
+                        Text(mistake.subject.localized())
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(.systemPurple).opacity(0.15))
+                            .foregroundColor(Color(.systemPurple))
+                            .cornerRadius(4)
+                    }
+                    
+                    Text(daysSinceAdded)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    if totalImages > 0 {
+                        Label("\(totalImages)", systemImage: "photo")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(12)
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
+        .opacity(animateIn ? 1 : 0)
+        .offset(x: animateIn ? 0 : -15)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85).delay(0.05)) {
+                animateIn = true
+            }
+        }
+    }
 }
 
 #Preview("Dark Mode") {

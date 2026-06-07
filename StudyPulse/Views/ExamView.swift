@@ -170,6 +170,7 @@ struct ExamView: View {
 /// 普通考试列表项视图
 struct ExamRowView: View {
     let exam: Exam
+    @State private var animateIn = false
     
     /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
     private var daysRemaining: Int {
@@ -182,7 +183,7 @@ struct ExamRowView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(exam.name)
                     .font(.headline)
@@ -190,47 +191,83 @@ struct ExamRowView: View {
                 Spacer()
                 Text(exam.subject.localized())
                     .font(.caption)
-                    .padding(4)
-                    .background(Color(.systemBlue).opacity(0.15))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color(.systemBlue).opacity(0.15))
+                    )
                     .foregroundColor(Color(.systemBlue))
-                    .cornerRadius(4)
             }
             
             Text("\(exam.examDate, style: .date)")
                 .font(.caption)
                 .foregroundColor(Color(.secondaryLabel))
             
-            HStack(spacing: 15) {
-                VStack(alignment: .leading) {
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Time Left")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
+                        .scaleEffect(x: 1, y: 1.2, anchor: .center)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
+                        .fontWeight(.medium)
                         .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Mastery")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
                         .tint(masteryColor)
+                        .scaleEffect(x: 1, y: 1.2, anchor: .center)
 
                     Text("\(exam.masteryDegree)%")
                         .font(.caption2)
+                        .fontWeight(.medium)
                         .foregroundColor(exam.masteryDegree <= 5 ? Color(.systemRed) : Color(.secondaryLabel))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.top, 4)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(10)
-//        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemBlue).opacity(0.25),
+                                Color(.systemBlue).opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(
+            color: Color.black.opacity(0.05),
+            radius: 6,
+            x: 0,
+            y: 3
+        )
+        .opacity(animateIn ? 1 : 0)
+        .offset(y: animateIn ? 0 : 15)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
     }
     
     /// 根据剩余天数确定进度条颜色
@@ -261,6 +298,7 @@ struct ExamRowView: View {
 /// 综合考试列表项视图
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
+    @State private var animateIn = false
     
     /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
     private var daysRemaining: Int {
@@ -278,7 +316,7 @@ struct ComprehensiveExamRowView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(exam.name.localized())
                     .font(.headline)
@@ -286,47 +324,83 @@ struct ComprehensiveExamRowView: View {
                 Spacer()
                 Text(subjectText.localized())
                     .font(.caption)
-                    .padding(4)
-                    .background(Color(.systemPurple).opacity(0.15))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color(.systemPurple).opacity(0.15))
+                    )
                     .foregroundColor(Color(.systemPurple))
-                    .cornerRadius(4)
             }
             
             Text("\(exam.examDate, style: .date)")
                 .font(.caption)
                 .foregroundColor(Color(.secondaryLabel))
             
-            HStack(spacing: 15) {
-                VStack(alignment: .leading) {
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Time Left")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
+                        .scaleEffect(x: 1, y: 1.2, anchor: .center)
                     Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
                         .font(.caption2)
+                        .fontWeight(.medium)
                         .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Mastery")
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
                         .tint(masteryColor)
+                        .scaleEffect(x: 1, y: 1.2, anchor: .center)
 
                     Text("\(exam.masteryDegree)%")
                         .font(.caption2)
+                        .fontWeight(.medium)
                         .foregroundColor(exam.masteryDegree <= 5 ? Color(.systemRed) : Color(.secondaryLabel))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.top, 4)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(10)
-//        .shadow(color: Color(.systemGray).opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemPurple).opacity(0.25),
+                                Color(.systemPurple).opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(
+            color: Color.black.opacity(0.05),
+            radius: 6,
+            x: 0,
+            y: 3
+        )
+        .opacity(animateIn ? 1 : 0)
+        .offset(y: animateIn ? 0 : 15)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
     }
     
     /// 根据剩余天数确定进度条颜色

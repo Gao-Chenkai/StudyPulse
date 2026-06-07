@@ -26,27 +26,91 @@ struct MistakeView: View {
         }.sorted { $0.date > $1.date }
     }
     
+    // 建议复习的题目
+    var suggestedForReview: [MistakeNote] {
+        let allMistakes = dataManager.mistakeSets.sorted { $0.date > $1.date }
+        
+        // 按照优先级排序：
+        // 1. 最近一周添加的
+        // 2. 超过一个月的
+        // 3. 其他
+        let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        
+        return allMistakes.sorted { a, b in
+            let priorityA = (a.date > oneWeekAgo ? 2 : a.date < oneMonthAgo ? 1 : 0)
+            let priorityB = (b.date > oneWeekAgo ? 2 : b.date < oneMonthAgo ? 1 : 0)
+            
+            if priorityA != priorityB {
+                return priorityA > priorityB
+            }
+            return a.date > b.date
+        }.prefix(4).map { $0 }
+    }
+    
     var body: some View {
         NavigationView {
             Group {
-                if filteredMistakes.isEmpty {
-                    ContentUnavailableView(
-                        searchText.isEmpty ? "No Mistakes" : "No Results",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(searchText.isEmpty ? "Tap '+' to add a new mistake note." : "Try adjusting your search.")
-                    )
+                if filteredMistakes.isEmpty && searchText.isEmpty {
+                    VStack(spacing: 24) {
+                        ContentUnavailableView(
+                            "No Mistakes",
+                            systemImage: "exclamationmark.triangle",
+                            description: Text("Tap '+' to add a new mistake note.")
+                        )
+                        
+                        Spacer()
+                    }
                     .background(Color(.systemGroupedBackground))
                     
                 } else {
-                    List {
-                        ForEach(filteredMistakes) { mistake in
-                            NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
-                                MistakeCardView(mistake: mistake)
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 24) {
+                            // 建议复习的题目
+                            if !suggestedForReview.isEmpty && searchText.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Image(systemName: "book.circle.fill")
+                                            .foregroundColor(.purple)
+                                        Text("Suggested for Review")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                    }
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 12) {
+                                            ForEach(suggestedForReview) { mistake in
+                                                NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
+                                                    SuggestedMistakeCard(mistake: mistake)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                            
+                            // 所有错题列表
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(searchText.isEmpty ? "All Mistakes" : "Search Results")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                LazyVStack(spacing: 12) {
+                                    ForEach(filteredMistakes) { mistake in
+                                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
+                                            MistakeCardView(mistake: mistake)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal)
                             }
                         }
-                        .onDelete(perform: deleteMistakeSets)
+                        .padding(.vertical)
                     }
-                    .listStyle(.insetGrouped)
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("Mistakes")
@@ -77,6 +141,7 @@ struct MistakeView: View {
 // MARK: - Mistake Card View
 struct MistakeCardView: View {
     let mistake: MistakeNote
+    @State private var animateIn = false
     
     var totalImageCount: Int {
         mistake.questionImages.count + mistake.reasonImages.count +
@@ -84,10 +149,10 @@ struct MistakeCardView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             // Title and date row
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(mistake.title)
                         .font(.headline)
                         .lineLimit(1)
@@ -95,11 +160,13 @@ struct MistakeCardView: View {
                     if !mistake.subject.isEmpty {
                         Text(mistake.subject.localized())
                             .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.systemPurple).opacity(0.15))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color(.systemPurple).opacity(0.15))
+                            )
                             .foregroundColor(Color(.systemPurple))
-                            .cornerRadius(4)
                     }
                 }
                 
@@ -111,7 +178,7 @@ struct MistakeCardView: View {
                         .foregroundColor(.secondary)
                     
                     if totalImageCount > 0 {
-                        Label("\(totalImageCount)", systemImage: "photo")
+                        Label("\(totalImageCount)", systemImage: "photo.fill")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -124,6 +191,7 @@ struct MistakeCardView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
+                    .padding(.top, 2)
             }
             
             // Source
@@ -133,7 +201,39 @@ struct MistakeCardView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemPurple).opacity(0.25),
+                                Color(.systemPurple).opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(
+            color: Color.black.opacity(0.05),
+            radius: 6,
+            x: 0,
+            y: 3
+        )
+        .opacity(animateIn ? 1 : 0)
+        .offset(y: animateIn ? 0 : 15)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
     }
 }
 
@@ -299,6 +399,117 @@ struct ThumbnailImageView: View {
         guard let thumb = thumbnail else { return }
         ImageCache.shared.putImage(thumb, data)
         await MainActor.run { uiImage = thumb }
+    }
+}
+
+// MARK: - 建议复习的错题卡片
+struct SuggestedMistakeCard: View {
+    let mistake: MistakeNote
+    @State private var animateIn = false
+    
+    var reviewPriority: String {
+        let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        
+        if mistake.date > oneWeekAgo {
+            return "🔴 High Priority"
+        } else if mistake.date < oneMonthAgo {
+            return "🟡 Review Soon"
+        } else {
+            return "🟢 Normal"
+        }
+    }
+    
+    var daysSinceAdded: String {
+        let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
+        let days = components.day ?? 0
+        if days == 0 {
+            return "Today"
+        } else if days == 1 {
+            return "Yesterday"
+        } else {
+            return "\(days) days ago"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundColor(.yellow)
+                
+                Text(reviewPriority)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+            }
+            
+            Text(mistake.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+            
+            if !mistake.subject.isEmpty {
+                Text(mistake.subject.localized())
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color(.systemPurple).opacity(0.15))
+                    .foregroundColor(Color(.systemPurple))
+                    .cornerRadius(4)
+            }
+            
+            if !mistake.originalQuestion.isEmpty {
+                Text(mistake.originalQuestion)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            
+            HStack {
+                Text(daysSinceAdded)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(14)
+        .frame(width: 180)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                
+                LinearGradient(
+                    colors: [
+                        Color(.systemPurple).opacity(0.08),
+                        Color(.systemPurple).opacity(0.02)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(.systemPurple).opacity(0.25), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+        .opacity(animateIn ? 1 : 0)
+        .offset(x: animateIn ? 0 : -20)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85).delay(0.1)) {
+                animateIn = true
+            }
+        }
     }
 }
 

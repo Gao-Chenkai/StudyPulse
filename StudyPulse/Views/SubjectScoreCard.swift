@@ -29,24 +29,33 @@ struct SubjectScoreCard: View {
     let latestGrade: Grade?
     let history: [Grade]
     let displayMode: String // 新增：接收显示模式
+    @State private var animateIn = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: subjectIcon(subject))
-                    .foregroundColor(.blue)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .cyan],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .font(.title3)
                 Text(subject.localized()) // 本地化科目名
-                    .font(.headline).bold()
+                    .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(Color(.label))
                 Spacer()
                 if let g = latestGrade {
-                    HStack {
+                    HStack(spacing: 6) {
                         Text(g.date.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(Color(.secondaryLabel))
+                            .foregroundColor(Color(.tertiaryLabel))
                     }
                 } else {
                     Text("--").foregroundColor(Color(.secondaryLabel))
@@ -55,12 +64,12 @@ struct SubjectScoreCard: View {
             
             if let g = latestGrade {
                 HStack {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 4) {
                         // 根据模式切换显示内容
                         if displayMode == "score" {
                             Text(String(format: "%.1f", g.score))
-                                .font(.title).bold()
-                                .foregroundColor(scoreColor(g.score))
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(scoreColor(g.score))
                             if let rank = g.ranking {
                                 Text("Rank: \(rank)")
                                     .font(.caption)
@@ -69,15 +78,21 @@ struct SubjectScoreCard: View {
                         } else {
                             if let rank = g.ranking, rank > 0 {
                                 Text("\(rank)")
-                                    .font(.title).bold()
-                                    .foregroundColor(scoreColor(g.score))
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(scoreColor(g.score))
                                 Text(String(format: "%.1f", g.score))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             } else {
                                 Text("N/A")
-                                    .font(.title).bold()
-                                    .foregroundColor(.indigo)
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [.indigo, .purple],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
                                 Text(String(format: "%.1f", g.score))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -103,7 +118,7 @@ struct SubjectScoreCard: View {
                         ],
                         displayMode: displayMode
                     )
-                    .frame(width: 80, height: 50)
+                    .frame(width: 100, height: 60)
                 }
             } else {
                 Text("No data available")
@@ -111,10 +126,39 @@ struct SubjectScoreCard: View {
                     .foregroundColor(Color(.secondaryLabel))
             }
         }
-        .padding()
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.05), radius: 8)
+        .padding(16)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemBlue).opacity(0.3),
+                                Color(.systemBlue).opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(
+            color: Color.black.opacity(0.06),
+            radius: 10,
+            x: 0,
+            y: 5
+        )
+        .opacity(animateIn ? 1 : 0)
+        .offset(y: animateIn ? 0 : 20)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
     }
     
     private func subjectIcon(_ subject: String) -> String {
