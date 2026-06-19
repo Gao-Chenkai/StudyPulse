@@ -54,53 +54,62 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // 
-                    if !subjectsNeedingAttention.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                Text("Subjects Needing Attention".localized())
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                            }
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(subjectsNeedingAttention, id: \.self) { subjectName in
-                                        NavigationLink(value: subjectName) {
-                                            AttentionSubjectCard(subjectName: subjectName, grades: getGradeHistory(for: subjectName))
+                    if activeSubjects.isEmpty {
+                        // 空状态
+                        ContentUnavailableView(
+                            "No Grades Yet".localized(),
+                            systemImage: "chart.xyaxis.line",
+                            description: Text("Add grades to see your trends here.".localized())
+                        )
+                        .padding(.top, 100)
+                    } else {
+                        if !subjectsNeedingAttention.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                    Text("Subjects Needing Attention".localized())
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                }
+
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) {
+                                        ForEach(subjectsNeedingAttention, id: \.self) { subjectName in
+                                            NavigationLink(value: subjectName) {
+                                                AttentionSubjectCard(subjectName: subjectName, grades: getGradeHistory(for: subjectName))
+                                            }
+                                            .buttonStyle(.plain)
                                         }
-                                        .buttonStyle(.plain)
                                     }
                                 }
+                            }
+                            .padding()
+                        }
+
+                        LazyVGrid(columns: AdaptiveGridColumns().columns, spacing: 20) {
+                            ForEach(activeSubjects, id: \.self) { subjectName in
+                                NavigationLink(value: subjectName) {
+                                    SubjectScoreCard(
+                                        subject: subjectName,
+                                        latestGrade: getLatestGrade(for: subjectName),
+                                        history: getGradeHistory(for: subjectName),
+                                        displayMode: trendsShowingMode
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding()
                     }
-                    
-                    LazyVStack(spacing: 20) {
-                        ForEach(activeSubjects, id: \.self) { subjectName in
-                            NavigationLink(value: subjectName) {
-                                SubjectScoreCard(
-                                    subject: subjectName,
-                                    latestGrade: getLatestGrade(for: subjectName),
-                                    history: getGradeHistory(for: subjectName),
-                                    displayMode: trendsShowingMode
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding()
                 }
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Trends".localized())
-            // iPad 上限制最大宽度并居中
-            .adaptiveMaxWidth(900)
-            
-            // 
+            // iPad 上撑满 detail 区宽度
+            .frame(maxWidth: .infinity)
+
+            //
             .navigationDestination(for: String.self) { subjectName in
                 SubjectDetailView(
                     subject: subjectName,
@@ -143,6 +152,7 @@ struct TrendsView: View {
             }
             .sheet(isPresented: $showingAddGrade) {
                 AddGradeView()
+                    .adaptiveSheet()
             }
         }
     }
@@ -172,8 +182,9 @@ struct TrendsView: View {
 struct SubjectDetailView: View {
     let subject: String
     @EnvironmentObject var dataManager: DataManager
-    @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明 
-    
+    @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
     @State private var selectedRange: TimeRange = .all
     @State private var showingAddGrade = false
 
@@ -182,6 +193,10 @@ struct SubjectDetailView: View {
         case last3Months = "3 Months"
         case last6Months = "6 Months"
         case lastYear = "1 Year"
+    }
+
+    private var chartHeight: CGFloat {
+        sizeClass == .regular ? 380 : 300
     }
     
     // 
@@ -373,10 +388,10 @@ struct SubjectDetailView: View {
                             }
                         }
                     }
-                    .frame(height: 300)
+                    .frame(height: chartHeight)
                 } else {
                     ContentUnavailableView("No Data".localized(), systemImage: "chart.line.xaxis.dashed")
-                        .frame(height: 300)
+                        .frame(height: chartHeight)
                 }
                 
                 // 
@@ -437,6 +452,7 @@ struct SubjectDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.large)
+        .adaptiveMaxWidth(960)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showingAddGrade = true }) {
@@ -446,6 +462,7 @@ struct SubjectDetailView: View {
         }
         .sheet(isPresented: $showingAddGrade) {
             AddGradeView()
+                .adaptiveSheet()
         }
     }
     
@@ -459,23 +476,24 @@ struct SubjectDetailView: View {
 struct AttentionSubjectCard: View {
     let subjectName: String
     let grades: [Grade]
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateIn = false
-    
+
     var recentGrades: [Grade] {
         Array(grades.sorted { $0.date > $1.date }.prefix(3))
     }
-    
+
     var averageScore: Double {
         guard !grades.isEmpty else { return 0 }
         return grades.map { $0.score }.reduce(0, +) / Double(grades.count)
     }
-    
+
     var trend: String {
         guard grades.count >= 2 else { return "N/A".localized() }
         let sorted = grades.sorted { $0.date < $1.date }
         let oldScore = sorted.first!.score
         let newScore = sorted.last!.score
-        
+
         if newScore > oldScore + 5 {
             return "Improving".localized()
         } else if newScore < oldScore - 5 {
@@ -483,6 +501,10 @@ struct AttentionSubjectCard: View {
         } else {
             return "Stable".localized()
         }
+    }
+
+    private var cardWidth: CGFloat {
+        sizeClass == .regular ? 240 : 200
     }
     
     var body: some View {
@@ -535,7 +557,7 @@ struct AttentionSubjectCard: View {
             }
         }
         .padding(14)
-        .frame(width: 200)
+        .frame(width: cardWidth)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(14)
         .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)

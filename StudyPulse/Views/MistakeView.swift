@@ -51,7 +51,7 @@ struct MistakeView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if dataManager.mistakeSets.isEmpty {
                     VStack(spacing: 24) {
@@ -76,7 +76,7 @@ struct MistakeView: View {
 
                             // 科目列表
                             VStack(alignment: .leading, spacing: 12) {
-                                Text(searchText.isEmpty ? "Subjects" : "Search Results")
+                                Text(searchText.isEmpty ? "Subjects".localized() : "Search Results".localized())
                                     .font(.headline)
                                     .padding(.horizontal)
 
@@ -92,14 +92,14 @@ struct MistakeView: View {
                             }
                         }
                         .padding(.vertical)
-                        // iPad 上限制最大宽度并居中
-                        .adaptiveMaxWidth(900)
+                        // iPad 上撑满 detail 区宽度
+                        .frame(maxWidth: .infinity)
                     }
                     .background(Color(.systemGroupedBackground))
                 }
             }
-            .navigationTitle("Mistakes")
-            .searchable(text: $searchText, prompt: "Search subjects or mistakes...")
+            .navigationTitle("Mistakes".localized())
+            .searchable(text: $searchText, prompt: "Search subjects or mistakes...".localized())
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewMistakeSet = true }) {
@@ -110,6 +110,7 @@ struct MistakeView: View {
             .sheet(isPresented: $showingNewMistakeSet) {
                 NewMistakeSetView()
                     .environmentObject(dataManager)
+                    .adaptiveSheet()
             }
             .background(Color(.systemGroupedBackground))
         }
@@ -190,7 +191,7 @@ struct SubjectMistakesView: View {
 
                 // 错题列表
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(searchText.isEmpty ? "All Mistakes (\(sortedMistakes.count))" : "Search Results (\(filteredMistakes.count))")
+                    Text(searchText.isEmpty ? String(format: "All Mistakes (%d)".localized(), sortedMistakes.count) : String(format: "Search Results (%d)".localized(), filteredMistakes.count))
                         .font(.headline)
                         .padding(.horizontal)
 
@@ -210,7 +211,7 @@ struct SubjectMistakesView: View {
             .adaptiveMaxWidth(900)
         }
         .navigationTitle(subject.localized())
-        .searchable(text: $searchText, prompt: "Search mistakes...")
+        .searchable(text: $searchText, prompt: "Search mistakes...".localized())
         .background(Color(.systemGroupedBackground))
     }
 }
@@ -223,8 +224,8 @@ struct OverviewStatsCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 24) {
-                StatItem(title: "Total", value: "\(totalCount)", icon: "doc.text.fill", color: .blue)
-                StatItem(title: "Subjects", value: "\(subjectCount)", icon: "folder.fill", color: .purple)
+                StatItem(title: "Total".localized(), value: "\(totalCount)", icon: "doc.text.fill", color: .blue)
+                StatItem(title: "Subjects".localized(), value: "\(subjectCount)", icon: "folder.fill", color: .purple)
             }
         }
         .padding(16)
@@ -420,6 +421,7 @@ struct SubjectCardView: View {
             }
         )
         .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+        .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
         .onAppear {
@@ -519,6 +521,7 @@ struct MistakeCardView: View {
             x: 0,
             y: 3
         )
+        .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
         .onAppear {
@@ -631,15 +634,17 @@ struct MistakeSetDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(mistakeSet.title)
         .navigationBarTitleDisplayMode(.inline)
+        .adaptiveMaxWidth(820)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
+                Button("Edit".localized()) {
                     showingEditSheet = true
                 }
             }
         }
         .sheet(isPresented: $showingEditSheet) {
             MistakeDetailEditView(mistakeSet: mistakeSet)
+                .adaptiveSheet()
         }
     }
     
@@ -697,31 +702,36 @@ struct ThumbnailImageView: View {
 // MARK: - 建议复习的错题卡片
 struct SuggestedMistakeCard: View {
     let mistake: MistakeNote
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateIn = false
-    
+
     var reviewPriority: String {
         let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
-        
+
         if mistake.date > oneWeekAgo {
-            return "🔴 High Priority"
+            return "🔴 High Priority".localized()
         } else if mistake.date < oneMonthAgo {
-            return "🟡 Review Soon"
+            return "🟡 Review Soon".localized()
         } else {
-            return "🟢 Normal"
+            return "🟢 Normal".localized()
         }
     }
-    
+
     var daysSinceAdded: String {
         let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
         let days = components.day ?? 0
         if days == 0 {
-            return "Today"
+            return "Today".localized()
         } else if days == 1 {
-            return "Yesterday"
+            return "Yesterday".localized()
         } else {
-            return "\(days) days ago"
+            return "\(days) " + "days ago".localized()
         }
+    }
+
+    private var cardWidth: CGFloat {
+        sizeClass == .regular ? 220 : 180
     }
     
     var body: some View {
@@ -773,7 +783,7 @@ struct SuggestedMistakeCard: View {
             }
         }
         .padding(14)
-        .frame(width: 180)
+        .frame(width: cardWidth)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 16)

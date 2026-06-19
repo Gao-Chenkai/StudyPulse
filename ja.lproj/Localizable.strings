@@ -295,3 +295,210 @@
 "No new grades in the past week. Regular tracking helps you spot trends early." = "過去1週間、新しい成績がありません。定期的な記録でトレンドを早期に発見できます。";
 "Balance your subjects" = "科目のバランスを";
 "You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "%@ の成績記録が他の科目よりはるかに多いです。他の科目も忘れずに。";
+
+// HomeView.swift - Additional
+"Register Exam Grades" = "試験成績を登録";
+"days ago" = "日前";
+"Good Morning" = "おはようございます";
+"Good Afternoon" = "こんにちは";
+"Good Evening" = "こんばんは";
+"Focus: Weakest" = "重点：最も弱い科目";
+"Focus: Recent" = "重点：最近";
+"Focus: Improving" = "重点：伸びている科目";
+"Random" = "ランダム";
+"HIGH" = "高";
+"MED" = "中";
+"LOW" = "低";
+
+// NewExamSetView.swift / ExamDetailEditView.swift
+"Assessment" = "評価";
+"Mastery Degree" = "習熟度";
+"Optional details." = "任意の詳細。";
+"Specific Exam Title or Notes" = "具体的な試験名またはメモ";
+"Add to Calendar" = "カレンダーに追加";
+"Add this exam to your system calendar with a 1-day advance reminder." = "この試験をシステムカレンダーに追加し、1 日前にリマインドします。";
+"Successfully added to calendar!" = "カレンダーに追加しました！";
+"Calendar" = "カレンダー";
+"Exam Name (e.g., Midterm)" = "試験名（例：中間試験）";
+"Exam Numbers" = "試験科目数";
+
+// ExamDetailView.swift
+"Overview" = "概要";
+"Metrics" = "メトリクス";
+"Time Status" = "時間状況";
+"Days Remaining" = "残り日数";
+"Note/Title" = "メモ/タイトル";
+"Will create an all-day event with a 1-day advance reminder in your system calendar." = "システムカレンダーに 1 日前にリマインダー付きの終日イベントを作成します。";
+"Related Mistakes" = "関連する错题";
+"No related mistakes for this subject" = "この科目に関連する错题はありません";
+"+ %d more mistakes" = "他 %d 件の错题";
+"Yesterday" = "昨日";
+"Today!" = "今日！";
+"Comprehensive Exam: %@" = "総合試験：%@";
+"Past Exams" = "過去の試験";
+
+// HRVOnboardingView.swift
+"Back" = "戻る";
+"Next" = "次へ";
+"Skip" = "スキップ";
+"Enable HRV" = "HRV を有効化";
+"HealthKit Access" = "ヘルスケアアクセス";
+"Open Settings" = "設定を開く";
+"What is HRV?" = "HRV とは？";
+"Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life." = "心拍変動（HRV）は、毎回の心拍の間隔のわずかな変化を測定する指標です。自律神経系を科学的に検証された指標であり、本質的に、ストレス・運動・日常生活から身体がどの程度回復しているかを示します。";
+"High HRV → well-rested, ready to learn" = "HRV が高い → 十分に休息が取れ、学習の準備ができている";
+"Low HRV → stressed, fatigued, needs recovery" = "HRV が低い → ストレス・疲労があり、回復が必要";
+"Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average." = "HRV は個人差があります。StudyPulse は 7〜14 日であなた自身のベースラインを構築するため、サジェストは母集団の平均ではなく、あなた専用に調整されます。";
+"Your Data Stays on Your Device" = "あなたのデータはあなたのデバイス上にだけあります";
+"HRV data is read directly from Apple Health" = "HRV データは Apple ヘルスケアから直接読み取られます";
+"We never see or store it ourselves" = "当社が閲覧・保存することは一切ありません";
+"All processing happens on your device" = "すべての処理はあなたのデバイス上で行われます";
+"No data is sent to any server" = "データがサーバーに送信されることはありません";
+"You can disable HRV anytime in Settings" = "設定からいつでも HRV を無効化できます";
+"Access is revoked instantly" = "アクセス権は即座に取り消されます";
+"StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data." = "StudyPulse はあなたの明示的な許可のもと、HealthKit から HRV を読み取るだけです。書き込みは一切行いません。";
+"Ready to Get Started?" = "はじめましょうか？";
+"When you enable HRV monitoring, StudyPulse will:" = "HRV モニタリングを有効にすると、StudyPulse は次のことを行います：";
+"Compare today's HRV to your personal 14-day baseline" = "今日の HRV をあなたの 14 日間のベースラインと比較します";
+"Show a readiness card on your Dashboard" = "ダッシュボードに準備度カードを表示します";
+"Add personalized study suggestions based on your recovery state" = "回復状態に基づいてパーソナライズされた学習提案を追加します";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "HRV を追跡する Apple Watch が必要です。数晩睡眠時に着用すると、ヘルスケアにデータが自動的に表示されます。";
+"HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit へのアクセスが拒否されました。後で iOS 設定の「プライバシーとセキュリティ → ヘルスケア → StudyPulse」から有効化できます。";
+
+// HRVStatusCard.swift
+"HRV Readiness" = "HRV 準備度";
+"Baseline" = "ベースライン";
+"Z-Score" = "Z スコア";
+"Excellent" = "非常に良い";
+"Normal" = "正常";
+"Low" = "低い";
+"Collecting" = "収集中";
+
+// DataAdminView.swift
+"Data Admin" = "データ管理";
+"No grades" = "成績なし";
+"No exams" = "試験なし";
+"No mistakes" = "错题なし";
+"Regular Exams" = "通常試験";
+"Comprehensive" = "総合";
+"Grade Details" = "成績詳細";
+"Edit Grade" = "成績を編集";
+"Subject" = "科目";
+"Edit Exam" = "試験を編集";
+"Exam Details" = "試験詳細";
+"Alias" = "別名";
+"Comma separated" = "カンマ区切り";
+"Mastery" = "習熟度";
+"Status" = "ステータス";
+"Edit Comp Exam" = "総合試験を編集";
+"%d%%" = "%d%%";
+
+// MistakeView.swift
+"Search Results" = "検索結果";
+"Search subjects or mistakes..." = "科目や错题を検索...";
+"Search mistakes..." = "错题を検索...";
+"All Mistakes (%d)" = "すべての错题（%d）";
+"Search Results (%d)" = "検索結果（%d）";
+"Total" = "合計";
+"🔴 High Priority" = "🔴 高優先度";
+"🟡 Review Soon" = "🟡 もうすぐ復習";
+"🟢 Normal" = "🟢 通常";
+"%d new" = "新着 %d";
+
+// NewMistakeSetView / MistakeDetailEditView
+"New Mistake" = "错题を追加";
+"Edit Mistake" = "错题を編集";
+"Section" = "セクション";
+"Hide Preview" = "プレビューを隠す";
+"Show Preview" = "プレビューを表示";
+"OCR Error" = "OCR エラー";
+"Recognizing text..." = "テキスト認識中...";
+"No content to preview" = "プレビューする内容がありません";
+"Untitled" = "無題";
+"Library" = "ライブラリ";
+"Camera" = "カメラ";
+"OCR" = "OCR";
+"Images" = "画像";
+"No images" = "画像なし";
+"Select" = "選択";
+
+// AvatarView.swift
+"Choose from Library" = "ライブラリから選択";
+"Take Photo" = "写真を撮る";
+"Remove Avatar" = "アバターを削除";
+"Change Avatar" = "アバターを変更";
+"years old" = "歳";
+"Display Name" = "表示名";
+"Real Name" = "本名";
+"School Name" = "学校名";
+"School Info" = "学校情報";
+"Grade & Class" = "学年とクラス";
+"e.g. Grade 11" = "例：高校 2 年";
+"e.g. Tsinghua University" = "例：清華大学";
+"Target" = "目標";
+"Apply" = "適用";
+"Category" = "カテゴリ";
+"Intl. %@" = "国際 %@";
+"Primary School" = "小学校";
+"Middle School" = "中学校";
+"High School" = "高校";
+"International High School" = "国際高校";
+"University" = "大学";
+"Graduate" = "大学院";
+"Year" = "年";
+"Cannot read file: encoding not supported. Please make sure the file is a valid CSV file." = "ファイルを読み込めません：サポートされていないエンコーディングです。有効な CSV ファイルであることを確認してください。";
+
+// SettingsView additions
+"Recovery & Readiness" = "回復と準備度";
+"HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded." = "HRV はあなたの許可のもと Apple ヘルスケアから読み取られます。データは端末上にのみ保持され、アップロードされません。";
+"HRV Monitoring" = "HRV モニタリング";
+"HRV Onboarding" = "HRV はじめに";
+"HRV Card Detail" = "HRV カードの詳細";
+"Suggestion Only" = "提案のみ";
+"Data + Suggestion" = "データ + 提案";
+"Chart + Data + Suggestion" = "チャート + データ + 提案";
+"Export Success" = "エクスポート成功";
+"Import Success" = "インポート成功";
+"Import Error" = "インポートエラー";
+"Export Data" = "データをエクスポート";
+"Import Data" = "データをインポート";
+"Version beta 0.0.1" = "バージョン beta 0.0.1";
+"Developed by" = "開発者";
+"Summary" = "概要";
+"Legal Code (English Summary)" = "法本文（英語概要）";
+"Click to View Full Legal Code in Browser" = "クリックしてブラウザで完全な法本文を表示";
+"License Details" = "ライセンスの詳細";
+"Attribution" = "表示";
+"Non-Commercial" = "非営利";
+"ShareAlike" = "継承";
+"Test Notification" = "テスト通知";
+"Test #%d" = "テスト #%d";
+"If you see this, notifications are working." = "これが表示されていれば通知は正常に動作しています。";
+"Add grades to see your trends here." = "成績を追加すると、ここに傾向が表示されます。";
+"No Grades Yet" = "成績はまだありません";
+
+// WelcomeConfig.swift
+"Continue" = "続行";
+"Chart Analysis" = "チャート分析";
+"Intuitive visualization of your trends." = "直感的に推移を確認できます。";
+"Lightning Fast" = "超高速";
+"Millisecond response with no waiting for results." = "ミリ秒レスポンス、結果を待つ必要はありません。";
+"Offline Support" = "オフライン対応";
+"Works fully offline. No internet required." = "完全オフラインで動作。インターネット接続は不要です。";
+"Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement." = "あなたのデバイス情報や利用データは、パーソナライズされた体験提供、アプリ機能の改善、不正防止の目的には使用されません。詳細はプライバシーポリシーをご確認ください。「続行」をタップすることで、利用規約に同意したものとみなされます。";
+
+// Daily motivational quotes (HomeView)
+"Quote 1" = "勉強はレースではなくマラソンです。最後まで続ける者が勝者です。";
+"Quote 2" = "今のあなたの努力は、未来のあなたが今のあなたに手を振っているのです。";
+"Quote 3" = "知識は海のようです。深く入るほど自分の小ささに気づきますが、同時に真理に近づきます。";
+"Quote 4" = "今日の汗は明日の収穫、今日の努力は未来への成功。";
+"Quote 5" = "勉強は山登りのようなもの。過程は大変ですが、頂上からの景色は努力の甲斐があります。";
+"Quote 6" = "一度の失敗で諦めないでください。すべての挫折は成長のチャンスです。";
+"Quote 7" = "知識は最良の投資、時間は最も貴重な資源です。";
+"Quote 8" = "勉強に近道はありません。一歩ずつ着実に続けるだけです。";
+"Quote 9" = "あなたの可能性は無限大です。諦めなければ何でも実現できます。";
+"Quote 10" = "成功はゴールではなく、継続的な学習と成長の過程です。";
+"Quote 11" = "毎日少しずつ進歩すれば、1年後の自分が今のあなたに感謝します。";
+"Quote 12" = "勉強は未来を照らす灯台、続けることは彼岸に渡る櫂。";
+"Quote 13" = "間違った道には魅惑的な風景が広がっています。見ているうちに足を踏み入れ、歩くうちに抜けられなくなります。";
+"Quote 14" = "成功したければ、覚悟を決めて突っ走れ！";

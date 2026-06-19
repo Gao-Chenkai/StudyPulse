@@ -37,13 +37,14 @@ struct MistakeDetailEditView: View {
     @State private var ocrErrorMessage = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 basicInfoSection
                 contentEditorSection
                 imagesSection
             }
-            .navigationTitle("Edit Mistake")
+            .adaptiveForm()
+            .navigationTitle("Edit Mistake".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
             .onAppear { initializeData() }
@@ -59,14 +60,14 @@ struct MistakeDetailEditView: View {
                 })
                 .ignoresSafeArea()
             }
-            .alert("OCR Error", isPresented: $showingOCRAlert) {
-                Button("OK") { }
+            .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
+                Button("OK".localized()) { }
             } message: {
                 Text(ocrErrorMessage)
             }
             .overlay {
                 if isProcessingOCR {
-                    ProgressView("Recognizing text...")
+                    ProgressView("Recognizing text...".localized())
                         .padding(20)
                         .background(Color(.systemBackground))
                         .cornerRadius(12)
@@ -119,7 +120,7 @@ private extension MistakeDetailEditView {
                 .font(.body)
             
             Toggle(isOn: $showMarkdownPreview) {
-                Label(showMarkdownPreview ? "Hide Preview" : "Show Preview",
+                Label(showMarkdownPreview ? "Hide Preview".localized() : "Show Preview".localized(),
                       systemImage: showMarkdownPreview ? "eye.slash" : "eye")
             }
             
@@ -185,11 +186,11 @@ private extension MistakeDetailEditView {
     var toolbar: some ToolbarContent {
         Group {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+                Button("Cancel".localized()) { presentationMode.wrappedValue.dismiss() }
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
+                Button("Save".localized()) {
                     saveChanges()
                     presentationMode.wrappedValue.dismiss()
                 }

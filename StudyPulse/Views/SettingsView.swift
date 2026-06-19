@@ -14,10 +14,12 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var envManager: AppEnvironmentManager
+    @EnvironmentObject var hrvManager: HealthKitManager
 
     // 编辑 / 模态
     @State private var showingProfileEdit = false
     @State private var showingSubjectsEdit = false
+    @State private var showingHRVOnboarding = false
     @State private var showingAbout = false
     @State private var showingCopyright = false
     @State private var showingAvatarPicker = false
@@ -42,175 +44,44 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
-                // MARK: 用户资料卡
-                Section {
-                    profileCard
-                }
-
-                // MARK: 编辑操作
-                Section(header: Text("Edit".localized())) {
-                    Button {
-                        showingProfileEdit = true
-                    } label: {
-                        Label("Edit Profile".localized(), systemImage: "person.text.rectangle")
-                    }
-
-                    Button {
-                        showingSubjectsEdit = true
-                    } label: {
-                        Label("Edit Subjects".localized(), systemImage: "book.closed")
-                    }
-                }
-
-                // MARK: 偏好设置
-                Section(header: Text("Preferences".localized())) {
-                    NavigationLink(destination: PreferencesView()) {
-                        Label("App Preferences".localized(), systemImage: "gearshape")
-                    }
-                }
-
-                // MARK: 学术信息
-                Section(header: Text("Academic Info".localized())) {
-                    if !dataManager.profile.schoolName.isEmpty {
-                        infoRow(
-                            icon: "building.columns",
-                            color: .indigo,
-                            title: "School".localized(),
-                            value: dataManager.profile.schoolName
-                        )
-                    }
-
-                    if !dataManager.profile.grade.isEmpty || !dataManager.profile.className.isEmpty {
-                        infoRow(
-                            icon: "graduationcap",
-                            color: .green,
-                            title: "Grade & Class".localized(),
-                            value: "\(dataManager.profile.grade)\(dataManager.profile.className.isEmpty ? "" : " · \(dataManager.profile.className)")"
-                        )
-                    }
-
-                    infoRow(
-                        icon: "building.columns",
-                        color: .orange,
-                        title: "Education System".localized(),
-                        value: dataManager.profile.educationSystem
-                    )
-
-                    infoRow(
-                        icon: "globe",
-                        color: .blue,
-                        title: "Region".localized(),
-                        value: dataManager.profile.region.localized()
-                    )
-
-                    if dataManager.profile.targetScore > 0 {
-                        infoRow(
-                            icon: "star.fill",
-                            color: .yellow,
-                            title: "Target Score".localized(),
-                            value: String(format: "%.1f", dataManager.profile.targetScore)
-                        )
-                    }
-
-                    if !dataManager.profile.targetSchool.isEmpty {
-                        infoRow(
-                            icon: "target",
-                            color: .red,
-                            title: "Target School".localized(),
-                            value: dataManager.profile.targetSchool
-                        )
-                    }
-                }
-
-                // MARK: 数据管理
-                Section(header: Text("Data Management".localized())) {
-                    Menu {
-                        Button {
-                            exportGrades()
-                        } label: {
-                            Label("Grades".localized(), systemImage: "number.circle")
-                        }
-                        Button {
-                            exportMistakes()
-                        } label: {
-                            Label("Mistakes".localized(), systemImage: "pencil.circle")
-                        }
-                        Button {
-                            exportExams()
-                        } label: {
-                            Label("Exams".localized(), systemImage: "calendar.circle")
-                        }
-                    } label: {
-                        Label("Export Data".localized(), systemImage: "tray.and.arrow.up")
-                    }
-
-                    Menu {
-                        Button {
-                            importType = .grades
-                            isImporting = true
-                        } label: {
-                            Label("Grades".localized(), systemImage: "number.circle")
-                        }
-                        Button {
-                            importType = .mistakes
-                            isImporting = true
-                        } label: {
-                            Label("Mistakes".localized(), systemImage: "pencil.circle")
-                        }
-                        Button {
-                            importType = .exams
-                            isImporting = true
-                        } label: {
-                            Label("Exams".localized(), systemImage: "calendar.circle")
-                        }
-                    } label: {
-                        Label("Import Data".localized(), systemImage: "tray.and.arrow.down")
-                    }
-                    .foregroundColor(.green)
-                }
-
-                // MARK: 关于
-                Section(header: Text("About".localized())) {
-                    Button {
-                        showingAbout = true
-                    } label: {
-                        Label("About StudyPulse".localized(), systemImage: "info.circle")
-                    }
-
-                    Button {
-                        showingCopyright = true
-                    } label: {
-                        Label("Copyright & License".localized(), systemImage: "checkmark.shield")
-                    }
-
-                    Button {
-                        sendTestNotification()
-                        showingTestAlert = true
-                    } label: {
-                        Label("Send Test Notification in 5 Seconds".localized(), systemImage: "bell.badge")
-                    }
-                }
+                profileCardSection
+                editSection
+                preferencesSection
+                hrvSection
+                academicInfoSection
+                dataManagementSection
+                aboutSection
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Settings".localized())
-            // iPad 上限制最大宽度并居中，避免设置项被拉得过宽
-            .adaptiveMaxWidth(720)
+            // iPad 上撑满 detail 区宽度
+            .frame(maxWidth: .infinity)
             .sheet(isPresented: $showingProfileEdit) {
                 ProfileEditView()
+                    .adaptiveSheet()
             }
             .sheet(isPresented: $showingSubjectsEdit) {
                 EditSubjectsView()
+                    .adaptiveSheet()
+            }
+            .sheet(isPresented: $showingHRVOnboarding) {
+                HRVOnboardingView()
+                    .environmentObject(hrvManager)
+                    .adaptiveSheet()
             }
             .sheet(isPresented: $showingAbout) {
                 AboutView()
+                    .adaptiveSheet()
             }
             .sheet(isPresented: $showingCopyright) {
                 CopyrightView()
+                    .adaptiveSheet()
             }
             .sheet(isPresented: $showingAvatarPicker) {
                 AvatarPickerSheet()
+                    .adaptiveSheet()
             }
             .fileExporter(
                 isPresented: $isExporting,
@@ -272,6 +143,223 @@ struct SettingsView: View {
             } message: {
                 Text("Check your notification center in 5 seconds!".localized())
             }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var profileCardSection: some View {
+        Section { profileCard }
+    }
+
+    private var editSection: some View {
+        Section(header: Text("Edit".localized())) {
+            Button {
+                showingProfileEdit = true
+            } label: {
+                Label("Edit Profile".localized(), systemImage: "person.text.rectangle")
+            }
+
+            Button {
+                showingSubjectsEdit = true
+            } label: {
+                Label("Edit Subjects".localized(), systemImage: "book.closed")
+            }
+        }
+    }
+
+    private var preferencesSection: some View {
+        Section(header: Text("Preferences".localized())) {
+            NavigationLink(destination: PreferencesView()) {
+                Label("App Preferences".localized(), systemImage: "gearshape")
+            }
+        }
+    }
+
+    private var hrvSection: some View {
+        Section(header: Text("Recovery & Readiness".localized()),
+                footer: Text("HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded.".localized())) {
+            HStack {
+                Label("HRV Monitoring".localized(), systemImage: "heart.text.square")
+                Spacer()
+                Toggle("", isOn: $hrvManager.hrvEnabled)
+                    .onChange(of: hrvManager.hrvEnabled) { _, newValue in
+                        if newValue {
+                            if !hrvManager.hrvOnboardingCompleted {
+                                showingHRVOnboarding = true
+                            } else {
+                                Task { await hrvManager.enable() }
+                            }
+                        } else {
+                            hrvManager.disable()
+                        }
+                    }
+            }
+            if hrvManager.hrvEnabled && hrvManager.hrvOnboardingCompleted {
+                Button {
+                    showingHRVOnboarding = true
+                } label: {
+                    Label("HRV Onboarding".localized(), systemImage: "info.circle")
+                }
+                detailLevelPicker
+            }
+        }
+    }
+
+    private var academicInfoSection: some View {
+        Section(header: Text("Academic Info".localized())) {
+            if !dataManager.profile.schoolName.isEmpty {
+                infoRow(
+                    icon: "building.columns",
+                    color: .indigo,
+                    title: "School".localized(),
+                    value: dataManager.profile.schoolName
+                )
+            }
+
+            if !dataManager.profile.grade.isEmpty || !dataManager.profile.className.isEmpty {
+                infoRow(
+                    icon: "graduationcap",
+                    color: .green,
+                    title: "Grade & Class".localized(),
+                    value: "\(dataManager.profile.grade)\(dataManager.profile.className.isEmpty ? "" : " · \(dataManager.profile.className)")"
+                )
+            }
+
+            infoRow(
+                icon: "building.columns",
+                color: .orange,
+                title: "Education System".localized(),
+                value: dataManager.profile.educationSystem
+            )
+
+            infoRow(
+                icon: "globe",
+                color: .blue,
+                title: "Region".localized(),
+                value: dataManager.profile.region.localized()
+            )
+
+            if dataManager.profile.targetScore > 0 {
+                infoRow(
+                    icon: "star.fill",
+                    color: .yellow,
+                    title: "Target Score".localized(),
+                    value: String(format: "%.1f", dataManager.profile.targetScore)
+                )
+            }
+
+            if !dataManager.profile.targetSchool.isEmpty {
+                infoRow(
+                    icon: "target",
+                    color: .red,
+                    title: "Target School".localized(),
+                    value: dataManager.profile.targetSchool
+                )
+            }
+        }
+    }
+
+    private var dataManagementSection: some View {
+        Section(header: Text("Data Management".localized())) {
+            Menu {
+                Button {
+                    exportGrades()
+                } label: {
+                    Label("Grades".localized(), systemImage: "number.circle")
+                }
+                Button {
+                    exportMistakes()
+                } label: {
+                    Label("Mistakes".localized(), systemImage: "pencil.circle")
+                }
+                Button {
+                    exportExams()
+                } label: {
+                    Label("Exams".localized(), systemImage: "calendar.circle")
+                }
+            } label: {
+                Label("Export Data".localized(), systemImage: "tray.and.arrow.up")
+            }
+
+            Menu {
+                Button {
+                    importType = .grades
+                    isImporting = true
+                } label: {
+                    Label("Grades".localized(), systemImage: "number.circle")
+                }
+                Button {
+                    importType = .mistakes
+                    isImporting = true
+                } label: {
+                    Label("Mistakes".localized(), systemImage: "pencil.circle")
+                }
+                Button {
+                    importType = .exams
+                    isImporting = true
+                } label: {
+                    Label("Exams".localized(), systemImage: "calendar.circle")
+                }
+            } label: {
+                Label("Import Data".localized(), systemImage: "tray.and.arrow.down")
+            }
+            .foregroundColor(.green)
+
+            NavigationLink {
+                DataAdminView()
+                    .environmentObject(dataManager)
+            } label: {
+                Label("Data Admin".localized(), systemImage: "tablecells")
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        Section(header: Text("About".localized())) {
+            Button {
+                showingAbout = true
+            } label: {
+                Label("About StudyPulse".localized(), systemImage: "info.circle")
+            }
+
+            Button {
+                showingCopyright = true
+            } label: {
+                Label("Copyright & License".localized(), systemImage: "checkmark.shield")
+            }
+
+            Button {
+                sendTestNotification()
+                showingTestAlert = true
+            } label: {
+                Label("Send Test Notification in 5 Seconds".localized(), systemImage: "bell.badge")
+            }
+        }
+    }
+
+    // MARK: - HRV detail level
+
+    private var detailLevelBinding: Binding<HRVDetailLevel> {
+        Binding(
+            get: { hrvManager.hrvDetailLevel },
+            set: { hrvManager.hrvDetailLevel = $0 }
+        )
+    }
+
+    private var detailLevelPicker: some View {
+        Picker("HRV Card Detail".localized(), selection: detailLevelBinding) {
+            ForEach(HRVDetailLevel.allCases, id: \.rawValue) { level in
+                Text(detailLevelLabel(level)).tag(level)
+            }
+        }
+    }
+
+    private func detailLevelLabel(_ level: HRVDetailLevel) -> String {
+        switch level {
+        case .suggestionOnly: return "Suggestion Only".localized()
+        case .dataAndSuggestion: return "Data + Suggestion".localized()
+        case .chartAndData: return "Chart + Data + Suggestion".localized()
         }
     }
 
@@ -576,7 +664,7 @@ struct EditSubjectsView: View {
     @EnvironmentObject var dataManager: DataManager
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section(header: Text("Subjects".localized()),
                         footer: Text("Toggle the subjects you're studying. Tap the score to adjust the full score for each subject.".localized())) {
@@ -631,6 +719,7 @@ struct EditSubjectsView: View {
                     .foregroundColor(.purple)
                 }
             }
+            .adaptiveForm()
             .navigationTitle("Edit Subjects".localized())
             .navigationBarTitleDisplayMode(.inline)
             .onDisappear {
@@ -678,7 +767,7 @@ struct ProfileEditView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 //  - 
                 Section(header: Text("Education Stage".localized())) {
@@ -911,6 +1000,7 @@ struct ProfileEditView: View {
                     }
                 }
             }
+            .adaptiveForm()
             .navigationTitle("Edit Profile".localized())
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -966,12 +1056,12 @@ struct ProfileEditView: View {
     /// 
     private func stageLabel(_ stage: EducationStage) -> String {
         switch stage {
-        case .primarySchool: return "Primary School"
-        case .middleSchool: return "Middle School"
-        case .highSchool: return "High School"
-        case .internationalHighSchool: return "International High School"
-        case .university: return "University"
-        case .graduate: return "Graduate"
+        case .primarySchool: return "Primary School".localized()
+        case .middleSchool: return "Middle School".localized()
+        case .highSchool: return "High School".localized()
+        case .internationalHighSchool: return "International High School".localized()
+        case .university: return "University".localized()
+        case .graduate: return "Graduate".localized()
         }
     }
     
@@ -1037,7 +1127,7 @@ struct ProfileEditView: View {
 
 struct AboutView: View {
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .center, spacing: 20) {
                     Image(systemName: "graduationcap.fill")
@@ -1069,14 +1159,11 @@ struct AboutView: View {
                     }
                     .padding()
                     
-                    Link("Click to View the Repository on Github".localized(), destination: URL(string: "https://github.com/Gao-Chenkai/StudyPulse")!)
-                        .font(.body)
-                        .padding(.top, 10)
-                    
                     Spacer()
                 }
                 .padding()
             }
+            .adaptiveMaxWidth(640)
             .navigationTitle("About".localized())
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -1087,7 +1174,7 @@ struct CopyrightView: View {
     @State private var showLicenseSheet = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .center, spacing: 24) {
                     Image(systemName: "graduationcap.fill")
@@ -1183,11 +1270,13 @@ struct CopyrightView: View {
                 }
                 .padding()
             }
+            .adaptiveMaxWidth(640)
             .navigationTitle("Copyright".localized())
             .navigationBarTitleDisplayMode(.inline)
             
             .sheet(isPresented: $showLicenseSheet) {
                 LicenseDetailView()
+                    .adaptiveSheet()
             }
         }
     }
@@ -1198,7 +1287,7 @@ struct LicenseDetailView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International".localized())
@@ -1237,6 +1326,7 @@ struct LicenseDetailView: View {
                 }
                 .padding()
             }
+            .adaptiveMaxWidth(720)
             .navigationTitle("License Details".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

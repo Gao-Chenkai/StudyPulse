@@ -13,9 +13,10 @@ struct ExamView: View {
     @State private var showingNewExamSet = false
     @State private var selectedExamForDetail: Exam? = nil
     @State private var selectedComprehensiveExam: comprehensiveExam? = nil
+    @State private var showingPastExams = false
 
-    /// 合并所有类型的考试，并按时间排序
-    private var allExams: [Any] {
+    /// 合并所有类型的考试，按时间排序
+    private var allExamsSorted: [Any] {
         var exams: [Any] = []
         exams.append(contentsOf: dataManager.examSets)
         exams.append(contentsOf: dataManager.comprehensiveExamSets)
@@ -27,7 +28,25 @@ struct ExamView: View {
         }
     }
     
-    /// 将考试按时间范围分组
+    /// 未过期的考试（日期 >= 今天）
+    private var upcomingExams: [Any] {
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        return allExamsSorted.filter { item in
+            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
+            return date >= todayStart
+        }
+    }
+    
+    /// 已过期的考试（日期 < 今天）
+    private var pastExams: [Any] {
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        return allExamsSorted.filter { item in
+            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
+            return date < todayStart
+        }
+    }
+    
+    /// 将未来考试按时间范围分组
     private var groupedExams: [(sectionTitle: String, exams: [Any])] {
         let now = Date()
         guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
@@ -35,84 +54,98 @@ struct ExamView: View {
             return []
         }
         
-        // 分别筛选不同时间段的考试
-        let week = allExams.filter { item in
+        let week = upcomingExams.filter { item in
             let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
             return date <= oneWeekLater
         }
-        let month = allExams.filter { item in
+        let month = upcomingExams.filter { item in
             let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
             return date > oneWeekLater && date <= oneMonthLater
         }
-        let later = allExams.filter { item in
+        let later = upcomingExams.filter { item in
             let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
             return date > oneMonthLater
         }
         
         var result: [(String, [Any])] = []
-        if !week.isEmpty { result.append(("Within 1 Week", week)) }
-        if !month.isEmpty { result.append(("Within 1 Month", month)) }
-        if !later.isEmpty { result.append(("Later", later)) }
-        
+        if !week.isEmpty { result.append(("Within 1 Week".localized(), week)) }
+        if !month.isEmpty { result.append(("Within 1 Month".localized(), month)) }
+        if !later.isEmpty { result.append(("Later".localized(), later)) }
+
         return result
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
-                // 当没有任何考试时显示占位视图
-                if dataManager.examSets.isEmpty && dataManager.comprehensiveExamSets.isEmpty {
+                if upcomingExams.isEmpty && pastExams.isEmpty {
                     ContentUnavailableView(
-                        "No Exams",
+                        "No Exams".localized(),
                         systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Tap '+' to add a new exam.")
+                        description: Text("Tap '+' to add a new exam.".localized())
                     )
                     .background(Color(.systemGroupedBackground))
                 } else {
-                    // 渲染考试列表
                     List {
-                        ForEach(groupedExams, id: \.0) { sectionTitle, exams in
-                            Section(header: Text(sectionTitle)
-                                .foregroundColor(Color(.secondaryLabel))
-                                .font(.subheadline)
-                                .textCase(.none)
-                            ) {
-                                ForEach(exams.indices, id: \.self) { index in
-                                    let item = exams[index]
-                                    
-                                    // 渲染普通考试行
-                                    if let exam = item as? Exam {
-                                        ExamRowView(exam: exam)
-                                            .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                selectedExamForDetail = exam
-                                            }
-                                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                                Button(role: .destructive) {
-                                                    deleteExam(exam)
-                                                } label: {
-                                                    Label("Delete", systemImage: "trash")
-                                                }
-                                                .tint(Color(.systemRed))
-                                            }
+                        if upcomingExams.isEmpty {
+                            Section {
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.title2)
+                                            .foregroundColor(Color(.secondaryLabel))
+                                        Text("No upcoming exams".localized())
+                                            .font(.subheadline)
+                                            .foregroundColor(Color(.secondaryLabel))
                                     }
-                                    // 渲染综合考试行
-                                    else if let comprehensive = item as? comprehensiveExam {
-                                        ComprehensiveExamRowView(exam: comprehensive)
-                                            .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                selectedComprehensiveExam = comprehensive
-                                            }
-                                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                                Button(role: .destructive) {
-                                                    deleteComprehensiveExam(comprehensive)
-                                                } label: {
-                                                    Label("Delete", systemImage: "trash")
+                                    .padding(.vertical, 20)
+                                    Spacer()
+                                }
+                                .listRowBackground(Color(.secondarySystemGroupedBackground))
+                            }
+                        } else {
+                            ForEach(groupedExams, id: \.0) { sectionTitle, exams in
+                                Section(header: Text(sectionTitle)
+                                    .foregroundColor(Color(.secondaryLabel))
+                                    .font(.subheadline)
+                                    .textCase(.none)
+                                ) {
+                                    ForEach(exams.indices, id: \.self) { index in
+                                        let item = exams[index]
+                                        
+                                        if let exam = item as? Exam {
+                                            ExamRowView(exam: exam)
+                                                .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    selectedExamForDetail = exam
                                                 }
-                                                .tint(Color(.systemRed))
-                                            }
+                                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                                    Button(role: .destructive) {
+                                                        deleteExam(exam)
+                                                    } label: {
+                                                        Label("Delete", systemImage: "trash")
+                                                    }
+                                                    .tint(Color(.systemRed))
+                                                }
+                                        }
+                                        else if let comprehensive = item as? comprehensiveExam {
+                                            ComprehensiveExamRowView(exam: comprehensive)
+                                                .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    selectedComprehensiveExam = comprehensive
+                                                }
+                                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                                    Button(role: .destructive) {
+                                                        deleteComprehensiveExam(comprehensive)
+                                                    } label: {
+                                                        Label("Delete", systemImage: "trash")
+                                                    }
+                                                    .tint(Color(.systemRed))
+                                                }
+                                        }
                                     }
                                 }
                             }
@@ -122,11 +155,25 @@ struct ExamView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Exams")
+            .navigationTitle("Exams".localized())
             .background(Color(.systemGroupedBackground))
-            // iPad 上限制最大宽度并居中
-            .adaptiveMaxWidth(800)
+            // iPad 上撑满 detail 区宽度
+            .frame(maxWidth: .infinity)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if !pastExams.isEmpty {
+                        Button {
+                            showingPastExams = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                Text("\(pastExams.count)")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewExamSet = true }) {
                         Image(systemName: "plus")
@@ -135,22 +182,40 @@ struct ExamView: View {
             }
             .sheet(isPresented: $showingNewExamSet) {
                 NewExamSetView()
+                    .adaptiveSheet()
             }
-            // 普通考试详情导航
+            .sheet(isPresented: $showingPastExams) {
+                PastExamsSheet(
+                    pastExams: pastExams,
+                    onSelectExam: { exam in
+                        showingPastExams = false
+                        // 延迟导航，等 sheet 关闭
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            selectedExamForDetail = exam
+                        }
+                    },
+                    onSelectComprehensive: { exam in
+                        showingPastExams = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            selectedComprehensiveExam = exam
+                        }
+                    },
+                    onDeleteExam: { exam in deleteExam(exam) },
+                    onDeleteComprehensive: { exam in deleteComprehensiveExam(exam) }
+                )
+                    .adaptiveSheet(detents: [.medium, .large])
+            }
             .navigationDestination(item: $selectedExamForDetail) { exam in
                 ExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
             }
-            // 综合考试详情导航
             .navigationDestination(item: $selectedComprehensiveExam) { exam in
-                Text("Comprehensive Exam: \(exam.name)")
+                Text("Comprehensive Exam: ".localized() + exam.name)
                     .background(Color(.systemBackground))
             }
         }
-        .background(Color(.systemGroupedBackground))
     }
     
-    /// 删除普通考试
     private func deleteExam(_ exam: Exam) {
         if let index = dataManager.examSets.firstIndex(where: { $0.id == exam.id }) {
             dataManager.examSets.remove(at: index)
@@ -158,7 +223,6 @@ struct ExamView: View {
         }
     }
     
-    /// 删除综合考试
     private func deleteComprehensiveExam(_ exam: comprehensiveExam) {
         if let index = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
             dataManager.comprehensiveExamSets.remove(at: index)
@@ -167,14 +231,111 @@ struct ExamView: View {
     }
 }
 
+// MARK: - 过去考试 Sheet
+
+/// 过去考试列表 Sheet
+struct PastExamsSheet: View {
+    let pastExams: [Any]
+    let onSelectExam: (Exam) -> Void
+    let onSelectComprehensive: (comprehensiveExam) -> Void
+    let onDeleteExam: (Exam) -> Void
+    let onDeleteComprehensive: (comprehensiveExam) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(pastExams.indices, id: \.self) { index in
+                    let item = pastExams[index]
+                    
+                    if let exam = item as? Exam {
+                        Button {
+                            dismiss()
+                            onSelectExam(exam)
+                        } label: {
+                            pastExamLabel(
+                                name: exam.name,
+                                subject: exam.subject,
+                                date: exam.examDate,
+                                mastery: exam.masteryDegree
+                            )
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDeleteExam(exam)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(Color(.systemRed))
+                        }
+                    } else if let comp = item as? comprehensiveExam {
+                        Button {
+                            dismiss()
+                            onSelectComprehensive(comp)
+                        } label: {
+                            pastExamLabel(
+                                name: comp.name,
+                                subject: comp.subject.joined(separator: ", "),
+                                date: comp.examDate,
+                                mastery: comp.masteryDegree
+                            )
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDeleteComprehensive(comp)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(Color(.systemRed))
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Past Exams".localized())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done".localized()) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    /// 过去考试行通用标签
+    private func pastExamLabel(name: String, subject: String, date: Date, mastery: Int) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.subheadline)
+                    .foregroundColor(Color(.label))
+                Text(subject)
+                    .font(.caption)
+                    .foregroundColor(Color(.secondaryLabel))
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(date, style: .date)
+                    .font(.caption)
+                    .foregroundColor(Color(.secondaryLabel))
+                Text("\(mastery)%")
+                    .font(.caption2)
+                    .foregroundColor(mastery >= 60 ? Color(.systemGreen) : Color(.systemOrange))
+            }
+        }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+    }
+}
+
 // MARK: - 子视图：普通考试行
 
-/// 普通考试列表项视图
 struct ExamRowView: View {
     let exam: Exam
     @State private var animateIn = false
     
-    /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         return max(0, components.day ?? 0)
@@ -208,13 +369,13 @@ struct ExamRowView: View {
             
             HStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Time Left")
+                    Text("Time Left".localized())
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
                         .scaleEffect(x: 1, y: 1.2, anchor: .center)
-                    Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
+                    Text(daysRemaining > 0 ? "\(daysRemaining) " + "days".localized() : "Today!".localized())
                         .font(.caption2)
                         .fontWeight(.medium)
                         .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
@@ -222,7 +383,7 @@ struct ExamRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Mastery")
+                    Text("Mastery".localized())
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
@@ -263,6 +424,7 @@ struct ExamRowView: View {
             x: 0,
             y: 3
         )
+        .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
         .onAppear {
@@ -272,7 +434,6 @@ struct ExamRowView: View {
         }
     }
     
-    /// 根据剩余天数确定进度条颜色
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)
@@ -283,7 +444,6 @@ struct ExamRowView: View {
         }
     }
     
-    /// 根据掌握程度确定进度条颜色
     private var masteryColor: Color {
         if exam.masteryDegree <= 20 {
             return Color(.systemRed)
@@ -297,12 +457,10 @@ struct ExamRowView: View {
 
 // MARK: - 子视图：综合考试行
 
-/// 综合考试列表项视图
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
     @State private var animateIn = false
     
-    /// 计算属性替代 @State + onAppear，避免副作用和不必要重绘
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         return max(0, components.day ?? 0)
@@ -312,7 +470,6 @@ struct ComprehensiveExamRowView: View {
         min(Double(daysRemaining) / 30.0, 1.0)
     }
     
-    /// 将多个考试科目拼接成逗号分隔的字符串
     private var subjectText: String {
         exam.subject.joined(separator: ", ")
     }
@@ -341,13 +498,13 @@ struct ComprehensiveExamRowView: View {
             
             HStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Time Left")
+                    Text("Time Left".localized())
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: timeProgress, total: 1.0)
                         .tint(timeLeftColor)
                         .scaleEffect(x: 1, y: 1.2, anchor: .center)
-                    Text(daysRemaining > 0 ? "\(daysRemaining) days" : "Today!")
+                    Text(daysRemaining > 0 ? "\(daysRemaining) " + "days".localized() : "Today!".localized())
                         .font(.caption2)
                         .fontWeight(.medium)
                         .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
@@ -355,7 +512,7 @@ struct ComprehensiveExamRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Mastery")
+                    Text("Mastery".localized())
                         .font(.caption2)
                         .foregroundColor(Color(.secondaryLabel))
                     ProgressView(value: Double(exam.masteryDegree), total: 100.0)
@@ -396,6 +553,7 @@ struct ComprehensiveExamRowView: View {
             x: 0,
             y: 3
         )
+        .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
         .onAppear {
@@ -405,7 +563,6 @@ struct ComprehensiveExamRowView: View {
         }
     }
     
-    /// 根据剩余天数确定进度条颜色
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)
@@ -416,7 +573,6 @@ struct ComprehensiveExamRowView: View {
         }
     }
     
-    /// 根据掌握程度确定进度条颜色
     private var masteryColor: Color {
         if exam.masteryDegree <= 20 {
             return Color(.systemRed)

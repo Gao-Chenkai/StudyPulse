@@ -56,7 +56,7 @@ struct AddGradeView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 examDetailsSection
                 
@@ -66,6 +66,7 @@ struct AddGradeView: View {
                 
                 importanceSection
             }
+            .adaptiveForm()
             .navigationTitle("Add New Grade")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }

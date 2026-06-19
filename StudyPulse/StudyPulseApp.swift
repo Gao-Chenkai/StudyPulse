@@ -35,6 +35,7 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 struct StudyPulseApp: App {
     @StateObject private var dataManager = DataManager()
     @StateObject private var envManager = AppEnvironmentManager.shared
+    @StateObject private var hrvManager = HealthKitManager.shared
     
     // 2. 声明协调器实例
     private let notificationCoordinator = NotificationCoordinator()
@@ -62,6 +63,7 @@ struct StudyPulseApp: App {
             ContentView()
                 .environmentObject(dataManager)
                 .environmentObject(envManager)
+                .environmentObject(hrvManager)
                 .preferredColorScheme(envManager.effectiveColorScheme)
                 .wsWelcomeView(
                     config: WSWelcomeConfig.welcomeInfo,

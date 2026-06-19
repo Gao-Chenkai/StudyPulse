@@ -2,15 +2,18 @@
 //  iPadLayout.swift
 //  StudyPulse
 //
-//  iPad 适配布局辅助工具
+//  iPad 自适应布局工具集
+//  为 iPhone 和 iPad 提供一致且优雅的自适应布局体验
 //
 
 import SwiftUI
 
-// MARK: - 设备/尺寸判断
+// MARK: - 设备判断
 
-// 注：horizontalSizeClass 仅在 View body 内可直接读取，
-// 其他位置请使用 @Environment(\.horizontalSizeClass) 自行注入。
+/// 当前设备是否为 iPad
+var isIPad: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad
+}
 
 // MARK: - 内容最大宽度
 
@@ -45,7 +48,7 @@ struct AdaptiveGridColumns {
     let columns: [GridItem]
 
     init(compact: Int = 1, regular: Int = 2, spacing: CGFloat = 20) {
-        let count = UIDevice.current.userInterfaceIdiom == .pad ? regular : compact
+        let count = isIPad ? regular : compact
         self.columns = Array(
             repeating: GridItem(.flexible(), spacing: spacing),
             count: max(1, count)
@@ -95,5 +98,107 @@ extension View {
     /// iPhone 横向 20pt 留白，iPad 不留白（由 maxWidth 容器负责边距）。
     func adaptiveCardPadding() -> some View {
         modifier(AdaptiveCardPadding())
+    }
+}
+
+// MARK: - Form 自适应宽度
+
+/// 为 Form 视图添加 iPad 自适应最大宽度和居中效果。
+/// 推荐用于所有基于 Form 的 Sheet 视图。
+struct AdaptiveFormModifier: ViewModifier {
+    var maxWidth: CGFloat
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        if sizeClass == .regular {
+            content
+                .frame(maxWidth: maxWidth)
+                .frame(maxWidth: .infinity)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// iPad 下端 Form 的自适应宽度与居中
+    /// - Parameter maxWidth: iPad 下的最大宽度，默认 680
+    func adaptiveForm(maxWidth: CGFloat = 680) -> some View {
+        modifier(AdaptiveFormModifier(maxWidth: maxWidth))
+    }
+}
+
+// MARK: - Sheet 展示尺寸控制
+
+/// iPad-friendly sheet sizing with configurable detents.
+/// On iPad (regular size class), applies presentationDetents and drag indicator;
+/// on iPhone, passes through unchanged.
+extension View {
+    /// Apply iPad-friendly sheet sizing with default .large detent.
+    func adaptiveSheet() -> some View {
+        self.modifier(AdaptiveSheetModifier())
+    }
+
+    /// Apply iPad-friendly sheet sizing with custom detents.
+    func adaptiveSheet(detents: Set<PresentationDetent> = [.large], selection: Binding<PresentationDetent>? = nil) -> some View {
+        self.modifier(AdaptiveSheetModifier(detents: detents, selection: selection))
+    }
+}
+
+private struct AdaptiveSheetModifier: ViewModifier {
+    var detents: Set<PresentationDetent> = [.large]
+    var selection: Binding<PresentationDetent>? = nil
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        if sizeClass == .regular {
+            if let selection {
+                content
+                    .presentationDetents(detents, selection: selection)
+                    .presentationDragIndicator(.visible)
+            } else {
+                content
+                    .presentationDetents(detents)
+                    .presentationDragIndicator(.visible)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+// MARK: - Pointer Hover Support
+
+/// Button style that responds to iPad pointer/trackpad hover with a visual highlight.
+struct HoverableButtonStyle: ButtonStyle {
+    var hoverScale: CGFloat = 1.02
+    var hoverOpacity: Double = 0.85
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
+/// View modifier that applies a subtle hover highlight for iPad pointer.
+struct HoverHighlightModifier: ViewModifier {
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .brightness(isHovering ? 0.04 : 0)
+            .scaleEffect(isHovering ? 1.01 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: isHovering)
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+}
+
+extension View {
+    /// Subtle highlight on iPad pointer hover — useful for tappable cards and list rows.
+    func hoverHighlight() -> some View {
+        modifier(HoverHighlightModifier())
     }
 }

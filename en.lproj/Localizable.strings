@@ -295,3 +295,210 @@
 "No new grades in the past week. Regular tracking helps you spot trends early." = "No new grades in the past week. Regular tracking helps you spot trends early.";
 "Balance your subjects" = "Balance your subjects";
 "You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "You have significantly more grades in %@ than other subjects. Don't neglect the rest.";
+
+// HomeView.swift - Additional
+"Register Exam Grades" = "Register Exam Grades";
+"days ago" = "days ago";
+"Good Morning" = "Good Morning";
+"Good Afternoon" = "Good Afternoon";
+"Good Evening" = "Good Evening";
+"Focus: Weakest" = "Focus: Weakest";
+"Focus: Recent" = "Focus: Recent";
+"Focus: Improving" = "Focus: Improving";
+"Random" = "Random";
+"HIGH" = "HIGH";
+"MED" = "MED";
+"LOW" = "LOW";
+
+// NewExamSetView.swift / ExamDetailEditView.swift
+"Assessment" = "Assessment";
+"Mastery Degree" = "Mastery Degree";
+"Optional details." = "Optional details.";
+"Specific Exam Title or Notes" = "Specific Exam Title or Notes";
+"Add to Calendar" = "Add to Calendar";
+"Add this exam to your system calendar with a 1-day advance reminder." = "Add this exam to your system calendar with a 1-day advance reminder.";
+"Successfully added to calendar!" = "Successfully added to calendar!";
+"Calendar" = "Calendar";
+"Exam Name (e.g., Midterm)" = "Exam Name (e.g., Midterm)";
+"Exam Numbers" = "Exam Numbers";
+
+// ExamDetailView.swift
+"Overview" = "Overview";
+"Metrics" = "Metrics";
+"Time Status" = "Time Status";
+"Days Remaining" = "Days Remaining";
+"Note/Title" = "Note/Title";
+"Will create an all-day event with a 1-day advance reminder in your system calendar." = "Will create an all-day event with a 1-day advance reminder in your system calendar.";
+"Related Mistakes" = "Related Mistakes";
+"No related mistakes for this subject" = "No related mistakes for this subject";
+"+ %d more mistakes" = "+ %d more mistakes";
+"Yesterday" = "Yesterday";
+"Today!" = "Today!";
+"Comprehensive Exam: %@" = "Comprehensive Exam: %@";
+"Past Exams" = "Past Exams";
+
+// HRVOnboardingView.swift
+"Back" = "Back";
+"Next" = "Next";
+"Skip" = "Skip";
+"Enable HRV" = "Enable HRV";
+"HealthKit Access" = "HealthKit Access";
+"Open Settings" = "Open Settings";
+"What is HRV?" = "What is HRV?";
+"Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life." = "Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life.";
+"High HRV → well-rested, ready to learn" = "High HRV → well-rested, ready to learn";
+"Low HRV → stressed, fatigued, needs recovery" = "Low HRV → stressed, fatigued, needs recovery";
+"Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average." = "Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average.";
+"Your Data Stays on Your Device" = "Your Data Stays on Your Device";
+"HRV data is read directly from Apple Health" = "HRV data is read directly from Apple Health";
+"We never see or store it ourselves" = "We never see or store it ourselves";
+"All processing happens on your device" = "All processing happens on your device";
+"No data is sent to any server" = "No data is sent to any server";
+"You can disable HRV anytime in Settings" = "You can disable HRV anytime in Settings";
+"Access is revoked instantly" = "Access is revoked instantly";
+"StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data." = "StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data.";
+"Ready to Get Started?" = "Ready to Get Started?";
+"When you enable HRV monitoring, StudyPulse will:" = "When you enable HRV monitoring, StudyPulse will:";
+"Compare today's HRV to your personal 14-day baseline" = "Compare today's HRV to your personal 14-day baseline";
+"Show a readiness card on your Dashboard" = "Show a readiness card on your Dashboard";
+"Add personalized study suggestions based on your recovery state" = "Add personalized study suggestions based on your recovery state";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights.";
+"HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse.";
+
+// HRVStatusCard.swift
+"HRV Readiness" = "HRV Readiness";
+"Baseline" = "Baseline";
+"Z-Score" = "Z-Score";
+"Excellent" = "Excellent";
+"Normal" = "Normal";
+"Low" = "Low";
+"Collecting" = "Collecting";
+
+// DataAdminView.swift
+"Data Admin" = "Data Admin";
+"No grades" = "No grades";
+"No exams" = "No exams";
+"No mistakes" = "No mistakes";
+"Regular Exams" = "Regular Exams";
+"Comprehensive" = "Comprehensive";
+"Grade Details" = "Grade Details";
+"Edit Grade" = "Edit Grade";
+"Subject" = "Subject";
+"Edit Exam" = "Edit Exam";
+"Exam Details" = "Exam Details";
+"Alias" = "Alias";
+"Comma separated" = "Comma separated";
+"Mastery" = "Mastery";
+"Status" = "Status";
+"Edit Comp Exam" = "Edit Comp Exam";
+"%d%%" = "%d%%";
+
+// MistakeView.swift
+"Search Results" = "Search Results";
+"Search subjects or mistakes..." = "Search subjects or mistakes...";
+"Search mistakes..." = "Search mistakes...";
+"All Mistakes (%d)" = "All Mistakes (%d)";
+"Search Results (%d)" = "Search Results (%d)";
+"Total" = "Total";
+"🔴 High Priority" = "🔴 High Priority";
+"🟡 Review Soon" = "🟡 Review Soon";
+"🟢 Normal" = "🟢 Normal";
+"%d new" = "%d new";
+
+// NewMistakeSetView / MistakeDetailEditView
+"New Mistake" = "New Mistake";
+"Edit Mistake" = "Edit Mistake";
+"Section" = "Section";
+"Hide Preview" = "Hide Preview";
+"Show Preview" = "Show Preview";
+"OCR Error" = "OCR Error";
+"Recognizing text..." = "Recognizing text...";
+"No content to preview" = "No content to preview";
+"Untitled" = "Untitled";
+"Library" = "Library";
+"Camera" = "Camera";
+"OCR" = "OCR";
+"Images" = "Images";
+"No images" = "No images";
+"Select" = "Select";
+
+// AvatarView.swift
+"Choose from Library" = "Choose from Library";
+"Take Photo" = "Take Photo";
+"Remove Avatar" = "Remove Avatar";
+"Change Avatar" = "Change Avatar";
+"years old" = "years old";
+"Display Name" = "Display Name";
+"Real Name" = "Real Name";
+"School Name" = "School Name";
+"School Info" = "School Info";
+"Grade & Class" = "Grade & Class";
+"e.g. Grade 11" = "e.g. Grade 11";
+"e.g. Tsinghua University" = "e.g. Tsinghua University";
+"Target" = "Target";
+"Apply" = "Apply";
+"Category" = "Category";
+"Intl. %@" = "Intl. %@";
+"Primary School" = "Primary School";
+"Middle School" = "Middle School";
+"High School" = "High School";
+"International High School" = "International High School";
+"University" = "University";
+"Graduate" = "Graduate";
+"Year" = "Year";
+"Cannot read file: encoding not supported. Please make sure the file is a valid CSV file." = "Cannot read file: encoding not supported. Please make sure the file is a valid CSV file.";
+
+// SettingsView additions
+"Recovery & Readiness" = "Recovery & Readiness";
+"HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded." = "HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded.";
+"HRV Monitoring" = "HRV Monitoring";
+"HRV Onboarding" = "HRV Onboarding";
+"HRV Card Detail" = "HRV Card Detail";
+"Suggestion Only" = "Suggestion Only";
+"Data + Suggestion" = "Data + Suggestion";
+"Chart + Data + Suggestion" = "Chart + Data + Suggestion";
+"Export Success" = "Export Success";
+"Import Success" = "Import Success";
+"Import Error" = "Import Error";
+"Export Data" = "Export Data";
+"Import Data" = "Import Data";
+"Version beta 0.0.1" = "Version beta 0.0.1";
+"Developed by" = "Developed by";
+"Summary" = "Summary";
+"Legal Code (English Summary)" = "Legal Code (English Summary)";
+"Click to View Full Legal Code in Browser" = "Click to View Full Legal Code in Browser";
+"License Details" = "License Details";
+"Attribution" = "Attribution";
+"Non-Commercial" = "Non-Commercial";
+"ShareAlike" = "ShareAlike";
+"Test Notification" = "Test Notification";
+"Test #%d" = "Test #%d";
+"If you see this, notifications are working." = "If you see this, notifications are working.";
+"Add grades to see your trends here." = "Add grades to see your trends here.";
+"No Grades Yet" = "No Grades Yet";
+
+// WelcomeConfig.swift
+"Continue" = "Continue";
+"Chart Analysis" = "Chart Analysis";
+"Intuitive visualization of your trends." = "Intuitive visualization of your trends.";
+"Lightning Fast" = "Lightning Fast";
+"Millisecond response with no waiting for results." = "Millisecond response with no waiting for results.";
+"Offline Support" = "Offline Support";
+"Works fully offline. No internet required." = "Works fully offline. No internet required.";
+"Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement." = "Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement.";
+
+// Daily motivational quotes (HomeView)
+"Quote 1" = "Learning is not a race, it's a marathon — the one who persists to the end is the winner.";
+"Quote 2" = "Every effort you make is your future self waving to you right now.";
+"Quote 3" = "Knowledge is like the ocean — the deeper you go, the smaller you feel, but the closer you get to truth.";
+"Quote 4" = "Today's sweat is tomorrow's harvest; today's persistence is tomorrow's success.";
+"Quote 5" = "Learning is like climbing a mountain — the journey is tough, but the view at the top is worth every effort.";
+"Quote 6" = "Don't give up after one failure; every setback is a chance to grow.";
+"Quote 7" = "Knowledge is the best investment; time is the most precious resource.";
+"Quote 8" = "There's no shortcut in learning — only steady, persistent steps.";
+"Quote 9" = "Your potential exceeds your imagination. As long as you don't give up, anything is possible.";
+"Quote 10" = "Success is not an endpoint, but a continuous process of learning and growth.";
+"Quote 11" = "A little progress every day — a year from now, you'll thank yourself.";
+"Quote 12" = "Learning is the lighthouse that lights the future; persistence is the oar that gets you there.";
+"Quote 13" = "A wrong path can have captivating scenery — you look, you step in, you walk, and you can never find your way out.";
+"Quote 14" = "To succeed, go all in — set your mind and charge forward!";

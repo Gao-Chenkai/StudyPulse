@@ -24,29 +24,29 @@ struct ExamDetailView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("Overview")
+            Section(header: Text("Overview".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
-                LabeledContent("Exam Name", value: exam.name)
+                LabeledContent("Exam Name".localized(), value: exam.name)
                     .foregroundColor(Color(.label))
-                LabeledContent("Subject", value: exam.subject)
+                LabeledContent("Subject".localized(), value: exam.subject)
                     .foregroundColor(Color(.label))
-                
-                LabeledContent("Date", value: exam.examDate.formatted(date: .complete, time: .omitted))
+
+                LabeledContent("Date".localized(), value: exam.examDate.formatted(date: .complete, time: .omitted))
                     .foregroundColor(Color(.label))
-                
+
                 if !exam.examName.isEmpty {
-                    LabeledContent("Note/Title", value: exam.examName)
+                    LabeledContent("Note/Title".localized(), value: exam.examName)
                         .foregroundColor(Color(.label))
                 }
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
-            
-            Section(header: Text("Metrics")
+
+            Section(header: Text("Metrics".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
                 HStack {
-                    Text("Importance")
+                    Text("Importance".localized())
                         .foregroundColor(Color(.label))
                     Spacer()
                     HStack(spacing: 2) {
@@ -56,9 +56,9 @@ struct ExamDetailView: View {
                         }
                     }
                 }
-                
+
                 HStack {
-                    Text("Mastery Degree")
+                    Text("Mastery Degree".localized())
                         .foregroundColor(Color(.label))
                     Spacer()
                     Text("\(exam.masteryDegree)%")
@@ -69,13 +69,13 @@ struct ExamDetailView: View {
                     .progressViewStyle(LinearProgressViewStyle(tint: masteryProgressColor))
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
-            
-            Section(header: Text("Time Status")
+
+            Section(header: Text("Time Status".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
                 let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate).day ?? 0
                 HStack {
-                    Text("Days Remaining")
+                    Text("Days Remaining".localized())
                         .foregroundColor(Color(.label))
                     Spacer()
                     Text("\(max(0, daysLeft)) days")
@@ -84,7 +84,7 @@ struct ExamDetailView: View {
                 }
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
-            
+
             // MARK: - 添加到日历
             Section {
                 Button(action: { addToCalendar() }) {
@@ -92,25 +92,25 @@ struct ExamDetailView: View {
                         Image(systemName: "calendar.badge.plus")
                             .foregroundColor(.accentColor)
                             .font(.title3)
-                        Text("Add to Calendar")
+                        Text("Add to Calendar".localized())
                             .foregroundColor(.accentColor)
                     }
                 }
             } footer: {
-                Text("Will create an all-day event with a 1-day advance reminder in your system calendar.")
+                Text("Will create an all-day event with a 1-day advance reminder in your system calendar.".localized())
                     .foregroundColor(.secondary)
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
-            
+
             // MARK: - 关联的错题
-            Section(header: Text("Related Mistakes")
+            Section(header: Text("Related Mistakes".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
                 if relatedMistakes.isEmpty {
                     HStack {
                         Image(systemName: "doc.text")
                             .foregroundColor(.secondary)
-                        Text("No related mistakes for this subject")
+                        Text("No related mistakes for this subject".localized())
                             .foregroundColor(.secondary)
                     }
                     .listRowBackground(Color(.secondarySystemGroupedBackground))
@@ -120,11 +120,11 @@ struct ExamDetailView: View {
                             RelatedMistakeCard(mistake: mistake)
                         }
                     }
-                    
+
                     if relatedMistakes.count > 4 {
                         HStack {
                             Spacer()
-                            Text("+ \(relatedMistakes.count - 4) more mistakes")
+                            Text(String(format: "+ %d more mistakes".localized(), relatedMistakes.count - 4))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -139,9 +139,10 @@ struct ExamDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(exam.name)
         .navigationBarTitleDisplayMode(.large)
+        .adaptiveMaxWidth(720)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
+                Button("Edit".localized()) {
                     showingEditSheet = true
                 }
                 .foregroundColor(Color(.systemBlue))
@@ -150,9 +151,10 @@ struct ExamDetailView: View {
         .sheet(isPresented: $showingEditSheet) {
             ExamDetailEditView(exam: exam)
                 .environmentObject(dataManager)
+                .adaptiveSheet()
         }
-        .alert("Calendar", isPresented: $showingCalendarAlert) {
-            Button("OK") { }
+        .alert("Calendar".localized(), isPresented: $showingCalendarAlert) {
+            Button("OK".localized()) { }
         } message: {
             Text(calendarAlertMessage)
         }
@@ -168,7 +170,7 @@ struct ExamDetailView: View {
                     note: exam.examName.isEmpty ? nil : exam.examName
                 )
                 await MainActor.run {
-                    calendarAlertMessage = "Successfully added to calendar!"
+                    calendarAlertMessage = "Successfully added to calendar!".localized()
                     showingCalendarAlert = true
                 }
             } catch {
@@ -225,11 +227,11 @@ struct RelatedMistakeCard: View {
         let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
         let days = components.day ?? 0
         if days == 0 {
-            return "Today"
+            return "Today".localized()
         } else if days == 1 {
-            return "Yesterday"
+            return "Yesterday".localized()
         } else if days < 7 {
-            return "\(days) days ago"
+            return "\(days) " + "days ago".localized()
         } else {
             let formatter = DateFormatter()
             formatter.dateStyle = .short
@@ -283,7 +285,7 @@ struct RelatedMistakeCard: View {
                 .foregroundColor(.secondary)
         }
         .padding(12)
-        .background(Color(.systemBackground))
+        .background(Color(.systemGroupedBackground))
         .cornerRadius(10)
         .opacity(animateIn ? 1 : 0)
         .offset(x: animateIn ? 0 : -15)

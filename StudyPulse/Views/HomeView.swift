@@ -11,20 +11,20 @@ import UIKit
 
 // MARK: - 每日变化的励志语录（基于日期）
 let dailyQuotes = [
-    "学习不是一场比赛，而是一场马拉松，坚持到最后的人才是赢家。",
-    "每一次的努力，都是未来的你在向现在的你招手。",
-    "知识就像海洋，越深入越发现自己的渺小，但也越接近真理。",
-    "今天的汗水，是明天的收获；今天的坚持，是未来的成功。",
-    "学习就像爬山，虽然过程艰辛，但登顶后的风景值得一切努力。",
-    "不要因为一次失败就放弃，每一次挫折都是成长的机会。",
-    "知识是最好的投资，时间是最宝贵的资源。",
-    "学习的路上没有捷径，只有一步一个脚印的坚持。",
-    "你的潜力超乎你的想象，只要不放弃，一切皆有可能。",
-    "成功不是终点，而是不断学习和成长的过程。",
-    "每天进步一点点，一年后你会感谢今天的自己。",
-    "学习是照亮未来的灯塔，坚持是到达彼岸的船桨。",
-    "因为歧路上有迷人的风景，看着、看着，就忍不住走进去了，走着、走着，就再也走不出来了。",
-    "要成功，先发疯，下定决心往前冲!",
+    "Quote 1".localized(),
+    "Quote 2".localized(),
+    "Quote 3".localized(),
+    "Quote 4".localized(),
+    "Quote 5".localized(),
+    "Quote 6".localized(),
+    "Quote 7".localized(),
+    "Quote 8".localized(),
+    "Quote 9".localized(),
+    "Quote 10".localized(),
+    "Quote 11".localized(),
+    "Quote 12".localized(),
+    "Quote 13".localized(),
+    "Quote 14".localized(),
 ]
 
 var dailyQuote: String {
@@ -36,60 +36,100 @@ var dailyQuote: String {
 
 // MARK: - 主视图
 struct HomeView: View {
+    @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var dataManager: DataManager
 
+    private var isRegularWidth: Bool {
+        sizeClass == .regular || isIPad
+    }
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
-                    Spacer(minLength: 8)
+                VStack(spacing: 20) {
+                    // 顶部欢迎区域（全宽）
+                    WelcomeHeaderView(selectedTab: $selectedTab)
 
-                    // 顶部欢迎区域
-                    WelcomeHeaderView()
-
-                    // 主要统计卡片
+                    // 主要统计卡片（全宽，4 个指标横排）
                     MainStatsCard()
 
-                    // iPad 多列：快捷操作 + 学习建议
-                    if sizeClass == .regular {
-                        AdaptiveHStack(spacing: 20) {
-                            QuickActionsCard()
-                            StudySuggestionsCard()
-                        }
+                    // HRV 学习准备度卡片（HealthKit）
+                    HRVStatusCard()
+
+                    // 成绩登记提醒（全宽，条件显示）
+                    if !unregisteredExams.isEmpty {
+                        UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+                    }
+
+                    // iPad 两列网格 / iPhone 单列堆叠
+                    if sizeClass == .regular || isIPad {
+                        iPadGrid
                     } else {
-                        QuickActionsCard()
-                        StudySuggestionsCard()
+                        iPhoneStack
                     }
-
-                    // 图表区域 + 即将到来的考试（iPad 并排）
-                    AdaptiveHStack(spacing: 20) {
-                        if !recentGrades.isEmpty {
-                            ChartSectionView()
-                        }
-                        if !upcomingExams.isEmpty {
-                            UpcomingExamsSection()
-                        }
-                    }
-
-                    // iPad 并排：每日励志 + 最近成绩
-                    AdaptiveHStack(spacing: 20) {
-                        DailyQuoteCard(quote: dailyQuote)
-                        if !recentGrades.isEmpty {
-                            RecentGradesSection()
-                        }
-                    }
-
-                    Spacer(minLength: 20)
                 }
-                .padding(.horizontal, sizeClass == .regular ? 24 : 20)
-                .frame(maxWidth: 1100) // iPad 限制最大内容宽度
-                .frame(maxWidth: .infinity) // 居中
+                .padding(.horizontal, sizeClass == .regular || isIPad ? 24 : 20)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(getBackgroundColor(colorScheme))
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard".localized())
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    // iPad 两列网格
+    private var iPadGrid: some View {
+        VStack(spacing: 16) {
+            // 快捷操作 - 全宽（3 个按钮才能横排）
+            QuickActionsCard()
+                .frame(maxWidth: .infinity)
+
+            // 学习建议 + 图表
+            HStack(alignment: .top, spacing: 16) {
+                StudySuggestionsCard()
+                    .frame(maxWidth: .infinity)
+                if !recentGrades.isEmpty {
+                    ChartSectionView()
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // 即将考试 + 最近成绩
+            HStack(alignment: .top, spacing: 16) {
+                if !upcomingExams.isEmpty {
+                    UpcomingExamsSection()
+                        .frame(maxWidth: .infinity)
+                }
+                if !recentGrades.isEmpty {
+                    RecentGradesSection()
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // 每日励志全宽
+            DailyQuoteCard(quote: dailyQuote)
+                .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // iPhone 单列堆叠
+    private var iPhoneStack: some View {
+        VStack(spacing: 20) {
+            QuickActionsCard()
+            StudySuggestionsCard()
+            if !recentGrades.isEmpty {
+                ChartSectionView()
+            }
+            if !upcomingExams.isEmpty {
+                UpcomingExamsSection()
+            }
+            DailyQuoteCard(quote: dailyQuote)
+            if !recentGrades.isEmpty {
+                RecentGradesSection()
+            }
         }
     }
     
@@ -103,10 +143,114 @@ struct HomeView: View {
             .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
             .sorted { $0.examDate < $1.examDate }
     }
+    
+    /// 已过 3-7 天但尚未登记成绩的考试（单科目 Exam）
+    var unregisteredExams: [Exam] {
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        guard let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: startOfToday),
+              let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) else {
+            return []
+        }
+        
+        return dataManager.examSets.filter { exam in
+            guard exam.examDate < threeDaysAgo && exam.examDate >= sevenDaysAgo else {
+                return false
+            }
+            
+            let hasGrade = dataManager.grades.contains { grade in
+                grade.subject == exam.subject &&
+                grade.examName == exam.examName &&
+                grade.date >= exam.examDate
+            }
+            return !hasGrade
+        }.sorted { $0.examDate < $1.examDate }
+    }
+}
+
+// MARK: - 成绩登记提醒卡片
+
+struct UnregisteredExamsReminderCard: View {
+    let unregisteredExams: [Exam]
+    @EnvironmentObject var dataManager: DataManager
+    @State private var showingAddGrade = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .foregroundColor(.orange)
+                Text("Register Exam Grades".localized())
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            ForEach(unregisteredExams) { exam in
+                Button {
+                    showingAddGrade = true
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(exam.name)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                            HStack(spacing: 4) {
+                                Text(exam.subject.localized())
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("·")
+                                    .foregroundColor(.secondary)
+                                Text("\(daysSince(exam.examDate)) " + "days ago".localized())
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.orange)
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground).opacity(0.6))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .shadow(
+            color: Color.black.opacity(0.05),
+            radius: 10,
+            x: 0,
+            y: 4
+        )
+        .sheet(isPresented: $showingAddGrade) {
+            AddGradeView()
+                .environmentObject(dataManager)
+                .adaptiveSheet()
+        }
+    }
+    
+    private func daysSince(_ date: Date) -> Int {
+        Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
+    }
 }
 
 // MARK: - 顶部欢迎区域
 struct WelcomeHeaderView: View {
+    @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var dataManager: DataManager
     
@@ -128,8 +272,9 @@ struct WelcomeHeaderView: View {
             
             Spacer()
             
-            // 头像
-            NavigationLink(destination: SettingsView()) {
+            Button {
+                selectedTab = 4
+            } label: {
                 AvatarView(
                     username: dataManager.profile.username,
                     avatarData: dataManager.loadAvatar(),
@@ -144,11 +289,11 @@ struct WelcomeHeaderView: View {
     private func greetingText() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
         if hour < 12 {
-            return "Good Morning"
+            return "Good Morning".localized()
         } else if hour < 18 {
-            return "Good Afternoon"
+            return "Good Afternoon".localized()
         } else {
-            return "Good Evening"
+            return "Good Evening".localized()
         }
     }
     
@@ -165,11 +310,13 @@ struct MainStatsCard: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateGradient = false
 
+    private var isWide: Bool { sizeClass == .regular || isIPad }
+
     var body: some View {
         VStack(spacing: 20) {
             // iPad 一行 4 个，iPhone 仍是 2x2
-            if sizeClass == .regular {
-                HStack(spacing: 16) {
+            if isWide {
+                HStack(spacing: 12) {
                     StatItemView(
                         title: "Average".localized(),
                         value: averageScoreText(),
@@ -196,8 +343,8 @@ struct MainStatsCard: View {
                     )
                 }
             } else {
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
                         StatItemView(
                             title: "Average".localized(),
                             value: averageScoreText(),
@@ -211,7 +358,7 @@ struct MainStatsCard: View {
                             color: .purple
                         )
                     }
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
                         StatItemView(
                             title: "Upcoming".localized(),
                             value: "\(upcomingExamsCount)",
@@ -229,6 +376,7 @@ struct MainStatsCard: View {
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 24)
@@ -364,6 +512,7 @@ struct QuickActionsCard: View {
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(
@@ -375,13 +524,16 @@ struct QuickActionsCard: View {
         .sheet(isPresented: $showingAddGrade) {
             AddGradeView()
                 .environmentObject(dataManager)
+                .adaptiveSheet()
         }
         .sheet(isPresented: $showingNewExam) {
             NewExamSetView()
+                .adaptiveSheet()
         }
         .sheet(isPresented: $showingNewMistake) {
             NewMistakeSetView()
                 .environmentObject(dataManager)
+                .adaptiveSheet()
         }
     }
 }
@@ -477,6 +629,7 @@ struct UpcomingExamsSection: View {
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(
@@ -500,7 +653,6 @@ struct CompactExamCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // 日期显示
             VStack(spacing: 4) {
                 Text(dayString(from: exam.examDate))
                     .font(.system(size: 20, weight: .bold))
@@ -517,7 +669,6 @@ struct CompactExamCard: View {
                     .fill(Color(.systemBackground))
             )
             
-            // 考试信息
             VStack(alignment: .leading, spacing: 6) {
                 Text(exam.name)
                     .font(.system(size: 16, weight: .semibold))
@@ -555,11 +706,11 @@ struct CompactExamCard: View {
         }
         .padding(14)
         .background(Color(.systemBackground).opacity(0.6))
-        .cornerRadius(16)
+        .cornerRadius(14)
         .opacity(animateIn ? 1 : 0)
-        .offset(x: animateIn ? 0 : 20)
+        .offset(y: animateIn ? 0 : 12)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                 animateIn = true
             }
         }
@@ -567,11 +718,11 @@ struct CompactExamCard: View {
     
     private var daysRemainingText: String {
         if daysRemaining == 0 {
-            return "Today!"
+            return "Today!".localized()
         } else if daysRemaining == 1 {
-            return "1 day"
+            return "Tomorrow".localized()
         } else {
-            return "\(daysRemaining) days"
+            return "\(daysRemaining) " + "days".localized()
         }
     }
     
@@ -588,89 +739,53 @@ struct CompactExamCard: View {
     }
 }
 
-// MARK: - 每日励志语录卡片
+// MARK: - 每日励志卡片
 struct DailyQuoteCard: View {
     let quote: String
-    @State private var isAnimating = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 24))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(.systemBlue), Color(.cyan)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .scaleEffect(isAnimating ? 1.1 : 1.0)
-                    .shadow(color: Color(.cyan).opacity(0.2), radius: 4, x: 0, y: 2)
+        VStack(spacing: 0) {
+            Spacer()
+            VStack(spacing: 16) {
+                Image(systemName: "quote.bubble.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(Color(.systemIndigo).opacity(0.6))
                 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Daily Inspiration".localized())
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    Text(quote)
-                        .font(.system(size: 15, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .lineSpacing(6)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    HStack {
-                        Spacer()
-                        Text("StudyPulse".localized())
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary.opacity(0.6))
-                            .italic()
-                    }
-                }
+                Text(quote)
+                    .font(.system(size: 15, weight: .medium, design: .serif))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 16)
             }
+            Spacer()
         }
+        .frame(minHeight: 140)
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color(.secondarySystemGroupedBackground))
                 
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemBlue).opacity(0.06),
-                        Color(.cyan).opacity(0.02)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                RadialGradient(
+                    colors: [
+                        Color(.systemIndigo).opacity(0.06),
+                        Color.clear
+                    ],
+                    center: .topLeading,
+                    startRadius: 0,
+                    endRadius: 200
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 20))
             }
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color(.systemBlue).opacity(0.25),
-                            Color(.cyan).opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
         .shadow(
-            color: Color.black.opacity(0.06),
-            radius: 12,
+            color: Color.black.opacity(0.05),
+            radius: 10,
             x: 0,
-            y: 6
+            y: 4
         )
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                isAnimating = true
-            }
-        }
     }
 }
 
@@ -679,32 +794,23 @@ struct RecentGradesSection: View {
     @EnvironmentObject var dataManager: DataManager
     
     var recentGrades: [Grade] {
-        Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(4))
+        Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(5))
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Recent Grades".localized())
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                NavigationLink(destination: TrendsView().environmentObject(dataManager)) {
-                    Text("See All".localized())
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.blue)
-                }
-            }
+            Text("Recent Grades".localized())
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.primary)
             
             VStack(spacing: 10) {
                 ForEach(recentGrades) { grade in
-                    GradeRowView(grade: grade)
+                    CompactGradeRow(grade: grade)
                 }
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(
@@ -716,154 +822,78 @@ struct RecentGradesSection: View {
     }
 }
 
-// MARK: - 成绩行视图
-struct GradeRowView: View {
-    let grade: Grade
-    @State private var animateIn = false
-    
-    var body: some View {
-        NavigationLink(destination: GradeDetailView(grade: grade)) {
-            HStack(spacing: 16) {
-                // 分数圆形
-                ZStack {
-                    Circle()
-                        .fill(scoreColor(grade.score).opacity(0.15))
-                        .frame(width: 56, height: 56)
-                    
-                    Text(String(format: "%.0f", grade.score))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(scoreColor(grade.score))
-                }
-                
-                // 信息
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(grade.examName.isEmpty ? "Exam" : grade.examName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 8) {
-                        Text(grade.subject.localized())
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Text("•")
-                            .foregroundColor(.secondary.opacity(0.5))
-                        
-                        Text(grade.date.formatted(date: .abbreviated, time: .omitted))
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.5))
-            }
-            .padding(14)
-            .background(Color(.systemBackground).opacity(0.6))
-            .cornerRadius(16)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .opacity(animateIn ? 1 : 0)
-        .offset(x: animateIn ? 0 : 20)
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.05)) {
-                animateIn = true
-            }
-        }
-    }
-}
-
-// MARK: - 成绩详情视图
-struct GradeDetailView: View {
+// MARK: - 紧凑成绩行
+struct CompactGradeRow: View {
     let grade: Grade
     
     var body: some View {
-        List {
-            Section(header: Text("Exam Details".localized())
-                .foregroundColor(.secondary)
-            ) {
-                HStack {
-                    Text("Exam Name".localized())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(grade.examName.isEmpty ? "N/A".localized() : grade.examName)
-                        .foregroundColor(.primary)
-                }
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(scoreColor.opacity(0.15))
+                    .frame(width: 40, height: 40)
                 
-                HStack {
-                    Text("Subject".localized())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(grade.subject.localized())
-                        .foregroundColor(.primary)
-                }
-                
-                HStack {
-                    Text("Date".localized())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(grade.date.formatted(date: .long, time: .shortened))
-                        .foregroundColor(.primary)
-                }
+                Text("\(Int(grade.score))")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(scoreColor)
             }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
             
-            Section(header: Text("Score".localized())
-                .foregroundColor(.secondary)
-            ) {
-                HStack {
-                    Text("Score".localized())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(String(format: "%.1f", grade.score))
-                        .foregroundColor(scoreColor(grade.score))
-                        .font(.system(size: 20, weight: .bold))
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(grade.subject.localized())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
                 
-                HStack {
-                    Text("Importance".localized())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        ForEach(0..<grade.importance, id: \.self) { _ in
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                        }
-                    }
-                }
+                Text(grade.date, style: .date)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
             }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
+            
+            Spacer()
+            
+            if let ranking = grade.ranking {
+                Text("#\(ranking)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Grade Detail".localized())
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(12)
+        .background(Color(.systemBackground).opacity(0.6))
+        .cornerRadius(12)
+    }
+    
+    private var scoreColor: Color {
+        let rate = grade.scoreRate()
+        if rate >= 0.85 { return .green }
+        if rate >= 0.6 { return .orange }
+        return .red
     }
 }
 
-// MARK: - 科目选择规则
+// MARK: - 图表区域
+
+/// 科目选择规则
 enum SubjectSelectionRule {
-    case lowestScore       // 最低分数科目
-    case mostGrades        // 成绩最多的科目
-    case recentMost        // 最近成绩最多的科目
-    case mostImprovement   // 进步最大的科目
-    case random            // 随机科目
+    case lowestScore
+    case mostGrades
+    case recentMost
+    case mostImprovement
+    case random
 }
 
-// MARK: - 图表区域视图
+/// 单科目趋势图表，用户通过 Menu 选择聚焦规则
 struct ChartSectionView: View {
     @EnvironmentObject var dataManager: DataManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var currentRule: SubjectSelectionRule = .lowestScore
     @State private var selectedSubject: String? = nil
     @State private var animateChart = false
+
+    private var chartHeight: CGFloat {
+        isIPad || sizeClass == .regular ? 260 : 180
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // 标题和规则选择
             HStack {
                 Text("Subject Trend".localized())
                     .font(.system(size: 18, weight: .semibold))
@@ -902,10 +932,8 @@ struct ChartSectionView: View {
                 }
             }
             
-            // 图表显示
             if let subject = selectedSubject, let grades = gradesForSubject(subject) {
                 VStack(spacing: 12) {
-                    // 科目信息
                     HStack {
                         Text(subject.localized())
                             .font(.system(size: 16, weight: .semibold))
@@ -918,7 +946,6 @@ struct ChartSectionView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    // 图表
                     Chart(grades.sorted(by: { $0.date < $1.date })) { grade in
                         LineMark(
                             x: .value("Date", grade.date),
@@ -947,11 +974,10 @@ struct ChartSectionView: View {
                                 }
                         }
                     }
-                    .frame(height: 180)
+                    .frame(height: chartHeight)
                     .opacity(animateChart ? 1 : 0)
                     .offset(y: animateChart ? 0 : 20)
                     
-                    // 统计信息
                     HStack(spacing: 20) {
                         StatisticItem(title: "Average".localized(), value: String(format: "%.1f", averageScore(for: grades)), color: .cyan)
                         StatisticItem(title: "Highest".localized(), value: String(format: "%.1f", highestScore(for: grades)), color: .green)
@@ -977,6 +1003,7 @@ struct ChartSectionView: View {
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(
@@ -992,14 +1019,14 @@ struct ChartSectionView: View {
             }
         }
     }
-    
+
     private var ruleDescription: String {
         switch currentRule {
-        case .lowestScore: return "Focus: Weakest"
-        case .mostGrades: return "Focus: Most Data"
-        case .recentMost: return "Focus: Recent"
-        case .mostImprovement: return "Focus: Improving"
-        case .random: return "Random"
+        case .lowestScore: return "Focus: Weakest".localized()
+        case .mostGrades: return "Focus: Most Data".localized()
+        case .recentMost: return "Focus: Recent".localized()
+        case .mostImprovement: return "Focus: Improving".localized()
+        case .random: return "Random".localized()
         }
     }
     
@@ -1025,7 +1052,6 @@ struct ChartSectionView: View {
             selectedSubject = activeSubjects.randomElement()
         }
         
-        // 重置并重新播放动画
         animateChart = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -1171,6 +1197,7 @@ struct StudySuggestionsCard: View {
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(
@@ -1187,7 +1214,6 @@ struct StudySuggestionsCard: View {
     private func generateSuggestions() {
         var newSuggestions: [StudySuggestion] = []
         
-        // 1: 弱势科目提醒
         if let weakSubject = findWeakSubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1200,7 +1226,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 2: 今天/明天的考试 —— 最紧急
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
         let urgentExams = dataManager.examSets.filter {
             Calendar.current.isDate($0.examDate, inSameDayAs: Date()) ||
@@ -1218,7 +1243,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 3: 成绩下滑趋势
         if let declining = findDecliningTrend() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1231,7 +1255,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 4: 有错题但未记录对应成绩的科目
         let unreviewedMistakes = findUnreviewedMistakeSubjects()
         if !unreviewedMistakes.isEmpty {
             newSuggestions.append(
@@ -1255,7 +1278,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 5: 未来两周的考试
         let upcomingExams = dataManager.examSets.filter { 
             $0.examDate > Date() && 
             $0.examDate <= Calendar.current.date(byAdding: .day, value: 14, to: Date())!
@@ -1272,7 +1294,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 6: 成绩上升趋势
         if let improving = findImprovingTrend() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1285,7 +1306,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 7: 错题集中的科目
         if let mistakeHeavy = findMistakeHeavySubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1298,7 +1318,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 8: 长期未录入新成绩
         if let lastGradeDate = dataManager.grades.map({ $0.date }).max(),
            Calendar.current.dateComponents([.day], from: lastGradeDate, to: Date()).day ?? 0 >= 7 {
             newSuggestions.append(
@@ -1312,7 +1331,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 9: 强项表扬
         if let strongSubject = findStrongSubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1325,7 +1343,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 10: 成绩数据不足
         if dataManager.grades.count < 5 {
             newSuggestions.append(
                 StudySuggestion(
@@ -1338,7 +1355,6 @@ struct StudySuggestionsCard: View {
             )
         }
         
-        // 11: 科目覆盖不均衡
         if let imbalanced = findImbalancedStudy() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1484,7 +1500,6 @@ struct StudySuggestion: Identifiable {
     let priority: Priority
     let color: Color
     enum Priority {
-
         case high, medium, low
     }
 }
@@ -1497,7 +1512,6 @@ struct SuggestionRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                // 图标
                 ZStack {
                     Circle()
                         .fill(suggestion.color.opacity(0.15))
@@ -1508,7 +1522,6 @@ struct SuggestionRowView: View {
                         .foregroundColor(suggestion.color)
                 }
                 
-                // 内容
                 VStack(alignment: .leading, spacing: 4) {
                     Text(suggestion.title)
                         .font(.system(size: 14, weight: .semibold))
@@ -1522,7 +1535,6 @@ struct SuggestionRowView: View {
                 
                 Spacer()
                 
-                // 优先级标记
                 PriorityIndicator(priority: suggestion.priority)
             }
             
@@ -1560,9 +1572,9 @@ struct PriorityIndicator: View {
     
     private var label: String {
         switch priority {
-        case .high: return "HIGH"
-        case .medium: return "MED"
-        case .low: return "LOW"
+        case .high: return "HIGH".localized()
+        case .medium: return "MED".localized()
+        case .low: return "LOW".localized()
         }
     }
     
@@ -1577,13 +1589,13 @@ struct PriorityIndicator: View {
 
 // MARK: - Previews
 #Preview {
-    HomeView()
+    HomeView(selectedTab: .constant(0))
         .environmentObject(DataManager())
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
-    HomeView()
+    HomeView(selectedTab: .constant(0))
         .environmentObject(DataManager())
         .preferredColorScheme(.dark)
 }

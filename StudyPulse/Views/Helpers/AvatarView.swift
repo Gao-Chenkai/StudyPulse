@@ -91,7 +91,7 @@ struct AvatarPickerSheet: View {
     @State private var imagePickerSourceType: UIImagePickerController.SourceType = .photoLibrary
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 // 头像预览
                 AvatarView(
@@ -110,20 +110,20 @@ struct AvatarPickerSheet: View {
                         imagePickerSourceType = .photoLibrary
                         showingImagePicker = true
                     }) {
-                        Label("Choose from Library", systemImage: "photo.on.rectangle")
+                        Label("Choose from Library".localized(), systemImage: "photo.on.rectangle")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)
                             .cornerRadius(12)
                     }
-                    
+
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
                         Button(action: {
                             imagePickerSourceType = .camera
                             showingImagePicker = true
                         }) {
-                            Label("Take Photo", systemImage: "camera")
+                            Label("Take Photo".localized(), systemImage: "camera")
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(Color.purple)
@@ -131,10 +131,10 @@ struct AvatarPickerSheet: View {
                                 .cornerRadius(12)
                         }
                     }
-                    
+
                     if dataManager.profile.avatarFileName != nil {
                         Button(action: removeAvatar) {
-                            Label("Remove Avatar", systemImage: "trash")
+                            Label("Remove Avatar".localized(), systemImage: "trash")
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(Color.red.opacity(0.1))
@@ -144,11 +144,12 @@ struct AvatarPickerSheet: View {
                     }
                 }
                 .padding(.horizontal, 32)
-                
+
                 Spacer()
             }
+            .adaptiveMaxWidth(480)
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Change Avatar")
+            .navigationTitle("Change Avatar".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

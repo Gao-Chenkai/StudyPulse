@@ -295,3 +295,210 @@
 "No new grades in the past week. Regular tracking helps you spot trends early." = "過去一週沒有新成績記錄，定期跟踪有助於及早發現趨勢。";
 "Balance your subjects" = "平衡你的科目";
 "You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "你在 %@ 的成績記錄遠多於其他科目，不要忽略其他科目。";
+
+// HomeView.swift - Additional
+"Register Exam Grades" = "登記考試成績";
+"days ago" = "天前";
+"Good Morning" = "早安";
+"Good Afternoon" = "午安";
+"Good Evening" = "晚安";
+"Focus: Weakest" = "重點：最弱科目";
+"Focus: Recent" = "重點：最近";
+"Focus: Improving" = "重點：進步中";
+"Random" = "隨機";
+"HIGH" = "高";
+"MED" = "中";
+"LOW" = "低";
+
+// NewExamSetView.swift / ExamDetailEditView.swift
+"Assessment" = "評估";
+"Mastery Degree" = "掌握程度";
+"Optional details." = "選填的詳細資訊。";
+"Specific Exam Title or Notes" = "具體考試標題或備註";
+"Add to Calendar" = "加入行事曆";
+"Add this exam to your system calendar with a 1-day advance reminder." = "將此考試加入你的系統行事曆，並提前 1 天提醒。";
+"Successfully added to calendar!" = "已成功加入行事曆！";
+"Calendar" = "行事曆";
+"Exam Name (e.g., Midterm)" = "考試名稱（如：期中考）";
+"Exam Numbers" = "考試科目數";
+
+// ExamDetailView.swift
+"Overview" = "總覽";
+"Metrics" = "指標";
+"Time Status" = "時間狀態";
+"Days Remaining" = "剩餘天數";
+"Note/Title" = "備註/標題";
+"Will create an all-day event with a 1-day advance reminder in your system calendar." = "將在系統行事曆中建立一個全天事件，並提前 1 天提醒。";
+"Related Mistakes" = "相關錯題";
+"No related mistakes for this subject" = "該科目暫無相關錯題";
+"+ %d more mistakes" = "還有 %d 題錯題";
+"Yesterday" = "昨天";
+"Today!" = "今天！";
+"Comprehensive Exam: %@" = "綜合考試：%@";
+"Past Exams" = "已過去的考試";
+
+// HRVOnboardingView.swift
+"Back" = "返回";
+"Next" = "下一步";
+"Skip" = "略過";
+"Enable HRV" = "開啟 HRV";
+"HealthKit Access" = "健康資料存取";
+"Open Settings" = "開啟設定";
+"What is HRV?" = "什麼是 HRV？";
+"Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life." = "心率變異性（HRV）衡量的是每次心跳之間時間的微小差異。它是自主神經系統的一項經科學驗證的指標——本質上反映身體從壓力、運動和日常生活中恢復的能力。";
+"High HRV → well-rested, ready to learn" = "HRV 高 → 充分休息，準備好學習";
+"Low HRV → stressed, fatigued, needs recovery" = "HRV 低 → 壓力較大、疲勞，需要恢復";
+"Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average." = "HRV 是個人化的——StudyPulse 會在 7-14 天內建立你自己的基準，因此建議會針對你個人調整，而不是基於族群平均值。";
+"Your Data Stays on Your Device" = "你的資料只保留在你的裝置上";
+"HRV data is read directly from Apple Health" = "HRV 資料直接從 Apple 健康讀取";
+"We never see or store it ourselves" = "我們不會查看或儲存這些資料";
+"All processing happens on your device" = "所有處理都在你的裝置上完成";
+"No data is sent to any server" = "資料不會傳送到任何伺服器";
+"You can disable HRV anytime in Settings" = "你隨時可以在設定中關閉 HRV";
+"Access is revoked instantly" = "權限立即撤銷";
+"StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data." = "StudyPulse 只會經過你的明確許可從健康應用讀取 HRV。我們不會寫入任何資料。";
+"Ready to Get Started?" = "準備好開始了嗎？";
+"When you enable HRV monitoring, StudyPulse will:" = "開啟 HRV 監測後，StudyPulse 將：";
+"Compare today's HRV to your personal 14-day baseline" = "將今天的 HRV 與你個人的 14 天基準進行比較";
+"Show a readiness card on your Dashboard" = "在你的儀表板上顯示準備度卡片";
+"Add personalized study suggestions based on your recovery state" = "根據你的恢復狀態新增個人化學習建議";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "你需要一支能追蹤 HRV 的 Apple Watch。連續配戴睡眠幾個晚上後，資料會自動出現在健康應用中。";
+"HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit 存取被拒絕。你可以稍後在 iOS 系統的「設定 → 隱私權與安全性 → 健康 → StudyPulse」中開啟。";
+
+// HRVStatusCard.swift
+"HRV Readiness" = "HRV 準備度";
+"Baseline" = "基準";
+"Z-Score" = "Z 分數";
+"Excellent" = "極佳";
+"Normal" = "正常";
+"Low" = "偏低";
+"Collecting" = "收集中";
+
+// DataAdminView.swift
+"Data Admin" = "資料管理";
+"No grades" = "暫無成績";
+"No exams" = "暫無考試";
+"No mistakes" = "暫無錯題";
+"Regular Exams" = "單科考試";
+"Comprehensive" = "綜合考試";
+"Grade Details" = "成績詳情";
+"Edit Grade" = "編輯成績";
+"Subject" = "科目";
+"Edit Exam" = "編輯考試";
+"Exam Details" = "考試詳情";
+"Alias" = "別名";
+"Comma separated" = "用逗號分隔";
+"Mastery" = "掌握度";
+"Status" = "狀態";
+"Edit Comp Exam" = "編輯綜合考試";
+"%d%%" = "%d%%";
+
+// MistakeView.swift
+"Search Results" = "搜尋結果";
+"Search subjects or mistakes..." = "搜尋科目或錯題...";
+"Search mistakes..." = "搜尋錯題...";
+"All Mistakes (%d)" = "全部錯題（%d）";
+"Search Results (%d)" = "搜尋結果（%d）";
+"Total" = "總數";
+"🔴 High Priority" = "🔴 高優先";
+"🟡 Review Soon" = "🟡 即將複習";
+"🟢 Normal" = "🟢 普通";
+"%d new" = "新增 %d";
+
+// NewMistakeSetView / MistakeDetailEditView
+"New Mistake" = "新增錯題";
+"Edit Mistake" = "編輯錯題";
+"Section" = "段落";
+"Hide Preview" = "隱藏預覽";
+"Show Preview" = "顯示預覽";
+"OCR Error" = "OCR 錯誤";
+"Recognizing text..." = "正在辨識文字...";
+"No content to preview" = "暫無內容可預覽";
+"Untitled" = "未命名";
+"Library" = "相簿";
+"Camera" = "相機";
+"OCR" = "OCR";
+"Images" = "圖片";
+"No images" = "暫無圖片";
+"Select" = "選擇";
+
+// AvatarView.swift
+"Choose from Library" = "從相簿選擇";
+"Take Photo" = "拍照";
+"Remove Avatar" = "移除大頭貼";
+"Change Avatar" = "更換大頭貼";
+"years old" = "歲";
+"Display Name" = "顯示名稱";
+"Real Name" = "真實姓名";
+"School Name" = "學校名稱";
+"School Info" = "學校資訊";
+"Grade & Class" = "年級與班級";
+"e.g. Grade 11" = "例如：高一";
+"e.g. Tsinghua University" = "例如：清華大學";
+"Target" = "目標";
+"Apply" = "套用";
+"Category" = "類別";
+"Intl. %@" = "國際 %@";
+"Primary School" = "小學";
+"Middle School" = "國中";
+"High School" = "高中";
+"International High School" = "國際高中";
+"University" = "大學";
+"Graduate" = "研究所";
+"Year" = "年";
+"Cannot read file: encoding not supported. Please make sure the file is a valid CSV file." = "無法讀取檔案：不支援的編碼。請確認檔案是有效的 CSV 檔案。";
+
+// SettingsView additions
+"Recovery & Readiness" = "恢復與準備度";
+"HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded." = "HRV 在你許可下從 Apple 健康讀取。資料只保留在你的裝置上，絕不上傳。";
+"HRV Monitoring" = "HRV 監測";
+"HRV Onboarding" = "HRV 引導";
+"HRV Card Detail" = "HRV 卡片詳情";
+"Suggestion Only" = "僅顯示建議";
+"Data + Suggestion" = "資料 + 建議";
+"Chart + Data + Suggestion" = "圖表 + 資料 + 建議";
+"Export Success" = "匯出成功";
+"Import Success" = "匯入成功";
+"Import Error" = "匯入錯誤";
+"Export Data" = "匯出資料";
+"Import Data" = "匯入資料";
+"Version beta 0.0.1" = "Beta 0.0.1 版";
+"Developed by" = "開發者";
+"Summary" = "概要";
+"Legal Code (English Summary)" = "法律全文（英文概要）";
+"Click to View Full Legal Code in Browser" = "點擊在瀏覽器中檢視完整法律全文";
+"License Details" = "授權詳情";
+"Attribution" = "署名";
+"Non-Commercial" = "非商業性";
+"ShareAlike" = "相同方式共用";
+"Test Notification" = "測試通知";
+"Test #%d" = "測試 #%d";
+"If you see this, notifications are working." = "如果你看到這則通知，代表通知功能正常。";
+"Add grades to see your trends here." = "新增成績後將在此查看你的趨勢。";
+"No Grades Yet" = "暫無成績";
+
+// WelcomeConfig.swift
+"Continue" = "繼續";
+"Chart Analysis" = "圖表分析";
+"Intuitive visualization of your trends." = "以直觀的形式了解趨勢。";
+"Lightning Fast" = "毫秒級回應";
+"Millisecond response with no waiting for results." = "超快速分析，無需等待即可獲得結果。";
+"Offline Support" = "離線支援";
+"Works fully offline. No internet required." = "無需連網，在本地裝置上完成所有處理。";
+"Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement." = "你的裝置資訊和使用資料將不會用於提供個人化體驗、改良應用功能和防止詐欺。查看詳細隱私權政策以了解更多資訊。點擊「繼續」即代表同意使用者協議。";
+
+// Daily motivational quotes (HomeView)
+"Quote 1" = "學習不是一場比賽，而是一場馬拉松，堅持到最後的人才是贏家。";
+"Quote 2" = "每一次的努力，都是未來你在向現在的你招手。";
+"Quote 3" = "知識就像海洋，越深入越發現自己的渺小，但也越接近真理。";
+"Quote 4" = "今天的汗水，是明天的收穫；今天的堅持，是未來的成功。";
+"Quote 5" = "學習就像爬山，雖然過程艱辛，但登頂後的風景值得一切努力。";
+"Quote 6" = "不要因為一次失敗就放棄，每一次挫折都是成長的機會。";
+"Quote 7" = "知識是最好的投資，時間是最寶貴的資源。";
+"Quote 8" = "學習的路上沒有捷徑，只有一步一個腳印的堅持。";
+"Quote 9" = "你的潛力超乎你的想像，只要不放棄，一切皆有可能。";
+"Quote 10" = "成功不是終點，而是不斷學習和成長的過程。";
+"Quote 11" = "每天進步一點點，一年後你會感謝今天的自己。";
+"Quote 12" = "學習是照亮未來的燈塔，堅持是到達彼岸的船槳。";
+"Quote 13" = "因為歧路上有迷人的風景，看著、看著，就忍不住走進去了，走著、走著，就再也走不出來了。";
+"Quote 14" = "要成功，先發瘋，下定決心往前衝！";

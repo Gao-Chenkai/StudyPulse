@@ -295,3 +295,210 @@
 "No new grades in the past week. Regular tracking helps you spot trends early." = "过去一周没有新成绩记录，定期跟踪有助于及早发现趋势。";
 "Balance your subjects" = "平衡你的科目";
 "You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "你在 %@ 的成绩记录远多于其他科目，不要忽略其他科目。";
+
+// HomeView.swift - Additional
+"Register Exam Grades" = "登记考试成绩";
+"days ago" = "天前";
+"Good Morning" = "早上好";
+"Good Afternoon" = "下午好";
+"Good Evening" = "晚上好";
+"Focus: Weakest" = "重点：最弱科目";
+"Focus: Recent" = "重点：最近";
+"Focus: Improving" = "重点：进步中";
+"Random" = "随机";
+"HIGH" = "高";
+"MED" = "中";
+"LOW" = "低";
+
+// NewExamSetView.swift / ExamDetailEditView.swift
+"Assessment" = "评估";
+"Mastery Degree" = "掌握程度";
+"Optional details." = "可选的详情。";
+"Specific Exam Title or Notes" = "具体考试标题或备注";
+"Add to Calendar" = "添加到日历";
+"Add this exam to your system calendar with a 1-day advance reminder." = "将此考试添加到你的系统日历，并提前 1 天提醒。";
+"Successfully added to calendar!" = "已成功添加到日历！";
+"Calendar" = "日历";
+"Exam Name (e.g., Midterm)" = "考试名称（如：期中考试）";
+"Exam Numbers" = "考试科目数";
+
+// ExamDetailView.swift
+"Overview" = "概览";
+"Metrics" = "指标";
+"Time Status" = "时间状态";
+"Days Remaining" = "剩余天数";
+"Note/Title" = "备注/标题";
+"Will create an all-day event with a 1-day advance reminder in your system calendar." = "将在系统日历中创建一个全天事件，并提前 1 天提醒。";
+"Related Mistakes" = "相关错题";
+"No related mistakes for this subject" = "该科目暂无相关错题";
+"+ %d more mistakes" = "还有 %d 道错题";
+"Yesterday" = "昨天";
+"Today!" = "今天！";
+"Comprehensive Exam: %@" = "综合考试：%@";
+"Past Exams" = "已过去的考试";
+
+// HRVOnboardingView.swift
+"Back" = "返回";
+"Next" = "下一步";
+"Skip" = "跳过";
+"Enable HRV" = "开启 HRV";
+"HealthKit Access" = "健康数据访问";
+"Open Settings" = "打开设置";
+"What is HRV?" = "什么是 HRV？";
+"Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life." = "心率变异性（HRV）衡量的是每次心跳之间时间的微小差异。它是自主神经系统的一项科学验证指标——本质上反映身体从压力、运动和日常生活中恢复的能力。";
+"High HRV → well-rested, ready to learn" = "HRV 高 → 充分休息，准备好学习";
+"Low HRV → stressed, fatigued, needs recovery" = "HRV 低 → 压力较大、疲劳，需要恢复";
+"Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average." = "HRV 是个性化的——StudyPulse 会在 7-14 天内建立你自己的基线，因此建议会针对你定制，而不是基于人群平均值。";
+"Your Data Stays on Your Device" = "你的数据只留在你的设备上";
+"HRV data is read directly from Apple Health" = "HRV 数据直接从 Apple 健康读取";
+"We never see or store it ourselves" = "我们不会查看或存储这些数据";
+"All processing happens on your device" = "所有处理都在你的设备上完成";
+"No data is sent to any server" = "数据不会发送到任何服务器";
+"You can disable HRV anytime in Settings" = "你随时可以在设置中关闭 HRV";
+"Access is revoked instantly" = "权限立即撤销";
+"StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data." = "StudyPulse 只会经过你的明确许可从健康应用读取 HRV。我们不会写入任何数据。";
+"Ready to Get Started?" = "准备好开始了吗？";
+"When you enable HRV monitoring, StudyPulse will:" = "开启 HRV 监测后，StudyPulse 将：";
+"Compare today's HRV to your personal 14-day baseline" = "将今天的 HRV 与你个人的 14 天基线进行比较";
+"Show a readiness card on your Dashboard" = "在你的数据概览上显示准备度卡片";
+"Add personalized study suggestions based on your recovery state" = "根据你的恢复状态添加个性化学习建议";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "你需要一块能追踪 HRV 的 Apple Watch。连续佩戴睡眠几个晚上后，数据会自动出现在健康应用中。";
+"HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit 访问被拒绝。你可以稍后在 iOS 系统的「设置 → 隐私与安全 → 健康 → StudyPulse」中开启。";
+
+// HRVStatusCard.swift
+"HRV Readiness" = "HRV 准备度";
+"Baseline" = "基线";
+"Z-Score" = "Z 分数";
+"Excellent" = "极佳";
+"Normal" = "正常";
+"Low" = "偏低";
+"Collecting" = "收集中";
+
+// DataAdminView.swift
+"Data Admin" = "数据管理";
+"No grades" = "暂无成绩";
+"No exams" = "暂无考试";
+"No mistakes" = "暂无错题";
+"Regular Exams" = "单科考试";
+"Comprehensive" = "综合考试";
+"Grade Details" = "成绩详情";
+"Edit Grade" = "编辑成绩";
+"Subject" = "科目";
+"Edit Exam" = "编辑考试";
+"Exam Details" = "考试详情";
+"Alias" = "别名";
+"Comma separated" = "用逗号分隔";
+"Mastery" = "掌握度";
+"Status" = "状态";
+"Edit Comp Exam" = "编辑综合考试";
+"%d%%" = "%d%%";
+
+// MistakeView.swift
+"Search Results" = "搜索结果";
+"Search subjects or mistakes..." = "搜索科目或错题...";
+"Search mistakes..." = "搜索错题...";
+"All Mistakes (%d)" = "全部错题（%d）";
+"Search Results (%d)" = "搜索结果（%d）";
+"Total" = "总数";
+"🔴 High Priority" = "🔴 高优先级";
+"🟡 Review Soon" = "🟡 即将复习";
+"🟢 Normal" = "🟢 普通";
+"%d new" = "新增 %d";
+
+// NewMistakeSetView / MistakeDetailEditView
+"New Mistake" = "添加错题";
+"Edit Mistake" = "编辑错题";
+"Section" = "段落";
+"Hide Preview" = "隐藏预览";
+"Show Preview" = "显示预览";
+"OCR Error" = "OCR 错误";
+"Recognizing text..." = "正在识别文字...";
+"No content to preview" = "暂无内容可预览";
+"Untitled" = "未命名";
+"Library" = "相册";
+"Camera" = "相机";
+"OCR" = "OCR";
+"Images" = "图片";
+"No images" = "暂无图片";
+"Select" = "选择";
+
+// AvatarView.swift
+"Choose from Library" = "从相册选择";
+"Take Photo" = "拍照";
+"Remove Avatar" = "移除头像";
+"Change Avatar" = "更换头像";
+"years old" = "岁";
+"Display Name" = "显示名称";
+"Real Name" = "真实姓名";
+"School Name" = "学校名称";
+"School Info" = "学校信息";
+"Grade & Class" = "年级与班级";
+"e.g. Grade 11" = "例如：高一";
+"e.g. Tsinghua University" = "例如：清华大学";
+"Target" = "目标";
+"Apply" = "应用";
+"Category" = "分类";
+"Intl. %@" = "国际 %@";
+"Primary School" = "小学";
+"Middle School" = "初中";
+"High School" = "高中";
+"International High School" = "国际高中";
+"University" = "大学";
+"Graduate" = "研究生";
+"Year" = "年";
+"Cannot read file: encoding not supported. Please make sure the file is a valid CSV file." = "无法读取文件：不支持的编码。请确认文件是有效的 CSV 文件。";
+
+// SettingsView additions
+"Recovery & Readiness" = "恢复与准备度";
+"HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded." = "HRV 在你许可下从 Apple 健康读取。数据只保留在你的设备上，绝不上传。";
+"HRV Monitoring" = "HRV 监测";
+"HRV Onboarding" = "HRV 引导";
+"HRV Card Detail" = "HRV 卡片详情";
+"Suggestion Only" = "仅显示建议";
+"Data + Suggestion" = "数据 + 建议";
+"Chart + Data + Suggestion" = "图表 + 数据 + 建议";
+"Export Success" = "导出成功";
+"Import Success" = "导入成功";
+"Import Error" = "导入错误";
+"Export Data" = "导出数据";
+"Import Data" = "导入数据";
+"Version beta 0.0.1" = "Beta 0.0.1 版";
+"Developed by" = "开发者";
+"Summary" = "概要";
+"Legal Code (English Summary)" = "法律文本（英文概要）";
+"Click to View Full Legal Code in Browser" = "点击在浏览器中查看完整法律文本";
+"License Details" = "许可详情";
+"Attribution" = "署名";
+"Non-Commercial" = "非商业性使用";
+"ShareAlike" = "相同方式共享";
+"Test Notification" = "测试通知";
+"Test #%d" = "测试 #%d";
+"If you see this, notifications are working." = "如果你看到这条通知，说明通知功能正常。";
+"Add grades to see your trends here." = "添加成绩后将在此查看你的趋势。";
+"No Grades Yet" = "暂无成绩";
+
+// WelcomeConfig.swift
+"Continue" = "继续";
+"Chart Analysis" = "图表分析";
+"Intuitive visualization of your trends." = "以直观的形式了解趋势。";
+"Lightning Fast" = "毫秒级响应";
+"Millisecond response with no waiting for results." = "超快速分析，无需等待即可获得结果。";
+"Offline Support" = "离线支持";
+"Works fully offline. No internet required." = "无需联网，在本地设备上完成所有处理。";
+"Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement." = "你的设备信息和使用数据将不会用于提供个性化体验、改进应用功能和防止欺诈。查看详细隐私政策了解更多信息。点击「继续」即代表同意用户协议。";
+
+// Daily motivational quotes (HomeView)
+"Quote 1" = "学习不是一场比赛，而是一场马拉松，坚持到最后的人才是赢家。";
+"Quote 2" = "每一次的努力，都是未来的你在向现在的你招手。";
+"Quote 3" = "知识就像海洋，越深入越发现自己的渺小，但也越接近真理。";
+"Quote 4" = "今天的汗水，是明天的收获；今天的坚持，是未来的成功。";
+"Quote 5" = "学习就像爬山，虽然过程艰辛，但登顶后的风景值得一切努力。";
+"Quote 6" = "不要因为一次失败就放弃，每一次挫折都是成长的机会。";
+"Quote 7" = "知识是最好的投资，时间是最宝贵的资源。";
+"Quote 8" = "学习的路上没有捷径，只有一步一个脚印的坚持。";
+"Quote 9" = "你的潜力超乎你的想象，只要不放弃，一切皆有可能。";
+"Quote 10" = "成功不是终点，而是不断学习和成长的过程。";
+"Quote 11" = "每天进步一点点，一年后你会感谢今天的自己。";
+"Quote 12" = "学习是照亮未来的灯塔，坚持是到达彼岸的船桨。";
+"Quote 13" = "因为歧路上有迷人的风景，看着、看着，就忍不住走进去了，走着、走着，就再也走不出来了。";
+"Quote 14" = "要成功，先发疯，下定决心往前冲！";

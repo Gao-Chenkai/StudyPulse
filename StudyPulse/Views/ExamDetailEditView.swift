@@ -38,27 +38,27 @@ struct ExamDetailEditView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                Section(header: Text("Basic Info")) {
-                    TextField("Exam Name", text: $name)
-                    
-                    Picker("Subject", selection: $selectedSubject) {
+                Section(header: Text("Basic Info".localized())) {
+                    TextField("Exam Name".localized(), text: $name)
+
+                    Picker("Subject".localized(), selection: $selectedSubject) {
                         ForEach(availableSubjects, id: \.self) { subject in
                             Text(subject).tag(subject)
                         }
                     }
-                    
-                    DatePicker("Date", selection: $examDate, displayedComponents: .date)
+
+                    DatePicker("Date".localized(), selection: $examDate, displayedComponents: .date)
                 }
-                
-                Section(header: Text("Assessment")) {
+
+                Section(header: Text("Assessment".localized())) {
                     // 重要性
                     VStack(alignment: .leading) {
                         HStack {
-                            Text("Importance")
+                            Text("Importance".localized())
                             Spacer()
-                            Text("\(importance) / 5")
+                            Text("\(importance) / 5".localized())
                                 .foregroundColor(.secondary)
                         }
                         HStack {
@@ -72,13 +72,13 @@ struct ExamDetailEditView: View {
                             }
                         }
                     }
-                    
+
                     // 掌握程度
                     VStack(alignment: .leading) {
                         HStack {
-                            Text("Mastery Degree")
+                            Text("Mastery Degree".localized())
                             Spacer()
-                            Text("\(masteryDegree)%")
+                            Text("\(masteryDegree)%".localized())
                                 .foregroundColor(.secondary)
                                 .monospacedDigit()
                         }
@@ -88,21 +88,22 @@ struct ExamDetailEditView: View {
                         ), in: 0...100, step: 5)
                     }
                 }
-                
-                Section(header: Text("Notes")) {
-                    TextField("Specific Exam Title or Notes", text: $examNote)
+
+                Section(header: Text("Notes".localized())) {
+                    TextField("Specific Exam Title or Notes".localized(), text: $examNote)
                 }
             }
-            .navigationTitle("Edit Exam")
+            .adaptiveForm()
+            .navigationTitle("Edit Exam".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancel".localized()) {
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Save".localized()) {
                         updateExam()
                     }
                     .fontWeight(.semibold)

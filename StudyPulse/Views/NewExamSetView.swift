@@ -56,24 +56,24 @@ struct NewExamSetView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                Section(header: Text("Basic Info")) {
-                    TextField("Exam Name (e.g., Midterm)", text: $name)
-                    
+                Section(header: Text("Basic Info".localized())) {
+                    TextField("Exam Name (e.g., Midterm)".localized(), text: $name)
+
                     VStack {
-                        Picker("Exam Numbers", selection: $isComprehensiveExam) {
-                            Text("Single Subject")
+                        Picker("Exam Numbers".localized(), selection: $isComprehensiveExam) {
+                            Text("Single Subject".localized())
                                 .tag(false)
-                            Text("Comprehensive Exam")
+                            Text("Comprehensive Exam".localized())
                                 .tag(true)
                         }
                         .pickerStyle(.segmented)
-                        
 
-                        
+
+
                         if !isComprehensiveExam {
-                            Picker("Select Subject", selection: $selectedSingleSubject) {
+                            Picker("Select Subject".localized(), selection: $selectedSingleSubject) {
                                 ForEach(availableSubjects, id: \.self) { subject in
                                     Text(subject.localized()).tag(subject)
                                 }
@@ -81,10 +81,10 @@ struct NewExamSetView: View {
                             .padding(.top, 8)
                         } else {
                             List {
-                                Text("Select Multiple Subjects")
+                                Text("Select Multiple Subjects".localized())
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
-                                
+
                                 ForEach(availableSubjects, id: \.self) { subject in
                                     HStack {
                                         Text(subject.localized())
@@ -109,24 +109,25 @@ struct NewExamSetView: View {
                         }
 
                     }
-                                        
-                                        
+
+
+
 //                    Picker("！Subject！", selection: $selectedSubject) {
 //                        ForEach(availableSubjects, id: \.self) { subject in
 //                            Text(subject).tag(subject)
 //                        }
 //                    }
-                    
-                    DatePicker("Date", selection: $examDate, displayedComponents: .date)
+
+                    DatePicker("Date".localized(), selection: $examDate, displayedComponents: .date)
                 }
-                
-                Section(header: Text("Assessment")) {
+
+                Section(header: Text("Assessment".localized())) {
                     // 重要性
                     VStack(alignment: .leading) {
                         HStack {
-                            Text("Importance")
+                            Text("Importance".localized())
                             Spacer()
-                            Text("\(importance) / 5")
+                            Text("\(importance) / 5".localized())
                                 .foregroundColor(.secondary)
                         }
                         HStack {
@@ -140,13 +141,13 @@ struct NewExamSetView: View {
                             }
                         }
                     }
-                    
+
                     // 掌握程度
                     VStack(alignment: .leading) {
                         HStack {
-                            Text("Mastery Degree")
+                            Text("Mastery Degree".localized())
                             Spacer()
-                            Text("\(masteryDegree)%")
+                            Text("\(masteryDegree)%".localized())
                                 .foregroundColor(.secondary)
                                 .monospacedDigit()
                         }
@@ -156,26 +157,27 @@ struct NewExamSetView: View {
                         ), in: 0...100, step: 5)
                     }
                 }
-                
-                Section(header: Text("Notes"), footer: Text("Optional details.")) {
-                    TextField("Specific Exam Title or Notes", text: $examNote)
+
+                Section(header: Text("Notes".localized()), footer: Text("Optional details.".localized())) {
+                    TextField("Specific Exam Title or Notes".localized(), text: $examNote)
                 }
-                
+
                 // 添加到日历选项
-                Section(header: Text("Calendar"), footer: Text("Add this exam to your system calendar with a 1-day advance reminder.")) {
-                    Toggle("Add to Calendar", isOn: $addToCalendarToggle)
+                Section(header: Text("Calendar".localized()), footer: Text("Add this exam to your system calendar with a 1-day advance reminder.".localized())) {
+                    Toggle("Add to Calendar".localized(), isOn: $addToCalendarToggle)
                 }
             }
-            .navigationTitle("New Exam")
+            .adaptiveForm()
+            .navigationTitle("New Exam".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancel".localized()) {
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Save".localized()) {
                         saveExam()
                     }
                     .fontWeight(.semibold)
@@ -183,8 +185,8 @@ struct NewExamSetView: View {
                 }
             }
         }
-        .alert("Calendar", isPresented: $showingCalendarAlert) {
-            Button("OK") { dismiss() }
+        .alert("Calendar".localized(), isPresented: $showingCalendarAlert) {
+            Button("OK".localized()) { dismiss() }
         } message: {
             Text(calendarAlertMessage)
         }
@@ -244,7 +246,7 @@ struct NewExamSetView: View {
                         note: examNote.isEmpty ? nil : examNote
                     )
                     await MainActor.run {
-                        calendarAlertMessage = "Successfully added to calendar!"
+                        calendarAlertMessage = "Successfully added to calendar!".localized()
                         showingCalendarAlert = true
                     }
                 } catch {

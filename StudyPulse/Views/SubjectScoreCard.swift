@@ -170,6 +170,7 @@ struct SubjectScoreCard: View {
             x: 0,
             y: 5
         )
+        .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 20)
         .onAppear {

@@ -12,7 +12,7 @@ struct SubjectPickerView: View {
     let subjects: [Subject]
     
     var body: some View {
-        Picker("Subject", selection: $selectedSubject) {
+        Picker("Subject".localized(), selection: $selectedSubject) {
             ForEach(subjects.filter { $0.enabled }, id: \.name) { subject in
                 Text(subject.name).tag(subject.name)
             }

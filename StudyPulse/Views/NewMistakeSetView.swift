@@ -28,10 +28,10 @@ enum EditSection: String, CaseIterable, Identifiable {
     
     var title: String {
         switch self {
-        case .question: return "Question"
-        case .reason: return "Error Reason"
-        case .wrong: return "Wrong Solution"
-        case .correct: return "Correct Solution"
+        case .question: return "Question".localized()
+        case .reason: return "Error Reason".localized()
+        case .wrong: return "Wrong Solution".localized()
+        case .correct: return "Correct Solution".localized()
         }
     }
 }
@@ -65,13 +65,14 @@ struct NewMistakeSetView: View {
     @State private var ocrErrorMessage = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 basicInfoSection
                 contentEditorSection
                 imagesSection
             }
-            .navigationTitle("New Mistake")
+            .adaptiveForm()
+            .navigationTitle("New Mistake".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
             .sheet(isPresented: $showingImagePicker) {
@@ -86,14 +87,14 @@ struct NewMistakeSetView: View {
                 })
                 .ignoresSafeArea()
             }
-            .alert("OCR Error", isPresented: $showingOCRAlert) {
-                Button("OK") { }
+            .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
+                Button("OK".localized()) { }
             } message: {
                 Text(ocrErrorMessage)
             }
             .overlay {
                 if isProcessingOCR {
-                    ProgressView("Recognizing text...")
+                    ProgressView("Recognizing text...".localized())
                         .padding(20)
                         .background(Color(.systemBackground))
                         .cornerRadius(12)
@@ -134,22 +135,22 @@ private extension NewMistakeSetView {
     
     var contentEditorSection: some View {
         Section(header: Text(selectedSection.title.localized())) {
-            Picker("Section", selection: $selectedSection) {
+            Picker("Section".localized(), selection: $selectedSection) {
                 ForEach(EditSection.allCases) { section in
                     Text(section.title.localized()).tag(section)
                 }
             }
             .pickerStyle(.segmented)
-            
+
             TextEditor(text: currentBinding)
                 .frame(minHeight: 160)
                 .font(.body)
-            
+
             Toggle(isOn: $showMarkdownPreview) {
-                Label(showMarkdownPreview ? "Hide Preview" : "Show Preview",
+                Label(showMarkdownPreview ? "Hide Preview".localized() : "Show Preview".localized(),
                       systemImage: showMarkdownPreview ? "eye.slash" : "eye")
             }
-            
+
             if showMarkdownPreview {
                 MarkdownPreviewView(text: currentBinding.wrappedValue)
                     .frame(minHeight: 100)
@@ -212,11 +213,11 @@ private extension NewMistakeSetView {
     var toolbar: some ToolbarContent {
         Group {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+                Button("Cancel".localized()) { presentationMode.wrappedValue.dismiss() }
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
+                Button("Save".localized()) {
                     saveMistake()
                     presentationMode.wrappedValue.dismiss()
                 }
@@ -281,7 +282,7 @@ private extension NewMistakeSetView {
     
     func saveMistake() {
         let newMistake = MistakeNote(
-            title: editedTitle.isEmpty ? "Untitled" : editedTitle,
+            title: editedTitle.isEmpty ? "Untitled".localized() : editedTitle,
             subject: selectedSubject,
             originalQuestion: editedOriginalQuestion,
             source: editedSource,
@@ -376,10 +377,10 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
 // MARK: - Markdown Preview
 struct MarkdownPreviewView: View {
     let text: String
-    
+
     var body: some View {
         if text.isEmpty {
-            Text("No content to preview")
+            Text("No content to preview".localized())
                 .foregroundColor(.secondary)
                 .italic()
                 .frame(maxWidth: .infinity, alignment: .center)

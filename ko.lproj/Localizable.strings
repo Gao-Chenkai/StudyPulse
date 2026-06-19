@@ -294,4 +294,211 @@
 "Keep the streak going!" = "기록 습관을 유지하세요!";
 "No new grades in the past week. Regular tracking helps you spot trends early." = "지난 1주일 동안 새로운 성적이 없습니다. 정기적인 기록으로 트렌드를 조기에 발견하세요.";
 "Balance your subjects" = "과목 균형 맞추기";
-"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "%@의 성적 기록이 다른 과목보다 훨씬 많습니다. 다른 과목도 소홀히 하지 마세요.";
+"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "%@ 과목의 성적이 다른 과목보다 압도적으로 많습니다. 다른 과목도 소홀하지 마세요.";
+
+// HomeView.swift - Additional
+"Register Exam Grades" = "시험 성적 등록";
+"days ago" = "일 전";
+"Good Morning" = "좋은 아침";
+"Good Afternoon" = "좋은 오후";
+"Good Evening" = "좋은 저녁";
+"Focus: Weakest" = "집중: 가장 약한 과목";
+"Focus: Recent" = "집중: 최근";
+"Focus: Improving" = "집중: 향상 중";
+"Random" = "무작위";
+"HIGH" = "높음";
+"MED" = "중간";
+"LOW" = "낮음";
+
+// NewExamSetView.swift / ExamDetailEditView.swift
+"Assessment" = "평가";
+"Mastery Degree" = "숙지도";
+"Optional details." = "선택 사항 세부 정보.";
+"Specific Exam Title or Notes" = "구체적인 시험명 또는 메모";
+"Add to Calendar" = "캘린더에 추가";
+"Add this exam to your system calendar with a 1-day advance reminder." = "이 시험을 시스템 캘린더에 추가하고 1일 전 미리 알림을 받습니다.";
+"Successfully added to calendar!" = "캘린더에 성공적으로 추가되었습니다!";
+"Calendar" = "캘린더";
+"Exam Name (e.g., Midterm)" = "시험 이름 (예: 중간고사)";
+"Exam Numbers" = "시험 과목 수";
+
+// ExamDetailView.swift
+"Overview" = "개요";
+"Metrics" = "지표";
+"Time Status" = "시간 상태";
+"Days Remaining" = "남은 일수";
+"Note/Title" = "메모/제목";
+"Will create an all-day event with a 1-day advance reminder in your system calendar." = "시스템 캘린더에 1일 전 미리 알림이 있는 종일 이벤트를 만듭니다.";
+"Related Mistakes" = "관련 오답";
+"No related mistakes for this subject" = "이 과목에 관련 오답이 없습니다";
+"+ %d more mistakes" = "오답 %d개 더 보기";
+"Yesterday" = "어제";
+"Today!" = "오늘!";
+"Comprehensive Exam: %@" = "종합 시험: %@";
+"Past Exams" = "지난 시험";
+
+// HRVOnboardingView.swift
+"Back" = "뒤로";
+"Next" = "다음";
+"Skip" = "건너뛰기";
+"Enable HRV" = "HRV 활성화";
+"HealthKit Access" = "건강 데이터 접근";
+"Open Settings" = "설정 열기";
+"What is HRV?" = "HRV란?";
+"Heart Rate Variability (HRV) measures the tiny variations in time between each heartbeat. It's a scientifically validated indicator of your autonomic nervous system — essentially, how well your body is recovering from stress, exercise, and daily life." = "심박변이도(HRV)는 매 심장박동 사이의 시간 간격의 미세한 변화를 측정합니다. 자율신경계의 과학적으로 검증된 지표로, 스트레스, 운동, 일상생활로부터 신체가 얼마나 잘 회복되고 있는지를 보여줍니다.";
+"High HRV → well-rested, ready to learn" = "HRV 높음 → 충분히 휴식, 학습 준비 완료";
+"Low HRV → stressed, fatigued, needs recovery" = "HRV 낮음 → 스트레스, 피로, 회복 필요";
+"Your HRV is personal — StudyPulse builds your own baseline over 7-14 days, so recommendations are tailored to you, not a population average." = "HRV는 개인마다 다릅니다. StudyPulse는 7~14일 동안 나만의 기준선을 구축하므로, 일반적인 인구가 아닌 나에게 맞춘 추천을 제공합니다.";
+"Your Data Stays on Your Device" = "데이터는 기기에만 보관됩니다";
+"HRV data is read directly from Apple Health" = "HRV 데이터는 Apple 건강 앱에서 직접 읽습니다";
+"We never see or store it ourselves" = "당사는 데이터를 보거나 저장하지 않습니다";
+"All processing happens on your device" = "모든 처리는 기기에서 이루어집니다";
+"No data is sent to any server" = "데이터는 서버로 전송되지 않습니다";
+"You can disable HRV anytime in Settings" = "설정에서 언제든지 HRV를 비활성화할 수 있습니다";
+"Access is revoked instantly" = "권한은 즉시 철회됩니다";
+"StudyPulse only reads HRV from HealthKit with your explicit permission. We do not write any data." = "StudyPulse는 명시적 권한하에 HealthKit에서 HRV를 읽기만 합니다. 데이터를 쓰지 않습니다.";
+"Ready to Get Started?" = "시작할 준비가 되셨나요?";
+"When you enable HRV monitoring, StudyPulse will:" = "HRV 모니터링을 활성화하면 StudyPulse는 다음을 수행합니다:";
+"Compare today's HRV to your personal 14-day baseline" = "오늘의 HRV를 개인 14일 기준선과 비교";
+"Show a readiness card on your Dashboard" = "대시보드에 준비도 카드 표시";
+"Add personalized study suggestions based on your recovery state" = "회복 상태에 따른 맞춤형 학습 제안 추가";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "HRV를 추적하는 Apple Watch가 필요합니다. 수면 시 며칠 밤 착용하면 건강 앱에 데이터가 자동으로 나타납니다.";
+"HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit 접근이 거부되었습니다. iOS 설정의 '개인정보 보호 및 보안 → 건강 → StudyPulse'에서 나중에 활성화할 수 있습니다.";
+
+// HRVStatusCard.swift
+"HRV Readiness" = "HRV 준비도";
+"Baseline" = "기준선";
+"Z-Score" = "Z 점수";
+"Excellent" = "매우 좋음";
+"Normal" = "보통";
+"Low" = "낮음";
+"Collecting" = "수집 중";
+
+// DataAdminView.swift
+"Data Admin" = "데이터 관리";
+"No grades" = "성적 없음";
+"No exams" = "시험 없음";
+"No mistakes" = "오답 없음";
+"Regular Exams" = "단과 시험";
+"Comprehensive" = "종합";
+"Grade Details" = "성적 상세";
+"Edit Grade" = "성적 편집";
+"Subject" = "과목";
+"Edit Exam" = "시험 편집";
+"Exam Details" = "시험 상세";
+"Alias" = "별칭";
+"Comma separated" = "쉼표로 구분";
+"Mastery" = "숙지도";
+"Status" = "상태";
+"Edit Comp Exam" = "종합 시험 편집";
+"%d%%" = "%d%%";
+
+// MistakeView.swift
+"Search Results" = "검색 결과";
+"Search subjects or mistakes..." = "과목 또는 오답 검색...";
+"Search mistakes..." = "오답 검색...";
+"All Mistakes (%d)" = "모든 오답 (%d)";
+"Search Results (%d)" = "검색 결과 (%d)";
+"Total" = "합계";
+"🔴 High Priority" = "🔴 높은 우선순위";
+"🟡 Review Soon" = "🟡 곧 복습";
+"🟢 Normal" = "🟢 보통";
+"%d new" = "신규 %d";
+
+// NewMistakeSetView / MistakeDetailEditView
+"New Mistake" = "새 오답";
+"Edit Mistake" = "오답 편집";
+"Section" = "섹션";
+"Hide Preview" = "미리보기 숨기기";
+"Show Preview" = "미리보기 표시";
+"OCR Error" = "OCR 오류";
+"Recognizing text..." = "텍스트 인식 중...";
+"No content to preview" = "미리볼 내용 없음";
+"Untitled" = "제목 없음";
+"Library" = "보관함";
+"Camera" = "카메라";
+"OCR" = "OCR";
+"Images" = "이미지";
+"No images" = "이미지 없음";
+"Select" = "선택";
+
+// AvatarView.swift
+"Choose from Library" = "보관함에서 선택";
+"Take Photo" = "사진 촬영";
+"Remove Avatar" = "아바타 제거";
+"Change Avatar" = "아바타 변경";
+"years old" = "세";
+"Display Name" = "표시 이름";
+"Real Name" = "실명";
+"School Name" = "학교 이름";
+"School Info" = "학교 정보";
+"Grade & Class" = "학년 및 반";
+"e.g. Grade 11" = "예: 고등학교 1학년";
+"e.g. Tsinghua University" = "예: 칭화대학교";
+"Target" = "목표";
+"Apply" = "적용";
+"Category" = "분류";
+"Intl. %@" = "국제 %@";
+"Primary School" = "초등학교";
+"Middle School" = "중학교";
+"High School" = "고등학교";
+"International High School" = "국제 고등학교";
+"University" = "대학교";
+"Graduate" = "대학원";
+"Year" = "년";
+"Cannot read file: encoding not supported. Please make sure the file is a valid CSV file." = "파일을 읽을 수 없습니다: 지원되지 않는 인코딩입니다. 유효한 CSV 파일인지 확인하세요.";
+
+// SettingsView additions
+"Recovery & Readiness" = "회복 및 준비도";
+"HRV is read from Apple Health with your permission. Your data stays on device and is never uploaded." = "HRV는 귀하의 허가하에 Apple 건강에서 읽습니다. 데이터는 기기에만 저장되며 업로드되지 않습니다.";
+"HRV Monitoring" = "HRV 모니터링";
+"HRV Onboarding" = "HRV 시작하기";
+"HRV Card Detail" = "HRV 카드 상세";
+"Suggestion Only" = "제안만";
+"Data + Suggestion" = "데이터 + 제안";
+"Chart + Data + Suggestion" = "차트 + 데이터 + 제안";
+"Export Success" = "내보내기 성공";
+"Import Success" = "가져오기 성공";
+"Import Error" = "가져오기 오류";
+"Export Data" = "데이터 내보내기";
+"Import Data" = "데이터 가져오기";
+"Version beta 0.0.1" = "버전 beta 0.0.1";
+"Developed by" = "개발자";
+"Summary" = "요약";
+"Legal Code (English Summary)" = "법적 본문 (영문 요약)";
+"Click to View Full Legal Code in Browser" = "브라우저에서 전체 법적 본문 보기";
+"License Details" = "라이선스 상세";
+"Attribution" = "표시";
+"Non-Commercial" = "비영리";
+"ShareAlike" = "동일조건 변경허락";
+"Test Notification" = "테스트 알림";
+"Test #%d" = "테스트 #%d";
+"If you see this, notifications are working." = "이 알림이 보이면 알림 기능이 정상입니다.";
+"Add grades to see your trends here." = "성적을 추가하면 여기에 추세가 표시됩니다.";
+"No Grades Yet" = "아직 성적이 없습니다";
+
+// WelcomeConfig.swift
+"Continue" = "계속";
+"Chart Analysis" = "차트 분석";
+"Intuitive visualization of your trends." = "추세를 직관적으로 시각화합니다.";
+"Lightning Fast" = "초고속";
+"Millisecond response with no waiting for results." = "밀리초 응답으로 결과 대기 없음.";
+"Offline Support" = "오프라인 지원";
+"Works fully offline. No internet required." = "완전한 오프라인 작동. 인터넷 불필요.";
+"Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement." = "사용자의 기기 정보와 사용 데이터는 개인화된 경험 제공, 앱 기능 개선 또는 부정 행위 방지에 사용되지 않습니다. 자세한 내용은 개인정보 처리방침을 검토하세요. '계속'을 탭하면 사용자 계약에 동의하는 것입니다.";
+
+// Daily motivational quotes (HomeView)
+"Quote 1" = "학습은 경주가 아니라 마라톤입니다. 끝까지坚持하는 사람이 승자입니다.";
+"Quote 2" = "당신의 모든 노력은 미래의 당신이 지금의 당신에게 손을 흔드는 것입니다.";
+"Quote 3" = "지식은 바다와 같습니다. 깊이 들어갈수록 자신의 작음을 깨닫지만, 동시에 진리에 가까워집니다.";
+"Quote 4" = "오늘의 땀은 내일의 수확, 오늘의 인고는 미래의 성공입니다.";
+"Quote 5" = "학습은 등산과 같습니다. 과정은 힘들지만 정상에서의 풍경은 모든 노력의 가치가 있습니다.";
+"Quote 6" = "한 번의 실패로 포기하지 마세요. 모든 좌절은 성장의 기회입니다.";
+"Quote 7" = "지식은 최선의 투자이며 시간은 가장 귀중한 자원입니다.";
+"Quote 8" = "학습에 지름길은 없습니다. 한 걸음 한 걸음 꾸준히 나아갈 뿐입니다.";
+"Quote 9" = "당신의 잠재력은 상상을 초월합니다. 포기하지 않는다면 모든 것이 가능합니다.";
+"Quote 10" = "성공은 종착점이 아니라 끊임없는 학습과 성장의 과정입니다.";
+"Quote 11" = "매일 조금씩进步하면 1년 후의 당신이 지금의 자신에게 감사할 것입니다.";
+"Quote 12" = "학습은 미래를 비추는 등대이고, 坚持는 그 곳에 닿는 노입니다.";
+"Quote 13" = "잘못된 길에는 매혹적인 풍경이 있습니다. 보다가, 보다가, 참지 못하고 들어서면, 걷다가, 걷다가, 다시는 빠져나올 수 없게 됩니다.";
+"Quote 14" = "성공하려면 먼저 미쳐라, 결심을 굳히고 앞으로 돌진하라!";

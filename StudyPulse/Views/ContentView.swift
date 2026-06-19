@@ -8,65 +8,86 @@
 import SwiftUI
 import UIKit
 
+// MARK: - 应用标签枚举（用于侧边栏 / 底部 Tab 栏共享）
+enum AppTab: Int, CaseIterable, Identifiable, Hashable {
+    case home = 0
+    case trends = 1
+    case mistake = 2
+    case exam = 3
+    case settings = 4
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .home: return "Home".localized()
+        case .trends: return "Trends".localized()
+        case .mistake: return "Mistakes".localized()
+        case .exam: return "Exams".localized()
+        case .settings: return "Settings".localized()
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .trends: return "chart.bar.fill"
+        case .mistake: return "exclamationmark.triangle.fill"
+        case .exam: return "list.bullet.clipboard"
+        case .settings: return "gearshape.fill"
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
-    @State private var selectedTab = 0
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var selectedTab: AppTab = .home
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-    
+
     var body: some View {
-        TabView (selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Image(systemName: "house.fill")
-                    Text("Home")
-                }
-                .tag(0)
-            
-            TrendsView()
-                .tabItem {
-                    Image(systemName: "chart.bar.fill")
-                    Text("Trends")
-                }
-                .tag(1)
-            
-            MistakeView()
-                .tabItem {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                    Text("Mistakes")
-                }
-                .tag(2)
-            
-            ExamView()
-                .tabItem {
-                    Image(systemName: "list.bullet.clipboard")
-                    Text("Exams")
-                }
-                .tag(3)
-            
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gearshape.fill")
-                    Text("Settings")
-                }
-                .tag(4)
-            
+        Group {
+            if sizeClass == .regular {
+                iPadSidebarLayout(selectedTab: $selectedTab)
+            } else {
+                iPhoneTabLayout(selectedTab: $selectedTab)
+            }
         }
         .tint(.cyan)
-        // iPad 下显示侧边栏样式的 Tab Bar，更符合 iPad 操作习惯
-        .tabViewStyle(.sidebarAdaptable)
+        .focusable()
+        .onKeyPress(.tab) {
+            selectedTab = nextTab()
+            return .handled
+        }
+        .onKeyPress(keys: Set(["1", "2", "3", "4", "5"].map { KeyEquivalent($0) })) { key in
+            let idx: Int? = switch key.key.character {
+            case "1": 0
+            case "2": 1
+            case "3": 2
+            case "4": 3
+            case "5": 4
+            default: nil
+            }
+            if let i = idx, let tab = AppTab(rawValue: i) {
+                selectedTab = tab
+                return .handled
+            }
+            return .ignored
+        }
         .onChange(of: selectedTab) { oldValue, newValue in
-            print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)")
             if oldValue != newValue {
-                print("准备触发震动...")
                 triggerHaptic()
             }
         }
     }
-    
+
+    private func nextTab() -> AppTab {
+        let all = AppTab.allCases
+        let idx = all.firstIndex(of: selectedTab) ?? 0
+        return all[(idx + 1) % all.count]
+    }
+
     private func triggerHaptic() {
-        // 将震动逻辑放入后台队列，或者稍微延迟一点点，让UI先渲染出来
-        // 这样用户看到的是界面先切过去，然后手震一下，感觉会流畅很多
-        // 上面两行是AI写的，本来想解决更新完打开APP时首次点击Tab栏的卡顿，但现在看起来并无什么卵用
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             impactFeedback.prepare()
             impactFeedback.impactOccurred()
@@ -74,9 +95,117 @@ struct ContentView: View {
     }
 }
 
+// MARK: - iPad 传统侧边栏布局
+struct iPadSidebarLayout: View {
+    @Binding var selectedTab: AppTab
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var selection: AppTab?
+
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            List(selection: $selection) {
+                ForEach(AppTab.allCases) { tab in
+                    NavigationLink(value: tab) {
+                        Label {
+                            Text(tab.title)
+                                .font(.body)
+                        } icon: {
+                            Image(systemName: tab.icon)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .tag(tab)
+                }
+            }
+            .navigationTitle("StudyPulse")
+            .listStyle(.sidebar)
+            // 限制侧边栏宽度，让 detail 区获得更多空间
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
+            .onChange(of: selection) { _, newValue in
+                if let newValue = newValue {
+                    selectedTab = newValue
+                }
+            }
+            .onAppear {
+                selection = selectedTab
+            }
+        } detail: {
+            detailView(for: selectedTab)
+        }
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    @ViewBuilder
+    private func detailView(for tab: AppTab) -> some View {
+        switch tab {
+        case .home:
+            HomeView(selectedTab: intBinding)
+        case .trends:
+            TrendsView()
+        case .mistake:
+            MistakeView()
+        case .exam:
+            ExamView()
+        case .settings:
+            SettingsView()
+        }
+    }
+
+    /// 桥接 `Binding<AppTab>` ↔ `Binding<Int>`，因为 HomeView 仍使用 Int
+    private var intBinding: Binding<Int> {
+        Binding<Int>(
+            get: { selectedTab.rawValue },
+            set: { newValue in
+                if let tab = AppTab(rawValue: newValue) {
+                    selectedTab = tab
+                }
+            }
+        )
+    }
+}
+
+// MARK: - iPhone 底部 Tab 栏布局
+struct iPhoneTabLayout: View {
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            HomeView(selectedTab: intBinding)
+                .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
+                .tag(AppTab.home)
+
+            TrendsView()
+                .tabItem { Label(AppTab.trends.title, systemImage: AppTab.trends.icon) }
+                .tag(AppTab.trends)
+
+            MistakeView()
+                .tabItem { Label(AppTab.mistake.title, systemImage: AppTab.mistake.icon) }
+                .tag(AppTab.mistake)
+
+            ExamView()
+                .tabItem { Label(AppTab.exam.title, systemImage: AppTab.exam.icon) }
+                .tag(AppTab.exam)
+
+            SettingsView()
+                .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.icon) }
+                .tag(AppTab.settings)
+        }
+    }
+
+    /// 桥接 `Binding<AppTab>` ↔ `Binding<Int>`，因为 HomeView 仍使用 Int
+    private var intBinding: Binding<Int> {
+        Binding<Int>(
+            get: { selectedTab.rawValue },
+            set: { newValue in
+                if let tab = AppTab(rawValue: newValue) {
+                    selectedTab = tab
+                }
+            }
+        )
+    }
+}
+
 #Preview {
     ContentView()
         .environmentObject(DataManager())
 }
-
-
