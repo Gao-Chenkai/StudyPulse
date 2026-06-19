@@ -36,50 +36,59 @@ var dailyQuote: String {
 
 // MARK: - 主视图
 struct HomeView: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var dataManager: DataManager
-    
+
     var body: some View {
         NavigationView {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 24) {
                     Spacer(minLength: 8)
-                    
+
                     // 顶部欢迎区域
                     WelcomeHeaderView()
-                    
+
                     // 主要统计卡片
                     MainStatsCard()
-                    
-                    // 快捷操作卡片
-                    QuickActionsCard()
-                    
-                    // 学习建议
-                    StudySuggestionsCard()
-                    
-                    // 图表区域
-                    if !recentGrades.isEmpty {
-                        ChartSectionView()
+
+                    // iPad 多列：快捷操作 + 学习建议
+                    if sizeClass == .regular {
+                        AdaptiveHStack(spacing: 20) {
+                            QuickActionsCard()
+                            StudySuggestionsCard()
+                        }
+                    } else {
+                        QuickActionsCard()
+                        StudySuggestionsCard()
                     }
-                    
-                    // 即将到来的考试
-                    if !upcomingExams.isEmpty {
-                        UpcomingExamsSection()
+
+                    // 图表区域 + 即将到来的考试（iPad 并排）
+                    AdaptiveHStack(spacing: 20) {
+                        if !recentGrades.isEmpty {
+                            ChartSectionView()
+                        }
+                        if !upcomingExams.isEmpty {
+                            UpcomingExamsSection()
+                        }
                     }
-                    
-                    // 每日励志语录
-                    DailyQuoteCard(quote: dailyQuote)
-                    
-                    // 最近成绩趋势
-                    if !recentGrades.isEmpty {
-                        RecentGradesSection()
+
+                    // iPad 并排：每日励志 + 最近成绩
+                    AdaptiveHStack(spacing: 20) {
+                        DailyQuoteCard(quote: dailyQuote)
+                        if !recentGrades.isEmpty {
+                            RecentGradesSection()
+                        }
                     }
-                    
+
                     Spacer(minLength: 20)
                 }
+                .padding(.horizontal, sizeClass == .regular ? 24 : 20)
+                .frame(maxWidth: 1100) // iPad 限制最大内容宽度
+                .frame(maxWidth: .infinity) // 居中
             }
             .background(getBackgroundColor(colorScheme))
-            .navigationTitle("Dashboard")
+            .navigationTitle("Dashboard".localized())
             .navigationBarHidden(true)
         }
     }
@@ -99,15 +108,16 @@ struct HomeView: View {
 // MARK: - 顶部欢迎区域
 struct WelcomeHeaderView: View {
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var dataManager: DataManager
     
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(greetingText())
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.secondary)
                 
-                Text("Ready to study!")
+                Text("Ready to study!".localized())
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
@@ -118,29 +128,17 @@ struct WelcomeHeaderView: View {
             
             Spacer()
             
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(.systemBlue).opacity(0.2), Color(.cyan).opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 60, height: 60)
-                
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 28))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(.systemBlue), Color(.cyan)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+            // 头像
+            NavigationLink(destination: SettingsView()) {
+                AvatarView(
+                    username: dataManager.profile.username,
+                    avatarData: dataManager.loadAvatar(),
+                    size: 50,
+                    showBorder: true
+                )
             }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
     }
     
     private func greetingText() -> String {
@@ -164,44 +162,70 @@ struct WelcomeHeaderView: View {
 // MARK: - 主要统计卡片
 struct MainStatsCard: View {
     @EnvironmentObject var dataManager: DataManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateGradient = false
-    
+
     var body: some View {
         VStack(spacing: 20) {
-            HStack(spacing: 16) {
-                // 平均分卡片
-                StatItemView(
-                    title: "Average",
-                    value: averageScoreText(),
-                    icon: "chart.line.uptrend.xyaxis",
-                    color: .cyan
-                )
-                
-                // 总分数卡片
-                StatItemView(
-                    title: "Total Grades",
-                    value: "\(dataManager.grades.count)",
-                    icon: "doc.text.fill",
-                    color: .purple
-                )
-            }
-            
-            HStack(spacing: 16) {
-                // 即将考试
-                StatItemView(
-                    title: "Upcoming",
-                    value: "\(upcomingExamsCount)",
-                    icon: "calendar.badge.exclamationmark",
-                    color: .orange
-                )
-                
-                // 错题本数量
-                StatItemView(
-                    title: "Mistakes",
-                    value: "\(dataManager.mistakeSets.count)",
-                    icon: "exclamationmark.triangle.fill",
-                    color: .red
-                )
+            // iPad 一行 4 个，iPhone 仍是 2x2
+            if sizeClass == .regular {
+                HStack(spacing: 16) {
+                    StatItemView(
+                        title: "Average".localized(),
+                        value: averageScoreText(),
+                        icon: "chart.line.uptrend.xyaxis",
+                        color: .cyan
+                    )
+                    StatItemView(
+                        title: "Total Grades".localized(),
+                        value: "\(dataManager.grades.count)",
+                        icon: "doc.text.fill",
+                        color: .purple
+                    )
+                    StatItemView(
+                        title: "Upcoming".localized(),
+                        value: "\(upcomingExamsCount)",
+                        icon: "calendar.badge.exclamationmark",
+                        color: .orange
+                    )
+                    StatItemView(
+                        title: "Mistakes".localized(),
+                        value: "\(dataManager.mistakeSets.count)",
+                        icon: "exclamationmark.triangle.fill",
+                        color: .red
+                    )
+                }
+            } else {
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        StatItemView(
+                            title: "Average".localized(),
+                            value: averageScoreText(),
+                            icon: "chart.line.uptrend.xyaxis",
+                            color: .cyan
+                        )
+                        StatItemView(
+                            title: "Total Grades".localized(),
+                            value: "\(dataManager.grades.count)",
+                            icon: "doc.text.fill",
+                            color: .purple
+                        )
+                    }
+                    HStack(spacing: 16) {
+                        StatItemView(
+                            title: "Upcoming".localized(),
+                            value: "\(upcomingExamsCount)",
+                            icon: "calendar.badge.exclamationmark",
+                            color: .orange
+                        )
+                        StatItemView(
+                            title: "Mistakes".localized(),
+                            value: "\(dataManager.mistakeSets.count)",
+                            icon: "exclamationmark.triangle.fill",
+                            color: .red
+                        )
+                    }
+                }
             }
         }
         .padding(20)
@@ -209,7 +233,7 @@ struct MainStatsCard: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color(.secondarySystemGroupedBackground))
-                
+
                 LinearGradient(
                     gradient: Gradient(colors: [
                         Color(.systemBlue).opacity(0.06),
@@ -241,7 +265,6 @@ struct MainStatsCard: View {
             x: 0,
             y: 8
         )
-        .padding(.horizontal, 20)
         .onAppear {
             withAnimation(.easeInOut(duration: 6.0).repeatForever(autoreverses: true)) {
                 animateGradient = true
@@ -313,27 +336,27 @@ struct QuickActionsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Quick Actions")
+            Text("Quick Actions".localized())
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.primary)
             
             HStack(spacing: 12) {
                 QuickActionButton(
-                    title: "Add Grade",
+                    title: "Add Grade".localized(),
                     icon: "plus.circle.fill",
                     color: .cyan,
                     action: { showingAddGrade = true }
                 )
                 
                 QuickActionButton(
-                    title: "New Exam",
+                    title: "New Exam".localized(),
                     icon: "calendar.badge.plus",
                     color: .purple,
                     action: { showingNewExam = true }
                 )
                 
                 QuickActionButton(
-                    title: "Mistake",
+                    title: "New Mistake".localized(),
                     icon: "pencil.tip.crop.circle.badge.plus",
                     color: .orange,
                     action: { showingNewMistake = true }
@@ -349,7 +372,6 @@ struct QuickActionsCard: View {
             x: 0,
             y: 4
         )
-        .padding(.horizontal, 20)
         .sheet(isPresented: $showingAddGrade) {
             AddGradeView()
                 .environmentObject(dataManager)
@@ -425,7 +447,7 @@ struct UpcomingExamsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Upcoming Exams")
+                Text("Upcoming Exams".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
                 
@@ -463,7 +485,6 @@ struct UpcomingExamsSection: View {
             x: 0,
             y: 4
         )
-        .padding(.horizontal, 20)
     }
 }
 
@@ -588,7 +609,7 @@ struct DailyQuoteCard: View {
                     .shadow(color: Color(.cyan).opacity(0.2), radius: 4, x: 0, y: 2)
                 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Daily Inspiration")
+                    Text("Daily Inspiration".localized())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary)
                     
@@ -600,7 +621,7 @@ struct DailyQuoteCard: View {
                     
                     HStack {
                         Spacer()
-                        Text("StudyPulse")
+                        Text("StudyPulse".localized())
                             .font(.system(size: 12))
                             .foregroundColor(.secondary.opacity(0.6))
                             .italic()
@@ -645,7 +666,6 @@ struct DailyQuoteCard: View {
             x: 0,
             y: 6
         )
-        .padding(.horizontal, 20)
         .onAppear {
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 isAnimating = true
@@ -665,14 +685,14 @@ struct RecentGradesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Recent Grades")
+                Text("Recent Grades".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
                 NavigationLink(destination: TrendsView().environmentObject(dataManager)) {
-                    Text("See All")
+                    Text("See All".localized())
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.blue)
                 }
@@ -693,7 +713,6 @@ struct RecentGradesSection: View {
             x: 0,
             y: 4
         )
-        .padding(.horizontal, 20)
     }
 }
 
@@ -764,19 +783,19 @@ struct GradeDetailView: View {
     
     var body: some View {
         List {
-            Section(header: Text("Exam Details")
+            Section(header: Text("Exam Details".localized())
                 .foregroundColor(.secondary)
             ) {
                 HStack {
-                    Text("Exam Name")
+                    Text("Exam Name".localized())
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(grade.examName.isEmpty ? "N/A" : grade.examName)
+                    Text(grade.examName.isEmpty ? "N/A".localized() : grade.examName)
                         .foregroundColor(.primary)
                 }
                 
                 HStack {
-                    Text("Subject")
+                    Text("Subject".localized())
                         .foregroundColor(.primary)
                     Spacer()
                     Text(grade.subject.localized())
@@ -784,7 +803,7 @@ struct GradeDetailView: View {
                 }
                 
                 HStack {
-                    Text("Date")
+                    Text("Date".localized())
                         .foregroundColor(.primary)
                     Spacer()
                     Text(grade.date.formatted(date: .long, time: .shortened))
@@ -793,11 +812,11 @@ struct GradeDetailView: View {
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
             
-            Section(header: Text("Score")
+            Section(header: Text("Score".localized())
                 .foregroundColor(.secondary)
             ) {
                 HStack {
-                    Text("Score")
+                    Text("Score".localized())
                         .foregroundColor(.primary)
                     Spacer()
                     Text(String(format: "%.1f", grade.score))
@@ -806,7 +825,7 @@ struct GradeDetailView: View {
                 }
                 
                 HStack {
-                    Text("Importance")
+                    Text("Importance".localized())
                         .foregroundColor(.primary)
                     Spacer()
                     HStack(spacing: 4) {
@@ -821,7 +840,7 @@ struct GradeDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Grade Detail")
+        .navigationTitle("Grade Detail".localized())
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -846,7 +865,7 @@ struct ChartSectionView: View {
         VStack(alignment: .leading, spacing: 16) {
             // 标题和规则选择
             HStack {
-                Text("Subject Trend")
+                Text("Subject Trend".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
                 
@@ -854,19 +873,19 @@ struct ChartSectionView: View {
                 
                 Menu {
                     Button(action: { selectSubject(rule: .lowestScore) }) {
-                        Label("Focus: Lowest Score", systemImage: "chart.line.downtrend.xyaxis")
+                        Label("Focus: Lowest Score".localized(), systemImage: "chart.line.downtrend.xyaxis")
                     }
                     Button(action: { selectSubject(rule: .mostGrades) }) {
-                        Label("Focus: Most Data", systemImage: "doc.text.fill")
+                        Label("Focus: Most Data".localized(), systemImage: "doc.text.fill")
                     }
                     Button(action: { selectSubject(rule: .recentMost) }) {
-                        Label("Focus: Recent Activity", systemImage: "clock")
+                        Label("Focus: Recent Activity".localized(), systemImage: "clock")
                     }
                     Button(action: { selectSubject(rule: .mostImprovement) }) {
-                        Label("Focus: Improvement", systemImage: "chart.line.uptrend.xyaxis")
+                        Label("Focus: Improvement".localized(), systemImage: "chart.line.uptrend.xyaxis")
                     }
                     Button(action: { selectSubject(rule: .random) }) {
-                        Label("Random Subject", systemImage: "shuffle")
+                        Label("Random Subject".localized(), systemImage: "shuffle")
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -894,7 +913,7 @@ struct ChartSectionView: View {
                         
                         Spacer()
                         
-                        Text("\(grades.count) records")
+                        Text(String(format: "%d records".localized(), grades.count))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -934,9 +953,9 @@ struct ChartSectionView: View {
                     
                     // 统计信息
                     HStack(spacing: 20) {
-                        StatisticItem(title: "Average", value: String(format: "%.1f", averageScore(for: grades)), color: .cyan)
-                        StatisticItem(title: "Highest", value: String(format: "%.1f", highestScore(for: grades)), color: .green)
-                        StatisticItem(title: "Lowest", value: String(format: "%.1f", lowestScore(for: grades)), color: .orange)
+                        StatisticItem(title: "Average".localized(), value: String(format: "%.1f", averageScore(for: grades)), color: .cyan)
+                        StatisticItem(title: "Highest".localized(), value: String(format: "%.1f", highestScore(for: grades)), color: .green)
+                        StatisticItem(title: "Lowest".localized(), value: String(format: "%.1f", lowestScore(for: grades)), color: .orange)
                     }
                 }
                 .padding(16)
@@ -947,7 +966,7 @@ struct ChartSectionView: View {
                     Image(systemName: "chart.bar.xaxis")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary)
-                    Text("Select a subject to view trends")
+                    Text("Select a subject to view trends".localized())
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -966,7 +985,6 @@ struct ChartSectionView: View {
             x: 0,
             y: 4
         )
-        .padding(.horizontal, 20)
         .onAppear {
             selectSubject(rule: currentRule)
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
@@ -1121,7 +1139,7 @@ struct StudySuggestionsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Study Suggestions")
+                Text("Study Suggestions".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
                 
@@ -1137,7 +1155,7 @@ struct StudySuggestionsCard: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 32))
                         .foregroundColor(.secondary)
-                    Text("Start adding grades to get suggestions!")
+                    Text("Start adding grades to get suggestions!".localized())
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1161,7 +1179,6 @@ struct StudySuggestionsCard: View {
             x: 0,
             y: 4
         )
-        .padding(.horizontal, 20)
         .onAppear {
             generateSuggestions()
         }
@@ -1170,33 +1187,75 @@ struct StudySuggestionsCard: View {
     private func generateSuggestions() {
         var newSuggestions: [StudySuggestion] = []
         
-        // 建议1：关注最低分科目
+        // 1: 弱势科目提醒
         if let weakSubject = findWeakSubject() {
             newSuggestions.append(
                 StudySuggestion(
                     icon: "exclamationmark.triangle.fill",
-                    title: "Focus on \(weakSubject.localized())",
-                    description: "Your scores in this subject are lower than average. Spend more time reviewing key concepts.",
+                    title: String(format: "Focus on %@".localized(), weakSubject.localized()),
+                    description: "Your scores in this subject are lower than average. Spend more time reviewing key concepts.".localized(),
+                    priority: .high,
+                    color: .yellow
+                )
+            )
+        }
+        
+        // 2: 今天/明天的考试 —— 最紧急
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        let urgentExams = dataManager.examSets.filter {
+            Calendar.current.isDate($0.examDate, inSameDayAs: Date()) ||
+            Calendar.current.isDate($0.examDate, inSameDayAs: tomorrow)
+        }
+        if !urgentExams.isEmpty {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "timer",
+                    title: "Exam is almost here!".localized(),
+                    description: String(format: "You have %d exam(s) today or tomorrow. Review your notes now!".localized(), urgentExams.count),
+                    priority: .high,
+                    color: .red
+                )
+            )
+        }
+        
+        // 3: 成绩下滑趋势
+        if let declining = findDecliningTrend() {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "chart.line.downtrend.xyaxis",
+                    title: String(format: "%@ scores are slipping".localized(), declining.localized()),
+                    description: "Your recent scores in this subject show a downward trend. Identify what's causing the gap.".localized(),
                     priority: .high,
                     color: .orange
                 )
             )
         }
         
-        // 建议2：复习错题
-        if dataManager.mistakeSets.count >= 3 {
+        // 4: 有错题但未记录对应成绩的科目
+        let unreviewedMistakes = findUnreviewedMistakeSubjects()
+        if !unreviewedMistakes.isEmpty {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "doc.text.magnifyingglass",
+                    title: "Unreviewed Mistakes".localized(),
+                    description: String(format: "You have mistakes in %@ that haven't been reviewed. Go through them before the next exam.".localized(), unreviewedMistakes.joined(separator: ", ").localized()),
+                    priority: .high,
+                    color: .purple
+                )
+            )
+        } else if dataManager.mistakeSets.count >= 5 {
             newSuggestions.append(
                 StudySuggestion(
                     icon: "book.fill",
-                    title: "Review Mistakes",
-                    description: "You have \(dataManager.mistakeSets.count) mistake notes. Regular review helps prevent similar errors.",
+                    title: "Review Mistakes".localized(),
+                    description: String(format: "You have %d mistake note(s). Regular review helps prevent similar errors.".localized(), dataManager.mistakeSets.count),
                     priority: .medium,
                     color: .purple
                 )
             )
         }
         
-        // 建议3：即将到来的考试
+        // 5: 未来两周的考试
         let upcomingExams = dataManager.examSets.filter { 
             $0.examDate > Date() && 
             $0.examDate <= Calendar.current.date(byAdding: .day, value: 14, to: Date())!
@@ -1204,37 +1263,90 @@ struct StudySuggestionsCard: View {
         if !upcomingExams.isEmpty {
             newSuggestions.append(
                 StudySuggestion(
-                    icon: "calendar.badge.exclamationmark",
-                    title: "Prepare for Exams",
-                    description: "You have \(upcomingExams.count) exam(s) coming up in the next 2 weeks. Start your preparations now!",
-                    priority: .high,
-                    color: .red
+                    icon: "calendar",
+                    title: "Upcoming Exams".localized(),
+                    description: String(format: "%d exam(s) in the next 2 weeks. Organize your review by subject priority.".localized(), upcomingExams.count),
+                    priority: .medium,
+                    color: .blue
                 )
             )
         }
         
-        // 建议4：保持势头
+        // 6: 成绩上升趋势
+        if let improving = findImprovingTrend() {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: String(format: "%@ is improving!".localized(), improving.localized()),
+                    description: "Your scores are trending upward. Keep the momentum!".localized(),
+                    priority: .medium,
+                    color: .green
+                )
+            )
+        }
+        
+        // 7: 错题集中的科目
+        if let mistakeHeavy = findMistakeHeavySubject() {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "text.badge.checkmark",
+                    title: String(format: "Deep dive into %@".localized(), mistakeHeavy.localized()),
+                    description: "You have many mistakes in this subject. Categorize your errors to find the root pattern.".localized(),
+                    priority: .medium,
+                    color: .orange
+                )
+            )
+        }
+        
+        // 8: 长期未录入新成绩
+        if let lastGradeDate = dataManager.grades.map({ $0.date }).max(),
+           Calendar.current.dateComponents([.day], from: lastGradeDate, to: Date()).day ?? 0 >= 7 {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "clock.arrow.circlepath",
+                    title: "Keep the streak going!".localized(),
+                    description: "No new grades in the past week. Regular tracking helps you spot trends early.".localized(),
+                    priority: .low,
+                    color: .cyan
+                )
+            )
+        }
+        
+        // 9: 强项表扬
         if let strongSubject = findStrongSubject() {
             newSuggestions.append(
                 StudySuggestion(
                     icon: "hand.thumbsup.fill",
-                    title: "Great at \(strongSubject.localized())!",
-                    description: "Keep up the good work! You're performing really well in this subject.",
+                    title: String(format: "Great at %@!".localized(), strongSubject.localized()),
+                    description: "Keep up the good work! You're performing really well in this subject.".localized(),
                     priority: .low,
                     color: .green
                 )
             )
         }
         
-        // 建议5：记录更多成绩
+        // 10: 成绩数据不足
         if dataManager.grades.count < 5 {
             newSuggestions.append(
                 StudySuggestion(
                     icon: "plus.circle.fill",
-                    title: "Add More Grades",
-                    description: "Tracking more grades will help you get better insights into your learning progress.",
+                    title: "Add More Grades".localized(),
+                    description: "Tracking more grades will help you get better insights into your learning progress.".localized(),
                     priority: .low,
                     color: .cyan
+                )
+            )
+        }
+        
+        // 11: 科目覆盖不均衡
+        if let imbalanced = findImbalancedStudy() {
+            newSuggestions.append(
+                StudySuggestion(
+                    icon: "scalemass",
+                    title: "Balance your subjects".localized(),
+                    description: String(format: "You have significantly more grades in %@ than other subjects. Don't neglect the rest.".localized(), imbalanced.localized()),
+                    priority: .low,
+                    color: .teal
                 )
             )
         }
@@ -1279,6 +1391,88 @@ struct StudySuggestionsCard: View {
         }
         return highestSubject
     }
+    
+    private func findDecliningTrend() -> String? {
+        let subjects = Set(dataManager.grades.map { $0.subject })
+        for subject in subjects {
+            let grades = dataManager.grades
+                .filter { $0.subject == subject }
+                .sorted { $0.date > $1.date }
+            guard grades.count >= 3 else { continue }
+            let recent = Array(grades.prefix(3))
+            let scores = recent.map { $0.score }
+            guard scores[0] < scores[1], scores[1] < scores[2],
+                  scores[2] - scores[0] >= 5 else { continue }
+            return subject
+        }
+        return nil
+    }
+    
+    private func findImprovingTrend() -> String? {
+        let subjects = Set(dataManager.grades.map { $0.subject })
+        for subject in subjects {
+            let grades = dataManager.grades
+                .filter { $0.subject == subject }
+                .sorted { $0.date > $1.date }
+            guard grades.count >= 3 else { continue }
+            let recent = Array(grades.prefix(3))
+            let scores = recent.map { $0.score }
+            guard scores[0] > scores[1], scores[1] > scores[2],
+                  scores[0] - scores[2] >= 5 else { continue }
+            return subject
+        }
+        return nil
+    }
+    
+    private func findUnreviewedMistakeSubjects() -> [String] {
+        let mistakeSubjects = Set(dataManager.mistakeSets.map { $0.subject })
+        var unreviewed: [String] = []
+        for subject in mistakeSubjects {
+            let mistakesInSubject = dataManager.mistakeSets
+                .filter { $0.subject == subject }
+                .count
+            let gradesInSubject = dataManager.grades
+                .filter { $0.subject == subject }
+                .count
+            if mistakesInSubject >= 3 && gradesInSubject == 0 {
+                unreviewed.append(subject)
+            }
+        }
+        return Array(unreviewed.prefix(2))
+    }
+    
+    private func findMistakeHeavySubject() -> String? {
+        let subjects = Set(dataManager.grades.map { $0.subject })
+            .union(dataManager.mistakeSets.map { $0.subject })
+        for subject in subjects {
+            let mistakeCount = dataManager.mistakeSets
+                .filter { $0.subject == subject }.count
+            let gradeCount = dataManager.grades
+                .filter { $0.subject == subject }.count
+            if mistakeCount >= 5 && mistakeCount > gradeCount * 2 {
+                return subject
+            }
+        }
+        return nil
+    }
+    
+    private func findImbalancedStudy() -> String? {
+        let subjects = Set(dataManager.grades.map { $0.subject })
+        guard subjects.count >= 3 else { return nil }
+        var counts: [(String, Int)] = []
+        for subject in subjects {
+            let count = dataManager.grades.filter { $0.subject == subject }.count
+            counts.append((subject, count))
+        }
+        counts.sort { a, b in a.1 > b.1 }
+        guard let max = counts.first else { return nil }
+        let others = counts.dropFirst()
+        var total = 0
+        for entry in others { total += entry.1 }
+        let avgOthers = others.isEmpty ? 0 : total / others.count
+        guard max.1 > avgOthers * 3 else { return nil }
+        return max.0
+    }
 }
 
 // MARK: - 学习建议模型
@@ -1289,8 +1483,8 @@ struct StudySuggestion: Identifiable {
     let description: String
     let priority: Priority
     let color: Color
-    
     enum Priority {
+
         case high, medium, low
     }
 }
@@ -1334,7 +1528,7 @@ struct SuggestionRowView: View {
             
             if !isExpanded {
                 Button(action: { isExpanded = true }) {
-                    Text("Read more")
+                    Text("Read more".localized())
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.blue)
                 }

@@ -7,14 +7,14 @@
 
 import WidgetKit
 
-/// Widget 时间线提供者 — 从 App Group 共享 UserDefaults 读取考试数据
+/// Widget timeline provider — reads exam data from shared App Group UserDefaults
 struct ExamWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> ExamWidgetEntry {
         ExamWidgetEntry(
             date: Date(),
             exams: [
                 ExamWidgetData(
-                    name: "期中考试",
+                    name: "Midterm Exam",
                     subject: "Mathematics",
                     examDate: Date().addingTimeInterval(86400 * 3),
                     daysRemaining: 3

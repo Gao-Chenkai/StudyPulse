@@ -65,6 +65,7 @@ struct PreferencesView: View {
             }
             .navigationTitle("Preferences".localized())
             .navigationBarTitleDisplayMode(.inline)
+            .adaptiveMaxWidth(640)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done".localized()) {

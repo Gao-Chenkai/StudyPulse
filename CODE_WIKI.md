@@ -1,1102 +1,1635 @@
-# StudyPulse Code Wiki
+# StudyPulse - Code Wiki
 
-> 一款综合性学习管理应用，帮助学生追踪学业表现、分析学习趋势，并高效管理学习资料。
+> A comprehensive code reference for the StudyPulse iOS app, an international study management application built with SwiftUI.
 
----
+=====================================================================
 
 ## Table of Contents
 
-- [1. Project Overview](#1-project-overview)
-- [2. Tech Stack & Requirements](#2-tech-stack--requirements)
-- [3. Project Structure](#3-project-structure)
-- [4. Architecture Design](#4-architecture-design)
-- [5. Data Models](#5-data-models)
-- [6. Core Managers](#6-core-managers)
-- [7. View Layer](#7-view-layer)
-- [8. Components & Helpers](#8-components--helpers)
-- [9. Extensions](#9-extensions)
-- [10. Notification System](#10-notification-system)
-- [11. Internationalization](#11-internationalization)
-- [12. Dependencies](#12-dependencies)
-- [13. Data Flow](#13-data-flow)
-- [14. How to Run](#14-how-to-run)
-- [15. Build Configuration](#15-build-configuration)
-
----
-
-## 1. Project Overview
-
-| Item | Description |
-|------|-------------|
-| **App Name** | StudyPulse |
-| **Bundle Identifier** | `Gao.Chenkai.StudyPulse` |
-| **Version** | 1.0 (Marketing Version) |
-| **Developer** | Gao-Chenkai |
-| **License** | CC BY-NC-SA 4.0 |
-
-### Core Features
-
-| Feature | Description |
-|---------|-------------|
-| **Multi-subject Grade Tracking** | Record scores across multiple subjects with raw score and ranking support |
-| **Interactive Chart Visualization** | Use Apple's Charts framework to visualize score trends and rankings |
-| **Exam Management** | Create, view, and manage single-subject and comprehensive exams with countdown |
-| **Mistake Collection** | Organize wrong questions with detailed analysis (title, error reason, wrong solution, correct solution) |
-| **Photo Upload** | Capture or select photos for exam papers and mistake notes |
-| **Exam Notifications** | Local notifications with 30/10/5/3/1 day countdown reminders |
-| **User Profile** | Store education level, system, region, and selected subjects |
-| **Daily Motivational Quotes** | 14 rotating inspirational quotes displayed on the home page |
-
----
-
-## 2. Tech Stack & Requirements
-
-| Layer | Technology |
-|-------|------------|
-| **UI Framework** | SwiftUI |
-| **Language** | Swift 6.0 |
-| **Minimum OS** | iOS 18.6 |
-| **Xcode Version** | Xcode 26.x |
-| **Charts** | Apple Charts framework (native) |
-| **Data Persistence** | JSON file serialization in Documents directory |
-| **Onboarding** | WSOnBoarding (third-party package) |
-| **Notifications** | UserNotifications framework |
-| **Camera/Gallery** | UIKit UIImagePickerController (via UIViewControllerRepresentable) |
-
-### Supported Platforms
-
-- iPhone (`iphoneos`)
-- iPad Simulator (`iphonesimulator`)
-- Mac Catalyst: **Not supported**
-
----
-
-## 3. Project Structure
-
-```
-StudyPulse/
-├── StudyPulse.xcodeproj/          # Xcode project configuration
-│   └── project.pbxproj
-│
-├── StudyPulse/                    # Main app source
-│   ├── StudyPulseApp.swift        # App entry point
-│   │
-│   ├── Models/
-│   │   └── DataModels.swift       # Core data models (Subject, Grade, Exam, etc.)
-│   │
-│   ├── Managers/
-│   │   ├── DataManager.swift      # Central data management & persistence
-│   │   ├── StringsLocalized.swift # String localization extension
-│   │   └── SubjectInfo.swift      # Max score calculation by education level
-│   │
-│   ├── Extensions/
-│   │   ├── ColorExtensions.swift  # UIColor → Color bridge
-│   │   └── DateExtensions.swift   # Date formatting helper
-│   │
-│   ├── NotificationsControl/
-│   │   └── ExamPrepareNotifications.swift  # Local notification scheduling
-│   │
-│   ├── Views/
-│   │   ├── ContentView.swift      # Main TabView navigation
-│   │   ├── HomeView.swift         # Dashboard with stats & trends
-│   │   ├── TrendsView.swift       # Score trend charts
-│   │   ├── ExamView.swift         # Exam list with grouping
-│   │   ├── ExamDetailView.swift   # Single exam detail display
-│   │   ├── ExamDetailEditView.swift # Edit exam detail form
-│   │   ├── NewExamSetView.swift   # Create new exam form
-│   │   ├── AddGradeView.swift     # Add grade entry form
-│   │   ├── MistakeView.swift      # Mistake collection list
-│   │   ├── MistakeDetailEditView.swift # Edit mistake detail
-│   │   ├── NewMistakeSetView.swift # Create new mistake entry
-│   │   ├── SettingsView.swift     # User profile & settings
-│   │   ├── SubjectScoreCard.swift # Subject score card with mini chart
-│   │   │
-│   │   ├── Components/
-│   │   │   ├── GradeChartView.swift    # Line chart for grades
-│   │   │   └── SubjectPickerView.swift # Subject selection picker
-│   │   │
-│   │   ├── Helpers/
-│   │   │   ├── BackgroundColors.swift  # Adaptive background color
-│   │   │   ├── ImagePicker.swift       # Photo library picker
-│   │   │   ├── PhotoCaptureView.swift  # Camera capture
-│   │   │   └── ScoreColor.swift        # Score-to-color mapping
-│   │   │
-│   │   ├── OnBoarding/
-│   │   │   └── WelcomeConfig.swift     # Onboarding screen config
-│   │   │
-│   │   └── Sheets/
-│   │       └── NewMistakeSheet.swift   # New mistake sheet view
-│   │
-│   ├── StudyPulseIcon.icon/      # App icon configuration
-│   └── Assets.xcassets/          # Image & color assets
-│
-├── zh-Hans.lproj/
-│   └── Localizable.strings       # Chinese (Simplified) translations
-├── en.lproj/
-│   └── Localizable.strings       # English strings
-│
-├── README.md                     # Project readme
-├── LICENSE                       # CC BY-NC-SA 4.0 license
-└── .gitignore
-```
-
----
-
-## 4. Architecture Design
-
-StudyPulse follows a **MVVM-inspired architecture** with SwiftUI's declarative paradigm:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     View Layer (SwiftUI)                 │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │ HomeView │ │TrendsView│ │ ExamView │ │SettingsView│  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘   │
-│       └─────────────┴────────────┴────────────┘         │
-│                         │                               │
-│              @EnvironmentObject<DataManager>             │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────┐
-│                  Manager Layer                           │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
-│  │ DataManager  │ │ SubjectInfo  │ │ExamPrepareNotif. │ │
-│  │ (Observable) │ │ (Helper)     │ │ (Scheduler)      │ │
-│  └──────┬───────┘ └──────────────┘ └──────────────────┘ │
-│         │                                                │
-│   JSON Persistence (Documents/)                         │
-└─────────┼───────────────────────────────────────────────┘
-          │
-┌─────────▼───────────────────────────────────────────────┐
-│                   Model Layer                            │
-│  ┌────────┐ ┌───────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Subject│ │ Grade │ │  Exam    │ │MistakeNote│       │
-│  └────────┘ └───────┘ └──────────┘ └──────────┘        │
-│  ┌──────────────────┐ ┌──────────┐                      │
-│  │comprehensiveExam │ │UserProfile│                     │
-│  └──────────────────┘ └──────────┘                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Key Architectural Patterns
-
-| Pattern | Implementation |
-|---------|---------------|
-| **Centralized State** | `DataManager` as `@StateObject` at app root, passed via `@EnvironmentObject` |
-| **Observable Data** | `DataManager` conforms to `ObservableObject` with `@Published` properties |
-| **Navigation** | `TabView` with 4 tabs (Home, Trends, Exams, Settings); `NavigationStack` within each tab |
-| **Sheet Presentation** | `.sheet` modifier for forms (AddGradeView, NewExamSetView, etc.) |
-| **Data Persistence** | JSON encoding/decoding to files in `FileManager.default.urls(for: .documentDirectory)` |
-| **Reactive Updates** | `@Published` triggers automatic UI refresh on data changes |
-
----
-
-## 5. Data Models
-
-All data models are defined in [DataModels.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Models/DataModels.swift) and conform to `Identifiable`, `Codable`, and `Equatable`.
-
-### 5.1 Subject
-
-```swift
-class Subject: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String      // e.g., "Chinese", "Mathematics"
-    var enabled: Bool     // Whether the subject is active
-}
-```
-
-Represents a single academic subject. Used for filtering grades, selecting subjects in exams, and configuring user profiles.
-
-### 5.2 Grade
-
-```swift
-struct Grade: Identifiable, Codable, Equatable {
-    let id: UUID
-    var subject: String        // Subject name
-    var score: Double?         // Normalized score (0-100 scale)
-    var rawScore: Double?      // Original exam score
-    var ranking: Int?          // Class/school ranking
-    var importance: Int        // 1-5 stars importance
-    var image: String?         // Photo filename
-    var date: Date             // Exam date
-    var examName: String       // Associated exam name
-}
-```
-
-Records a single grade entry for a subject. Supports both normalized scores and raw scores.
-
-### 5.3 MistakeNote
-
-```swift
-struct MistakeNote: Identifiable, Codable, Equatable {
-    let id: UUID
-    var title: String                  // Title of the mistake note
-    var originalQuestion: String       // The original question text
-    var source: String                 // Source (which exam)
-    var date: Date                     // Date recorded
-    var errorReason: String            // Why the mistake was made
-    var wrongSolution: String          // The incorrect solution attempted
-    var correctSolution: String        // The correct solution
-    var images: [String]               // Associated photo filenames
-}
-```
-
-A detailed mistake/错题 record with four-section analysis structure.
-
-### 5.4 UserProfile
-
-```swift
-struct UserProfile: Identifiable, Codable, Equatable {
-    let id: UUID
-    var username: String
-    var age: Int
-    var educationLevel: String      // "Primary School", "Middle School", "High School"
-    var educationSystem: String     // e.g., "Chinese", "IB", etc.
-    var region: String              // Geographic region
-    var selectedSubjects: [String]  // Active subject names
-    var theme: String               // UI theme preference
-}
-```
-
-Stores user's personal and academic information. Used for score normalization and personalized display.
-
-### 5.5 Exam
-
-```swift
-struct Exam: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
-    var examDate: Date
-    var importance: Int             // 1-5 stars
-    var subject: String             // Single subject
-    var examName: String            // Parent exam name
-    var masteryDegree: Double       // 0.0 - 1.0 mastery percentage
-}
-```
-
-Single-subject exam entry with countdown and mastery tracking.
-
-### 5.6 ComprehensiveExam
-
-```swift
-struct ComprehensiveExam: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
-    var examDate: Date
-    var importance: Int
-    var subject: [String]           // Multiple subjects
-    var examName: String
-    var masteryDegree: Double
-}
-```
-
-Multi-subject exam that bundles several subjects under one exam event.
-
----
-
-## 6. Core Managers
-
-### 6.1 DataManager
-
-**File:** [DataManager.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/DataManager.swift)
-
-The central data management hub. Conforms to `ObservableObject` and manages all app data with JSON persistence.
-
-#### Published Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `grades` | `[Grade]` | All recorded grades |
-| `subjects` | `[Subject]` | Available academic subjects |
-| `mistakeSets` | `[MistakeNote]` | All mistake notes |
-| `examSets` | `[Exam]` | All single-subject exams |
-| `comprehensiveExamSets` | `[ComprehensiveExam]` | All comprehensive exams |
-| `profile` | `UserProfile` | Current user profile |
-
-#### Key Methods
-
-| Method | Description |
-|--------|-------------|
-| `init()` | Initializes default subjects and loads all data from JSON files |
-| `loadData()` | Reads all JSON files from Documents directory and decodes into arrays |
-| `saveData()` | Encodes all data arrays to JSON files in Documents directory |
-| `getDocumentsDirectory()` | Returns the URL for the app's Documents directory |
-| `addGrade(_:)` | Appends a grade and saves |
-| `removeGrade(_:)` | Deletes a grade and saves |
-| `addSubject(_:)` | Appends a subject and saves |
-| `removeSubject(_:)` | Deletes a subject and saves |
-| `toggleSubject(_:)` | Toggles a subject's enabled state |
-| `addMistakeSet(_:)` | Appends a mistake note and saves |
-| `removeMistakeSet(_:)` | Deletes a mistake note and saves |
-| `addExamSet(_:)` | Appends an exam and saves |
-| `removeExamSet(_:)` | Deletes an exam and saves |
-| `addComprehensiveExam(_:)` | Appends a comprehensive exam and saves |
-| `removeComprehensiveExam(_:)` | Deletes a comprehensive exam and saves |
-| `updateExam(_:)` | Updates an existing exam and saves |
-| `updateComprehensiveExam(_:)` | Updates an existing comprehensive exam and saves |
-| `updateProfile(_:)` | Updates user profile and saves |
-
-#### Data Persistence Format
-
-Each data type is stored as a separate JSON file:
-
-| File | Content |
-|------|---------|
-| `grades.json` | Array of Grade objects |
-| `subjects.json` | Array of Subject objects |
-| `mistakeSets.json` | Array of MistakeNote objects |
-| `examSets.json` | Array of Exam objects |
-| `comprehensiveExamSets.json` | Array of ComprehensiveExam objects |
-| `profile.json` | Single UserProfile object |
-
-#### Default Subjects
-
-Initialized on first launch:
-
-| Subject | Enabled |
-|---------|---------|
-| Chinese | Yes |
-| Mathematics | Yes |
-| English | Yes |
-| Science | Yes |
-| History & Society | Yes |
-| Physics | Yes |
-| Chemistry | Yes |
-| Biology | Yes |
-| History | Yes |
-| Geography | Yes |
-| Politics | Yes |
-| Information Technology | Yes |
-| General Technology | Yes |
-| Art | Yes |
-| Music | Yes |
-| PE & Health | Yes |
-
-### 6.2 SubjectInfo
-
-**File:** [SubjectInfo.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/SubjectInfo.swift)
-
-Helper class that calculates maximum possible scores based on education level and subject.
-
-```swift
-func getMaxScore(level: String, subject: String) -> Double
-```
-
-| Education Level | Subject | Max Score |
-|-----------------|---------|-----------|
-| Primary School | All | 100 |
-| Middle School | Chinese, Mathematics, English | 120 |
-| Middle School | Science | 160 |
-| Middle School | Others | 100 |
-| High School | Chinese, Mathematics, English | 150 |
-| High School | Others | 100 |
-
-Used for score normalization (converting raw scores to percentage-based scores).
-
-### 6.3 StringsLocalized
-
-**File:** [StringsLocalized.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/StringsLocalized.swift)
-
-Simple extension on `String` that provides a shorthand for `NSLocalizedString`:
-
-```swift
-extension String {
-    func localized() -> String {
-        return NSLocalizedString(self, comment: "")
-    }
-}
-```
-
----
-
-## 7. View Layer
-
-### 7.1 App Entry Point
-
-**File:** [StudyPulseApp.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/StudyPulseApp.swift)
-
-```swift
-@main
-struct StudyPulseApp: App
-```
-
-#### Responsibilities
-
-1. Creates and holds `DataManager` as `@StateObject`
-2. Configures `UNUserNotificationCenter` delegate via `NotificationCoordinator`
-3. Requests notification permissions on launch
-4. Wraps `ContentView` with `WSOnBoarding` welcome screen
-5. Injects `DataManager` into the environment
-
-#### NotificationCoordinator
-
-Implements `UNUserNotificationCenterDelegate`:
-- `willPresent`: Presents notifications as banner with sound and badge
-- `didReceive`: Clears badge count when user taps notification
-
-### 7.2 ContentView
-
-**File:** [ContentView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ContentView.swift)
-
-The main tab-based navigation container.
-
-| Tab | Icon | View | Tag |
-|-----|------|------|-----|
-| Home | `house.fill` | HomeView | 0 |
-| Trends | `chart.bar.fill` | TrendsView | 1 |
-| Exams | `list.bullet.clipboard` | ExamView | 3 |
-| Settings | `gearshape.fill` | SettingsView | 4 |
-
-> Note: The Mistakes tab (tag 2) is currently commented out/disabled.
-
-Features `UIImpactFeedbackGenerator` for haptic feedback on tab switching.
-
-### 7.3 HomeView
-
-**File:** [HomeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/HomeView.swift)
-
-The main dashboard page. Largest view in the app (~783 lines).
-
-#### Key Components
-
-| Component | Description |
-|-----------|-------------|
-| `WelcomeCardView` | Top card with greeting, daily quote, and quick stats |
-| `StatCardView` | Reusable stat display card (icon, label, value) |
-| `GradeDetailView` | Scrollable list of recent grades with score details |
-| `UpcomingExamCard` | Displays upcoming exams within 2 weeks |
-| `HomeMainInfoView` | Container for all home page sections |
-| `DailyQuoteCard` | Displays a daily motivational quote |
-
-#### Daily Quotes System
-
-- `dailyQuotes`: Array of 14 motivational quotes
-- `dailyQuote`: Computed property that selects a quote based on the current day of year (cycles through the array)
-
-#### Displayed Statistics
-
-| Stat Card | Data Source |
-|-----------|-------------|
-| Total Exams | `dataManager.examSets.count + dataManager.comprehensiveExamSets.count` |
-| Upcoming Exams | Exams within 2 weeks |
-| Overall Average | Average of all grades' scores |
-| Latest Grade | Most recent grade entry |
-
-### 7.4 TrendsView
-
-**File:** [TrendsView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/TrendsView.swift)
-
-Score trend analysis and visualization page.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| Score/Ranking Toggle | Switch between score and ranking display modes |
-| Time Range Filter | All / 3 Months / 6 Months / 1 Year |
-| Subject Detail View | Expandable detail for each subject |
-| Charts Integration | Uses Apple's Charts framework for line/point marks |
-
-#### SubjectDetailView
-
-Inner view that shows a chart and grade list for a specific subject:
-- Line chart with date on X-axis and score/ranking on Y-axis
-- Scrollable list of individual grade entries with color-coded scores
-- Delete support via swipe gesture
-
-### 7.5 ExamView
-
-**File:** [ExamView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamView.swift)
-
-Exam management list view.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| Combined Display | Merges `examSets` and `comprehensiveExamSets` into `allExams` |
-| Time Grouping | Groups exams into: Within 1 Week, Within 1 Month, Later |
-| Swipe to Delete | Supports left-swipe deletion with confirmation |
-| Countdown Display | Shows days remaining until each exam |
-
-#### ExamRowView
-
-Displays a single exam row with:
-- Exam name and date
-- Subject tags (multiple for comprehensive exams)
-- Importance stars (1-5)
-- Mastery degree progress bar
-- Days remaining countdown
-
-### 7.6 ExamDetailView
-
-**File:** [ExamDetailView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamDetailView.swift)
-
-Read-only exam detail display.
-
-#### Layout Sections
-
-| Section | Content |
-|---------|---------|
-| Overview | Exam name, date, subject tags |
-| Metrics | Importance (star icons), Mastery degree (progress bar) |
-| Countdown | Large remaining days display |
-
-### 7.7 ExamDetailEditView
-
-**File:** [ExamDetailEditView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamDetailEditView.swift)
-
-Form for editing existing exam details. Fields:
-- Exam name (TextField)
-- Subject (disabled, shows current)
-- Date (DatePicker)
-- Importance (1-5 star picker)
-- Mastery degree (slider)
-- Notes (TextEditor)
-
-### 7.8 NewExamSetView
-
-**File:** [NewExamSetView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/NewExamSetView.swift)
-
-Form for creating new exams.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| Exam Type Toggle | Single Subject vs Comprehensive Exam |
-| Subject Multi-Select | Select multiple subjects for comprehensive exams |
-| Date Picker | Select exam date |
-| Importance Picker | 1-5 star rating |
-| Mastery Degree Slider | 0-100% slider |
-
-### 7.9 AddGradeView
-
-**File:** [AddGradeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/AddGradeView.swift)
-
-Form for recording new grades.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| Exam Type | Single Subject or Comprehensive Exam |
-| Exam Selection | Pick from existing exams |
-| Subject Picker | Select subject (or multiple for comprehensive) |
-| Score Input | Normalized score input |
-| Raw Score Toggle | Optional raw/original score entry |
-| Ranking Toggle | Optional ranking entry |
-| Importance Picker | 1-5 star rating |
-| Image Upload | Attach exam photo |
-
-#### ScoreControlView / RankingControlView
-
-Helper sub-views within AddGradeView for score and ranking input with +/- increment buttons.
-
-### 7.10 MistakeView
-
-**File:** [MistakeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/MistakeView.swift)
-
-Mistake collection list and detail view.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| List View | Shows all mistake notes with title, source, and date |
-| Detail View | Full mistake analysis with four sections |
-| Navigation | NavigationStack with detail push |
-
-### 7.11 MistakeDetailEditView
-
-**File:** [MistakeDetailEditView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/MistakeDetailEditView.swift)
-
-Detailed mistake editing form with four collapsible sections:
-
-| Section | Purpose |
-|---------|---------|
-| 题目 (Question) | The original exam question |
-| 错因 (Error Reason) | Why the mistake was made |
-| 错解 (Wrong Solution) | The incorrect answer attempted |
-| 正解 (Correct Solution) | The correct answer |
-
-Each section is independently expandable/collapsible via toggle.
-
-### 7.12 NewMistakeSetView
-
-**File:** [NewMistakeSetView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/NewMistakeSetView.swift)
-
-Form for creating new mistake entries.
-
-#### Fields
-
-| Field | Type |
-|-------|------|
-| Title | TextField |
-| Subject | Picker (from enabled subjects) |
-| Date | DatePicker |
-| Importance | Star picker (1-5) |
-| Source | TextField (which exam) |
-| 题目 | Collapsible TextEditor |
-| 错因 | Collapsible TextEditor |
-| 错解 | Collapsible TextEditor |
-| 正解 | Collapsible TextEditor |
-| Images | Photo capture/gallery support |
-
-### 7.13 NewMistakeSheet
-
-**File:** [NewMistakeSheet.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Sheets/NewMistakeSheet.swift)
-
-Sheet-based version of the new mistake form. Wraps `NewMistakeSetView`-like content in a `.sheet` presentation with navigation bar.
-
-### 7.14 SettingsView
-
-**File:** [SettingsView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/SettingsView.swift)
-
-App settings and configuration page. Largest settings-related file (~576 lines).
-
-#### Sections
-
-| Section | Content |
-|---------|---------|
-| **User Information** | Username, age, education level, system, region |
-| **Academic Info** | Edit subjects (enable/disable), selected subjects |
-| **About** | App description, features list, GitHub link |
-| **Copyright** | CC BY-NC-SA 4.0 license details |
-| **Test** | Send test notification in 5 seconds (for debugging) |
-
-#### Sub-views
-
-| View | Description |
-|------|-------------|
-| `EditSubjectsView` | Toggle individual subjects on/off |
-| `ProfileEditView` | Edit user profile fields |
-| `AboutView` | App info, features, and GitHub link |
-| `CopyrightView` | License information |
-| `LicenseDetailView` | Full CC BY-NC-SA 4.0 license text |
-| `SectionHeader` | Reusable section header with optional action button |
-
-### 7.15 SubjectScoreCard
-
-**File:** [SubjectScoreCard.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/SubjectScoreCard.swift)
-
-Reusable card component for displaying a subject's score information.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| Score/Ranking Toggle | Switch display mode |
-| Score History | List of past grades for the subject |
-| Mini Chart | Small line chart showing trend (miniChartView) |
-| Delete Support | Swipe to delete individual grades |
-
-#### ChartDataPoint
-
-Internal struct for chart rendering:
-```swift
-struct ChartDataPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let value: Double
-}
-```
-
----
-
-## 8. Components & Helpers
-
-### 8.1 GradeChartView
-
-**File:** [GradeChartView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Components/GradeChartView.swift)
-
-Simple line chart for a specific subject's grades using Apple Charts framework.
-
-```swift
-struct GradeChartView: View {
-    let grades: [Grade]
-    let subject: String
-    // Filters grades by subject, sorts by date, renders line + point marks
-}
-```
-
-### 8.2 SubjectPickerView
-
-**File:** [SubjectPickerView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Components/SubjectPickerView.swift)
-
-Reusable picker that shows only enabled subjects:
-
-```swift
-struct SubjectPickerView: View {
-    @Binding var selectedSubject: String
-    let subjects: [Subject]
-    // Filters subjects by .enabled property
-}
-```
-
-### 8.3 BackgroundColors
-
-**File:** [BackgroundColors.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/BackgroundColors.swift)
-
-Adaptive background color function based on color scheme:
-
-```swift
-func getBackgroundColor(_ colorScheme: ColorScheme) -> Color
-// Light mode: systemGray6
-// Dark mode: systemBackground
-```
-
-### 8.4 ImagePicker
-
-**File:** [ImagePicker.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/ImagePicker.swift)
-
-`UIViewControllerRepresentable` wrapper for `UIImagePickerController` to select images from the photo library.
-
-### 8.5 PhotoCaptureView
-
-**File:** [PhotoCaptureView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/PhotoCaptureView.swift)
-
-`UIViewControllerRepresentable` wrapper for `UIImagePickerController` with `sourceType = .camera` for direct camera capture.
-
-### 8.6 ScoreColor
-
-**File:** [ScoreColor.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/ScoreColor.swift)
-
-Maps numeric scores to semantic colors:
-
-| Score Range | Color |
-|-------------|-------|
-| >= 120 | systemGreen |
-| >= 90 | systemBlue |
-| >= 60 | systemOrange |
-| < 60 | systemRed |
-
----
-
-## 9. Extensions
-
-### 9.1 ColorExtensions
-
-**File:** [ColorExtensions.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Extensions/ColorExtensions.swift)
-
-Bridges UIKit UIColor constants to SwiftUI Color:
-
-| Extension | Maps To |
-|-----------|---------|
-| `Color.systemBackground` | `UIColor.systemBackground` |
-| `Color.secondarySystemBackground` | `UIColor.secondarySystemBackground` |
-| `Color.systemGray6` | `UIColor.systemGray6` |
-
-### 9.2 DateExtensions
-
-**File:** [DateExtensions.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Extensions/DateExtensions.swift)
-
-Convenience method for date formatting:
-
-```swift
-extension Date {
-    func formatted(date style: DateFormatter.Style, time style2: DateFormatter.Style) -> String
-}
-```
-
----
-
-## 10. Notification System
-
-**File:** [ExamPrepareNotifications.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/NotificationsControl/ExamPrepareNotifications.swift)
-
-Manages local notifications for exam countdown reminders.
-
-### Key Methods
-
-| Method | Description |
-|--------|-------------|
-| `requestAuthorization()` | Requests user permission for local notifications |
-| `scheduleNotifications(for: examName, date: examDate)` | Schedules a series of countdown notifications |
-| `cancelNotifications(for: examName)` | Cancels all notifications for a specific exam |
-
-### Notification Schedule
-
-| Days Before Exam | Notification Content |
-|------------------|---------------------|
-| 30 days | "30 days until [examName]" |
-| 10 days | "10 days until [examName]" |
-| 5 days | "5 days until [examName]" |
-| 3 days | "3 days until [examName]" |
-| 1 day | "1 day until [examName]" |
-
-Each notification is scheduled at 8:00 AM on the respective countdown day, using calendar components for recurring delivery.
-
-### Usage Flow
-
-1. When a new exam is created in `NewExamSetView`, `ExamPrepareNotifications.scheduleNotifications(for: date:)` is called
-2. When an exam is deleted, `ExamPrepareNotifications.cancelNotifications(for:)` is called
-3. `SettingsView` includes a debug option to send a test notification in 5 seconds
-
----
-
-## 11. Internationalization
-
-StudyPulse supports two locales:
-
-| Locale | File | Status |
-|--------|------|--------|
-| English (en) | [en.lproj/Localizable.strings](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/en.lproj/Localizable.strings) | Minimal (fallback) |
-| Chinese Simplified (zh-Hans) | [zh-Hans.lproj/Localizable.strings](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/zh-Hans.lproj/Localizable.strings) | Complete translations |
-
-### Localized Categories
-
-| Category | Keys |
-|----------|------|
-| AddGradeView | GROUP, Exam Details, Exam Name, Score, Ranking, etc. |
-| ContentView | Home, Trends, Mistakes, Exams, Settings |
-| ExamView | Within 1 Week, Within 1 Month, Later, Delete, etc. |
-| HomeView | Welcome back, Total Exams, Dashboard, etc. |
-| SettingsView | User Information, Edit Profile, About, Copyright, etc. |
-| Subjects | All 16 subject names (Chinese, Mathematics, English, etc.) |
-
-Usage pattern:
-```swift
-"Total Exams".localized()  // Returns "考试总次数" in zh-Hans
-```
-
----
-
-## 12. Dependencies
-
-### Third-Party Packages
-
-| Package | Repository | Purpose |
-|---------|------------|---------|
-| **WSOnBoarding** | [github.com/Jewel591/WSOnBoarding](https://github.com/Jewel591/WSOnBoarding) | Onboarding/welcome screen with feature highlights |
-
-### WSOnBoarding Configuration
-
-**File:** [WelcomeConfig.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/OnBoarding/WelcomeConfig.swift)
-
-| Feature Item | Icon | Color |
-|--------------|------|-------|
-| 图表分析 | `list.clipboard` | Blue |
-| 毫秒级响应 | `bolt.fill` | Orange |
-| 离线支持 | `wifi.slash` | Green |
-
-App icon: `graduationcap.fill`, Primary color: Blue
-
-### Native Frameworks Used
-
-| Framework | Purpose |
-|-----------|---------|
-| `SwiftUI` | UI framework |
-| `Charts` | Data visualization |
-| `UserNotifications` | Local notifications |
-| `UIKit` | Image picker, view controllers |
-| `AVFoundation` | Camera support |
-| `Combine` | Reactive programming (SubjectInfo) |
-| `Foundation` | Data types, JSON encoding, date handling |
-
----
-
-## 13. Data Flow
-
-### 13.1 Adding a Grade
-
-```
-User taps + on HomeView/TrendsView
-       │
-       ▼
-AddGradeView presented as .sheet
-       │
-       ▼
-User fills form (exam, subject, score, ranking, importance)
-       │
-       ▼
-User taps "Save"
-       │
-       ▼
-dataManager.addGrade(newGrade)
-       │
-       ├──► grades.append(newGrade)
-       ├──► saveData() → grades.json
-       │
-       ▼
-@Published triggers automatic UI update
-       │
-       ▼
-Sheet dismisses, views refresh with new data
-```
-
-### 13.2 Creating an Exam
-
-```
-User taps + on ExamView
-       │
-       ▼
-NewExamSetView presented as .sheet
-       │
-       ▼
-User selects exam type (single/comprehensive), subjects, date, etc.
-       │
-       ▼
-User taps "Save"
-       │
-       ├──► dataManager.addExamSet() or .addComprehensiveExam()
-       ├──► ExamPrepareNotifications.scheduleNotifications(for: date)
-       │
-       ▼
-Views refresh, notifications scheduled
-```
-
-### 13.3 Data Persistence Cycle
-
-```
-App Launch
-    │
-    ▼
-DataManager.init()
-    │
-    ├──► Initialize default subjects (16 subjects)
-    ├──► loadData()
-    │       │
-    │       ├──► Read grades.json → decode → grades[]
-    │       ├──► Read subjects.json → decode → subjects[]
-    │       ├──► Read mistakeSets.json → decode → mistakeSets[]
-    │       ├──► Read examSets.json → decode → examSets[]
-    │       ├──► Read comprehensiveExamSets.json → decode → comprehensiveExamSets[]
-    │       └──► Read profile.json → decode → profile
-    │
-    ▼
-App is ready
-
-Any data modification
-    │
-    ▼
-saveData()
-    │
-    ├──► Encode grades[] → grades.json
-    ├──► Encode subjects[] → subjects.json
-    ├──► Encode mistakeSets[] → mistakeSets.json
-    ├──► Encode examSets[] → examSets.json
-    ├──► Encode comprehensiveExamSets[] → comprehensiveExamSets.json
-    └──► Encode profile → profile.json
-```
-
----
-
-## 14. How to Run
+1. [Getting Started](#getting-started)
+2. [Architecture Overview](#architecture-overview)
+3. [Directory Structure](#directory-structure)
+4. [Data Models Reference](#data-models-reference)
+5. [Managers Reference](#managers-reference)
+6. [Views Reference](#views-reference)
+7. [Education Systems](#education-systems)
+8. [Widget Extension](#widget-extension)
+9. [Notification System](#notification-system)
+10. [OCR System](#ocr-system)
+11. [Image Cache System](#image-cache-system)
+12. [CSV Export](#csv-export)
+13. [iPad Adaptation](#ipad-adaptation)
+14. [Performance Patterns](#performance-patterns)
+15. [Privacy](#privacy)
+16. [Build Commands](#build-commands)
+17. [Coding Standards and Conventions](#coding-standards-and-conventions)
+
+=====================================================================
+
+## Getting Started
 
 ### Prerequisites
 
 | Requirement | Version |
 |-------------|---------|
-| macOS | Latest (compatible with Xcode 26) |
-| Xcode | 26.x |
+| macOS | 15.0+ |
+| Xcode | 26.3 |
 | iOS Deployment Target | 18.6+ |
 | Swift | 6.0 |
+| Supported Devices | iPhone & iPad (`TARGETED_DEVICE_FAMILY = "1,2"`) |
 
-### Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd StudyPulse
-   ```
-
-2. **Open in Xcode**
-   ```bash
-   open StudyPulse.xcodeproj
-   ```
-
-3. **Resolve Swift Package Dependencies**
-   - Xcode should automatically resolve WSOnBoarding from `https://github.com/Jewel591/WSOnBoarding`
-   - If not: `File` → `Packages` → `Resolve Package Versions`
-
-4. **Select Target Device**
-   - Choose an iPhone simulator (iOS 18.6+) or a physical device
-
-5. **Build and Run**
-   - Press `Cmd + R` or click the Run button
-   - The app will launch with the WSOnBoarding welcome screen on first run
-
-### Building from Command Line
+### Quick Start
 
 ```bash
-# Build for simulator
-xcodebuild -project StudyPulse.xcodeproj \
-  -scheme StudyPulse \
-  -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
-  build
+# 1. Clone the repository
+cd StudyPulse/
 
-# Build for device (requires signing)
-xcodebuild -project StudyPulse.xcodeproj \
-  -scheme StudyPulse \
-  -sdk iphoneos \
-  -configuration Release \
-  build
+# 2. Open in Xcode
+open StudyPulse.xcodeproj
+
+# 3. Resolve SPM packages
+#    Xcode -> File -> Packages -> Resolve Package Versions
+
+# 4. Build and Run
+#    Cmd + R
 ```
 
-### Debugging Tips
+### Key Concepts
 
-- **Test Notifications**: Go to Settings → "在 5 秒后进行本地通知接收测试"
-- **Data Location**: JSON files are stored in the app's Documents directory. Use Xcode's Devices & Simulators window to download the container.
-- **Reset Data**: Delete the app and reinstall to start fresh (all JSON files are removed)
+- **MVVM Architecture**: Views are driven by @EnvironmentObject DataManager
+- **JSON Persistence**: All data stored as JSON files in ~/Documents/
+- **Async Loading**: App uses asyncInit() for non-blocking startup
+- **Global Education**: Supports 15+ education systems (CN, UK, IB, AP, SAT, etc.)
+- **Universal Device Support**: iPhone + iPad with size-class adaptive layouts
+  (see [iPad Adaptation](#ipad-adaptation) below)
 
----
+=====================================================================
 
-## 15. Build Configuration
+## Architecture Overview
 
-### Project Settings
+StudyPulse follows the **MVVM (Model-View-ViewModel)** pattern using SwiftUI's @EnvironmentObject for dependency injection.
 
-| Setting | Value |
-|---------|-------|
-| **Bundle Identifier** | `Gao.Chenkai.StudyPulse` |
-| **Swift Version** | 6.0 |
-| **C++ Standard** | gnu++20 |
-| **C Standard** | gnu17 |
-| **Development Team** | D2G8858WRZ |
-| **Code Sign Style** | Automatic |
+### High-Level Architecture Diagram
 
-### Deployment Targets
+```
++---------------------------------------------------------------------------+
+|                        StudyPulse iOS App                                  |
++===========================================================================+
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  |                        Presentation Layer                          |   |
+|  +--------------------------------------------------------------------+   |
+|  |                                                                    |   |
+|  |  +----------------------------------------------------------------+|   |
+|  |  |                         StudyPulseApp                          ||   |
+|  |  |  +----------------------------------------------------------+  ||   |
+|  |  |  |                 AppEnvironmentManager                    |  ||   |
+|  |  |  |  (Theme + Language Preferences + ColorScheme)            |  ||   |
+|  |  |  +----------------------------------------------------------+  ||   |
+|  |  +----------------------------------------------------------------+|   |
+|  +--------------------------------------------------------------------+   |
+|                              |                                            |
+|                              v                                            |
+|  +--------------------------------------------------------------------+   |
+|  |                             View Layer                              |   |
+|  +--------------------------------------------------------------------+   |
+|  |                                                                    |   |
+|  |  ContentView (TabView)                                            |   |
+|  |  +----------+ +----------+ +----------+ +----------+ +----------+|   |
+|  |  |   Home   | |  Trends  | | Mistakes | |  Exams   | | Settings ||   |
+|  |  +----------+ +----------+ +----------+ +----------+ +----------+|   |
+|  |                                                                    |   |
+|  |  +----------+ +----------+ +----------+ +----------+ +----------+|   |
+|  |  | HomeView | |TrendsView| |MistakeVw| | ExamView | |Settings  ||   |
+|  |  +----------+ +----------+ +----------+ +----------+ +----------+|   |
+|  +--------------------------------------------------------------------+   |
+|                              |                                            |
+|                              v                                            |
+|  +--------------------------------------------------------------------+   |
+|  |                      Business Logic Layer                           |   |
+|  +--------------------------------------------------------------------+   |
+|  |                                                                    |   |
+|  |  +------------------- DataManager -----------------------------+  |   |
+|  |  |  grades   |  subjects   |  mistakeSets   |  examSets       |  |   |
+|  |  |  comprehensiveExamSets         |        profile            |  |   |
+|  |  +------------------------------------------------------------+  |   |
+|  |  |  asyncInit()        |  load*Async()    |  save*()         |  |   |
+|  |  |  fullScore()        |  displayName()   |  applySmartRec() |  |   |
+|  |  +------------------------------------------------------------+  |   |
+|  |                                                                    |   |
+|  |  +--------+ +--------+ +----------+ +------------+                |   |
+|  |  |Calendar| |  OCR   | |ImageCache| |WidgetData  |                |   |
+|  |  | Manager| |Manager | |          | | SyncMgr    |                |   |
+|  |  +--------+ +--------+ +----------+ +------------+                |   |
+|  +--------------------------------------------------------------------+   |
+|                              |                                            |
+|                              v                                            |
+|  +--------------------------------------------------------------------+   |
+|  |                             Data Layer                              |   |
+|  +--------------------------------------------------------------------+   |
+|  |                                                                    |   |
+|  |  Models:                                                          |   |
+|  |  +----------+ +---------+ +---------+ +----------+ +----------+   |   |
+|  |  | Education| | Subject | | Subject | |  Grade   | |UserProfle|   |   |
+|  |  |  Stage   | |  Config | |  Region | |          | |          |   |   |
+|  |  +----------+ +---------+ +---------+ +----------+ +----------+   |   |
+|  |  +----------+ +---------+ +----------+ +------------------+       |   |
+|  |  | Mistake  | |  Exam   | |  Subject | | AppPreferences   |       |   |
+|  |  |   Note   | |         | |          | |                  |       |   |
+|  |  +----------+ +---------+ +----------+ +------------------+       |   |
+|  |                                                                    |   |
+|  |  Persistence Layer:                                                |   |
+|  |  ~/Documents/                                                       |   |
+|  |    profile.json    grades.json    mistakes.json                    |   |
+|  |    exams.json    comprehensiveExams.json  subjects.json            |   |
+|  |    images/        (avatar_*.jpg, grade_*.jpg)                      |   |
+|  +--------------------------------------------------------------------+   |
+|                              |                                            |
+|                              v                                            |
+|  +--------------------------------------------------------------------+   |
+|  |                        Widget Extension                             |   |
+|  |                                                                    |   |
+|  |  StudyPulseWidget/                                                 |   |
+|  |    ExamWidget.swift          (Widget Definition)                   |   |
+|  |    ExamWidgetData.swift      (Shared Data Model)                   |   |
+|  |    ExamWidgetEntry.swift     (Timeline Entry)                      |   |
+|  |    ExamWidgetProvider.swift  (Timeline Provider)                   |   |
+|  |    ExamWidgetViews.swift     (Widget UI)                           |   |
+|  +--------------------------------------------------------------------+   |
++---------------------------------------------------------------------------+
+```
 
-| Platform | Version |
-|----------|---------|
-| iOS | 18.6 |
-| Xcode Build Target | 26.0 |
+### Component Interaction Flow
 
-### Build Configurations
+```
++------------------+
+|    User Input    |
++--------+---------+
+         |
+         v
++----------------------------------------------+
+|              SwiftUI Views                   |
+|  +----------+  +----------+  +----------+   |
+|  | HomeView |  | AddGrade |  | Settings |   |
+|  +----+-----+  +----+-----+  +----+-----+   |
++-------+-------------+-------------+---------+
+        |             |             |
+        +-------------+-------------+
+                      |
+                      v
+         +---------------------------+
+         |      DataManager          |
+         |    (@EnvironmentObject)   |
+         +------------+--------------+
+                      |
+         +------------+------------+
+         |                         |
+         v                         v
++------------------+  +------------------+
+|  Update Models   |  |  Save to Disk    |
+|  (State Change)  |  |  (JSON + Images) |
++------------------+  +--------+---------+
+                               |
+                               v
+                 +---------------------------+
+                 | WidgetDataSyncManager     |
+                 |  (App Group Sync)         |
+                 +------------+--------------+
+                               |
+                               v
+                 +---------------------------+
+                 | StudyPulseWidget          |
+                 |  (Timeline Refresh)       |
+                 +---------------------------+
+```
 
-| Setting | Debug | Release |
-|---------|-------|---------|
-| Optimization | `-Onone` | `wholemodule` |
-| Debug Info | `dwarf` | `dwarf-with-dsym` |
-| Assertions | Enabled | Disabled |
-| Testability | Enabled | Disabled |
-| Validation | No | `VALIDATE_PRODUCT = YES` |
+### Module Dependency Graph
 
-### Compiler Flags
+```
++---------------------------------------------------------------------------+
+|                      Module Dependency Graph                               |
++===========================================================================+
+|                                                                           |
+|  +-----------------+     +-----------------+     +-----------------+      |
+|  | Views           |---->| DataManager     |---->| Models          |      |
+|  |  - HomeView     |     |                 |     |  - Grade        |      |
+|  |  - TrendsView   |     | Published:      |     |  - MistakeNote  |      |
+|  |  - MistakeView  |     |  - grades       |     |  - Exam         |      |
+|  |  - ExamView     |     |  - subjects     |     |  - Subject      |      |
+|  |  - SettingsView |     |  - mistakeSets  |     |  - UserProfile  |      |
+|  |  - AddGradeView |     |  - examSets     |     |  - SubjectConfig|      |
+|  |  - NewExamSet   |     |  - profile      |     |  - EducationRgn |      |
+|  +-----------------+     +--------+--------+     +-----------------+      |
+|                                    |                                       |
+|                                    v                                       |
+|  +------------------ Helper Managers -------------------------------+     |
+|  |                                                                  |     |
+|  |  +--------+ +---------+ +----------+ +------------------+         |     |
+|  |  |Calendar| |  OCR    | | ImageCache| | Education Config |         |     |
+|  |  |Manager | | Manager | |           | | (Static)         |         |     |
+|  |  |(EventKt)| | (Vision)| | (NSCache) | |                  |         |     |
+|  |  +--------+ +---------+ +----------+ +------------------+         |     |
+|  +-------------------------------------------------------------------+     |
+|                                    |                                       |
+|                                    v                                       |
+|  +------------------ Extensions & Utilities -------------------------+    |
+|  |                                                                  |     |
+|  |  +--------+ +--------+ +-----------+ +------------------+         |     |
+|  |  | Color  | |  Date  | |  Score    | | Strings Localized|         |     |
+|  |  | Extensn| | Extensn| |  Color    | |                  |         |     |
+|  |  +--------+ +--------+ +-----------+ +------------------+         |     |
+|  +-------------------------------------------------------------------+     |
+|                                                                           |
+|  Dependency Direction: Views -> DataManager -> Helpers -> Extensions      |
+|  (Views never directly access Helpers; DataManager mediates)              |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
 
-| Flag | Value |
-|------|-------|
-| `SWIFT_DEFAULT_ACTOR_ISOLATION` | MainActor |
-| `SWIFT_APPROACHABLE_CONCURRENCY` | YES |
-| `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` | YES |
-| `SWIFT_EMIT_LOC_STRINGS` | YES |
-| `CLANG_ENABLE_MODULES` | YES |
-| `CLANG_ENABLE_OBJC_ARC` | YES |
-| `ENABLE_STRICT_OBJC_MSGSEND` | YES |
+### Data Persistence Flow
 
-### Info.plist Keys (Generated)
+```
++---------------------------------------------------------------------------+
+|                       Data Persistence Flow                                |
++===========================================================================+
+|                                                                           |
+|  App Launch (.task -> asyncInit())                                        |
+|  +-----------------------------------------------------------------+      |
+|  |                                                                 |      |
+|  |  Main Thread                      Background Thread             |      |
+|  |  +----------------------+         +----------------------+      |      |
+|  |  | StudyPulseApp        |         | DataManager          |      |      |
+|  |  |  .onAppear {         |   async |  loadProfileAsync()  |      |      |
+|  |  |    dataManager.      |-------->|  loadGradesAsync()   |      |      |
+|  |  |    asyncInit()       |         |  loadExamsAsync()    |      |      |
+|  |  |  }                   |         |  loadMistakesAsync() |      |      |
+|  |  +----------------------+         |  loadSubjectsAsync() |      |      |
+|  |                                   +----------+-----------+      |      |
+|  |                                              |                  |      |
+|  |                                              v                  |      |
+|  |                                   +----------------------+      |      |
+|  |                                   | ~/Documents/         |      |      |
+|  |                                   |  - profile.json      |      |      |
+|  |                                   |  - grades.json       |      |      |
+|  |                                   |  - exams.json        |      |      |
+|  |                                   |  - mistakes.json     |      |      |
+|  |                                   |  - subjects.json     |      |      |
+|  |                                   +----------------------+      |      |
+|  +-----------------------------------------------------------------+      |
+|                                                                           |
+|  Save Operation (User Action -> save)                                     |
+|  +-----------------------------------------------------------------+      |
+|  |                                                                 |      |
+|  |  User taps "Save"                                                |      |
+|  |     |                                                           |      |
+|  |     v                                                           |      |
+|  |  DataManager.save*() (@MainActor)                                |      |
+|  |   - Update @Published property -> triggers SwiftUI re-render     |      |
+|  |   - Encode model -> JSON Data (JSONEncoder)                      |      |
+|  |   - Write to ~/Documents/{file}.json (atomic write)              |      |
+|  |   - WidgetDataSyncManager.syncExamsToWidget()                    |      |
+|  |                                                                 |      |
+|  +-----------------------------------------------------------------+      |
+|                                                                           |
+|  File I/O Pattern (DataFileIO - nonisolated enum)                         |
+|  +-----------------------------------------------------------------+      |
+|  |  - read(from:)    -> Data? (throws on error)                    |      |
+|  |  - write(data:to:) -> Bool (atomic via temp file + rename)      |      |
+|  |  - directoryExists / createDirectory()                          |      |
+|  |  - Safe for background thread execution                         |      |
+|  +-----------------------------------------------------------------+      |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
 
-| Key | Value |
-|-----|-------|
-| `UIApplicationSceneManifest_Generation` | YES |
-| `UIApplicationSupportsIndirectInputEvents` | YES |
-| `UILaunchScreen_Generation` | YES |
-| Supported Orientations (iPhone) | Portrait, Landscape Left, Landscape Right |
-| Supported Orientations (iPad) | Portrait, Portrait Upside Down, Landscape Left, Landscape Right |
+=====================================================================
 
-### Supported Device Families
+## Directory Structure
 
-- iPhone (`1`)
-- iPad (`2`)
-- Mac Catalyst: **Disabled** (`SUPPORTS_MACCATALYST = NO`)
+```
+StudyPulse/
++-- Models/                  # Data model definitions
+|   +-- DataModels.swift     # Core domain models (Grade, MistakeNote, etc.)
+|   +-- AppPreferences.swift # App-wide preferences (language + theme)
+|   +-- ExamWidgetData.swift # Shared widget data model
++-- Managers/                # Business logic managers
+|   +-- DataManager.swift    # Central state manager (@MainActor)
+|   +-- EducationConfig.swift# Static education system config
+|   +-- AppEnvironmentManager.swift  # Language + theme manager
+|   +-- CalendarManager.swift        # EventKit integration
+|   +-- OCRManager.swift             # Vision framework OCR
+|   +-- ImageCache.swift             # NSCache-backed image cache
+|   +-- SubjectInfo.swift            # Subject display helpers
+|   +-- WidgetDataSyncManager.swift  # App Group sync
++-- Views/                   # SwiftUI views and components
+|   +-- ContentView.swift    # Main TabView container (sidebar-adaptable on iPad)
+|   +-- HomeView.swift       # Dashboard (4-col stats + 2-col sections on iPad)
+|   +-- TrendsView.swift     # Trend analysis
+|   +-- ExamView.swift       # Exam list + detail
+|   +-- MistakeView.swift    # Mistake notebook
+|   +-- AddGradeView.swift   # Grade entry form
+|   +-- SettingsView.swift   # Settings
+|   +-- ProfileEditView.swift
+|   +-- EditSubjectsView.swift
+|   +-- PreferencesView.swift
+|   +-- Helpers/             # Reusable components
+|       +-- AvatarView.swift
+|       +-- ScoreColor.swift
+|       +-- SubjectScoreCard.swift
+|       +-- iPadLayout.swift     # iPad adaptive helpers (adaptiveMaxWidth, AdaptiveHStack, AdaptiveGridColumns)
++-- Extensions/              # Color, Date, and utility extensions
++-- Notifications/           # Local notification scheduling
++-- StudyPulseWidget/        # Widget extension (separate target)
+|   +-- ExamWidget.swift     # Widget definition
+|   +-- ExamWidgetEntry.swift
+|   +-- ExamWidgetProvider.swift
+|   +-- ExamWidgetViews.swift
+|   +-- StudyPulseWidgetBundle.swift
++-- StudyPulseApp.swift      # App entry point
+```
+
+=====================================================================
+
+## Data Models Reference
+
+### Models Summary Table
+
+| Model | File | Type | ID Source | Codable | Sendable | Purpose |
+|-------|------|------|-----------|---------|----------|---------|
+| EducationStage | DataModels.swift | enum | rawValue | Yes | Yes | User's educational stage |
+| EducationCategory | DataModels.swift | enum | rawValue | Yes | Yes | Domestic / International |
+| SubjectConfig | DataModels.swift | struct | name | Yes | Yes | Subject definition in region |
+| EducationRegion | DataModels.swift | struct | name | Yes | Yes | Regional education system |
+| Subject | DataModels.swift | struct | UUID | Yes | No | User's subject list |
+| Grade | DataModels.swift | struct | UUID | Yes | No | Single grade record |
+| UserProfile | DataModels.swift | struct | n/a | Yes | No | User profile + academic info |
+| MistakeNote | DataModels.swift | struct | UUID | Yes | No | Mistake note entry |
+| Exam | DataModels.swift | struct | UUID | Yes | No | Single-subject exam |
+| comprehensiveExam | DataModels.swift | struct | UUID | Yes | No | Multi-subject exam |
+| AppPreferences | AppPreferences.swift | struct | n/a | Yes | No | Language + color scheme |
+| ColorSchemeOption | AppPreferences.swift | enum | rawValue | Yes | No | system/light/dark |
+
+### EducationStage (enum)
+
+Defines the user's current educational stage.
+
+```swift
+nonisolated enum EducationStage: String, CaseIterable, Identifiable, Codable, Sendable {
+    case primarySchool = "Primary School"
+    case middleSchool = "Middle School"
+    case highSchool = "High School"
+    case internationalHighSchool = "International High School"
+    case university = "University"
+    case graduate = "Graduate"
+}
+```
+
+### EducationCategory (enum)
+
+Categorizes education systems as domestic or international.
+
+```swift
+nonisolated enum EducationCategory: String, CaseIterable, Codable, Sendable {
+    case domestic = "Domestic"
+    case international = "International"
+}
+```
+
+### SubjectConfig
+
+Configuration for a single subject within a region.
+
+```swift
+nonisolated struct SubjectConfig: Identifiable, Codable, Hashable, Sendable {
+    var id: String { name }
+    let name: String
+    let displayName: String
+    let fullScore: Double
+    let isRequired: Bool
+    let isElective: Bool
+    let category: String?
+
+    // Factory methods
+    static func required(_ name: String, displayName: String, fullScore: Double, category: String? = nil)
+    static func elective(_ name: String, displayName: String, fullScore: Double, category: String? = nil)
+}
+```
+
+### EducationRegion
+
+Represents a regional education system (e.g., zhejiang high school).
+
+```swift
+nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
+    var id: String { name }
+    let name: String              // e.g., "zhejiang"
+    let displayName: String       // e.g., "浙江 (3+3)"
+    let category: EducationCategory
+    let stage: EducationStage
+    let systemCode: String        // e.g., "CN-ZJ-3+3"
+    let subjects: [SubjectConfig]
+    let notes: String
+}
+```
+
+### Subject
+
+User's subject list with customizable full score.
+
+```swift
+nonisolated struct Subject: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String              // e.g., "Mathematics"
+    var displayName: String       // e.g., "数学"
+    var enabled: Bool
+    var fullScore: Double         // customizable per subject
+}
+```
+
+### Grade
+
+A single grade record.
+
+```swift
+nonisolated struct Grade: Identifiable, Codable {
+    var id = UUID()
+    var subject: String
+    var score: Double
+    var rawScore: Double?         // original score before ranking
+    var ranking: Int?
+    var importance: Int           // 1-5
+    var image: Data?              // legacy inline image
+    var imageFileName: String?    // new file-based image
+    var date: Date
+    var examName: String
+    var fullScore: Double?        // full score at the time of recording
+
+    // Dynamic score rate calculation
+    func scoreRate(subjectFullScore: Double = 100) -> Double
+}
+```
+
+### UserProfile (expanded)
+
+User's profile with detailed academic info.
+
+```swift
+nonisolated struct UserProfile: Codable {
+    var username: String = "Student"
+    var realName: String = ""
+    var age: Int = 16
+    var gender: String = "Not Specified"
+    var educationLevel: String       // legacy
+    var educationSystem: String      // legacy
+    var region: String               // legacy
+    var educationStage: String       // EducationStage rawValue
+    var regionCode: String           // EducationRegion.name
+    var selectedSubjects: [Subject] = []
+    var theme: String = "Auto"
+    var avatarFileName: String?
+
+    // New detailed fields
+    var grade: String = ""           // e.g., "高一"
+    var className: String = ""
+    var schoolName: String = ""
+    var studentId: String = ""
+    var enrollmentYear: Int
+    var examYear: Int
+    var targetSchool: String = ""
+    var targetScore: Double = 0
+}
+```
+
+### MistakeNote
+
+A single mistake note with images.
+
+```swift
+nonisolated struct MistakeNote: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var subject: String
+    var originalQuestion: String
+    var source: String
+    var date: Date
+    var errorReason: String
+    var wrongSolution: String
+    var correctSolution: String
+    var questionImages: [String]           // filenames
+    var reasonImages: [String]
+    var wrongSolutionImages: [String]
+    var correctSolutionImages: [String]
+}
+```
+
+### Exam / comprehensiveExam
+
+```swift
+nonisolated struct Exam: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var subject: String          // single subject
+    var examDate: Date
+    var importance: Int          // 1-5
+    var masteryDegree: Int       // 0-100
+    var notes: String
+}
+
+nonisolated struct comprehensiveExam: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var subject: [String]        // multiple subjects
+    var examDate: Date
+    var importance: Int
+    var masteryDegree: Int
+    var notes: String
+}
+```
+
+### AppPreferences
+
+```swift
+struct AppPreferences: Codable {
+    var appLanguage: String?     // "en", "zh-Hans", nil = system
+    var colorScheme: ColorSchemeOption
+}
+
+enum ColorSchemeOption: String, CaseIterable, Codable {
+    case system, light, dark
+}
+```
+
+=====================================================================
+
+## Managers Reference
+
+### Managers Summary Table
+
+| Manager | File | Actor/Type | Key Collaborators | Purpose |
+|---------|------|------------|-------------------|---------|
+| DataManager | DataManager.swift | @MainActor (ObservableObject) | All models, ImageCache, WidgetDataSyncManager | Central state and persistence |
+| EducationConfig | EducationConfig.swift | nonisolated enum | EducationRegion, SubjectConfig | Static education system registry |
+| AppEnvironmentManager | AppEnvironmentManager.swift | ObservableObject | AppPreferences | Language + theme management |
+| CalendarManager | CalendarManager.swift | class (singleton) | EventKit | Add exams to system calendar |
+| OCRManager | OCRManager.swift | class | Vision framework | Text recognition from images |
+| ImageCache | ImageCache.swift | nonisolated class (singleton) | NSCache | Thumbnail caching |
+| SubjectInfo | SubjectInfo.swift | ObservableObject | SubjectDisplay | Subject display helpers and max-score lookups |
+| WidgetDataSyncManager | WidgetDataSyncManager.swift | class (singleton) | App Group container | Data sync with widget |
+
+### DataManager Data Flow
+
+```
++---------------------------------------------------------------------------+
+|                        DataManager Data Flow                               |
++===========================================================================+
+|                                                                           |
+|  +-------------------------- Initialization ---------------------------+   |
+|  |                                                                    |   |
+|  |  asyncInit()                                                       |   |
+|  |   |                                                                 |   |
+|  |   +---> loadProfileAsync()  ->  UserProfile from profile.json       |   |
+|  |   +---> loadGradesAsync()   ->  [Grade] from grades.json            |   |
+|  |   +---> loadSubjectsAsync() ->  [Subject] from subjects.json        |   |
+|  |   +---> loadExamsAsync()    ->  [Exam] from exams.json              |   |
+|  |   +---> loadComprehensiveExamsAsync()                               |   |
+|  |   |            -> [comprehensiveExam] from comprehensiveExams.json  |   |
+|  |   +---> loadMistakeSetsAsync() -> [MistakeNote] from mistakes.json  |   |
+|  |   |                                                                 |   |
+|  |   +---> initializeDefaultSubjects()  (if no subjects exist)         |   |
+|  |                                                                    |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  +--------------------------- Write Path --------------------------------+   |
+|  |                                                                    |   |
+|  |  SwiftUI View (user action)                                          |   |
+|  |       |                                                              |   |
+|  |       v                                                              |   |
+|  |  DataManager.save{Entity}()                                          |   |
+|  |   |                                                                  |   |
+|  |   +---> @Published property updated  ->  SwiftUI refresh             |   |
+|  |   +---> JSONEncoder.encode(entity)     ->  JSON Data                 |   |
+|  |   +---> DataFileIO.write(data, to: file) ->  Atomic write           |   |
+|  |   |                                                                  |   |
+|  |   +---> WidgetDataSyncManager.syncExamsToWidget()  (if exams)        |   |
+|  |                                                                    |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  +--------------------------- Image Path -------------------------------+   |
+|  |                                                                    |   |
+|  |  saveGradeImage(Data)                                                |   |
+|  |   |                                                                  |   |
+|  |   +---> Generate UUID filename ("grade_UUID.jpg")                    |   |
+|  |   +---> Write JPEG to ~/Documents/images/{filename}                  |   |
+|  |   +---> Return filename (stored on Grade.imageFileName)              |   |
+|  |                                                                    |   |
+|  |  getImage(filename)                                                  |   |
+|  |   |                                                                  |   |
+|  |   +---> First check ImageCache                                       |   |
+|  |   +---> If miss, load from disk -> UIImage -> Cache                  |   |
+|  |                                                                    |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### EducationConfig System Resolution Flow
+
+```
++---------------------------------------------------------------------------+
+|                  EducationConfig System Resolution Flow                   |
++===========================================================================+
+|                                                                           |
+|  User selects EducationStage in ProfileEditView                           |
+|        |                                                                  |
+|        v                                                                  |
+|  EducationConfig.availableRegions(for: stage)                             |
+|        |                                                                  |
+|        v                                                                  |
+|  Returns [EducationRegion] filtered by stage                              |
+|        |                                                                  |
+|        +---> .domestic regions (e.g., 浙江 高中 3+3)                      |
+|        +---> .international regions (e.g., UK A-Level, IB DP, US AP)     |
+|        |                                                                  |
+|        v                                                                  |
+|  User picks region -> region.code stored in UserProfile.regionCode        |
+|        |                                                                  |
+|        v                                                                  |
+|  "Apply Smart Recommendation" button                                      |
+|        |                                                                  |
+|        v                                                                  |
+|  DataManager.applySmartSubjectRecommendation(stage, regionCode)           |
+|   |                                                                       |
+|   +---> Lookup EducationRegion via EducationConfig.region(...)            |
+|   +---> Iterate region.subjects (SubjectConfig[])                        |
+|   +---> Map each SubjectConfig -> Subject (with fullScore)                |
+|   +---> Replace UserProfile.selectedSubjects                              |
+|   |                                                                       |
+|   +---> saveProfile() / saveSubjects()                                    |
+|        |                                                                  |
+|        v                                                                  |
+|  SwiftUI refreshes to show new subjects                                   |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### AppEnvironmentManager Theme / Language Flow
+
+```
++---------------------------------------------------------------------------+
+|            AppEnvironmentManager (Theme + Language) Flow                   |
++===========================================================================+
+|                                                                           |
+|  PreferencesView                                                           |
+|    +---> Language selector:  English / 简体中文 / 繁體中文 / 日本語       |
+|    |                         / 한국어 / Follow System                     |
+|    |                                                                      |
+|    +---> Theme selector: Light / Dark / Follow System                     |
+|        |                                                                  |
+|        v                                                                  |
+|  AppEnvironmentManager.setLanguage("zh-Hans")                             |
+|    +---> updates preferences.appLanguage                                  |
+|    +---> writes preferences to disk                                       |
+|    +---> triggers .environment(\.locale, ...) on root view                |
+|                                                                           |
+|  AppEnvironmentManager.setColorScheme(.dark)                              |
+|    +---> updates preferences.colorScheme                                  |
+|    +---> writes preferences to disk                                       |
+|    +---> computed effectiveColorScheme used by root view                  |
+|                                                                           |
+|  On launch:                                                               |
+|    AppEnvironmentManager loads preferences file and restores state        |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### WidgetDataSyncManager Sync Flow
+
+```
++---------------------------------------------------------------------------+
+|                    WidgetDataSyncManager Sync Flow                         |
++===========================================================================+
+|                                                                           |
+|  Main App:                                                               |
+|  DataManager.saveExams() / saveComprehensiveExams()                       |
+|        |                                                                  |
+|        v                                                                  |
+|  WidgetDataSyncManager.syncExamsToWidget(exams)                           |
+|   |                                                                       |
+|   +---> Build ExamWidgetData struct (shared model)                        |
+|   |       - upcomingExams: filtered and limited list                      |
+|   |       - lastUpdated: Date                                             |
+|   |                                                                       |
+|   +---> Encode to JSON                                                    |
+|   +---> Write to App Group container file                                 |
+|   |       (group.Gao-Chenkai.StudyPulse / widgetExams.json)               |
+|   |                                                                       |
+|   +---> WidgetKit reloadTimelines(ofKind:...)                             |
+|        |                                                                  |
+|        v                                                                  |
+|  Widget Extension:                                                         |
+|  ExamWidgetProvider.getTimeline(in: for: after:)                          |
+|   |                                                                       |
+|   +---> Load ExamWidgetData from App Group file                           |
+|   +---> Build TimelineEntry[] with upcoming exam info                     |
+|   +---> Return -> WidgetKit renders ExamWidgetViews                       |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+=====================================================================
+
+## Views Reference
+
+### Tab Structure
+
+```
++---------------------------------------------------------------------------+
+|                        ContentView (TabView)                               |
++===========================================================================+
+|                                                                           |
+|  Tab 1: HomeView           -> Dashboard                                   |
+|  Tab 2: TrendsView         -> Trend analysis                              |
+|  Tab 3: MistakeView        -> Mistake notebook                            |
+|  Tab 4: ExamView           -> Exam list                                   |
+|  Tab 5: SettingsView       -> Settings: profile card, edit profile/subjects, preferences, academic info, data management (CSV export/import), about |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### Modal Sheet Navigation
+
+```
++---------------------------------------------------------------------------+
+|                       Modal Sheet Navigation Flow                          |
++===========================================================================+
+|                                                                           |
+|  HomeView                                                                 |
+|   +---> (quick action) AddGradeView        (.sheet)                       |
+|   +---> (quick action) NewExamSet          (.sheet)                       |
+|   +---> (tap exam)    ExamDetailView       (.navigationDestination)       |
+|                                                                           |
+|  TrendsView                                                               |
+|   +---> (tap subject) SubjectDetailView    (.navigationDestination)       |
+|                                                                           |
+|  ExamView                                                                 |
+|   +---> (+ button)    NewExamSetView       (.sheet)                       |
+|   +---> (tap exam)    ExamDetailView       (.navigationDestination)       |
+|          |                                                                  |
+|          +---> (edit)    NewExamSetView (edit mode)                       |
+|          +---> (related) MistakeDetailEditView                            |
+|                                                                           |
+|  MistakeView                                                              |
+|   +---> (+ button)    MistakeDetailEditView (new)   (.sheet)              |
+|   +---> (tap mistake) MistakeDetailEditView (edit)  (.navigationDestination)|
+|          |                                                                  |
+|          +---> (OCR)     OCRManager.recognizeText()  (async)              |
+|          +---> (image)   PhotosPicker / UIImagePicker  (async)            |
+|                                                                           |
+|  SettingsView                                                             |
+|   +---> Profile Card (tap avatar -> AvatarPickerSheet)                    |
+|   +---> ProfileEditView      (.sheet)                                      |
+|   +---> EditSubjectsView     (.sheet)                                      |
+|   +---> PreferencesView      (.sheet)                                      |
+|   +---> AboutView / CopyrightView (.sheet)                                 |
+|          |                                                                  |
+|          +---> AvatarPickerSheet         (nested)                         |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### Views Reference Table
+
+| View | File | Role | Key Features |
+|------|------|------|--------------|
+| ContentView | ContentView.swift | Root container | 5-tab TabView with `.tabViewStyle(.sidebarAdaptable)` for iPad sidebar |
+| HomeView | HomeView.swift | Dashboard | Welcome header, stat cards (4-col on iPad), upcoming exams, subject chart, smart tips; `AdaptiveHStack` 2-col sections on iPad |
+| TrendsView | TrendsView.swift | Trend analysis | Subjects Needing Attention alerts, per-subject score cards, score/ranking toggle; `.adaptiveMaxWidth(900)` on iPad |
+| ExamView | ExamView.swift | Exam list | Calendar integration, days remaining countdown; `.adaptiveMaxWidth(800)` on iPad |
+| ExamDetailView | ExamDetailView.swift | Exam detail | Related Mistakes section, mastery degree, notes |
+| NewExamSetView | NewExamSetView.swift | Exam editor | Create / edit exam, calendar & reminder toggles |
+| MistakeView | MistakeView.swift | Mistake list | Suggested for Review section, search, card layout; `.adaptiveMaxWidth(900)` on iPad |
+| MistakeDetailEditView | MistakeDetailEditView.swift | Mistake editor | 4-section editing, OCR, photo per-section, markdown preview |
+| AddGradeView | AddGradeView.swift | Grade entry | Single / multi-subject input, custom full score, raw score/ranking |
+| SettingsView | SettingsView.swift | Settings | Profile card (tap avatar -> picker), edit profile/subjects, app preferences (navigation link), academic info (school/grade/class/region/education system/targets), data management (CSV export / import grouped as menus), about / copyright & license / test notification; `.adaptiveMaxWidth(720)` on iPad |
+| ProfileEditView | ProfileEditView.swift | Profile editor | 12+ fields (student ID, enrollment year, target school, etc.) |
+| EditSubjectsView | EditSubjectsView.swift | Subject editor | Per-subject full score customization |
+| PreferencesView | PreferencesView.swift | Preferences | Light/Dark/System theme; English/Chinese/Japanese/Korean/Follow-System language; `.adaptiveMaxWidth(640)` on iPad |
+| AvatarView | Helpers/AvatarView.swift | Reusable | Avatar display with first-letter fallback |
+| SubjectScoreCard | Helpers/SubjectScoreCard.swift | Reusable | Icon + score + mini trend chart |
+| iPadLayout | Helpers/iPadLayout.swift | Reusable | `adaptiveMaxWidth()`, `AdaptiveHStack`, `AdaptiveGridColumns`, `adaptiveCardPadding()` -- iPad layout helpers |
+
+### HomeView Chart Selection Strategies
+
+| Strategy | Selection Criterion |
+|----------|---------------------|
+| Focus: Weakest | Lowest average score |
+| Focus: Most Data | Most recorded grades |
+| Focus: Recent | Most active in last 30 days |
+| Focus: Improving | Biggest improvement |
+| Random | Random subject |
+
+### Score Color Rules
+
+Proportional to full score (not fixed 100):
+
+| Percent of Full Score | Color |
+|----------------------|-------|
+| >= 90% | Green |
+| >= 75% | Blue |
+| >= 60% | Orange |
+| < 60%  | Red |
+
+```swift
+// Backward compatible (assumes 100 full score)
+func scoreColor(_ score: Double) -> Color
+
+// Proportional color based on full score
+func scoreColor(_ score: Double, fullScore: Double) -> Color
+
+// Format: "85.0/100 (85%)"
+func scoreColorText(_ score: Double, fullScore: Double) -> String
+```
+
+=====================================================================
+
+## Education Systems
+
+### Education System Classification Tree
+
+```
+Education Systems (EducationConfig)
+|
++-- Domestic (国内)
+|   +-- China (中国)
+|   |   +-- Mainland Standard (中国大陆标准版)
+|   |   |   +-- Primary School (小学)
+|   |   |   +-- Middle School (初中)
+|   |   |   +-- High School (高中)
+|   |   +-- Zhejiang (浙江)
+|   |   |   +-- Middle School (初中)
+|   |   |   +-- High School 3+3 (高中 3+3)
+|   |   +-- Shanghai (上海)
+|   |   |   +-- Middle School (初中)
+|   |   |   +-- High School 3+3 (高中 3+3)
+|   |   +-- Taiwan (台湾)
+|   |   |   +-- Middle School (初中)
+|   |   |   +-- GSAT (学测)
+|   |   +-- Hong Kong (香港)
+|   |       +-- DSE
+|   |
+|   +-- Singapore (新加坡)
+|       +-- O-Level
+|
++-- International (国际)
+    +-- United Kingdom (英国)
+    |   +-- IGCSE
+    |   +-- A-Level
+    |
+    +-- IB
+    |   +-- Diploma Programme (DP)
+    |
+    +-- United States (美国)
+    |   +-- AP (Advanced Placement)
+    |   +-- SAT (Scholastic Assessment Test)
+    |   +-- ACT (American College Testing)
+    |
+    +-- Graduate & Language (研究生 & 语言)
+        +-- GRE (Graduate Record Examination)
+        +-- GMAT (Graduate Management Admission Test)
+        +-- TOEFL (Test of English as a Foreign Language)
+        +-- IELTS (International English Language Testing System)
+```
+
+### Coverage Matrix
+
+| Region | Primary | Middle | High School | Intl. High School | University | Graduate |
+|--------|---------|--------|-------------|-------------------|------------|----------|
+| 中国大陆 | Yes | Yes | Yes | - | - | - |
+| 浙江 | - | Yes | Yes (3+3) | - | - | - |
+| 上海 | - | Yes | Yes (3+3) | - | - | - |
+| 台湾 | - | Yes | Yes (学测) | - | - | - |
+| 香港 | - | - | Yes (DSE) | - | - | - |
+| 新加坡 | - | Yes (O-Level) | Yes (O-Level) | Yes | - | - |
+| UK IGCSE | - | Yes | - | Yes | - | - |
+| UK A-Level | - | - | Yes | Yes | - | - |
+| IB Diploma | - | - | Yes | Yes | - | - |
+| US AP | - | - | Yes | Yes | - | - |
+| US SAT | - | - | - | - | Yes | - |
+| US ACT | - | - | - | - | Yes | - |
+| GRE / GMAT | - | - | - | - | - | Yes |
+| TOEFL / IELTS | - | - | - | - | - | Yes |
+
+### Score Scale Reference
+
+| System | Scale | Example |
+|--------|-------|---------|
+| 中国大陆 高中 | 100 / 150 | 语文 150, 物理 100 |
+| 浙江 高中 | 100 (赋分) | All subjects 100 max |
+| 香港 DSE | 1-7 (5** = 7) | All subjects 7 max |
+| 台湾 学测 | 100 | 数学A / 数学B 各 100 |
+| UK A-Level | 100 | A* = 90+ |
+| IB DP | 1-7 | 6 subjects + TOK + EE = 45 |
+| US AP | 1-5 | 5 = max |
+| US SAT | 200-800 | 1600 total |
+| US ACT | 1-36 | 36 = max |
+| GRE | 130-170 | 340 total |
+| TOEFL | 0-120 | - |
+| IELTS | 0-9 | - |
+
+### Domestic vs. International Comparison
+
+| Dimension | Domestic Systems | International Systems |
+|-----------|------------------|-----------------------|
+| Typical full score | 100 / 150 | Variable (1-5, 1-7, 1-36, 200-800, 0-120, 0-9) |
+| Subjects fixed / flexible | Mostly fixed (regional curriculum) | Flexible (choose subjects) |
+| Exam frequency | Annual / semester | Set dates (AP May, SAT monthly, etc.) |
+| Ranking system | Yes (ranking on Grade) | Not applicable (percentile-based scales) |
+| Supported stages | Primary / Middle / High | High / University / Graduate |
+
+=====================================================================
+
+## Widget Extension
+
+### Widget Architecture Diagram
+
+```
++---------------------------------------------------------------------------+
+|                         Main App (StudyPulse)                              |
++===========================================================================+
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  |  DataManager                                                         |   |
+|  |  - examSets                                                          |   |
+|  |  - comprehensiveExamSets                                             |   |
+|  +-----------------------------+---------------------------------------+   |
+|                                |                                           |
+|                                v                                           |
+|  +--------------------------------------------------------------------+   |
+|  |  WidgetDataSyncManager                                               |   |
+|  |  - syncExamsToWidget()                                               |   |
+|  +-----------------------------+---------------------------------------+   |
+|                                |                                           |
++--------------------------------+------------------------------------------+
+                                 |
+                                 |   App Group Container
+                                 |   (group.Gao-Chenkai.StudyPulse)
+                                 |
++--------------------------------+------------------------------------------+
+|                    StudyPulseWidget Extension                             |
++===========================================================================+
+|                                |                                           |
+|                                v                                           |
+|  +--------------------------------------------------------------------+   |
+|  |  ExamWidgetData (Shared Data Model)                                 |   |
+|  +-----------------------------+---------------------------------------+   |
+|                                |                                           |
+|                                v                                           |
+|  +--------------------------------------------------------------------+   |
+|  |  ExamWidgetProvider (Timeline Provider)                             |   |
+|  |  - getTimeline()                                                    |   |
+|  |  - placeholder()                                                    |   |
+|  +-----------------------------+---------------------------------------+   |
+|                                |                                           |
+|                                v                                           |
+|  +--------------------------------------------------------------------+   |
+|  |  ExamWidgetViews                                                      |   |
+|  |  - Small Widget View                                                  |   |
+|  |  - Medium Widget View                                                 |   |
+|  |  - Large Widget View                                                  |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### Widget Files
+
+| File | Role |
+|------|------|
+| ExamWidget.swift | Widget definition |
+| ExamWidgetData.swift | Shared data model (App Group) |
+| ExamWidgetEntry.swift | Timeline entry |
+| ExamWidgetProvider.swift | Timeline provider |
+| ExamWidgetViews.swift | Widget UI views (small / medium / large) |
+| StudyPulseWidgetBundle.swift | Widget bundle |
+
+### Data Sharing Mechanism
+
+| Component | Role |
+|-----------|------|
+| App Group container | `group.Gao-Chenkai.StudyPulse` |
+| WidgetDataSyncManager | Syncs ExamWidgetData to shared container on every exam save |
+| ExamWidgetProvider | Reads ExamWidgetData from shared container, builds timeline |
+| WidgetKit | Reloads timelines when sync manager signals |
+
+=====================================================================
+
+## Notification System
+
+### Notification Scheduling Flow
+
+```
++---------------------------------------------------------------------------+
+|                    Notification Scheduling Flow                           |
++===========================================================================+
+|                                                                           |
+|  Trigger: User creates / edits an exam with reminders enabled             |
+|                                                                           |
+|  +-----------------------------------------------------------------+      |
+|  |                                                                 |      |
+|  |  NewExamSetView / ExamDetailView                                |      |
+|  |   |                                                              |      |
+|  |   +---> Toggle: "Add to Calendar" (default ON)                  |      |
+|  |   +---> Toggle: "Exam Reminders"  (default ON)                  |      |
+|  |                                                                 |      |
+|  +-----------------------------+-----------------------------------+      |
+|                                |                                           |
+|                                v                                           |
+|  ExamPrepareNotifications.scheduleExamPrepareNotification(exam: Exam)      |
+|   |                                                                       |
+|   +---> Request UNAuthorization (.alert, .sound, .badge)                |
+|   +---> Create UNMutableNotificationContent                              |
+|   |       title: "Exam Tomorrow: {exam.name}"                            |
+|   |       body:  "Do not forget to review!"                              |
+|   |       sound: .default                                                |
+|   |                                                                      |
+|   +---> Calculate trigger date (examDate - 1 day)                        |
+|   +---> Create UNCalendarNotificationTrigger                             |
+|   +---> Create UNNotificationRequest (id: "exam_{exam.id}")              |
+|   +---> UNUserNotificationCenter.add(request)                            |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### Notification Lifecycle
+
+```
++---------------------------------------------------------------------------+
+|                          Notification Lifecycle                           |
++===========================================================================+
+|                                                                           |
+|  Create Exam  ------> Schedule Notification                               |
+|                                                                           |
+|  Edit Exam    ------> Cancel Old Notification                             |
+|  (date changed)        |                                                  |
+|                         +------> Create New Notification                  |
+|                                                                           |
+|  Delete Exam  ------> Cancel Notification (by id: "exam_{exam.id}")      |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+=====================================================================
+
+## OCR System
+
+### OCR Processing Pipeline
+
+```
++---------------------------------------------------------------------------+
+|                       OCR Processing Pipeline                              |
++===========================================================================+
+|                                                                           |
+|  User Action: Tap "OCR" button in MistakeDetailEditView                   |
+|                                                                           |
+|  +-----------------------------------------------------------------+      |
+|  |  Step 1: Check Image Availability                               |      |
+|  |   - Current edit section has image array                        |      |
+|  |   - Get last uploaded image filename                            |      |
+|  |   - Load image from ~/Documents/images/{filename}               |      |
+|  |   - If no image -> Show alert "No image to recognize"           |      |
+|  +-----------------------------+-----------------------------------+      |
+|                                |                                           |
+|                                v                                           |
+|  +-----------------------------------------------------------------+      |
+|  |  Step 2: Vision Framework Processing                             |      |
+|  |   - Create VNImageRequestHandler(cgImage, options:)              |      |
+|  |   - Create VNRecognizeTextRequest                               |      |
+|  |        recognitionLevel:    .accurate  (slower, better results) |      |
+|  |        usesLanguageCorrection: true                               |      |
+|  |        revision: VNRecognizeTextRequestRevision3                  |      |
+|  |                                                                      |
+|  |   - Perform request -> [VNRecognizedTextObservation]              |      |
+|  |   - Extract topCandidates(1) from each observation                |      |
+|  |   - Join all candidate strings with newlines                      |      |
+|  +-----------------------------+-----------------------------------+      |
+|                                |                                           |
+|                                v                                           |
+|  +-----------------------------------------------------------------+      |
+|  |  Step 3: Result Display                                            |      |
+|  |   - If text found -> Insert into current TextEditor section       |      |
+|  |        (originalQuestion / errorReason / wrongSolution /         |      |
+|  |         correctSolution)                                          |      |
+|  |   - If no text -> Show alert "No text detected in image"          |      |
+|  |   - Error -> Show error alert                                     |      |
+|  +-----------------------------------------------------------------+      |
+|                                                                           |
+|  Vision Framework Details:                                                 |
+|   - Supports: Chinese (Simplified / Traditional), English, mixed          |
+|   - async/await pattern: await handler.perform([request])                 |
+|   - Runs on background thread (non-blocking UI)                           |
+|   - Accuracy: .accurate > .fast (trade-off speed vs. quality)             |
+|   - Language correction: Improves results for common words                |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### OCRManager API
+
+```swift
+class OCRManager {
+    func recognizeText(from image: UIImage) async throws -> String
+}
+```
+
+### Supported Languages
+
+| Language | Code |
+|----------|------|
+| Simplified Chinese | zh-Hans |
+| Traditional Chinese | zh-Hant |
+| English | en |
+| Mixed (auto) | auto |
+
+=====================================================================
+
+## Image Cache System
+
+### Image Cache Architecture
+
+```
++---------------------------------------------------------------------------+
+|                       Image Cache System                                  |
++===========================================================================+
+|                                                                           |
+|  SwiftUI Views (MistakeDetailEditView, Grade cards, etc.)                |
+|                                |                                           |
+|                                v                                           |
+|  DataManager.getImage(filename)                                            |
+|   |                                                                       |
+|   +---> Check ImageCache.cached[filename]                                 |
+|   |     +---> Hit? -> return UIImage immediately                          |
+|   |     +---> Miss? -> load from disk                                     |
+|   |                                                                       |
+|   +---> Load from disk: ~/Documents/images/{filename}                     |
+|   |     +---> Read file as Data -> UIImage(data:)                         |
+|   |     +---> Downscale to max 300 px for thumbnail                       |
+|   |                                                                       |
+|   +---> Store in NSCache (key: filename)                                  |
+|   |     +---> Max 50 entries (LRU eviction by NSCache)                    |
+|   |                                                                       |
+|   +---> Return UIImage                                                     |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### ImageCache API
+
+```swift
+nonisolated class ImageCache {
+    static let shared = ImageCache()
+
+    func image(for filename: String) -> UIImage?       // full size
+    func thumbnail(for filename: String) -> UIImage?   // ~300 px thumbnail
+    func clear()                                        // flush cache
+}
+```
+
+### Cache Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Cache backend | NSCache<NSString, UIImage> |
+| Max entries | 50 |
+| Max thumbnail size | 300 px |
+| Thread safety | nonisolated + NSCache internal locking |
+| Disk path | ~/Documents/images/ |
+
+=====================================================================
+
+## CSV Export
+
+### CSV Export Flow
+
+```
++---------------------------------------------------------------------------+
+|                         CSV Export Flow                                   |
++===========================================================================+
+|                                                                           |
+|  User action: Tap "Export Grades" (in SettingsView or TrendsView)         |
+|                                |                                           |
+|                                v                                           |
+|  1. Collect source data                                                     |
+|     DataManager.grades            -> [Grade]                               |
+|     DataManager.profile           -> UserProfile (for subject fullScores) |
+|     SubjectConfig.fullScore maps -> per-subject scale                     |
+|                                |                                           |
+|                                v                                           |
+|  2. Build header row                                                         |
+|     "Subject,Score,FullScore,ScoreRate,Ranking,ExamName,Date,Importance"   |
+|                                |                                           |
+|                                v                                           |
+|  3. Iterate grades and build data rows                                      |
+|     For each Grade:                                                         |
+|       - Subject display name (SubjectDisplay.displayName)                   |
+|       - Score                                                               |
+|       - FullScore  (resolve via Subject / SubjectConfig)                    |
+|       - ScoreRate = score / fullScore                                       |
+|       - Ranking                                                             |
+|       - Exam name                                                           |
+|       - Date (ISO 8601)                                                     |
+|       - Importance (1-5)                                                    |
+|                                |                                           |
+|                                v                                           |
+|  4. Write to CSV file                                                         |
+|     Filename: "StudyPulse_Grades_{yyyyMMdd}.csv"                            |
+|     Path:     ~/Documents/exports/{filename}                                |
+|     Encoding: UTF-8                                                         |
+|                                |                                           |
+|                                v                                           |
+|  5. Share via UIActivityViewController                                        |
+|     Present system share sheet with .fileURL                                |
+|                                |                                           |
+|                                v                                           |
+|  6. Optional: Mistakes / Exams CSV                                           |
+|     Same pattern for MistakeNote[] and Exam[] / comprehensiveExam[]        |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### CSV Column Layout - Grades
+
+| Column | Source | Notes |
+|--------|--------|-------|
+| Subject | Grade.subject -> displayName | Resolved via SubjectDisplay |
+| Score | Grade.score | Numeric |
+| FullScore | Grade.fullScore ?? Subject.fullScore | Fallback chain |
+| ScoreRate | score / fullScore | Percent |
+| Ranking | Grade.ranking | Optional, blank if absent |
+| Exam Name | Grade.examName | |
+| Date | Grade.date | ISO 8601 |
+| Importance | Grade.importance | 1-5 |
+
+### CSV Column Layout - Mistakes
+
+| Column | Source |
+|--------|--------|
+| Title | MistakeNote.title |
+| Subject | MistakeNote.subject |
+| Source | MistakeNote.source |
+| Date | MistakeNote.date |
+| Original Question | MistakeNote.originalQuestion (truncated) |
+| Error Reason | MistakeNote.errorReason (truncated) |
+| Correct Solution | MistakeNote.correctSolution (truncated) |
+
+=====================================================================
+
+## iPad Adaptation
+
+The app is a universal binary targeting both iPhone and iPad
+(`TARGETED_DEVICE_FAMILY = "1,2"`). iPhone layouts are untouched; iPad gets
+a native sidebar tab bar and multi-column, width-constrained layouts.
+
+### High-Level Approach
+
+| Concern | iPhone Behavior | iPad Behavior |
+|---------|-----------------|---------------|
+| Tab Bar | Bottom 5-tab (classic) | Left sidebar (`.tabViewStyle(.sidebarAdaptable)`) |
+| Content width | Full screen edge-to-edge | Centered, clamped to max-width |
+| Section layout | Vertical stack (VStack) | Side-by-side (HStack) via `AdaptiveHStack` |
+| Stats card | 2x2 grid | 4-in-a-row |
+| Form / List | Full width | Centered, narrow column |
+
+### Adaptive Helpers (`Views/Helpers/iPadLayout.swift`)
+
+```swift
+// 1) Content max-width
+struct AdaptiveContentWidth: ViewModifier {  // var maxWidth: CGFloat = 720
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: sizeClass == .regular ? maxWidth : .infinity)
+            .frame(maxWidth: .infinity)        // center
+    }
+}
+extension View {
+    func adaptiveMaxWidth(_ maxWidth: CGFloat = 720) -> some View
+}
+
+// 2) Multi-column grid items (1 col on iPhone, N col on iPad)
+struct AdaptiveGridColumns {
+    init(compact: Int = 1, regular: Int = 2, spacing: CGFloat = 20)
+}
+
+// 3) 2-column HStack / VStack switcher
+struct AdaptiveHStack<Content: View>: View {
+    init(spacing: CGFloat = 20, @ViewBuilder content: @escaping () -> Content)
+    // sizeClass == .regular -> HStack
+    // else                -> VStack
+}
+
+// 4) Card outer padding (20pt on iPhone, 0 on iPad)
+struct AdaptiveCardPadding: ViewModifier
+extension View {
+    func adaptiveCardPadding() -> some View
+}
+```
+
+All helpers read `horizontalSizeClass` via `@Environment` inside `body`; this
+environment value cannot be accessed from a generic View extension property.
+
+### File-by-File Changes
+
+| File | iPad Adaptation |
+|------|-----------------|
+| `ContentView.swift` | `.tabViewStyle(.sidebarAdaptable)` for sidebar on iPad |
+| `HomeView.swift` | `frame(maxWidth: 1100)` container + `AdaptiveHStack` 2-col sections + 4-col `MainStatsCard` |
+| `SettingsView.swift` | `.adaptiveMaxWidth(720)` on the List |
+| `PreferencesView.swift` | `.adaptiveMaxWidth(640)` on the Form |
+| `TrendsView.swift` | `.adaptiveMaxWidth(900)` on the ScrollView |
+| `MistakeView.swift` | `.adaptiveMaxWidth(900)` on `MistakeView` + `SubjectMistakesView` |
+| `ExamView.swift` | `.adaptiveMaxWidth(800)` on the List |
+| `Helpers/iPadLayout.swift` | **NEW** -- all adaptive helpers |
+
+### Width Constraints Reference
+
+| View | iPad Max Width | Reason |
+|------|----------------|--------|
+| `SettingsView` | 720 | Single-column forms read best near 600-720pt |
+| `PreferencesView` | 640 | Compact settings panel |
+| `ExamView` | 800 | Slightly wider for countdown + notes |
+| `TrendsView` | 900 | Charts need more horizontal space |
+| `MistakeView` | 900 | Long markdown content benefits from width |
+| `HomeView` | 1100 | Dashboard / multi-column can be wider |
+
+### HomeView Multi-Column Layout (iPad)
+
+```
++---------------------------------------------------+
+|  Welcome Header (full width within 1100 max)      |
++-----------------+---------------------------------+
+|   Stat 1  Stat 2  Stat 3  Stat 4   (one row)     |
++-----------------+---------------------------------+
+| Quick Actions   |  Upcoming Exams   (2-col)       |
+|-----------------+---------------------------------|
+| Chart / Trend   |  Suggestions       (2-col)      |
++-----------------+---------------------------------+
+| Daily Quote / Recent Grades (full width)          |
++---------------------------------------------------+
+```
+
+### Design Principles
+
+1. **No iPhone regression** -- every change gated on `horizontalSizeClass` or
+   `UIDevice.current.userInterfaceIdiom`.
+2. **Centered, not stretched** -- content is centered with a max-width on
+   iPad, preserving readability.
+3. **Native iPad feel** -- sidebar tab bar + multi-column dashboards.
+4. **Single source of truth** -- all adaptive logic in `iPadLayout.swift`;
+   feature views just call the helpers.
+
+=====================================================================
+
+## Performance Patterns
+
+### Pattern Summary Table
+
+| Pattern | Implementation | Benefit |
+|---------|----------------|---------|
+| Async startup | `asyncInit()` in `.task` modifier | No main-thread blocking on launch |
+| Image caching | `ImageCache` (NSCache, max 50 entries) | Fast thumbnail reuse; avoids disk hit on repeat renders |
+| File-based images | Grade/avatar images stored as separate files, not in JSON | Smaller JSON files; faster model (de)serialization |
+| Computed properties | `daysRemaining` etc. computed, not `@State` + `onAppear` | Fewer invalidations, cleaner code |
+| Sendable models | All models marked `nonisolated` + `Sendable` | Swift 6 concurrency safety, actor isolation checks |
+| Factory construction | `SubjectConfig.required(...)` / `.elective(...)` | Clean subject configuration without ad-hoc literals |
+| Atomic file writes | DataFileIO uses temp file + rename | No partial writes; crash-safe saves |
+
+### Asynchronous Data Loading Timeline
+
+```
+           User launches app
+                 |
+                 v
++------------------------------+  Main Thread
+|  StudyPulseApp appears       |
+|  .task { ... } modifier      |
++------------+-----------------+
+             |
+             |   (async await)
+             v
++------------------------------+  Background Thread (cooperative)
+|  DataManager.asyncInit()     |
+|  +---> loadProfileAsync()    |
+|  +---> loadGradesAsync()     |
+|  +---> loadSubjectsAsync()   |
+|  +---> loadExamsAsync()      |
+|  +---> loadComprehensiveExamsAsync() |
+|  +---> loadMistakeSetsAsync()|
+|  +---> (optional) default subjects |
++------------+-----------------+
+             |
+             |   @MainActor: state commit
+             v
++------------------------------+  Main Thread
+|  @Published properties set   |
+|  SwiftUI re-renders views    |
+|  (HomeView, TrendsView, ...) |
++------------------------------+
+```
+
+### View Optimization Techniques
+
+| Technique | Where |
+|-----------|-------|
+| Computed properties instead of @State + onAppear | Days remaining, score rate, derived stats |
+| Reusable components (SubjectScoreCard, AvatarView) | HomeView, TrendsView, MistakeView, ExamView |
+| Lazy stacks for long lists | MistakeView card grid, ExamView list |
+| ImageCache for thumbnail reuse | Every view that renders grade/mistake images |
+| Small / medium / large Widget variants | ExamWidgetViews (different layouts per size class) |
+
+=====================================================================
+
+## Privacy
+
+### Permissions Table
+
+| Permission | Purpose |
+|------------|---------|
+| Camera | Photo capture for mistake notes and avatar |
+| Photo Library | Photo selection for mistake notes and avatar |
+| Calendars | Add exams to the system calendar (EventKit) |
+| Notifications | Schedule exam reminder notifications |
+
+### Data Storage Locations
+
+| Data | Location | Encryption |
+|------|----------|------------|
+| User profile, grades, subjects, exams, mistakes | ~/Documents/*.json | iOS default at-rest encryption |
+| Grade images, avatars | ~/Documents/images/*.jpg | iOS default at-rest encryption |
+| Widget data | App Group container (shared with widget) | iOS default at-rest encryption |
+| App preferences (language + theme) | preferences file in sandbox | iOS default at-rest encryption |
+
+Note: All data is stored locally on the device. No data is uploaded to remote servers.
+
+=====================================================================
+
+## Build Commands
+
+```bash
+# Open project in Xcode
+open StudyPulse.xcodeproj
+
+# Resolve Swift Package Manager dependencies
+# Xcode -> File -> Packages -> Resolve Package Versions
+
+# Build (from Xcode)
+# Cmd + B
+
+# Run on simulator or device (from Xcode)
+# Cmd + R
+
+# Clean build folder
+# Cmd + Shift + K
+
+# Product -> Archive to distribute
+# (ad-hoc, App Store, or TestFlight)
+```
+
+### Targets
+
+| Target | Role | Notes |
+|--------|------|-------|
+| StudyPulse (iOS) | Main app | SwiftUI, iOS 18.6+ |
+| StudyPulseWidget | Home screen widget | WidgetKit, shares data via App Group |
+
+=====================================================================
+
+## Coding Standards and Conventions
+
+### General Style Guide
+
+| Rule | Standard |
+|------|----------|
+| File organization | One file per major manager / view / model; helpers grouped in `Helpers/` |
+| Naming | UpperCamelCase for types, lowerCamelCase for members; American English |
+| Access control | Use `private` / `fileprivate` where possible; managers expose minimal public API |
+| Singletons | Prefer `.shared` singletons for managers that are stateless caches or system clients |
+| `@MainActor` | All ObservableObject view-model objects marked `@MainActor` (via class-level annotation) |
+| Async / await | Prefer structured concurrency; avoid unchecked Task detaches |
+| Error handling | `async throws` for recoverable failure paths; fatalError only for true programmatic bugs |
+| Force unwraps | Avoid; use guard-let / if-let / default values |
+
+### Model / Manager Conventions
+
+| Item | Pattern |
+|------|---------|
+| Models | `nonisolated struct X: Identifiable, Codable, Hashable` (Sendable when fields allow) |
+| ID property | `var id = UUID()` unless there is a stable business key (e.g., `name`) |
+| Persistence API | `DataManager.save{Entity}()` writes to `{entity}.json` atomically |
+| Published properties | One `@Published var` per entity array / object; views read via `@EnvironmentObject` |
+| Manager dependencies | Views never import helpers; DataManager mediates ImageCache / OCRManager / etc. |
+
+### View Conventions
+
+| Item | Pattern |
+|------|---------|
+| Root view | `ContentView` is the top-level TabView; `StudyPulseApp` owns environment injection |
+| Navigation | `.navigationDestination(...)` for drill-down; `.sheet(...)` for modal editors |
+| State | Prefer `@Binding` + `@EnvironmentObject` over local `@State` for business data |
+| Reusables | Stateless `struct Foo: View` with explicit `let` parameters in `Helpers/` |
+| Theme | Color scheme driven by `AppEnvironmentManager.effectiveColorScheme` |
+| Localization | Use `String(localized:...)` / `Text("key")`; never hard-coded user-facing strings |
+
+### File I/O Conventions
+
+| Item | Pattern |
+|------|---------|
+| Reader | `DataFileIO.read(from: .documentsDirectory.appending(...))` returns `Data?` or throws |
+| Writer | `DataFileIO.write(data, to: url)` uses temp file + `rename()` for atomicity |
+| Threading | `DataFileIO` is `nonisolated`; safe to call from async contexts |
+| Images | Always stored as files in `~/Documents/images/` with UUID filenames; `imageFileName` on model, not inline `Data` |
+
+### Concurrency Model
+
+| Layer | Actor Isolation |
+|-------|-----------------|
+| Views | MainActor (SwiftUI default) |
+| DataManager | MainActor (declared via ObservableObject on main actor) |
+| Persistence helpers (DataFileIO) | nonisolated |
+| ImageCache | nonisolated |
+| OCRManager | nonisolated (Vision runs off main) |
+| WidgetDataSyncManager | nonisolated (App Group I/O) |
+| Models | nonisolated structs, Sendable where possible |
+
+=====================================================================
+
+## Changelog
+
+### v2026.06.13 - iPad Adaptation
+
+- Project now supports iPad natively (`TARGETED_DEVICE_FAMILY = "1,2"`)
+- New `Views/Helpers/iPadLayout.swift` with size-class adaptive helpers:
+  - `adaptiveMaxWidth(_:)` ViewModifier -- center & clamp content on iPad
+  - `AdaptiveHStack` -- HStack on iPad, VStack on iPhone
+  - `AdaptiveGridColumns` -- multi-column grids by device idiom
+  - `adaptiveCardPadding()` -- unified outer padding across iPhone/iPad
+- `ContentView` uses `.tabViewStyle(.sidebarAdaptable)` (iOS 18+) so iPad
+  gets a native sidebar tab bar automatically
+- `HomeView`:
+  - Centered `frame(maxWidth: 1100)` container on iPad
+  - `MainStatsCard` lays out 4 stats in one row on iPad (vs 2x2 on iPhone)
+  - Welcome / Quick Actions / Exams / Chart sections use `AdaptiveHStack`
+    for 2-column layouts on iPad
+- `SettingsView` (720), `PreferencesView` (640), `TrendsView` (900),
+  `MistakeView` (900), `ExamView` (800) all use `.adaptiveMaxWidth` to keep
+  form/list content centered and readable on iPad
+- iPhone layout is unchanged; all iPad behavior is gated on
+  `horizontalSizeClass == .regular` or `UIDevice.current.userInterfaceIdiom`
+- Verified on iPad Pro 11-inch (M5) simulator + iPhone simulator builds
+  with no warnings
+
+### v2026.06.07 - Full View Layer Refactor + Design System
+
+- HomeView split into 9 independent components for modular design
+- MistakeView: suggested review horizontal scroll + card gradient beautification
+- TrendsView: added "Subjects Needing Attention" smart alerts
+- ExamDetailView: added related mistakes section
+- SubjectScoreCard: gradient border + entrance animation
+- New AppStyle design system skeleton (.minimal / .literature / .tech)
+- New StudyPulseWidget home screen widget complete skeleton
+- WidgetBundle / Provider / Entry / three size views
+- App side ExamWidgetData + WidgetDataSyncManager
+- Rewrote AGENTS.md as full AI agent guide
+- Added architecture diagrams and data flow diagrams to all three docs
+
+### v2026.06.06 - Multi-Language Support
+
+- Added Traditional Chinese (zh-Hant) localization
+- Added Japanese (ja) localization
+- Added Korean (ko) localization
+- Updated language selector, supporting six languages
+- Optimized app performance and memory management
+- Improved ImageCache and DataManager
+
+### v2026.06.05 - Mistake Module Launch
+
+- Mistake editing in four sections: original question / error reason / wrong solution / correct solution
+- Each section supports photo capture or gallery selection independently
+- OCR text recognition based on Vision framework
+- Markdown preview functionality
+- Calendar integration, auto add exam reminders
+- ZoomableImageView with pinch-to-zoom
+- Complete mistake CRUD operations
+
+### v2026.06 - Global Education System Support
+
+- Added EducationConfig supporting 15+ education systems
+- Added SubjectConfig factory methods
+- New user avatar system
+- Score color by proportion of full score
+- Extended user profile fields
+- Redesigned home page UI
+- Added "Subjects Needing Attention" alerts on Trends page
+- Added "Suggested for Review" section on Mistakes page
+- Added "Related Mistakes" display on Exam detail page
+- Added WidgetKit widget support
+
+=====================================================================

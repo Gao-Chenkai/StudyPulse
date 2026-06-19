@@ -42,6 +42,14 @@ struct AddGradeView: View {
         }.map { $0.name }
     }
     
+    // 显示用的科目名
+    func displayName(forSubject name: String) -> String {
+        if let subject = dataManager.subjects.first(where: { $0.name == name }) {
+            return subject.displayName.isEmpty ? name.localized() : subject.displayName
+        }
+        return name.localized()
+    }
+    
     // 列表高度
     var dynamicListHeight: CGFloat {
         CGFloat(availableSubjects.count * 60)
@@ -71,15 +79,15 @@ private extension AddGradeView {
     
     // 1. 考试信息区域
     var examDetailsSection: some View {
-        Section(header: Text("Exam Details")) {
+        Section(header: Text("Exam Details".localized())) {
             HStack {
-                Text("Exam Name")
-                TextField("Name", text: $examName)
+                Text("Exam Name".localized())
+                TextField("Name".localized(), text: $examName)
                     .multilineTextAlignment(.trailing)
             }
-            
-            DatePicker("Exam Date", selection: $selectedDate, in: ...Date(), displayedComponents: .date)
-            
+
+            DatePicker("Exam Date".localized(), selection: $selectedDate, in: ...Date(), displayedComponents: .date)
+
             examTypePicker
         }
     }
@@ -87,9 +95,9 @@ private extension AddGradeView {
     // 2. 考试类型选择器
     var examTypePicker: some View {
         VStack(spacing: 8) {
-            Picker("Exam Type", selection: $isComprehensiveExam) {
-                Text("Single Subject").tag(false)
-                Text("Comprehensive Exam").tag(true)
+            Picker("Exam Type".localized(), selection: $isComprehensiveExam) {
+                Text("Single Subject".localized()).tag(false)
+                Text("Comprehensive Exam".localized()).tag(true)
             }
             .pickerStyle(.segmented)
             
@@ -103,9 +111,9 @@ private extension AddGradeView {
     
     // 3. 单选科目
     var singleSubjectPicker: some View {
-        Picker("Select Subject", selection: $selectedSingleSubject) {
-            ForEach(availableSubjects, id: \.self) {
-                Text($0.localized()).tag($0)
+        Picker("Select Subject".localized(), selection: $selectedSingleSubject) {
+            ForEach(availableSubjects, id: \.self) { name in
+                Text(displayName(forSubject: name)).tag(name)
             }
         }
         .padding(.top, 10)
@@ -116,13 +124,13 @@ private extension AddGradeView {
     // 4. 多选科目
     var multipleSubjectList: some View {
         List {
-            Text("Select Multiple Subjects")
+            Text("Select Multiple Subjects".localized())
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
             ForEach(availableSubjects, id: \.self) { subject in
                 HStack {
-                    Text(subject.localized())
+                    Text(displayName(forSubject: subject))
                     Spacer()
                     if selectedMultipleSubjects.contains(subject) {
                         Image(systemName: "checkmark.circle.fill").foregroundColor(.blue)
@@ -139,31 +147,28 @@ private extension AddGradeView {
     // 5. 所有科目分数录入区域
     var scoreInputSections: some View {
         ForEach($subjectScores) { $subject in
-            Section(header: Text("Score \(subject.subject)")) {
-                let maxScore = subjectInfo.getMaxScore(
-                    level: dataManager.profile.educationLevel,
-                    subject: subject.subject
-                )
+            Section(header: Text("Score \(subject.subject.localized())".localized())) {
+                let maxScore = dataManager.fullScore(for: subject.subject)
                 
                 ScoreControlView(
-                    title: "Score",
+                    title: "Score".localized(),
                     value: $subject.score,
                     max: Int(maxScore),
-                    color: scoreColor(subject.score)
+                    color: scoreColor(subject.score, fullScore: maxScore)
                 )
                 
-                Toggle("Use Raw Score", isOn: $subject.useRawScore)
+                Toggle("Use Raw Score".localized(), isOn: $subject.useRawScore)
                 
                 if subject.useRawScore {
                     ScoreControlView(
-                        title: "Raw Score",
+                        title: "Raw Score".localized(),
                         value: $subject.rawScore,
                         max: Int(maxScore),
-                        color: scoreColor(subject.rawScore)
+                        color: scoreColor(subject.rawScore, fullScore: maxScore)
                     )
                 }
                 
-                Toggle("Use Ranking", isOn: $subject.useRanking)
+                Toggle("Use Ranking".localized(), isOn: $subject.useRanking)
                 
                 if subject.useRanking {
                     RankingControlView(ranking: $subject.ranking)
@@ -174,12 +179,12 @@ private extension AddGradeView {
     
     // 6. 重要性
     var importanceSection: some View {
-        Section(header: Text("Importance")) {
+        Section(header: Text("Importance".localized())) {
             VStack(alignment: .leading) {
                 HStack {
-                    Text("Importance")
+                    Text("Importance".localized())
                     Spacer()
-                    Text("\(importance) / 5").foregroundColor(.secondary)
+                    Text(String(format: "%d / 5".localized(), importance)).foregroundColor(.secondary)
                 }
                 HStack {
                     ForEach(1...5, id: \.self) { index in
@@ -237,7 +242,7 @@ private extension AddGradeView {
     
     func saveGrades() {
         subjectScores.forEach {
-            let grade = Grade(
+            var grade = Grade(
                 subject: $0.subject,
                 score: $0.score,
                 rawScore: $0.useRawScore ? $0.rawScore : nil,
@@ -246,6 +251,8 @@ private extension AddGradeView {
                 date: selectedDate,
                 examName: examName
             )
+            // 记录此次成绩对应的满分
+            grade.fullScore = dataManager.fullScore(for: $0.subject)
             dataManager.grades.append(grade)
         }
         dataManager.saveGrades()
@@ -314,16 +321,16 @@ struct RankingControlView: View {
     
     var body: some View {
         VStack {
-            Text("Ranking")
+            Text("Ranking".localized())
                 .font(.headline)
                 .foregroundColor(.secondary)
             
             HStack(spacing: 16) {
-                // 👈 减号按钮（逻辑直接写在UI里，和你原来一样）
+                // 
                 Button {
                     withAnimation {
                         if ranking ?? 1 <= 1 {
-                            print("Cannot be miner than 1")
+                            print("Cannot be smaller than 1")
                         } else {
                             ranking = (ranking ?? 1) - 1
                         }

@@ -9,7 +9,7 @@ import SwiftUI
 import WSOnBoarding
 import UserNotifications
 
-// 👇 1. 新增：专门处理通知代理的类
+// 1. 新增：专门处理通知代理的类
 class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
     
     // 处理前台收到通知的情况
@@ -22,7 +22,7 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         // 核心代码：点击通知后强制清除角标
         center.setBadgeCount(0)
-        print("👆 用户点击了通知，已强制清除角标！")
+        print("[OK] 用户点击了通知，已强制清除角标！")
         
         // 这里可以添加跳转逻辑
         // ...
@@ -36,17 +36,17 @@ struct StudyPulseApp: App {
     @StateObject private var dataManager = DataManager()
     @StateObject private var envManager = AppEnvironmentManager.shared
     
-    // 👇 2. 声明协调器实例
+    // 2. 声明协调器实例
     private let notificationCoordinator = NotificationCoordinator()
     
     init() {
-        // 👇 3. 将代理设置为我们的协调器实例
+        // 3. 将代理设置为我们的协调器实例
         UNUserNotificationCenter.current().delegate = notificationCoordinator
 
         // 请求通知权限
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
-                print("✅ 用户允许了通知")
+                print("[OK] 用户允许了通知")
             }
         }
         

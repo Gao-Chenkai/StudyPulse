@@ -8,56 +8,57 @@
 import Foundation
 import EventKit
 
+// MARK: - Calendar Manager (日历管理器)
+
 /// 日历事件管理器 - 处理考试事件的创建和管理
+/// 使用 EventKit 框架将考试添加到系统日历
 class CalendarManager {
     static let shared = CalendarManager()
     private let eventStore = EKEventStore()
     
-    /// 请求日历访问权限
+    /// Request calendar access
+    /// - Returns: Whether the user granted access
     func requestAccess() async throws -> Bool {
         try await eventStore.requestWriteOnlyAccessToEvents()
     }
     
-    /// 将考试添加到系统日历
+    /// Add an exam to the system calendar
     /// - Parameters:
-    ///   - examName: 考试名称
-    ///   - subject: 科目名称
-    ///   - examDate: 考试日期
-    ///   - note: 备注（可选）
-    /// - Returns: 是否添加成功
+    ///   - examName: Exam name
+    ///   - subject: Subject name
+    ///   - examDate: Exam date
+    ///   - note: Additional notes (optional)
+    /// - Returns: Whether the event was added successfully
     func addExamToCalendar(
         examName: String,
         subject: String,
         examDate: Date,
         note: String? = nil
     ) async throws -> Bool {
-        // 请求权限
         let granted = try await requestAccess()
         guard granted else {
             throw CalendarError.accessDenied
         }
         
-        // 创建事件
         let event = EKEvent(eventStore: eventStore)
-        event.title = "考试: \(examName)"
-        event.notes = note ?? "科目: \(subject)\n来自 StudyPulse"
+        event.title = "Exam: \(examName)"
+        event.notes = note ?? "Subject: \(subject)\nFrom StudyPulse"
         event.startDate = examDate
         event.endDate = Calendar.current.date(byAdding: .hour, value: 2, to: examDate) ?? examDate
         event.isAllDay = true
         
-        // 设置提醒
-        let alarm = EKAlarm(relativeOffset: -86400) // 提前一天提醒
+        let alarm = EKAlarm(relativeOffset: -86400)
         event.alarms = [alarm]
         
-        // 获取默认日历
         event.calendar = eventStore.defaultCalendarForNewEvents
         
-        // 保存事件
         try eventStore.save(event, span: .thisEvent)
         return true
     }
     
-    /// 移除之前添加的考试事件
+    /// Remove a previously added exam event
+    /// - Parameter eventIdentifier: Event unique identifier
+    /// - Returns: Whether the event was removed successfully
     func removeExamFromCalendar(eventIdentifier: String) async throws -> Bool {
         let granted = try await requestAccess()
         guard granted else {
@@ -73,7 +74,6 @@ class CalendarManager {
     }
 }
 
-/// 日历错误类型
 enum CalendarError: LocalizedError {
     case accessDenied
     case saveFailed
@@ -82,11 +82,11 @@ enum CalendarError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "StudyPulse 没有日历访问权限，请在设置中开启"
+            return NSLocalizedString("StudyPulse does not have calendar access. Please enable it in Settings.", comment: "Calendar error: no permission")
         case .saveFailed:
-            return "保存日历事件失败"
+            return NSLocalizedString("Failed to save calendar event.", comment: "Calendar error: save failed")
         case .eventNotFound:
-            return "未找到对应的日历事件"
+            return NSLocalizedString("Calendar event not found.", comment: "Calendar error: event not found")
         }
     }
 }

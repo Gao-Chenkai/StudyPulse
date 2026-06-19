@@ -8,7 +8,7 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - 单个考试行视图
+// MARK: - Single exam row view
 struct ExamRowView: View {
     let exam: ExamWidgetData
     
@@ -36,9 +36,12 @@ struct ExamRowView: View {
     
     private var daysLabel: String {
         switch exam.daysRemaining {
-        case ...0: "Today"
-        case 1: "Tomorrow"
-        default: "\(exam.daysRemaining)d left"
+        case ...0:
+            return String(localized: "Today")
+        case 1:
+            return String(localized: "Tomorrow")
+        default:
+            return String(format: String(localized: "%d days left"), exam.daysRemaining)
         }
     }
     
@@ -55,21 +58,21 @@ struct ExamRowView: View {
     }
 }
 
-// MARK: - 空状态视图
+// MARK: - Empty state view
 struct EmptyExamWidgetView: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 32))
                 .foregroundColor(.secondary)
-            Text("No Upcoming Exams")
+            Text("No upcoming exams", comment: "Widget empty state message")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
 }
 
-// MARK: - Widget 尺寸视图
+// MARK: - Widget size views
 struct ExamWidgetSmallView: View {
     let entry: ExamWidgetEntry
     
@@ -109,9 +112,12 @@ struct ExamWidgetSmallView: View {
     
     private func daysLabel(_ exam: ExamWidgetData) -> String {
         switch exam.daysRemaining {
-        case ...0: "Today"
-        case 1: "Tomorrow"
-        default: "\(exam.daysRemaining)d left"
+        case ...0:
+            return String(localized: "Today")
+        case 1:
+            return String(localized: "Tomorrow")
+        default:
+            return String(format: String(localized: "%d days left"), exam.daysRemaining)
         }
     }
     
@@ -129,7 +135,6 @@ struct ExamWidgetSmallView: View {
     }
 }
 
-
 struct ExamWidgetMediumView: View {
     let entry: ExamWidgetEntry
     
@@ -140,7 +145,7 @@ struct ExamWidgetMediumView: View {
                     .font(.subheadline)
                     .foregroundColor(.accentColor)
                 
-                Text("Upcoming Exams")
+                Text("Upcoming Exams", comment: "Widget section title")
                     .font(.subheadline)
                     .fontWeight(.semibold)
             }
@@ -169,7 +174,7 @@ struct ExamWidgetLargeView: View {
                     .font(.title3)
                     .foregroundColor(.accentColor)
                 
-                Text("Upcoming Exams")
+                Text("Upcoming Exams", comment: "Widget section title")
                     .font(.headline)
             }
             

@@ -124,3 +124,174 @@
 "Art" = "미술";
 "Music" = "음악";
 "PE & Health" = "체육과 건강";
+
+// General UI
+"N/A" = "없음";
+"Name" = "이름";
+"Today" = "오늘";
+"Tomorrow" = "내일";
+"%d days left" = "남은 %d일";
+"%d records" = "총 %d건";
+"%d / 5" = "%d / 5";
+"Raw Score" = "원점수";
+"Time Range" = "기간";
+"All" = "전체";
+"3 Months" = "3개월";
+"6 Months" = "6개월";
+"1 Year" = "1년";
+"Rank: %d" = "순위: %d";
+"No data available" = "데이터 없음";
+"Read more" = "더보기";
+"Tap below to change your avatar" = "아래를 탭하여 프로필 아이콘 변경";
+
+// HomeView.swift - Additional
+"Ready to study!" = "공부할 준비 완료!";
+"Average" = "평균";
+"Total Grades" = "성적 개수";
+"Upcoming" = "예정";
+"Quick Actions" = "빠른 작업";
+"Add Grade" = "성적 추가";
+"New Exam" = "시험 추가";
+"New Mistake" = "오답 추가";
+"Daily Inspiration" = "오늘의 동기부여";
+"StudyPulse" = "StudyPulse";
+"See All" = "전체 보기";
+"Grade Detail" = "성적 상세";
+"Subject Trend" = "과목 트렌드";
+"Focus: Lowest Score" = "집중: 점수가 낮은 과목";
+"Focus: Most Data" = "집중: 데이터가 많은 과목";
+"Focus: Recent Activity" = "집중: 최근 활동";
+"Focus: Improvement" = "집중: 성장 과목";
+"Random Subject" = "랜덤 과목";
+"Highest" = "최고";
+"Lowest" = "최저";
+"Select a subject to view trends" = "과목을 선택하여 트렌드 보기";
+"Study Suggestions" = "학습 제안";
+"Start adding grades to get suggestions!" = "성적을 추가하여 제안을 받아보세요!";
+"Focus on %@" = "%@ 집중 필요";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "이 과목의 성적이 평균보다 낮습니다. 핵심 개념 복습에 더 많은 시간을 투자하세요.";
+"Review Mistakes" = "오답 복습";
+"You have %d mistake notes. Regular review helps prevent similar errors." = "오답 노트가 %d개 있습니다. 정기적인 복습은 같은 실수를 방지하는 데 도움이 됩니다.";
+"Prepare for Exams" = "시험 준비";
+"You have %d exam(s) coming up in the next 2 weeks. Start your preparations now!" = "향후 2주 이내에 %d개의 시험이 있습니다. 지금 준비를 시작하세요!";
+"Great at %@!" = "%@ 잘하고 있어요!";
+"Keep up the good work! You're performing really well in this subject." = "잘하고 있어요! 이 과목에서 정말 좋은 성적을 내고 있습니다.";
+"Add More Grades" = "더 많은 성적 추가";
+"Tracking more grades will help you get better insights into your learning progress." = "더 많은 성적을 기록하면 학습 진행 상황을 더 잘 파악할 수 있습니다.";
+
+// TrendsView.swift
+"Subjects Needing Attention" = "주의가 필요한 과목";
+"Average Score" = "평균 점수";
+"Average Rank" = "평균 순위";
+"Latest" = "최신";
+"History" = "이력";
+"No grades available" = "성적 없음";
+"Unnamed Exam" = "이름 없는 시험";
+"No Data" = "데이터 없음";
+"Avg Score" = "평균 점수";
+"Trend" = "트렌드";
+"Improving" = "향상 중";
+"Declining" = "하락 중";
+"Stable" = "안정";
+
+// MistakeView.swift
+"No Mistakes" = "오답 없음";
+"Tap '+' to add a new mistake note." = "+ 를 탭하여 새 오답 노트를 추가하세요.";
+"Suggested for Review" = "복습 권장";
+"%d mistakes" = "%d개의 오답";
+"%d added this week" = "이번 주 추가 %d개";
+"Oldest: %@" = "가장 오래된: %@";
+"%d new" = "새로 추가 %d";
+"Source: %@" = "출처: %@";
+"Details" = "상세";
+"Title" = "제목";
+"Source" = "출처";
+"Original Question" = "원래 문제";
+"Error Reason" = "틀린 이유";
+"Wrong Solution" = "잘못된 풀이";
+"Correct Solution" = "올바른 풀이";
+
+// Settings - Additional strings
+"Edit" = "편집";
+"Preferences" = "환경설정";
+"Academic Info" = "학습 정보";
+"Data Management" = "데이터 관리";
+"About" = "정보";
+"Subjects" = "과목";
+"Toggle the subjects you're studying. Tap the score to adjust the full score for each subject." = "학습 중인 과목을 토글하세요. 점수를 탭하여 각 과목의 만점을 조정할 수 있습니다.";
+"Reset to Recommended Subjects" = "추천 과목으로 재설정";
+"Education Stage" = "교육 단계";
+"Stage" = "단계";
+"Region / Education System" = "지역 / 교육 제도";
+"Different regions and education systems have different subjects and grading scales. Includes domestic and international curricula (A-Level, IB, AP, SAT, ACT, IGCSE)." = "지역과 교육 제도에 따라 과목과 평가 기준이 다릅니다. 국내 및 국제 교육 과정(A-Level, IB, AP, SAT, ACT, IGCSE)을 지원합니다.";
+"All" = "전체";
+"Domestic" = "국내";
+"International" = "국제";
+"Apply Smart Subject Recommendation" = "스마트 과목 추천 적용";
+"School" = "학교";
+"Student ID" = "학생 ID";
+"Class" = "반";
+"Academic Year" = "학년도";
+"Enrollment Year" = "입학 연도";
+"Target Exam Year" = "목표 시험 연도";
+"Goals" = "목표";
+"Track your progress towards your target school and score." = "목표 학교와 목표 점수를 향한 진행 상황을 추적하세요.";
+"Target School" = "목표 학교";
+"Target Score" = "목표 점수";
+"Gender" = "성별";
+"Not Specified" = "미지정";
+"Male" = "남성";
+"Female" = "여성";
+"Other" = "기타";
+
+// Smart Recommendation
+"Apply Smart Recommendation" = "스마트 추천 적용";
+"This will reset subject list and auto-check required subjects for %@ - %@. Existing enabled preferences will be kept." = "과목 목록을 재설정하고 %@ - %@의 필수 과목을 자동으로 체크합니다. 기존에 활성화한 설정은 유지됩니다.";
+
+// Notifications
+"Exam Countdown" = "시험 카운트다운";
+"%@ - %d day(s) until the exam. Get ready!" = "%@ - 시험까지 %d일 남았습니다. 준비하세요!";
+
+// Data Management / Import Export
+"Import / Export Data" = "데이터 가져오기 / 내보내기";
+"Export All Data" = "모든 데이터 내보내기";
+"Import Data" = "데이터 가져오기";
+"Data exported successfully!" = "데이터 내보내기 성공!";
+"Failed to export data: %@" = "데이터 내보내기 실패: %@";
+"Please select a file to import" = "가져올 파일을 선택하세요";
+"Data imported successfully!" = "데이터 가져오기 성공!";
+"Failed to import data: %@" = "데이터 가져오기 실패: %@";
+"Warning: This will overwrite your current data. Are you sure?" = "경고: 현재 데이터를 덮어쓰게 됩니다. 계속하시겠습니까?";
+"Data exported to: %@" = "데이터가 내보내졌습니다: %@";
+
+// CalendarManager
+"StudyPulse does not have calendar access. Please enable it in Settings." = "StudyPulse는 캘린더 접근 권한이 없습니다. 설정에서 활성화하세요.";
+"Failed to save calendar event." = "캘린더 이벤트 저장에 실패했습니다.";
+"Calendar event not found." = "캘린더 이벤트를 찾을 수 없습니다.";
+
+// Widget strings
+"Midterm Exam" = "중간고사";
+"No upcoming exams" = "예정된 시험 없음";
+"%d days" = "%d일";
+"Day %d" = "%d일차";
+"In %d days" = "%d일 후";
+
+// StudySuggestionsCard new entries
+"Focus on %@" = "%@에 집중하세요";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "이 과목의 성적이 평균보다 낮습니다. 핵심 개념 복습에 더 많은 시간을 투자하세요.";
+"Exam is almost here!" = "시험이 곧 다가옵니다!";
+"You have %d exam(s) today or tomorrow. Review your notes now!" = "오늘 또는 내일 %d개의 시험이 있습니다. 지금 바로 노트를 복습하세요!";
+"%@ scores are slipping" = "%@ 성적이 하락 중입니다";
+"Your recent scores in this subject show a downward trend. Identify what's causing the gap." = "최근 이 과목의 성적이 하락 추세입니다. 원인을 파악하세요.";
+"Unreviewed Mistakes" = "복습하지 않은 오답";
+"You have mistakes in %@ that haven't been reviewed. Go through them before the next exam." = "%@에 복습하지 않은 오답이 있습니다. 다음 시험 전에 확인하세요.";
+"Upcoming Exams" = "다가오는 시험";
+"%d exam(s) in the next 2 weeks. Organize your review by subject priority." = "앞으로 2주 안에 %d개의 시험이 있습니다. 과목 우선순위에 따라 복습을 계획하세요.";
+"%@ is improving!" = "%@ 실력이 향상되고 있습니다!";
+"Your scores are trending upward. Keep the momentum!" = "성적이 상승 추세입니다. 이 기세를 유지하세요!";
+"Deep dive into %@" = "%@ 심층 분석";
+"You have many mistakes in this subject. Categorize your errors to find the root pattern." = "이 과목에 오답이 많습니다. 오류를 분류하여 근본 패턴을 찾으세요.";
+"Keep the streak going!" = "기록 습관을 유지하세요!";
+"No new grades in the past week. Regular tracking helps you spot trends early." = "지난 1주일 동안 새로운 성적이 없습니다. 정기적인 기록으로 트렌드를 조기에 발견하세요.";
+"Balance your subjects" = "과목 균형 맞추기";
+"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "%@의 성적 기록이 다른 과목보다 훨씬 많습니다. 다른 과목도 소홀히 하지 마세요.";

@@ -1,1112 +1,1716 @@
-# StudyPulse 代码 Wiki
+# StudyPulse - 代码维基（中文版）
 
-> 一款综合性学习管理应用，帮助学生追踪学业表现、分析学习趋势，并高效管理学习资料。
+> StudyPulse iOS 应用的完整代码参考文档。这是一个支持全球教育体系的学业管理应用，使用 SwiftUI 构建。
 
----
+================================================================================
 
 ## 目录
 
-- [1. 项目概览](#1-项目概览)
-- [2. 技术栈与环境要求](#2-技术栈与环境要求)
-- [3. 项目结构](#3-项目结构)
-- [4. 架构设计](#4-架构设计)
-- [5. 数据模型](#5-数据模型)
-- [6. 核心管理器](#6-核心管理器)
-- [7. 视图层](#7-视图层)
-- [8. 组件与辅助工具](#8-组件与辅助工具)
-- [9. 扩展](#9-扩展)
-- [10. 通知系统](#10-通知系统)
-- [11. 国际化](#11-国际化)
-- [12. 依赖关系](#12-依赖关系)
-- [13. 数据流](#13-数据流)
-- [14. 运行方式](#14-运行方式)
-- [15. 构建配置](#15-构建配置)
-
----
-
-## 1. 项目概览
-
-| 项目 | 说明 |
-|------|------|
-| **应用名称** | StudyPulse |
-| **Bundle 标识符** | `Gao.Chenkai.StudyPulse` |
-| **版本号** | 1.0（市场版本） |
-| **开发者** | Gao-Chenkai |
-| **许可证** | CC BY-NC-SA 4.0 |
-
-### 核心功能
-
-| 功能 | 说明 |
-|------|------|
-| **多科目成绩追踪** | 记录多门科目的分数，支持原始分和排名 |
-| **交互式图表可视化** | 使用 Apple Charts 框架可视化成绩趋势和排名 |
-| **考试管理** | 创建、查看和管理单科与综合考试，支持倒计时 |
-| **错题集管理** | 整理错题并进行详细分析（标题、错因、错解、正解） |
-| **照片上传** | 拍摄或选择试卷和错题照片 |
-| **考试通知** | 本地通知，提供 30/10/5/3/1 天倒计时提醒 |
-| **用户档案** | 存储教育阶段、教育体系、地区和所选科目 |
-| **每日励志语录** | 14 条轮换的励志语录，显示在主页 |
-
----
-
-## 2. 技术栈与环境要求
-
-| 层级 | 技术 |
-|------|------|
-| **UI 框架** | SwiftUI |
-| **编程语言** | Swift 6.0 |
-| **最低系统版本** | iOS 18.6 |
-| **Xcode 版本** | Xcode 26.x |
-| **图表** | Apple Charts 框架（原生） |
-| **数据持久化** | JSON 文件序列化，存储于 Documents 目录 |
-| **引导页** | WSOnBoarding（第三方包） |
-| **通知** | UserNotifications 框架 |
-| **相机/相册** | UIKit UIImagePickerController（通过 UIViewControllerRepresentable） |
-
-### 支持平台
-
-- iPhone（`iOS`）
-- iPad（iPadOS）
-- Mac Catalyst：**不支持**
-
----
-
-## 3. 项目结构
-
-```
-StudyPulse/
-├── StudyPulse.xcodeproj/          # Xcode 项目配置
-│   └── project.pbxproj
-│
-├── StudyPulse/                    # 主应用源码
-│   ├── StudyPulseApp.swift        # 应用入口
-│   │
-│   ├── Models/
-│   │   └── DataModels.swift       # 核心数据模型（Subject, Grade, Exam 等）
-│   │
-│   ├── Managers/
-│   │   ├── DataManager.swift      # 中央数据管理与持久化
-│   │   ├── StringsLocalized.swift # 字符串本地化扩展
-│   │   └── SubjectInfo.swift      # 按教育阶段计算满分
-│   │
-│   ├── Extensions/
-│   │   ├── ColorExtensions.swift  # UIColor → Color 桥接
-│   │   └── DateExtensions.swift   # 日期格式化辅助
-│   │
-│   ├── NotificationsControl/
-│   │   └── ExamPrepareNotifications.swift  # 本地通知调度
-│   │
-│   ├── Views/
-│   │   ├── ContentView.swift      # 主 TabView 导航
-│   │   ├── HomeView.swift         # 数据仪表盘，含统计与趋势
-│   │   ├── TrendsView.swift       # 成绩趋势图表
-│   │   ├── ExamView.swift         # 考试列表，按时间分组
-│   │   ├── ExamDetailView.swift   # 单个考试详情展示
-│   │   ├── ExamDetailEditView.swift # 编辑考试详情表单
-│   │   ├── NewExamSetView.swift   # 创建新考试表单
-│   │   ├── AddGradeView.swift     # 添加成绩录入表单
-│   │   ├── MistakeView.swift      # 错题集列表
-│   │   ├── MistakeDetailEditView.swift # 编辑错题详情
-│   │   ├── NewMistakeSetView.swift # 创建新错题条目
-│   │   ├── SettingsView.swift     # 用户档案与设置
-│   │   ├── SubjectScoreCard.swift # 科目分数卡片，含迷你图表
-│   │   │
-│   │   ├── Components/
-│   │   │   ├── GradeChartView.swift    # 成绩折线图
-│   │   │   └── SubjectPickerView.swift # 科目选择器
-│   │   │
-│   │   ├── Helpers/
-│   │   │   ├── BackgroundColors.swift  # 自适应背景色
-│   │   │   ├── ImagePicker.swift       # 相册选择器
-│   │   │   ├── PhotoCaptureView.swift  # 相机拍摄
-│   │   │   └── ScoreColor.swift        # 分数到颜色的映射
-│   │   │
-│   │   ├── OnBoarding/
-│   │   │   └── WelcomeConfig.swift     # 引导页配置
-│   │   │
-│   │   └── Sheets/
-│   │       └── NewMistakeSheet.swift   # 新建错题弹出页
-│   │
-│   ├── StudyPulseIcon.icon/      # 应用图标配置
-│   └── Assets.xcassets/          # 图片与颜色资源
-│
-├── zh-Hans.lproj/
-│   └── Localizable.strings       # 简体中文翻译
-├── en.lproj/
-│   └── Localizable.strings       # 英文字符串
-│
-├── README.md                     # 项目说明
-├── LICENSE                       # CC BY-NC-SA 4.0 许可证
-└── .gitignore
-```
-
----
-
-## 4. 架构设计
-
-StudyPulse 采用**受 MVVM 启发的架构**，结合 SwiftUI 的声明式范式：
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     视图层（SwiftUI）                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │ HomeView │ │TrendsView│ │ ExamView │ │SettingsView│  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘   │
-│       └─────────────┴────────────┴────────────┘         │
-│                         │                               │
-│              @EnvironmentObject<DataManager>             │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────┐
-│                     管理器层                              │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
-│  │ DataManager  │ │ SubjectInfo  │ │ExamPrepareNotif. │ │
-│  │ （可观察对象） │ │ （辅助类）   │ │ （调度器）       │ │
-│  └──────┬───────┘ └──────────────┘ └──────────────────┘ │
-│         │                                                │
-│   JSON 持久化（Documents/）                              │
-└─────────┼───────────────────────────────────────────────┘
-          │
-┌─────────▼───────────────────────────────────────────────┐
-│                     模型层                                │
-│  ┌────────┐ ┌───────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Subject│ │ Grade │ │  Exam    │ │MistakeNote│       │
-│  └────────┘ └───────┘ └──────────┘ └──────────┘        │
-│  ┌──────────────────┐ ┌──────────┐                      │
-│  │comprehensiveExam │ │UserProfile│                     │
-│  └──────────────────┘ └──────────┘                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 关键架构模式
-
-| 模式 | 实现方式 |
-|------|----------|
-| **集中式状态管理** | `DataManager` 作为应用根节点的 `@StateObject`，通过 `@EnvironmentObject` 传递 |
-| **可观察数据** | `DataManager` 遵循 `ObservableObject`，使用 `@Published` 属性 |
-| **导航** | `TabView` 包含 4 个标签页（主页、趋势、考试、设置）；每个标签页内使用 `NavigationStack` |
-| **弹出页展示** | 使用 `.sheet` 修饰符展示表单（AddGradeView、NewExamSetView 等） |
-| **数据持久化** | JSON 编码/解码到 `FileManager.default.urls(for: .documentDirectory)` 中的文件 |
-| **响应式更新** | `@Published` 在数据变更时自动触发 UI 刷新 |
-
----
-
-## 5. 数据模型
-
-所有数据模型定义于 [DataModels.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Models/DataModels.swift)，均遵循 `Identifiable`、`Codable` 和 `Equatable` 协议。
-
-### 5.1 Subject（科目）
-
-```swift
-class Subject: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String      // 如 "Chinese"、"Mathematics"
-    var enabled: Bool     // 该科目是否启用
-}
-```
-
-表示单个学科科目。用于过滤成绩、在考试中选择科目以及配置用户档案。
-
-### 5.2 Grade（成绩）
-
-```swift
-struct Grade: Identifiable, Codable, Equatable {
-    let id: UUID
-    var subject: String        // 科目名称
-    var score: Double?         // 标准化分数（0-100 比例）
-    var rawScore: Double?      // 原始考试分数（卷面分）
-    var ranking: Int?          // 班级/年级排名
-    var importance: Int        // 重要程度（1-5 星）
-    var image: String?         // 照片文件名
-    var date: Date             // 考试日期
-    var examName: String       // 所属考试名称
-}
-```
-
-记录单个科目的成绩条目。同时支持标准化分数和原始分数。
-
-### 5.3 MistakeNote（错题记录）
-
-```swift
-struct MistakeNote: Identifiable, Codable, Equatable {
-    let id: UUID
-    var title: String                  // 错题标题
-    var originalQuestion: String       // 原始题目文本
-    var source: String                 // 来源（哪场考试）
-    var date: Date                     // 记录日期
-    var errorReason: String            // 出错原因
-    var wrongSolution: String          // 错误的解答
-    var correctSolution: String        // 正确的解答
-    var images: [String]               // 关联的照片文件名
-}
-```
-
-详细的错题记录，采用四段式分析结构。
-
-### 5.4 UserProfile（用户档案）
-
-```swift
-struct UserProfile: Identifiable, Codable, Equatable {
-    let id: UUID
-    var username: String
-    var age: Int
-    var educationLevel: String      // "Primary School"、"Middle School"、"High School"
-    var educationSystem: String     // 如 "Chinese"、"IB" 等
-    var region: String              // 地理区域
-    var selectedSubjects: [String]  // 已选科目名称
-    var theme: String               // UI 主题偏好
-}
-```
-
-存储用户的个人和学业信息。用于分数标准化和个性化展示。
-
-### 5.5 Exam（考试）
-
-```swift
-struct Exam: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
-    var examDate: Date
-    var importance: Int             // 1-5 星
-    var subject: String             // 单科
-    var examName: String            // 所属考试名称
-    var masteryDegree: Double       // 0.0 - 1.0 掌握程度百分比
-}
-```
-
-单科考试条目，支持倒计时和掌握程度追踪。
-
-### 5.6 ComprehensiveExam（综合考试）
-
-```swift
-struct ComprehensiveExam: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
-    var examDate: Date
-    var importance: Int
-    var subject: [String]           // 多科目
-    var examName: String
-    var masteryDegree: Double
-}
-```
-
-多科目考试，将多个科目捆绑在一个考试事件下。
-
----
-
-## 6. 核心管理器
-
-### 6.1 DataManager（数据管理器）
-
-**文件：** [DataManager.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/DataManager.swift)
-
-中央数据管理中枢。遵循 `ObservableObject`，通过 JSON 持久化管理所有应用数据。
-
-#### 已发布属性（@Published）
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| `grades` | `[Grade]` | 所有已记录的成绩 |
-| `subjects` | `[Subject]` | 可用的学科科目 |
-| `mistakeSets` | `[MistakeNote]` | 所有错题记录 |
-| `examSets` | `[Exam]` | 所有单科考试 |
-| `comprehensiveExamSets` | `[ComprehensiveExam]` | 所有综合考试 |
-| `profile` | `UserProfile` | 当前用户档案 |
-
-#### 核心方法
-
-| 方法 | 说明 |
-|------|------|
-| `init()` | 初始化默认科目并从 JSON 文件加载所有数据 |
-| `loadData()` | 从 Documents 目录读取所有 JSON 文件并解码为数组 |
-| `saveData()` | 将所有数据数组编码为 JSON 文件保存到 Documents 目录 |
-| `getDocumentsDirectory()` | 返回应用 Documents 目录的 URL |
-| `addGrade(_:)` | 添加成绩并保存 |
-| `removeGrade(_:)` | 删除成绩并保存 |
-| `addSubject(_:)` | 添加科目并保存 |
-| `removeSubject(_:)` | 删除科目并保存 |
-| `toggleSubject(_:)` | 切换科目的启用/禁用状态 |
-| `addMistakeSet(_:)` | 添加错题记录并保存 |
-| `removeMistakeSet(_:)` | 删除错题记录并保存 |
-| `addExamSet(_:)` | 添加考试并保存 |
-| `removeExamSet(_:)` | 删除考试并保存 |
-| `addComprehensiveExam(_:)` | 添加综合考试并保存 |
-| `removeComprehensiveExam(_:)` | 删除综合考试并保存 |
-| `updateExam(_:)` | 更新现有考试并保存 |
-| `updateComprehensiveExam(_:)` | 更新现有综合考试并保存 |
-| `updateProfile(_:)` | 更新用户档案并保存 |
-
-#### 数据持久化格式
-
-每种数据类型存储为独立的 JSON 文件：
-
-| 文件 | 内容 |
-|------|------|
-| `grades.json` | Grade 对象数组 |
-| `subjects.json` | Subject 对象数组 |
-| `mistakeSets.json` | MistakeNote 对象数组 |
-| `examSets.json` | Exam 对象数组 |
-| `comprehensiveExamSets.json` | ComprehensiveExam 对象数组 |
-| `profile.json` | 单个 UserProfile 对象 |
-
-#### 默认科目
-
-首次启动时初始化：
-
-| 科目 | 是否启用 |
-|------|----------|
-| 语文（Chinese） | 是 |
-| 数学（Mathematics） | 是 |
-| 英语（English） | 是 |
-| 科学（Science） | 是 |
-| 历史与社会（History & Society） | 是 |
-| 物理（Physics） | 是 |
-| 化学（Chemistry） | 是 |
-| 生物（Biology） | 是 |
-| 历史（History） | 是 |
-| 地理（Geography） | 是 |
-| 政治（Politics） | 是 |
-| 信息技术（Information Technology） | 是 |
-| 通用技术（General Technology） | 是 |
-| 美术（Art） | 是 |
-| 音乐（Music） | 是 |
-| 体育与健康（PE & Health） | 是 |
-
-### 6.2 SubjectInfo（科目信息）
-
-**文件：** [SubjectInfo.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/SubjectInfo.swift)
-
-辅助类，根据教育阶段和科目计算最高可能分数。
-
-```swift
-func getMaxScore(level: String, subject: String) -> Double
-```
-
-| 教育阶段 | 科目 | 满分 |
-|----------|------|------|
-| 小学 | 所有科目 | 100 |
-| 初中 | 语文、数学、英语 | 120 |
-| 初中 | 科学 | 160 |
-| 初中 | 其他科目 | 100 |
-| 高中 | 语文、数学、英语 | 150 |
-| 高中 | 其他科目 | 100 |
-
-用于分数标准化（将原始分转换为百分比分数）。
-
-### 6.3 StringsLocalized（字符串本地化）
-
-**文件：** [StringsLocalized.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/StringsLocalized.swift)
-
-对 `String` 的简单扩展，提供 `NSLocalizedString` 的简写形式：
-
-```swift
-extension String {
-    func localized() -> String {
-        return NSLocalizedString(self, comment: "")
-    }
-}
-```
-
----
-
-## 7. 视图层
-
-### 7.1 应用入口
-
-**文件：** [StudyPulseApp.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/StudyPulseApp.swift)
-
-```swift
-@main
-struct StudyPulseApp: App
-```
-
-#### 职责
-
-1. 创建并持有 `DataManager` 作为 `@StateObject`
-2. 通过 `NotificationCoordinator` 配置 `UNUserNotificationCenter` 代理
-3. 启动时请求通知权限
-4. 用 `WSOnBoarding` 引导页包装 `ContentView`
-5. 将 `DataManager` 注入环境
-
-#### NotificationCoordinator
-
-实现 `UNUserNotificationCenterDelegate`：
-- `willPresent`：以横幅形式展示通知，附带声音和角标
-- `didReceive`：用户点击通知时清除角标数量
-
-### 7.2 ContentView（主视图）
-
-**文件：** [ContentView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ContentView.swift)
-
-主标签页导航容器。
-
-| 标签页 | 图标 | 视图 | 标签值 |
-|--------|------|------|--------|
-| 主页 | `house.fill` | HomeView | 0 |
-| 趋势 | `chart.bar.fill` | TrendsView | 1 |
-| 考试 | `list.bullet.clipboard` | ExamView | 3 |
-| 设置 | `gearshape.fill` | SettingsView | 4 |
-
-> 注意：错题标签页（标签值 2）当前已被注释/禁用。
-
-使用 `UIImpactFeedbackGenerator` 在标签页切换时提供触觉反馈。
-
-### 7.3 HomeView（主页）
-
-**文件：** [HomeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/HomeView.swift)
-
-主数据仪表盘页面。应用中最大的视图文件（约 783 行）。
-
-#### 关键组件
-
-| 组件 | 说明 |
-|------|------|
-| `WelcomeCardView` | 顶部卡片，含问候语、每日语录和快捷统计 |
-| `StatCardView` | 可复用的统计展示卡片（图标、标签、数值） |
-| `GradeDetailView` | 可滚动的近期成绩列表，含分数详情 |
-| `UpcomingExamCard` | 显示两周内即将到来的考试 |
-| `HomeMainInfoView` | 主页所有区域的容器 |
-| `DailyQuoteCard` | 显示每日励志语录 |
-
-#### 每日语录系统
-
-- `dailyQuotes`：包含 14 条励志语录的数组
-- `dailyQuote`：计算属性，根据一年中的第几天选择一条语录（循环遍历数组）
-
-#### 显示的统计数据
-
-| 统计卡片 | 数据来源 |
-|----------|----------|
-| 考试总次数 | `dataManager.examSets.count + dataManager.comprehensiveExamSets.count` |
-| 即将到来的考试 | 2 周内的考试 |
-| 整体平均分 | 所有成绩分数的平均值 |
-| 最新成绩 | 最近一次录入的成绩 |
-
-### 7.4 TrendsView（趋势页）
-
-**文件：** [TrendsView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/TrendsView.swift)
-
-成绩趋势分析与可视化页面。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 分数/排名切换 | 在分数和排名显示模式之间切换 |
-| 时间范围筛选 | 全部 / 3 个月 / 6 个月 / 1 年 |
-| 科目详情视图 | 每个科目可展开的详细信息 |
-| Charts 集成 | 使用 Apple Charts 框架绘制折线/点标记 |
-
-#### SubjectDetailView
-
-内部视图，展示特定科目的图表和成绩列表：
-- X 轴为日期、Y 轴为分数/排名的折线图
-- 可滚动的单项成绩列表，分数带颜色编码
-- 通过滑动手势支持删除
-
-### 7.5 ExamView（考试页）
-
-**文件：** [ExamView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamView.swift)
-
-考试管理列表视图。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 合并显示 | 将 `examSets` 和 `comprehensiveExamSets` 合并为 `allExams` |
-| 时间分组 | 将考试分为：一周内、一个月内、后续 |
-| 滑动删除 | 支持左滑删除并确认 |
-| 倒计时显示 | 显示距离每场考试的剩余天数 |
-
-#### ExamRowView
-
-显示单个考试行，包含：
-- 考试名称和日期
-- 科目标签（综合考试为多个）
-- 重要程度星标（1-5）
-- 掌握程度进度条
-- 剩余天数倒计时
-
-### 7.6 ExamDetailView（考试详情页）
-
-**文件：** [ExamDetailView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamDetailView.swift)
-
-只读考试详情展示。
-
-#### 布局区域
-
-| 区域 | 内容 |
-|------|------|
-| 概览 | 考试名称、日期、科目标签 |
-| 指标 | 重要程度（星形图标）、掌握程度（进度条） |
-| 倒计时 | 大字号剩余天数展示 |
-
-### 7.7 ExamDetailEditView（考试详情编辑页）
-
-**文件：** [ExamDetailEditView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/ExamDetailEditView.swift)
-
-用于编辑现有考试详情的表单。字段包括：
-- 考试名称（TextField）
-- 科目（禁用，显示当前科目）
-- 日期（DatePicker）
-- 重要程度（1-5 星选择器）
-- 掌握程度（滑块）
-- 备注（TextEditor）
-
-### 7.8 NewExamSetView（新建考试页）
-
-**文件：** [NewExamSetView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/NewExamSetView.swift)
-
-创建新考试的表单。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 考试类型切换 | 单科 vs 综合考试 |
-| 科目多选 | 为综合考试选择多个科目 |
-| 日期选择器 | 选择考试日期 |
-| 重要程度选择器 | 1-5 星评分 |
-| 掌握程度滑块 | 0-100% 滑块 |
-
-### 7.9 AddGradeView（添加成绩页）
-
-**文件：** [AddGradeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/AddGradeView.swift)
-
-录入新成绩的表单。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 考试类型 | 单科或综合考试 |
-| 考试选择 | 从已有考试中选择 |
-| 科目选择器 | 选择科目（综合考试可多选） |
-| 分数输入 | 标准化分数输入 |
-| 原始分开关 | 可选的原始分/卷面分录入 |
-| 排名开关 | 可选的排名录入 |
-| 重要程度选择器 | 1-5 星评分 |
-| 图片上传 | 附加考试照片 |
-
-#### ScoreControlView / RankingControlView
-
-AddGradeView 内的辅助子视图，用于分数和排名输入，带 +/- 增减按钮。
-
-### 7.10 MistakeView（错题页）
-
-**文件：** [MistakeView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/MistakeView.swift)
-
-错题集列表和详情视图。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 列表视图 | 显示所有错题记录，含标题、来源和日期 |
-| 详情视图 | 完整的四段式错题分析 |
-| 导航 | NavigationStack 支持详情页推送 |
-
-### 7.11 MistakeDetailEditView（错题详情编辑页）
-
-**文件：** [MistakeDetailEditView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/MistakeDetailEditView.swift)
-
-详细的错题编辑表单，包含四个可折叠区域：
-
-| 区域 | 用途 |
-|------|------|
-| 题目 | 原始考试题目 |
-| 错因 | 出错原因分析 |
-| 错解 | 尝试过的错误解答 |
-| 正解 | 正确答案 |
-
-每个区域通过开关独立展开/折叠。
-
-### 7.12 NewMistakeSetView（新建错题页）
-
-**文件：** [NewMistakeSetView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/NewMistakeSetView.swift)
-
-创建新错题条目的表单。
-
-#### 字段
-
-| 字段 | 类型 |
-|------|------|
-| 标题 | TextField |
-| 科目 | Picker（从已启用的科目中选择） |
-| 日期 | DatePicker |
-| 重要程度 | 星形选择器（1-5） |
-| 来源 | TextField（哪场考试） |
-| 题目 | 可折叠 TextEditor |
-| 错因 | 可折叠 TextEditor |
-| 错解 | 可折叠 TextEditor |
-| 正解 | 可折叠 TextEditor |
-| 图片 | 相机拍摄/相册选择支持 |
-
-### 7.13 NewMistakeSheet（新建错题弹出页）
-
-**文件：** [NewMistakeSheet.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Sheets/NewMistakeSheet.swift)
-
-基于 `.sheet` 弹出的新建错题表单版本。将类似 `NewMistakeSetView` 的内容包裹在带导航栏的弹出页中。
-
-### 7.14 SettingsView（设置页）
-
-**文件：** [SettingsView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/SettingsView.swift)
-
-应用设置与配置页面。与设置相关的最大文件（约 576 行）。
-
-#### 区域
-
-| 区域 | 内容 |
-|------|------|
-| **用户档案** | 用户名、年龄、教育阶段、教育体系、地区 |
-| **学业信息** | 编辑科目（启用/禁用）、已选科目 |
-| **关于** | 应用描述、功能列表、GitHub 链接 |
-| **版权信息** | CC BY-NC-SA 4.0 许可证详情 |
-| **测试** | 5 秒后发送测试通知（用于调试） |
-
-#### 子视图
-
-| 视图 | 说明 |
-|------|------|
-| `EditSubjectsView` | 切换单个科目的启用/禁用 |
-| `ProfileEditView` | 编辑用户档案字段 |
-| `AboutView` | 应用信息、功能和 GitHub 链接 |
-| `CopyrightView` | 许可证信息 |
-| `LicenseDetailView` | 完整的 CC BY-NC-SA 4.0 许可证文本 |
-| `SectionHeader` | 可复用的区域标题，含可选操作按钮 |
-
-### 7.15 SubjectScoreCard（科目分数卡片）
-
-**文件：** [SubjectScoreCard.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/SubjectScoreCard.swift)
-
-可复用的卡片组件，用于展示科目的分数信息。
-
-#### 功能
-
-| 功能 | 说明 |
-|------|------|
-| 分数/排名切换 | 切换显示模式 |
-| 分数历史 | 该科目过往成绩列表 |
-| 迷你图表 | 显示趋势的小型折线图（miniChartView） |
-| 删除支持 | 滑动删除单项成绩 |
-
-#### ChartDataPoint
-
-用于图表渲染的内部结构体：
-```swift
-struct ChartDataPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let value: Double
-}
-```
-
----
-
-## 8. 组件与辅助工具
-
-### 8.1 GradeChartView（成绩图表视图）
-
-**文件：** [GradeChartView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Components/GradeChartView.swift)
-
-使用 Apple Charts 框架为特定科目成绩绘制简单折线图。
-
-```swift
-struct GradeChartView: View {
-    let grades: [Grade]
-    let subject: String
-    // 按科目过滤成绩，按日期排序，渲染折线 + 点标记
-}
-```
-
-### 8.2 SubjectPickerView（科目选择器）
-
-**文件：** [SubjectPickerView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Components/SubjectPickerView.swift)
-
-可复用的选择器，仅显示已启用的科目：
-
-```swift
-struct SubjectPickerView: View {
-    @Binding var selectedSubject: String
-    let subjects: [Subject]
-    // 按 .enabled 属性过滤科目
-}
-```
-
-### 8.3 BackgroundColors（背景色）
-
-**文件：** [BackgroundColors.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/BackgroundColors.swift)
-
-根据配色方案自适应背景色：
-
-```swift
-func getBackgroundColor(_ colorScheme: ColorScheme) -> Color
-// 浅色模式：systemGray6
-// 深色模式：systemBackground
-```
-
-### 8.4 ImagePicker（图片选择器）
-
-**文件：** [ImagePicker.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/ImagePicker.swift)
-
-`UIViewControllerRepresentable` 包装器，用于 `UIImagePickerController` 从相册选择图片。
-
-### 8.5 PhotoCaptureView（相机拍摄视图）
-
-**文件：** [PhotoCaptureView.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/PhotoCaptureView.swift)
-
-`UIViewControllerRepresentable` 包装器，用于 `UIImagePickerController`，设置 `sourceType = .camera` 进行直接相机拍摄。
-
-### 8.6 ScoreColor（分数颜色）
-
-**文件：** [ScoreColor.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/Helpers/ScoreColor.swift)
-
-将数值分数映射到语义化颜色：
-
-| 分数范围 | 颜色 |
-|----------|------|
-| >= 120 | systemGreen（绿色） |
-| >= 90 | systemBlue（蓝色） |
-| >= 60 | systemOrange（橙色） |
-| < 60 | systemRed（红色） |
-
----
-
-## 9. 扩展
-
-### 9.1 ColorExtensions（颜色扩展）
-
-**文件：** [ColorExtensions.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Extensions/ColorExtensions.swift)
-
-将 UIKit 的 UIColor 常量桥接到 SwiftUI 的 Color：
-
-| 扩展 | 映射到 |
-|------|--------|
-| `Color.systemBackground` | `UIColor.systemBackground` |
-| `Color.secondarySystemBackground` | `UIColor.secondarySystemBackground` |
-| `Color.systemGray6` | `UIColor.systemGray6` |
-
-### 9.2 DateExtensions（日期扩展）
-
-**文件：** [DateExtensions.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Extensions/DateExtensions.swift)
-
-日期格式化的便捷方法：
-
-```swift
-extension Date {
-    func formatted(date style: DateFormatter.Style, time style2: DateFormatter.Style) -> String
-}
-```
-
----
-
-## 10. 通知系统
-
-**文件：** [ExamPrepareNotifications.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/NotificationsControl/ExamPrepareNotifications.swift)
-
-管理考试倒计时提醒的本地通知。
-
-### 核心方法
-
-| 方法 | 说明 |
-|------|------|
-| `requestAuthorization()` | 请求用户的本地通知权限 |
-| `scheduleNotifications(for: examName, date: examDate)` | 调度一系列倒计时通知 |
-| `cancelNotifications(for: examName)` | 取消特定考试的所有通知 |
-
-### 通知调度计划
-
-| 距离考试天数 | 通知内容 |
-|--------------|----------|
-| 30 天 | "距离 [examName] 还有 30 天" |
-| 10 天 | "距离 [examName] 还有 10 天" |
-| 5 天 | "距离 [examName] 还有 5 天" |
-| 3 天 | "距离 [examName] 还有 3 天" |
-| 1 天 | "距离 [examName] 还有 1 天" |
-
-每条通知均调度在对应倒计时日的上午 8:00，使用日历组件进行周期性投递。
-
-### 使用流程
-
-1. 在 `NewExamSetView` 中创建新考试时，调用 `ExamPrepareNotifications.scheduleNotifications(for: date:)`
-2. 删除考试时，调用 `ExamPrepareNotifications.cancelNotifications(for:)`
-3. `SettingsView` 中包含一个调试选项，可在 5 秒后发送测试通知
-
----
-
-## 11. 国际化
-
-StudyPulse 支持两种语言环境：
-
-| 语言 | 文件 | 状态 |
-|------|------|------|
-| 英语（en） | [en.lproj/Localizable.strings](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/en.lproj/Localizable.strings) | 最小化（回退语言） |
-| 简体中文（zh-Hans） | [zh-Hans.lproj/Localizable.strings](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/zh-Hans.lproj/Localizable.strings) | 完整翻译 |
-
-### 本地化分类
-
-| 分类 | 键值 |
-|------|------|
-| AddGradeView | GROUP、Exam Details、Exam Name、Score、Ranking 等 |
-| ContentView | Home、Trends、Mistakes、Exams、Settings |
-| ExamView | Within 1 Week、Within 1 Month、Later、Delete 等 |
-| HomeView | Welcome back、Total Exams、Dashboard 等 |
-| SettingsView | User Information、Edit Profile、About、Copyright 等 |
-| Subjects | 全部 16 个科目名称（Chinese、Mathematics、English 等） |
-
-使用方式：
-```swift
-"Total Exams".localized()  // 在 zh-Hans 下返回 "考试总次数"
-```
-
----
-
-## 12. 依赖关系
-
-### 第三方包
-
-| 包名 | 仓库地址 | 用途 |
-|------|----------|------|
-| **WSOnBoarding** | [github.com/Jewel591/WSOnBoarding](https://github.com/Jewel591/WSOnBoarding) | 引导页/欢迎页面，展示功能亮点 |
-
-### WSOnBoarding 配置
-
-**文件：** [WelcomeConfig.swift](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Views/OnBoarding/WelcomeConfig.swift)
-
-| 功能项 | 图标 | 颜色 |
-|--------|------|------|
-| 图表分析 | `list.clipboard` | 蓝色 |
-| 毫秒级响应 | `bolt.fill` | 橙色 |
-| 离线支持 | `wifi.slash` | 绿色 |
-
-应用图标：`graduationcap.fill`，主色调：蓝色
-
-### 使用的原生框架
-
-| 框架 | 用途 |
-|------|------|
-| `SwiftUI` | UI 框架 |
-| `Charts` | 数据可视化 |
-| `UserNotifications` | 本地通知 |
-| `UIKit` | 图片选择器、视图控制器 |
-| `AVFoundation` | 相机支持 |
-| `Combine` | 响应式编程（SubjectInfo） |
-| `Foundation` | 数据类型、JSON 编码、日期处理 |
-
----
-
-## 13. 数据流
-
-### 13.1 添加成绩
-
-```
-用户在主页/趋势页点击 + 按钮
-       │
-       ▼
-以 .sheet 形式弹出 AddGradeView
-       │
-       ▼
-用户填写表单（考试、科目、分数、排名、重要程度）
-       │
-       ▼
-用户点击"保存"
-       │
-       ▼
-dataManager.addGrade(newGrade)
-       │
-       ├──► grades.append(newGrade)
-       ├──► saveData() → grades.json
-       │
-       ▼
-@Published 触发自动 UI 更新
-       │
-       ▼
-弹出页关闭，视图以新数据刷新
-```
-
-### 13.2 创建考试
-
-```
-用户在考试页点击 + 按钮
-       │
-       ▼
-以 .sheet 形式弹出 NewExamSetView
-       │
-       ▼
-用户选择考试类型（单科/综合）、科目、日期等
-       │
-       ▼
-用户点击"保存"
-       │
-       ├──► dataManager.addExamSet() 或 .addComprehensiveExam()
-       ├──► ExamPrepareNotifications.scheduleNotifications(for: date)
-       │
-       ▼
-视图刷新，通知已调度
-```
-
-### 13.3 数据持久化周期
-
-```
-应用启动
-    │
-    ▼
-DataManager.init()
-    │
-    ├──► 初始化默认科目（16 个科目）
-    ├──► loadData()
-    │       │
-    │       ├──► 读取 grades.json → 解码 → grades[]
-    │       ├──► 读取 subjects.json → 解码 → subjects[]
-    │       ├──► 读取 mistakeSets.json → 解码 → mistakeSets[]
-    │       ├──► 读取 examSets.json → 解码 → examSets[]
-    │       ├──► 读取 comprehensiveExamSets.json → 解码 → comprehensiveExamSets[]
-    │       └──► 读取 profile.json → 解码 → profile
-    │
-    ▼
-应用就绪
-
-任意数据修改
-    │
-    ▼
-saveData()
-    │
-    ├──► 编码 grades[] → grades.json
-    ├──► 编码 subjects[] → subjects.json
-    ├──► 编码 mistakeSets[] → mistakeSets.json
-    ├──► 编码 examSets[] → examSets.json
-    ├──► 编码 comprehensiveExamSets[] → comprehensiveExamSets.json
-    └──► 编码 profile → profile.json
-```
-
----
-
-## 14. 运行方式
+1. 快速入门
+2. 架构概览
+3. 目录结构
+4. 数据模型参考
+5. 管理器参考
+6. 视图参考
+7. 教育系统
+8. 小组件扩展
+9. 通知系统
+10. OCR 系统
+11. 图片缓存系统
+12. CSV 导出功能
+13. iPad 适配
+14. 性能模式
+15. 隐私权限
+16. 构建命令
+17. 编码标准与约定
+
+================================================================================
+
+## 快速入门
 
 ### 前置要求
 
-| 要求 | 版本 |
-|------|------|
-| macOS | 最新版（兼容 Xcode 26） |
-| Xcode | 26.x |
-| iOS 部署目标 | 18.6+ |
-| Swift | 6.0 |
++---------------+--------------+
+| 要求          | 版本         |
++---------------+--------------+
+| macOS         | 15.0 或更高  |
+| Xcode         | 26.3         |
+| iOS 部署目标  | 18.6 或更高  |
+| Swift         | 6.0          |
+| 支持设备      | iPhone 与 iPad（`TARGETED_DEVICE_FAMILY = "1,2"`） |
++---------------+--------------+
 
-### 步骤
-
-1. **克隆仓库**
-   ```bash
-   git clone https://github.com/Gao-Chenkai/StudyPulse
-   cd StudyPulse
-   ```
-
-2. **在 Xcode 中打开**
-   ```bash
-   open StudyPulse.xcodeproj
-   ```
-
-3. **解析 Swift Package 依赖**
-   - Xcode 应自动从 `https://github.com/Jewel591/WSOnBoarding` 解析 WSOnBoarding
-   - 如未自动解析：`File` → `Packages` → `Resolve Package Versions`
-
-4. **选择目标设备**
-   - 选择 iPhone 模拟器（iOS 18.6+）或物理设备
-
-5. **构建并运行**
-   - 按 `Cmd + R` 或点击运行按钮
-   - 首次运行时应用将展示 WSOnBoarding 引导页
-
-### 命令行构建
+### 快速开始命令
 
 ```bash
-# 为模拟器构建
-xcodebuild -project StudyPulse.xcodeproj \
-  -scheme StudyPulse \
-  -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
-  build
+# 1. 进入项目目录
+cd StudyPulse/
 
-# 为真机构建（需要签名）
-xcodebuild -project StudyPulse.xcodeproj \
-  -scheme StudyPulse \
-  -sdk iphoneos \
-  -configuration Release \
-  build
+# 2. 在 Xcode 中打开
+open StudyPulse.xcodeproj
+
+# 3. 解析 SPM 包
+#    Xcode -> File -> Packages -> Resolve Package Versions
+
+# 4. 构建并运行
+#    Cmd + R
 ```
 
-### 调试技巧
+### 核心概念
 
-- **测试通知**：前往设置页 → "在 5 秒后进行本地通知接收测试"
-- **数据位置**：JSON 文件存储在应用的 Documents 目录中。使用 Xcode 的 Devices & Simulators 窗口下载容器文件。
-- **重置数据**：删除应用并重新安装即可重新开始（所有 JSON 文件将被清除）
++ 架构模式：MVVM，视图由 `@EnvironmentObject` DataManager 驱动
++ 持久化方式：所有数据存储为 `~/Documents/` 下的 JSON 文件
++ 启动方式：应用使用 `asyncInit()` 非阻塞启动
++ 全球教育支持：支持 15+ 教育体系（中国大陆、浙江、上海、台湾、香港、新加坡、UK、IB、AP、SAT、ACT、GRE、GMAT、TOEFL、IELTS）
++ 通用设备支持：iPhone 与 iPad 通用，基于 size class 的自适应布局（详见 [iPad 适配](#ipad-适配)）
 
----
+================================================================================
 
-## 15. 构建配置
+## 架构概览
 
-### 项目设置
+StudyPulse 采用 MVVM（Model-View-ViewModel）模式，使用 SwiftUI 的 `@EnvironmentObject` 进行依赖注入。
 
-| 设置项 | 值 |
-|--------|-----|
-| **Bundle 标识符** | `Gao.Chenkai.StudyPulse` |
-| **Swift 版本** | 6.0 |
-| **C++ 标准** | gnu++20 |
-| **C 标准** | gnu17 |
-| **开发团队** | D2G8858WRZ |
-| **代码签名方式** | 自动（Automatic） |
+### 高级架构图
 
-### 部署目标
+```
++-------------------------------------------------------------------------------+
+|                       StudyPulse iOS 应用 - 高级架构图                        |
++===============================================================================+
+|                                                                               |
+|  +---表现层（Presentation Layer）-------------------------------------------+  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  |  |     StudyPulseApp            |  |  AppEnvironmentManager         |    |  |
+|  |  |  （应用入口）                |  |  （主题 + 语言 + 配色）         |    |  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  +---视图层（View Layer）---------------------------------------------------+  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  |  |    ContentView (TabView)      |  |                               |    |  |
+|  |  |  +------+  +------+  +------+ |  |                               |    |  |
+|  |  |  | 主页  |  | 趋势  |  | 错题  | |  |   HomeView / TrendsView    |    |  |
+|  |  |  +------+  +------+  +------+ |  |   MistakeView / ExamView     |    |  |
+|  |  |  +------+  +------+           |  |   SettingsView / AddGradeView |    |  |
+|  |  |  | 考试  |  | 设置  |           |  |   NewExamSet / ProfileEdit  |    |  |
+|  |  |  +------+  +------+           |  |                               |    |  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  +-------------------------------------------------------------------------+  |
+|                                       |                                       |
+|  +---业务逻辑层（Business Logic Layer）-----------------------------------+  |
+|  |                               +---------------------------------+     |  |
+|  |  +--------------------------+ |  DataManager（中央状态管理器）  |     |  |
+|  |  |     辅助管理器            | |  - grades / subjects          |     |  |
+|  |  |                          | |  - mistakeSets / examSets      |     |  |
+|  |  |  +--------------------+   | |  - comprehensiveExamSets      |     |  |
+|  |  |  |  CalendarManager   |   | |  - profile                     |     |  |
+|  |  |  |  OCRManager        |   | +---------------------------------+     |  |
+|  |  |  |  ImageCache        |   |                                         |  |
+|  |  |  |  WidgetDataSyncMgr |   |  方法: asyncInit(), save*(),           |  |
+|  |  |  |  EducationConfig   |   |        fullScore(), displayName(),      |  |
+|  |  |  |  SubjectInfo       |   |        applySmartRec()                 |  |
+|  |  |  +--------------------+   |                                         |  |
+|  |  +--------------------------+                                         |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  +---数据层（Data Layer）---------------------------------------------------+  |
+|  |  +---------------------------+   +----------------------------------+  |  |
+|  |  |     模型（Models）         |   |      持久化层（Persistence）      |  |  |
+|  |  |  EducationStage           |   |  ~/Documents/                    |  |  |
+|  |  |  EducationCategory        |   |  - profile.json                  |  |  |
+|  |  |  SubjectConfig            |   |  - grades.json                   |  |  |
+|  |  |  EducationRegion          |   |  - exams.json                    |  |  |
+|  |  |  Subject / Grade          |   |  - mistakes.json                 |  |  |
+|  |  |  UserProfile              |   |  - subjects.json                 |  |  |
+|  |  |  MistakeNote              |   |  - comprehensiveExams.json       |  |  |
+|  |  |  Exam / comprehensiveExam |   |  - images/ （成绩/头像图片）      |  |  |
+|  |  |  AppPreferences           |   |                                  |  |  |
+|  |  +---------------------------+   +----------------------------------+  |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  +---小组件扩展（Widget Extension）-----------------------------------------+  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  |  |  ExamWidgetData             |  |  ExamWidget（时间轴刷新）        |    |  |
+|  |  |  ExamWidgetEntry            |  |                               |    |  |
+|  |  |  ExamWidgetProvider         |  |  ExamWidgetViews (S/M/L)       |    |  |
+|  |  |  StudyPulseWidgetBundle     |  |                               |    |  |
+|  |  +-------------------------------+  +-------------------------------+    |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
 
-| 平台 | 版本 |
-|------|------|
-| iOS | 18.6 |
-| Xcode 构建目标 | 26.0 |
+### 组件交互流程图
 
-### 构建配置
+```
++-------------------+
+|   用户输入操作      |
++---------+---------+
+          |
+          v
++----------------------------------------------------------+
+|                  SwiftUI 视图                            |
+|  +-----------+  +-----------+  +-----------+            |
+|  |  主页视图   |  | 添加成绩   |  | 设置页面   |            |
+|  +-----+-----+  +-----+-----+  +-----+-----+            |
++--------+--------------+--------------+------------------+
+         |              |              |
+         +--------------+--------------+
+                        |
+                        v
+         +------------------------------+
+         |    DataManager（中央）        |
+         |   (@EnvironmentObject)        |
+         +--------------+---------------+
+                        |
+         +--------------+--------------+
+         |                             |
+         v                             v
++----------------------+   +------------------------+
+| 更新模型状态         |   | 保存到磁盘（文件I/O）    |
+| (SwiftUI 重新渲染)    |   |   JSON + 图片文件       |
++----------------------+   +------------+-----------+
+                                        |
+                                        v
+                         +------------------------------+
+                         |  WidgetDataSyncManager       |
+                         |   （App Group 数据同步）      |
+                         +--------------+---------------+
+                                        |
+                                        v
+                         +------------------------------+
+                         |  StudyPulseWidget            |
+                         |   （时间轴刷新）              |
+                         +------------------------------+
+```
 
-| 设置项 | Debug（调试） | Release（发布） |
-|--------|---------------|-----------------|
-| 优化级别 | `-Onone` | `wholemodule` |
-| 调试信息 | `dwarf` | `dwarf-with-dsym` |
-| 断言 | 启用 | 禁用 |
-| 可测试性 | 启用 | 禁用 |
-| 产品验证 | 否 | `VALIDATE_PRODUCT = YES` |
+### 模块依赖关系图
 
-### 编译器标志
+```
++-------------------------------------------------------------------------------+
+|                         模块依赖关系图                                        |
++===============================================================================+
+|                                                                               |
+|  +------------------+        +------------------+        +------------------+ |
+|  |  视图层           | -----> |  DataManager     | -----> |  数据模型         | |
+|  |  HomeView        |        |                  |        |  Grade           | |
+|  |  TrendsView      |        |  已发布属性:       |        |  MistakeNote     | |
+|  |  MistakeView     |        |  grades           |        |  Exam            | |
+|  |  ExamView        |        |  subjects         |        |  Subject         | |
+|  |  SettingsView    |        |  mistakeSets      |        |  UserProfile     | |
+|  |  AddGradeView    |        |  examSets         |        |  SubjectConfig   | |
+|  |  NewExamSet      |        |  profile          |        |  EducationRegion | |
+|  +------------------+        +---------+--------+        +------------------+ |
+|                                         |                                      |
+|                                         v                                      |
+|                              +---------------------+                          |
+|                              |   辅助管理器         |                          |
+|                              |                     |                          |
+|                              |  +---------------+  |                          |
+|                              |  | CalendarMgr   |  |                          |
+|                              |  | OCRManager    |  |                          |
+|                              |  | ImageCache    |  |                          |
+|                              |  | EducationCfg  |  |                          |
+|                              |  | SubjectInfo   |  |                          |
+|                              |  +---------------+  |                          |
+|                              +---------------------+                          |
+|                                         |                                      |
+|                                         v                                      |
+|                              +---------------------+                          |
+|                              |   扩展与工具类       |                          |
+|                              |  Color/Date/Score/  |                          |
+|                              |  Strings 本地化     |                          |
+|                              +---------------------+                          |
+|                                                                               |
+|  依赖方向: 视图 -> DataManager -> 辅助管理器 -> 扩展                            |
+|  （视图不直接访问辅助管理器，由 DataManager 中介）                               |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
 
-| 标志 | 值 |
-|------|-----|
-| `SWIFT_DEFAULT_ACTOR_ISOLATION` | MainActor |
-| `SWIFT_APPROACHABLE_CONCURRENCY` | YES |
-| `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` | YES |
-| `SWIFT_EMIT_LOC_STRINGS` | YES |
-| `CLANG_ENABLE_MODULES` | YES |
-| `CLANG_ENABLE_OBJC_ARC` | YES |
-| `ENABLE_STRICT_OBJC_MSGSEND` | YES |
+### 数据持久化流程图
 
-### Info.plist 键值（自动生成）
+```
++-------------------------------------------------------------------------------+
+|                      数据持久化流程图                                          |
++===============================================================================+
+|                                                                               |
+|  [A] 应用启动 (.task -> asyncInit())                                           |
+|  +-------------------------------------------------------------------------+  |
+|  |  主线程                               后台线程                           |  |
+|  |  +-------------------+              +----------------------+           |  |
+|  |  | StudyPulseApp     |   async      |  DataManager         |           |  |
+|  |  |  .task {          | ------------> |  loadProfileAsync()  |           |  |
+|  |  |    dataManager.   |              |  loadGradesAsync()   |           |  |
+|  |  |    asyncInit()    |              |  loadExamsAsync()    |           |  |
+|  |  |  }                |              |  loadMistakesAsync() |           |  |
+|  |  +-------------------+              |  loadSubjectsAsync() |           |  |
+|  |                                       +-----------+----------+           |  |
+|  |                                                   |                      |  |
+|  |                                                   v                      |  |
+|  |                                       ~/Documents/（文件存储）            |  |
+|  |                                       - profile.json                      |  |
+|  |                                       - grades.json                       |  |
+|  |                                       - exams.json                        |  |
+|  |                                       - mistakes.json                     |  |
+|  |                                       - subjects.json                     |  |
+|  |                                       +----------------------+           |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  [B] 保存操作（用户操作 -> 保存）                                               |
+|  +-------------------------------------------------------------------------+  |
+|  |  用户点击"保存"                                                           |  |
+|  |     |                                                                   |  |
+|  |     v                                                                   |  |
+|  |  DataManager.save*() (@MainActor)                                       |  |
+|  |   +---- 更新 @Published 属性 -> 触发 SwiftUI 重新渲染                    |  |
+|  |   +---- 编码模型 -> JSON Data（JSONEncoder）                             |  |
+|  |   +---- 写入 ~/Documents/{file}.json（原子写入）                         |  |
+|  |   +---- WidgetDataSyncManager.syncExamsToWidget()                       |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  [C] 文件 I/O 模式（DataFileIO - nonisolated 枚举）                            |
+|  +-------------------------------------------------------------------------+  |
+|  |  + read(from:) -> Data? （出错时抛出）                                     |  |
+|  |  + write(data:to:) -> Bool（通过临时文件 + 重命名实现原子写入）             |  |
+|  |  + directoryExists() / createDirectory()                                  |  |
+|  |  + 安全支持后台线程执行                                                    |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
 
-| 键 | 值 |
-|-----|-----|
-| `UIApplicationSceneManifest_Generation` | YES |
-| `UIApplicationSupportsIndirectInputEvents` | YES |
-| `UILaunchScreen_Generation` | YES |
-| 支持的屏幕方向（iPhone） | 竖屏、横屏左、横屏右 |
-| 支持的屏幕方向（iPad） | 竖屏、竖屏倒置、横屏左、横屏右 |
+================================================================================
 
-### 支持的设备系列
+## 目录结构
 
-- iPhone
-- iPad
-- Mac Catalyst：**已禁用**（`SUPPORTS_MACCATALYST = NO`）
+```
+StudyPulse/
+|
++-- Models/                          数据模型定义
+|   |-- DataModels.swift             核心数据模型
+|   +-- AppPreferences.swift         应用偏好设置模型
+|
++-- Managers/                        业务逻辑管理器
+|   |-- DataManager.swift            中央状态管理器
+|   |-- EducationConfig.swift        教育体系静态配置
+|   |-- AppEnvironmentManager.swift  全局偏好管理（语言+主题）
+|   |-- CalendarManager.swift        EventKit 日历集成
+|   |-- OCRManager.swift             Vision 框架文字识别
+|   |-- ImageCache.swift             NSCache 缩略图缓存
+|   |-- SubjectInfo.swift            科目显示辅助
+|   +-- WidgetDataSyncManager.swift  App Group 数据同步
+|
++-- Views/                           SwiftUI 视图和组件
+|   |-- ContentView.swift            主 TabView 容器（iPad 侧边栏自适应）
+|   |-- HomeView.swift               仪表板主页（iPad 上 4 列统计 + 2 列分区）
+|   |-- TrendsView.swift             科目趋势分析
+|   |-- ExamView.swift               考试列表
+|   |-- ExamDetailView.swift         考试详情
+|   |-- MistakeView.swift            错题本
+|   |-- AddGradeView.swift           成绩录入表单
+|   |-- SettingsView.swift           设置页面
+|   |-- ProfileEditView.swift        用户资料编辑
+|   |-- EditSubjectsView.swift       科目编辑
+|   |-- NewExamSet.swift             新建考试
+|   |-- PreferencesView.swift        应用偏好（语言+主题）
+|   |-- SubjectScoreCard.swift       可复用科目成绩卡片
+|   +-- Helpers/                     辅助视图组件
+|       |-- AvatarView.swift         头像视图 + 选择 Sheet
+|       |-- ScoreColor.swift         分数颜色工具
+|       +-- iPadLayout.swift         iPad 自适应布局辅助（adaptiveMaxWidth、AdaptiveHStack、AdaptiveGridColumns）
+|
++-- Extensions/                      颜色和日期扩展
+|
++-- Notifications/                   本地通知调度
+|   +-- ExamPrepareNotifications.swift  考试提醒调度
+|
++-- StudyPulseWidget/                小组件扩展目标
+|   |-- ExamWidget.swift             小组件定义
+|   |-- ExamWidgetData.swift         共享数据模型
+|   |-- ExamWidgetEntry.swift        时间轴条目
+|   |-- ExamWidgetProvider.swift     时间轴提供者
+|   |-- ExamWidgetViews.swift        小组件 UI 视图（小/中/大）
+|   +-- StudyPulseWidgetBundle.swift 小组件 Bundle
+|
++-- StudyPulseApp.swift              应用入口点
+|
++-- *.lproj/                         本地化资源
+|   |-- en.lproj
+|   |-- zh-Hans.lproj
+|   |-- zh-Hant.lproj
+|   |-- ja.lproj
+|   +-- ko.lproj
+|
++-- Assets.xcassets/                 图像与颜色资源
+|
++-- Info.plist / PrivacyInfo.xcprivacy  权限与配置
+|
++-- Package.swift                    Swift 包管理器清单
+|
++-- StudyPulse.xcodeproj             Xcode 项目文件
+|
++-- AGENTS.md                        AI 代理指南
++-- CODE_WIKI.md                     代码维基（英文）
++-- CODE_WIKI_CN.md                  代码维基（中文，本文件）
++-- CONTRIBUTING.md                  贡献指南
++-- README.md                        项目说明
++-- CHANGELOG.md                     版本变更日志
++-- LICENSE                          许可证
+```
 
+================================================================================
 
+## 数据模型参考
 
+### 模型快速索引表
 
++------------------------+-----------------------------------+-----------+
+| 模型名称               | 用途                              | 文件      |
++------------------------+-----------------------------------+-----------+
+| EducationStage         | 教育阶段枚举                      | DataModels|
+| EducationCategory      | 教育体系分类（国内/国际）         | DataModels|
+| SubjectConfig          | 单科目配置信息                    | DataModels|
+| EducationRegion        | 地区教育体系                      | DataModels|
+| Subject                | 用户科目列表                      | DataModels|
+| Grade                  | 单条成绩记录                      | DataModels|
+| UserProfile            | 用户资料                          | DataModels|
+| MistakeNote            | 单条错题笔记                      | DataModels|
+| Exam                   | 单科目考试                        | DataModels|
+| comprehensiveExam      | 多科目综合考试                    | DataModels|
+| AppPreferences         | 应用偏好（语言+主题）             | AppPrefs  |
+| ColorSchemeOption      | 配色方案选项                      | AppPrefs  |
++------------------------+-----------------------------------+-----------+
 
+### EducationStage（枚举）
 
+定义用户当前的教育阶段。
 
-This WIKI is Created by Trea, Qwen3.6-Plus.
+```swift
+nonisolated enum EducationStage: String, CaseIterable, Identifiable, Codable, Sendable {
+    case primarySchool = "Primary School"
+    case middleSchool = "Middle School"
+    case highSchool = "High School"
+    case internationalHighSchool = "International High School"
+    case university = "University"
+    case graduate = "Graduate"
+}
+```
 
-Final Revision & Release Approver: Gao Chenkai
+### EducationCategory（枚举）
+
+教育体系的分类（国内 / 国际）。
+
+```swift
+nonisolated enum EducationCategory: String, CaseIterable, Codable, Sendable {
+    case domestic = "Domestic"
+    case international = "International"
+}
+```
+
+### SubjectConfig
+
+单科目配置信息，描述一个教育体系中的标准科目。
+
+```swift
+nonisolated struct SubjectConfig: Identifiable, Codable, Hashable, Sendable {
+    var id: String { name }
+    let name: String
+    let displayName: String
+    let fullScore: Double
+    let isRequired: Bool
+    let isElective: Bool
+    let category: String?
+
+    // 工厂方法
+    static func required(_ name: String, displayName: String,
+                         fullScore: Double, category: String? = nil)
+    static func elective(_ name: String, displayName: String,
+                         fullScore: Double, category: String? = nil)
+}
+```
+
+### EducationRegion
+
+代表一个地区的教育体系。
+
+```swift
+nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
+    var id: String { name }
+    let name: String
+    let displayName: String
+    let category: EducationCategory
+    let stage: EducationStage
+    let systemCode: String
+    let subjects: [SubjectConfig]
+    let notes: String
+}
+```
+
+### Subject
+
+用户科目列表，满分可自定义。
+
+```swift
+nonisolated struct Subject: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String
+    var displayName: String
+    var enabled: Bool
+    var fullScore: Double
+}
+```
+
+### Grade
+
+单条成绩记录。
+
+```swift
+nonisolated struct Grade: Identifiable, Codable {
+    var id = UUID()
+    var subject: String
+    var score: Double
+    var rawScore: Double?
+    var ranking: Int?
+    var importance: Int
+    var image: Data?
+    var imageFileName: String?
+    var date: Date
+    var examName: String
+    var fullScore: Double?
+
+    func scoreRate(subjectFullScore: Double = 100) -> Double
+}
+```
+
+### UserProfile（已扩展）
+
+用户资料，包含详细学术信息。
+
+```swift
+nonisolated struct UserProfile: Codable {
+    var username: String = "Student"
+    var realName: String = ""
+    var age: Int = 16
+    var gender: String = "Not Specified"
+    var educationLevel: String
+    var educationSystem: String
+    var region: String
+    var educationStage: String
+    var regionCode: String
+    var selectedSubjects: [Subject] = []
+    var theme: String = "Auto"
+    var avatarFileName: String?
+
+    var grade: String = ""
+    var className: String = ""
+    var schoolName: String = ""
+    var studentId: String = ""
+    var enrollmentYear: Int
+    var examYear: Int
+    var targetSchool: String = ""
+    var targetScore: Double = 0
+}
+```
+
+### MistakeNote
+
+单条错题笔记。
+
+```swift
+nonisolated struct MistakeNote: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var subject: String
+    var originalQuestion: String
+    var source: String
+    var date: Date
+    var errorReason: String
+    var wrongSolution: String
+    var correctSolution: String
+    var questionImages: [String]
+    var reasonImages: [String]
+    var wrongSolutionImages: [String]
+    var correctSolutionImages: [String]
+}
+```
+
+### Exam / comprehensiveExam
+
+```swift
+nonisolated struct Exam: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var subject: String
+    var examDate: Date
+    var importance: Int
+    var masteryDegree: Int
+    var notes: String
+}
+
+nonisolated struct comprehensiveExam: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var subject: [String]
+    var examDate: Date
+    var importance: Int
+    var masteryDegree: Int
+    var notes: String
+}
+```
+
+### AppPreferences
+
+```swift
+struct AppPreferences: Codable {
+    var appLanguage: String?
+    var colorScheme: ColorSchemeOption
+}
+
+enum ColorSchemeOption: String, CaseIterable, Codable {
+    case system, light, dark
+}
+```
+
+================================================================================
+
+## 管理器参考
+
+### 管理器索引表
+
++------------------------+-----------------------------------+--------------------+
+| 管理器                 | 主要职责                          | 关键 API           |
++------------------------+-----------------------------------+--------------------+
+| DataManager            | 中央状态管理 + 持久化             | asyncInit()        |
+|                        |                                   | saveProfile()      |
+|                        |                                   | saveGrades()       |
+|                        |                                   | fullScore()        |
+|                        |                                   | displayName()      |
+|                        |                                   | applySmartRec()    |
++------------------------+-----------------------------------+--------------------+
+| EducationConfig        | 教育体系静态配置                  | availableRegions() |
+|                        |                                   | defaultRegion()    |
+|                        |                                   | region(named:)     |
++------------------------+-----------------------------------+--------------------+
+| AppEnvironmentManager  | 语言 + 主题偏好                   | setLanguage()      |
+|                        |                                   | setColorScheme()   |
++------------------------+-----------------------------------+--------------------+
+| CalendarManager        | EventKit 日历集成                 | requestAccess()    |
+|                        |                                   | addExamToCalendar()|
++------------------------+-----------------------------------+--------------------+
+| OCRManager             | Vision 框架文字识别               | recognizeText()    |
++------------------------+-----------------------------------+--------------------+
+| ImageCache             | NSCache 缩略图缓存                | image()            |
+|                        |                                   | thumbnail()        |
+|                        |                                   | clear()            |
++------------------------+-----------------------------------+--------------------+
+| SubjectInfo            | 科目显示辅助                      | getMaxScore()      |
+|                        |                                   | SubjectDisplay     |
++------------------------+-----------------------------------+--------------------+
+| WidgetDataSyncManager  | App Group 小组件数据同步          | syncExamsToWidget()|
+|                        |                                   | loadWidgetData()   |
++------------------------+-----------------------------------+--------------------+
+
+### DataManager（中央状态管理器）
+
+`DataManager` 是中央状态管理器，通过 `ObservableObject` 隐式标记为 `@MainActor`。
+
+#### 已发布属性
+
++-------------------------+----------------------+--------------------------+
+| 属性                    | 类型                 | 说明                     |
++-------------------------+----------------------+--------------------------+
+| grades                  | [Grade]              | 成绩记录集合             |
+| subjects                | [Subject]            | 用户启用的科目           |
+| mistakeSets             | [MistakeNote]        | 错题笔记集合             |
+| examSets                | [Exam]               | 单科目考试集合           |
+| comprehensiveExamSets   | [comprehensiveExam]  | 多科目综合考试集合       |
+| profile                 | UserProfile          | 用户资料                 |
++-------------------------+----------------------+--------------------------+
+
+#### 关键方法
+
+```swift
+// 初始化
+func asyncInit() async
+private func initializeDefaultSubjects()
+
+// 科目辅助
+func fullScore(for subjectName: String) -> Double
+func displayName(for subjectName: String) -> String
+func applySmartSubjectRecommendation(stage: EducationStage, regionCode: String)
+
+// 头像管理
+func saveAvatar(_ data: Data) -> String?
+func loadAvatar() -> Data?
+func deleteAvatar(filename: String)
+
+// 图片管理
+func saveGradeImage(_ data: Data) -> String?
+func getImage(filename: String) -> UIImage?
+func deleteGradeImage(filename: String)
+
+// 持久化
+func saveProfile()
+func saveGrades()
+func saveSubjects()
+func saveExams()
+func saveComprehensiveExams()
+func saveMistakeSets()
+```
+
+### EducationConfig（教育体系配置）
+
+`EducationConfig` 是一个 `nonisolated` 枚举，提供对所有支持教育体系的静态访问。
+
+```swift
+// 按学段获取地区
+static func availableRegions(for stage: EducationStage) -> [EducationRegion]
+
+// 按分类筛选
+static func availableRegions(category: EducationCategory) -> [EducationRegion]
+
+// 按名称查找
+static func region(named name: String, stage: EducationStage) -> EducationRegion?
+
+// 学段默认地区
+static func defaultRegion(for stage: EducationStage) -> EducationRegion
+
+// 按 systemCode 查找
+static func region(systemCode: String) -> EducationRegion?
+```
+
+### AppEnvironmentManager（全局偏好）
+
+管理应用全局偏好（语言 + 主题）。
+
+```swift
+class AppEnvironmentManager: ObservableObject {
+    @Published var preferences: AppPreferences
+    var effectiveColorScheme: ColorScheme?
+    func setLanguage(_ language: String?)
+    func setColorScheme(_ scheme: ColorSchemeOption)
+}
+```
+
+### CalendarManager（日历集成）
+
+EventKit 集成，将考试添加到系统日历。
+
+```swift
+class CalendarManager {
+    static let shared = CalendarManager()
+    func requestAccess() async -> Bool
+    func addExamToCalendar(exam: Exam) async throws
+}
+```
+
+### OCRManager（文字识别）
+
+Vision 框架文字识别，用于错题照片。
+
+```swift
+class OCRManager {
+    func recognizeText(from image: UIImage) async throws -> String
+}
+```
+
+### ImageCache（图片缓存）
+
+`nonisolated` 类，提供 NSCache 缩略图缓存。
+
+```swift
+nonisolated class ImageCache {
+    static let shared = ImageCache()
+    func image(for filename: String) -> UIImage?
+    func thumbnail(for filename: String) -> UIImage?
+    func clear()
+}
+```
+
++ 缓存容量：最多 50 条
++ 最大尺寸：缩略图 300 像素
++ 线程安全：nonisolated，可在后台调用
+
+### SubjectInfo（科目信息）
+
+```swift
+nonisolated enum SubjectDisplay {
+    static func displayName(for name: String, custom: String? = nil) -> String
+}
+
+class SubjectInfo: ObservableObject {
+    func getMaxScore(level: String, subject: String) -> Double
+}
+```
+
+### WidgetDataSyncManager（小组件同步）
+
+通过 App Group 与小组件同步数据。
+
+```swift
+class WidgetDataSyncManager {
+    static let shared = WidgetDataSyncManager()
+    func syncExamsToWidget(_ exams: [Exam])
+    func loadWidgetData() -> ExamWidgetData?
+}
+```
+
+### 管理器协作流程图
+
+```
++-------------------------------------------------------------------------------+
+|                       管理器协作流程                                          |
++===============================================================================+
+|                                                                               |
+|  [视图层]                                                                     |
+|   HomeView  TrendsView  MistakeView  ExamView  SettingsView  AddGradeView    |
+|       |         |          |          |          |              |            |
+|       +---------+----------+----------+----------+--------------+            |
+|                                  |                                             |
+|                                  v                                             |
+|                       +-------------------------+                              |
+|                       |     DataManager         |                              |
+|                       |   （中央状态 + 持久化）   |                              |
+|                       +----+-------------+---+--+                              |
+|                            |             |   |                                 |
+|                            |             |   |                                 |
+|             +--------------+             |   +-------------+                   |
+|             |                            |                 |                   |
+|             v                            v                 v                   |
+|  +----------------------+   +----------------------+  +------------+          |
+|  |  EducationConfig     |   |  WidgetDataSyncMgr   |  | ImageCache |          |
+|  |  （静态配置，只读）    |   |   App Group 同步      |  | NSCache    |          |
+|  +----------------------+   +----------------------+  +------------+          |
+|                            |              |                                     |
+|                +-----------+              +-----------+                        |
+|                |                                      |                        |
+|                v                                      v                        |
+|      +-------------------+            +-------------------------+             |
+|      |  CalendarManager  |            |   StudyPulseWidget      |             |
+|      |  EventKit         |            |   （时间轴刷新）         |             |
+|      +-------------------+            +-------------------------+             |
+|                                                                               |
+|  [全局]                                                                       |
+|   +-------------------+      +-------------+      +-----------------+        |
+|   | AppEnvironmentMgr |      | OCRManager  |      | SubjectInfo     |        |
+|   | （语言 + 主题）     |      | Vision 框架  |      |（显示辅助）      |        |
+|   +-------------------+      +-------------+      +-----------------+        |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+================================================================================
+
+## 视图参考
+
+### 标签页结构
+
+```
++----------------------------------------------------------------------+
+|                      ContentView (TabView)                           |
+|                                                                      |
+|  +----------+  +----------+  +----------+  +----------+  +----------+ |
+|  |   主页    |  |   趋势    |  |   错题    |  |   考试    |  |   设置    | |
+|  | HomeView  |  |TrendsView|  |MistakeView|  | ExamView |  |Settings  | |
+|  +----------+  +----------+  +----------+  +----------+  +----------+ |
++----------------------------------------------------------------------+
+```
+
+### HomeView（仪表板主页）
+
++ 欢迎头部（按时段问候 + 头像）
++ 统计卡片：iPhone 2x2 网格（考试计数、成绩计数、错题计数、平均分）
++ iPad：4 个统计卡片在一行排列，呈现仪表板风格
++ 快捷操作按钮（添加成绩、新建考试、新建错题）
++ 即将到来的考试卡片（倒计时显示，iPad 上 2 列并排）
++ 每日激励语
++ 科目趋势图表（5 种选择策略）
++ 最近成绩列表
++ 智能学习建议
++ 整体外层容器 iPad 上 `frame(maxWidth: 1100)` 居中显示
++ 多个分区使用 `AdaptiveHStack` 实现 iPad 双列布局
+
+#### 图表选择策略
+
++----------------+--------------------------------------------+
+| 策略           | 说明                                       |
++----------------+--------------------------------------------+
+| Weakest        | 优先展示最低分科目                         |
+| Most Data      | 优先展示成绩数据最多的科目                 |
+| Recent         | 优先展示最近 30 天最活跃的科目             |
+| Improving      | 优先展示进步最大的科目                     |
+| Random         | 随机选择科目                               |
++----------------+--------------------------------------------+
+
+### TrendsView（趋势分析）
+
++ "需要引起重视的科目"提示（平均分 < 70 或下降 > 15 分）
++ 各科成绩卡片（SubjectScoreCard）
++ 分数模式 / 排名模式切换
++ 科目详情页（图表 + 统计 + 历史）
+
+### ExamView + ExamDetailView（考试）
+
++ 考试列表（按日期排序）
++ 考试详情页
+  + 倒计时显示
+  + 关联错题区域
+  + 日历集成按钮（添加到系统日历）
+  + 掌握度显示
+
+### MistakeView（错题本）
+
++ "建议复习的题目"区域（按优先级排序，可横向滑动）
++ 搜索功能（按标题 / 科目 / 内容搜索）
++ 卡片式列表（渐变 + 动画）
++ 点击查看详情（支持编辑、Markdown 预览、图片缩放）
+
+### AddGradeView（成绩录入表单）
+
++ 单科目或多科目输入
++ 每个科目自定义满分
++ 分数 / 卷面分 / 排名可选字段
++ 根据科目数自动调整高度
++ 图片附件支持
+
+### SettingsView + ProfileEditView + EditSubjectsView（设置）
+
++ 用户资料卡（头像+用户名+年龄/学段，点击头像打开选择器）
++ 编辑操作区（编辑资料 / 编辑科目，均为 Sheet 呈现）
++ 偏好设置（NavigationLink 进入 PreferencesView）
++ 学术信息（学校 / 年级·班级 / 教育体系 / 地区 / 目标分数 / 目标学校）
++ 数据管理（导出数据 / 导入数据，均为菜单式，支持成绩 / 错题 / 考试 CSV）
++ 关于（关于 StudyPulse / 版权与许可证 / 测试通知发送）
++ 使用 .insetGrouped 列表样式与统一的 infoRow 辅助视图
+
+### ProfileEditView（用户资料编辑）
++ 用户资料编辑（12+ 字段：用户名、真实姓名、年龄、性别、学段、地区、年级、班级、学校、学号、入学年份、考试年份、目标学校、目标分数）
++ 学段 + 地区选择器（菜单式）
++ 智能科目推荐按钮（一键应用）
+
+### PreferencesView（偏好设置）
+
++ 主题：浅色 / 深色 / 跟随系统
++ 语言：英文 / 简体中文 / 繁体中文 / 日语 / 韩语 / 跟随系统
+
+### 辅助视图组件
+
++ AvatarView：头像显示组件（可配置尺寸、边框）
++ AvatarPickerSheet：头像选择 Sheet（相册 / 拍照）
++ ScoreColor：分数颜色工具
++ SubjectScoreCard：可复用科目成绩卡片
+
+#### 分数颜色规则
+
++---------------------+-------------------+
+| 分数占满分的比例    | 颜色              |
++---------------------+-------------------+
+| 90% 或更高          | 绿色（优秀）      |
+| 75% - 89%           | 蓝色（良好）      |
+| 60% - 74%           | 橙色（合格）      |
+| 低于 60%            | 红色（需努力）    |
++---------------------+-------------------+
+
+```swift
+// 向后兼容（默认按 100 满分）
+func scoreColor(_ score: Double) -> Color
+
+// 按满分比例显示颜色
+func scoreColor(_ score: Double, fullScore: Double) -> Color
+
+// 格式化输出
+func scoreColorText(_ score: Double, fullScore: Double) -> String
+```
+
+### 模态表单汇总
+
++----------------------------+--------------------------------+------------+
+| 模态视图                   | 触发方式                       | 层级       |
++----------------------------+--------------------------------+------------+
+| AddGradeView               | 主页 -> 添加成绩按钮           | Sheet      |
+| NewExamSet                 | 考试页 -> 新建考试按钮         | Sheet      |
+| ProfileEditView            | 设置页 -> 编辑资料             | Sheet      |
+| EditSubjectsView           | 设置页 -> 编辑科目             | Sheet      |
+| MistakeDetailEditView      | 错题页 -> 点击/新建错题        | Sheet      |
+| AvatarPickerSheet          | 设置页（头像卡）-> 头像选择    | Sheet      |
+| PreferencesView            | 设置页 -> 偏好设置             | Navigation |
+| AboutView / CopyrightView  | 设置页 -> 关于/版权与许可证    | Sheet      |
+| ExamDetailView             | 考试页 -> 点击考试条目         | Navigation |
++----------------------------+--------------------------------+------------+
+
+================================================================================
+
+## 教育系统
+
+### 教育系统分类树
+
+```
+EducationConfig（教育体系配置）
+|
++-- 国内
+|   |
+|   +-- 中国
+|   |   +-- 中国大陆标准版
+|   |   |   +-- 小学
+|   |   |   +-- 初中
+|   |   |   +-- 高中
+|   |   |
+|   |   +-- 浙江
+|   |   |   +-- 初中
+|   |   |   +-- 高中 3+3
+|   |   |
+|   |   +-- 上海
+|   |   |   +-- 初中
+|   |   |   +-- 高中 3+3
+|   |   |
+|   |   +-- 台湾
+|   |   |   +-- 初中
+|   |   |   +-- 学测
+|   |   |
+|   |   +-- 香港
+|   |       +-- DSE
+|   |
+|   +-- 新加坡
+|       +-- O-Level
+|
++-- 国际
+    |
+    +-- 英国
+    |   +-- IGCSE
+    |   +-- A-Level
+    |
+    +-- IB
+    |   +-- Diploma Programme (DP)
+    |
+    +-- 美国
+    |   +-- AP (Advanced Placement)
+    |   +-- SAT (Scholastic Assessment Test)
+    |   +-- ACT (American College Testing)
+    |
+    +-- 研究生与语言考试
+        +-- GRE (Graduate Record Examination)
+        +-- GMAT (Graduate Management Admission Test)
+        +-- TOEFL (Test of English as a Foreign Language)
+        +-- IELTS (International English Language Testing System)
+```
+
+### 覆盖矩阵表
+
++----------------+------+------+--------------+----------+------+--------+
+| 地区           | 小学 | 初中 | 高中         | 国际高中 | 大学 | 研究生 |
++----------------+------+------+--------------+----------+------+--------+
+| 中国大陆       |  是  |  是  | 是           |    -     |  -   |   -    |
+| 浙江           |  -   |  是  | 是 (3+3)     |    -     |  -   |   -    |
+| 上海           |  -   |  是  | 是 (3+3)     |    -     |  -   |   -    |
+| 台湾           |  -   |  是  | 是 (学测)    |    -     |  -   |   -    |
+| 香港           |  -   |  -   | 是 (DSE)     |    -     |  -   |   -    |
+| 新加坡         |  -   |  是  | 是 (O-Level) |    是    |  -   |   -    |
+| UK IGCSE       |  -   |  是  | -            |    是    |  -   |   -    |
+| UK A-Level     |  -   |  -   | 是           |    是    |  -   |   -    |
+| IB Diploma     |  -   |  -   | 是           |    是    |  -   |   -    |
+| US AP          |  -   |  -   | 是           |    是    |  -   |   -    |
+| US SAT         |  -   |  -   | -            |    -     |  是  |   -    |
+| US ACT         |  -   |  -   | -            |    -     |  是  |   -    |
+| GRE / GMAT     |  -   |  -   | -            |    -     |  -   |   是   |
+| TOEFL / IELTS  |  -   |  -   | -            |    -     |  -   |   是   |
++----------------+------+------+--------------+----------+------+--------+
+
+### 评分制参考表
+
++-----------------+----------------+---------------------------------+
+| 体系            | 评分制         | 示例                            |
++-----------------+----------------+---------------------------------+
+| 中国大陆 高中   | 100 / 150      | 语文 150，物理 100              |
+| 浙江 高中       | 100（赋分）    | 全部科目 100 满分               |
+| 香港 DSE        | 1-7 (5**=7)    | 全部科目 7 满分                 |
+| 台湾 学测       | 100            | 数学 A / 数学 B 各 100          |
+| UK A-Level      | 100            | A* = 90 分以上                  |
+| IB DP           | 1-7            | 6 科 + TOK + EE = 45 总分       |
+| US AP           | 1-5            | 5 = 满分                        |
+| US SAT          | 200-800        | 1600 总分                       |
+| US ACT          | 1-36           | 36 = 满分                       |
+| GRE             | 130-170        | 340 总分                        |
+| TOEFL           | 0-120          | -                               |
+| IELTS           | 0-9            | -                               |
++-----------------+----------------+---------------------------------+
+
+### 特色体系详细说明
+
+#### 浙江初中
+
++ 合并科目：科学（160 分满分）、历史与社会（100 分满分）
++ 语文、数学、英语各 120 分
+
+#### 台湾学测
+
++ 数学 A（理工科组）
++ 数学 B（文商科组）
++ 两份不同试卷，科目独立勾选
+
+#### IB Diploma
+
++ 6 个 Group：母语 / 外语 / 人文社会 / 实验科学 / 数学 / 艺术
++ 3 门 HL + 3 门 SL
++ 总分 45：6 科（42 分）+ TOK（1 分）+ EE（1 分）+ CAS（0 分）
+
+#### UK A-Level
+
++ 选 3-4 门课
++ 各考试局通用（CIE / Edexcel / AQA / OCR）
++ A* = 90 分以上
+
+#### US AP
+
++ College Board 课程
++ 5 分制
++ 35+ 门课可选
+
+================================================================================
+
+## 小组件扩展
+
+### 小组件架构图
+
+```
++-------------------------------------------------------------------------------+
+|                      StudyPulseWidget - 小组件架构图                          |
++===============================================================================+
+|                                                                               |
+|  +---主应用（StudyPulse）---------------------------------------------------+  |
+|  |  +-----------------------------+                                          |  |
+|  |  |     DataManager             |                                          |  |
+|  |  |  - examSets                 |                                          |  |
+|  |  |  - comprehensiveExamSets    |                                          |  |
+|  |  +-------------+---------------+                                          |  |
+|  |                |                                                          |  |
+|  |                v                                                          |  |
+|  |  +-----------------------------+                                          |  |
+|  |  |  WidgetDataSyncManager      |                                          |  |
+|  |  |  - syncExamsToWidget()       |                                          |  |
+|  |  +-------------+---------------+                                          |  |
+|  |                |                                                          |  |
+|  +----------------+---------------------------------------------------------+  |
+|                   |                                                           |
+|                   |   App Group 容器                                          |
+|                   |   (group.Gao-Chenkai.StudyPulse)                          |
+|                   |                                                           |
+|  +----------------+---------------------------------------------------------+  |
+|  |                v                                                          |  |
+|  |  +-----------------------------+     +-----------------------------+     |  |
+|  |  |   ExamWidgetData            |     |                             |     |  |
+|  |  |  （共享数据模型）            |     |   ExamWidgetProvider        |     |  |
+|  |  +-------------+---------------+     |   getTimeline()            |     |  |
+|  |                |                     |   placeholder()            |     |  |
+|  |                v                     +-------------+--------------+     |  |
+|  |  +-----------------------------+                   |                    |  |
+|  |  |   ExamWidgetEntry           |                   v                    |  |
+|  |  |  （时间轴条目模型）          |     +-----------------------------+     |  |
+|  |  +-----------------------------+     |   ExamWidgetViews           |     |  |
+|  |                                      |  - Small Widget View        |     |  |
+|  |                                      |  - Medium Widget View       |     |  |
+|  |                                      |  - Large Widget View        |     |  |
+|  |                                      +-----------------------------+     |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  注:                                                                          |
+|  数据流向: DataManager -> WidgetDataSyncManager -> App Group 文件             |
+|           -> ExamWidgetProvider -> ExamWidgetViews                            |
+|  刷新时机: 成绩/考试变更时自动刷新时间轴                                       |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+### 小组件文件清单
+
++-------------------------------+----------------------------------+
+| 文件                          | 说明                             |
++-------------------------------+----------------------------------+
+| ExamWidget.swift              | 小组件定义（Widget 协议）        |
+| ExamWidgetData.swift          | 共享数据模型（App Group）        |
+| ExamWidgetEntry.swift         | 时间轴条目（TimelineEntry）      |
+| ExamWidgetProvider.swift      | 时间轴提供者（TimelineProvider） |
+| ExamWidgetViews.swift         | 小组件 UI 视图（小/中/大）       |
+| StudyPulseWidgetBundle.swift  | 小组件 Bundle                    |
++-------------------------------+----------------------------------+
+
+### 数据共享机制
+
++ 使用 App Group: `group.Gao-Chenkai.StudyPulse`
++ 由 `WidgetDataSyncManager` 处理同步
++ 成绩 / 考试变更时刷新时间轴
++ 数据格式：JSON（通过 `ExamWidgetData` 模型编码）
+
+================================================================================
+
+## 通知系统
+
+### 通知调度流程图
+
+```
++-------------------------------------------------------------------------------+
+|                        通知调度流程图                                          |
++===============================================================================+
+|                                                                               |
+|  [A] 触发条件：用户创建/编辑考试并开启日历通知                                  |
+|  +-------------------------------------------------------------------------+  |
+|  |                                                                         |  |
+|  |  NewExamSetView / ExamDetailView                                        |  |
+|  |  +---开关: "添加到日历"（默认开启）                                      |  |
+|  |  +---开关: "考试提醒"（默认开启）                                         |  |
+|  |                        |                                                 |  |
+|  |                        v                                                 |  |
+|  |  ExamPrepareNotifications.scheduleExamPrepareNotification(exam: Exam)     |  |
+|  |   |                                                                      |  |
+|  |   +-- 请求 UNAuthorization (.alert, .sound, .badge)                      |  |
+|  |   +-- 创建 UNMutableNotificationContent                                   |  |
+|  |   |     +-- title: "明天考试：{exam.name}"                               |  |
+|  |   |     +-- body: "别忘了复习！"                                          |  |
+|  |   |     +-- sound: .default                                              |  |
+|  |   +-- 计算触发日期 (examDate - 1 天)                                      |  |
+|  |   +-- 创建 UNCalendarNotificationTrigger                                  |  |
+|  |   +-- 创建 UNNotificationRequest (id: "exam_{exam.id}")                  |  |
+|  |   +-- UNUserNotificationCenter.add(request)                              |  |
+|  |                                                                           |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  [B] 通知生命周期                                                            |
+|  +-------------------------------------------------------------------------+  |
+|  |                                                                         |  |
+|  |  创建考试  ---->  调度通知                                               |  |
+|  |                                                                         |  |
+|  |  编辑考试（日期变更）----> 取消旧通知 ----> 创建新通知                    |  |
+|  |                                                                         |  |
+|  |  删除考试  ---->  取消通知（按 id）                                       |  |
+|  |                                                                         |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+================================================================================
+
+## OCR 系统
+
+### OCR 处理管线图
+
+```
++-------------------------------------------------------------------------------+
+|                        OCR 处理管线图                                          |
++===============================================================================+
+|                                                                               |
+|  触发: 在 MistakeDetailEditView 中点击 "OCR" 按钮                              |
+|                                                                               |
+|  [第一步] 检查图片可用性                                                      |
+|  +-------------------------------------------------------------------------+  |
+|  |                                                                         |  |
+|  |  + 当前编辑区域有图片数组                                                |  |
+|  |  + 获取最后上传的图片文件名                                              |  |
+|  |  + 从 ~/Documents/images/{filename} 加载图片                            |  |
+|  |  + 如果没有图片 -> 显示提示 "没有可识别的图片"                            |  |
+|  |                                                                         |  |
+|  +-------------------------------+-----------------------------------------+  |
+|                                  |                                            |
+|                                  v                                            |
+|  [第二步] Vision 框架处理                                                    |
+|  +-------------------------------------------------------------------------+  |
+|  |                                                                         |  |
+|  |  + 创建 VNImageRequestHandler(cgImage: options:)                        |  |
+|  |  + 创建 VNRecognizeTextRequest                                          |  |
+|  |  |   +-- recognitionLevel: .accurate （较慢，结果更好）                 |  |
+|  |  |   +-- usesLanguageCorrection: true                                  |  |
+|  |  |   +-- revision: VNRecognizeTextRequestRevision3                     |  |
+|  |  + 执行请求 -> 获取 VNRecognizedTextObservation[]                       |  |
+|  |  + 从每个 observation 提取 topCandidates(1)                            |  |
+|  |  + 用换行符连接所有字符串                                                |  |
+|  |                                                                         |  |
+|  +-------------------------------+-----------------------------------------+  |
+|                                  |                                            |
+|                                  v                                            |
+|  [第三步] 结果展示                                                            |
+|  +-------------------------------------------------------------------------+  |
+|  |                                                                         |  |
+|  |  + 识别到文字 -> 插入当前 TextEditor 区域                                |  |
+|  |    （原题 / 错因 / 错误解法 / 正确解法）                                 |  |
+|  |  + 没有文字 -> 显示提示 "图片中未检测到文字"                              |  |
+|  |  + 错误处理 -> 显示错误提示                                              |  |
+|  |                                                                         |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
+|  Vision 框架详情:                                                             |
+|  +-------------------------------------------------------------------------+  |
+|  |  + 支持语言: 中文（简/繁）、英文、混合                                    |  |
+|  |  + 异步模式: await handler.perform([request])                           |  |
+|  |  + 在后台线程运行（不阻塞 UI）                                           |  |
+|  |  + 精度选项: .accurate 优于 .fast（速度与质量权衡）                      |  |
+|  |  + 语言校正: 提升常见词识别效果                                          |  |
+|  +-------------------------------------------------------------------------+  |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+================================================================================
+
+## 图片缓存系统
+
+### 图片缓存架构图
+
+```
++-------------------------------------------------------------------------------+
+|                        图片缓存系统架构图                                      |
++===============================================================================+
+|                                                                               |
+|  [请求源]                                                                     |
+|   HomeView  TrendsView  MistakeView  ProfileEditView                         |
+|       |          |          |             |                                   |
+|       +----------+----------+-------------+                                   |
+|                    |                                                           |
+|                    v                                                           |
+|   +----------------+---------------+                                           |
+|   |     ImageCache（单例）          |                                           |
+|   |  nonisolated class              |                                           |
+|   |                                  |                                           |
+|   |  + image(for filename) -> UIImage? （检查缓存 -> 从磁盘加载）           |
+|   |  + thumbnail(for filename) -> UIImage? （缓存缩略图，最大 300 像素）     |
+|   |  + clear() -> Void （清空所有缓存）                                     |
+|   |                                  |                                           |
+|   +---+-----+------------------------+                                           |
+|       |     |                                                                    |
+|       |     |    [内部实现]                                                       |
+|       |     +--> NSCache（内存缓存，最多 50 条）                                 |
+|       |          |                                                                |
+|       |          +-- Key: filename (String)                                       |
+|       |          +-- Value: UIImage（缩略图）                                     |
+|       |                                                                          |
+|       v                                                                          |
+|   +----------------------------------------------------------------------+      |
+|   |   磁盘存储（~/Documents/images/）                                      |      |
+|   |                                                                       |      |
+|   |  avatar_{uuid}.jpg        用户头像文件                                 |      |
+|   |  grade_{uuid}.jpg         成绩附件图片                                 |      |
+|   |  question_{uuid}.jpg      错题原题图片                                 |      |
+|   |  reason_{uuid}.jpg        错题错因图片                                 |      |
+|   |  wrong_{uuid}.jpg         错题错误解法图片                             |      |
+|   |  correct_{uuid}.jpg       错题正确解法图片                             |      |
+|   |                                                                       |      |
+|   |  读取: DataFileIO.read(from:)                                         |      |
+|   |  写入: DataFileIO.write(data:to:) （原子写入）                         |      |
+|   +-----------------------------------------------------------------------+      |
+|                                                                               |
+|  数据流向:                                                                    |
+|    请求 -> ImageCache.image()                                                |
+|      |-- 在 NSCache 中查找（命中: 立即返回）                                  |
+|      |-- 未命中 -> 从 ~/Documents/images/ 加载 -> 缓存 -> 返回                |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+================================================================================
+
+## CSV 导出功能
+
+### CSV 导出流程图
+
+```
++-------------------------------------------------------------------------------+
+|                        CSV 导出流程图                                          |
++===============================================================================+
+|                                                                               |
+|  [触发] 用户在设置页或统计页点击 "导出" 按钮                                    |
+|                                                                               |
+|  +-- 选择导出范围（成绩 / 错题 / 考试 / 全部）                                  |
+|  |                                                                             |
+|  v                                                                             |
+|  +-- DataManager 读取数据                                                       |
+|  |   grades / mistakeSets / examSets / comprehensiveExamSets                  |
+|  |                                                                             |
+|  v                                                                             |
+|  +-- 构建 CSV 行（逐模型转换）                                                 |
+|  |                                                                             |
+|  |   [成绩记录 Grade]                                                         |
+|  |   列: 日期 | 科目 | 分数 | 满分 | 排名 | 考试名称 | 重要性 | 备注            |
+|  |                                                                             |
+|  |   [错题笔记 MistakeNote]                                                   |
+|  |   列: 日期 | 科目 | 标题 | 原题 | 错因 | 错误解法 | 正确解法 | 来源          |
+|  |                                                                             |
+|  |   [考试 Exam]                                                              |
+|  |   列: 日期 | 名称 | 科目 | 重要性 | 掌握度 | 备注                           |
+|  |                                                                             |
+|  v                                                                             |
+|  +-- CSV 格式处理                                                             |
+|  |   + 分隔符: 逗号 (,)                                                       |
+|  |   + 字符串字段: 包裹在双引号中 (")                                         |
+|  |   + 换行符: \n                                                             |
+|  |   + 编码: UTF-8                                                            |
+|  |   + 表头: 第一行为字段名称                                                  |
+|  |                                                                             |
+|  v                                                                             |
+|  +-- 写入临时文件                                                              |
+|  |   ~/Documents/temp_{timestamp}.csv                                         |
+|  |                                                                             |
+|  v                                                                             |
+|  +-- UIActivityViewController 分享（可选）                                     |
+|      允许用户保存到文件 / 分享到其他应用                                       |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+### CSV 字段格式约定
+
++----------------+------------------+------------------------------------------+
+| 数据类型       | CSV 格式         | 示例                                     |
++----------------+------------------+------------------------------------------+
+| 日期 Date      | ISO 8601         | 2026-06-11                               |
+| 字符串         | 双引号包裹       | "数学"                                   |
+| 数字           | 直接写入         | 92.5                                     |
+| 布尔/枚举      | rawValue         | high / required                         |
+| UUID           | uuidString       | 550e8400-e29b-41d4-a716-446655440000     |
+| 多行文本       | 引号包裹 + \n    | "第一行\n第二行"                         |
++----------------+------------------+------------------------------------------+
+
+================================================================================
+
+## iPad 适配
+
+应用是一个通用二进制目标，同时支持 iPhone 与 iPad
+（`TARGETED_DEVICE_FAMILY = "1,2"`）。iPhone 上的布局完全保持原样；iPad 上则
+会获得原生侧边栏 Tab Bar 和多列、限宽的布局。
+
+### 总体策略
+
+| 关注点         | iPhone 行为              | iPad 行为                                  |
+|----------------|--------------------------|--------------------------------------------|
+| Tab Bar        | 底部 5 个 Tab（经典）    | 左侧侧边栏（`.tabViewStyle(.sidebarAdaptable)`） |
+| 内容宽度       | 满屏                     | 居中、限制最大宽度                          |
+| 分区布局       | 竖直堆叠（VStack）        | 并排显示（HStack），通过 `AdaptiveHStack`  |
+| 统计卡片       | 2x2 网格                 | 4 个一行                                   |
+| 表单 / 列表    | 满宽                     | 居中、窄列                                 |
+
+### 自适应辅助组件（`Views/Helpers/iPadLayout.swift`）
+
+```swift
+// 1) 内容最大宽度
+struct AdaptiveContentWidth: ViewModifier {  // var maxWidth: CGFloat = 720
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: sizeClass == .regular ? maxWidth : .infinity)
+            .frame(maxWidth: .infinity)        // 居中
+    }
+}
+extension View {
+    func adaptiveMaxWidth(_ maxWidth: CGFloat = 720) -> some View
+}
+
+// 2) 自适应网格列数（iPhone 1 列，iPad N 列）
+struct AdaptiveGridColumns {
+    init(compact: Int = 1, regular: Int = 2, spacing: CGFloat = 20)
+}
+
+// 3) HStack / VStack 自动切换
+struct AdaptiveHStack<Content: View>: View {
+    init(spacing: CGFloat = 20, @ViewBuilder content: @escaping () -> Content)
+    // sizeClass == .regular -> HStack
+    // else                -> VStack
+}
+
+// 4) 卡片外层 padding（iPhone 横向 20pt，iPad 横向 0）
+struct AdaptiveCardPadding: ViewModifier
+extension View {
+    func adaptiveCardPadding() -> some View
+}
+```
+
+所有辅助组件均通过 `@Environment` 在 `body` 内读取 `horizontalSizeClass`；
+该环境值在普通的 View extension property 中无法访问。
+
+### 文件级改动清单
+
+| 文件 | iPad 适配内容 |
+|------|---------------|
+| `ContentView.swift` | `.tabViewStyle(.sidebarAdaptable)` 显示 iPad 侧边栏 |
+| `HomeView.swift` | `frame(maxWidth: 1100)` 容器 + `AdaptiveHStack` 双列分区 + 4 列 `MainStatsCard` |
+| `SettingsView.swift` | `.adaptiveMaxWidth(720)` 应用于 List |
+| `PreferencesView.swift` | `.adaptiveMaxWidth(640)` 应用于 Form |
+| `TrendsView.swift` | `.adaptiveMaxWidth(900)` 应用于 ScrollView |
+| `MistakeView.swift` | `.adaptiveMaxWidth(900)` 应用于 `MistakeView` + `SubjectMistakesView` |
+| `ExamView.swift` | `.adaptiveMaxWidth(800)` 应用于 List |
+| `Helpers/iPadLayout.swift` | **新增** -- 全部自适应辅助组件 |
+
+### 最大宽度参考表
+
+| 视图 | iPad 最大宽度 | 说明 |
+|------|---------------|------|
+| `SettingsView` | 720 | 单列表单在 600-720pt 范围内可读性最佳 |
+| `PreferencesView` | 640 | 紧凑型偏好面板 |
+| `ExamView` | 800 | 倒计时 + 备注需要稍宽一些 |
+| `TrendsView` | 900 | 图表需要更多水平空间 |
+| `MistakeView` | 900 | 长 Markdown 内容适合更宽 |
+| `HomeView` | 1100 | 仪表板 / 多列布局可以更宽 |
+
+### HomeView iPad 多列布局示意
+
+```
++---------------------------------------------------+
+|  欢迎头部（1100 最大宽度内铺满）                  |
++-----------------+---------------------------------+
+|  Stat 1  Stat 2  Stat 3  Stat 4   （一行）         |
++-----------------+---------------------------------+
+|  快捷操作       |  即将到来的考试   （双列）       |
+|-----------------+---------------------------------|
+|  图表 / 趋势    |  学习建议         （双列）       |
++-----------------+---------------------------------+
+|  每日激励语 / 最近成绩（满宽）                    |
++---------------------------------------------------+
+```
+
+### 设计原则
+
+1. **不破坏 iPhone 布局** -- 所有改动均由 `horizontalSizeClass` 或
+   `UIDevice.current.userInterfaceIdiom` 控制。
+2. **居中而非拉伸** -- iPad 上内容以最大宽度居中显示，保持可读性。
+3. **原生 iPad 体验** -- 侧边栏 Tab Bar + 多列仪表板。
+4. **单一来源** -- 所有自适应逻辑集中在 `iPadLayout.swift`，
+   业务视图只需调用对应辅助组件。
+
+================================================================================
+
+## 性能模式
+
+### 性能优化措施
+
++----------------+----------------------------------------------------------+
+| 优化项         | 说明                                                     |
++----------------+----------------------------------------------------------+
+| 异步数据加载   | asyncInit() 在 .task 修饰符中执行，不阻塞主线程         |
+| 图片缓存       | ImageCache（基于 NSCache，最多缓存 50 条缩略图）         |
+| 文件存储图片   | 成绩和头像图片存储为独立文件，不嵌入 JSON                |
+| 计算属性       | daysRemaining 等使用计算属性，避免 @State + onAppear    |
+| Sendable 模型  | 所有模型标记为 nonisolated + Sendable，支持 Swift 6 并发 |
+| 工厂方法       | SubjectConfig.required() / .elective() 简洁构造          |
+| 后台线程写入   | DataFileIO 为 nonisolated 枚举，安全在后台执行           |
+| 原子文件写入   | write() 使用临时文件 + 重命名，避免数据损坏              |
+| 懒加载列表     | 长列表（错题 / 成绩 / 考试）使用 LazyVStack / List       |
+| 缩略图缓存     | 图片缩略图最大 300 像素，减少内存占用                    |
++----------------+----------------------------------------------------------+
+
+### 主线程与后台线程分工
+
+```
++-------------------------------------------------------------------------------+
+|                      主线程 / 后台线程 分工图                                 |
++===============================================================================+
+|                                                                               |
+|  [主线程（MainActor）]                                                        |
+|  +-----------------------------+                                              |
+|  |  SwiftUI 视图渲染           |                                              |
+|  |  @Published 属性更新        |                                              |
+|  |  DataManager.save*()        |                                              |
+|  |  动画和交互                 |                                              |
+|  +-----------------------------+                                              |
+|                                                                               |
+|  [后台线程（非 MainActor）]                                                   |
+|  +-----------------------------+                                              |
+|  |  asyncInit() 加载 JSON      |                                              |
+|  |  OCRManager.recognizeText() |                                              |
+|  |  CalendarManager 请求       |                                              |
+|  |  DataFileIO 读/写           |                                              |
+|  |  ImageCache 图片加载        |                                              |
+|  |  Widget 数据同步            |                                              |
+|  +-----------------------------+                                              |
+|                                                                               |
+|  数据流向:                                                                    |
+|    后台（async/await） -> 主线程（@MainActor 更新 @Published）                 |
+|                         -> SwiftUI 自动刷新视图                               |
+|                                                                               |
++-------------------------------------------------------------------------------+
+```
+
+================================================================================
+
+## 隐私权限
+
+### 权限清单表
+
++----------------+----------------------------------------------------+
+| 权限           | 用途                                                |
++----------------+----------------------------------------------------+
+| 相机           | 拍照拍摄错题照片 / 头像照片                         |
+| 相册           | 访问相册选择错题照片 / 头像                         |
+| 日历           | 将考试添加到系统日历（EventKit）                    |
+| 通知           | 考试提醒（UNUserNotificationCenter）                |
++----------------+----------------------------------------------------+
+
+### 权限声明位置
+
++----------------+----------------------------------+
+| 权限           | Info.plist / PrivacyInfo 键       |
++----------------+----------------------------------+
+| 相机           | NSCameraUsageDescription         |
+| 相册           | NSPhotoLibraryUsageDescription   |
+| 相册（写入）   | NSPhotoLibraryAddUsageDescription|
+| 日历           | NSCalendarsUsageDescription      |
+| 日历（写入）   | NSCalendarsFullAccessUsageDescription |
+| 通知           | UNUserNotificationCenter（请求）|
++----------------+----------------------------------+
+
+================================================================================
+
+## 构建命令
+
+### Xcode 构建
+
+```bash
+# 在 Xcode 中打开项目
+open StudyPulse.xcodeproj
+
+# 解析 Swift 包
+# Xcode -> File -> Packages -> Resolve Package Versions
+
+# 构建
+# Cmd + B
+
+# 在模拟器或设备上运行
+# Cmd + R
+```
+
+### 命令行构建（可选）
+
+```bash
+# 使用 xcodebuild 构建（模拟器）
+xcodebuild -project StudyPulse.xcodeproj \
+           -scheme StudyPulse \
+           -sdk iphonesimulator \
+           -destination 'platform=iOS Simulator,name=iPhone 15' \
+           build
+
+# 使用 xcodebuild 构建（真机）
+xcodebuild -project StudyPulse.xcodeproj \
+           -scheme StudyPulse \
+           -sdk iphoneos \
+           build
+
+# 清理构建
+xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse clean
+```
+
+### 常见构建目标
+
++----------------+---------------------------------------------------+
+| 目标           | 说明                                               |
++----------------+---------------------------------------------------+
+| StudyPulse     | 主 iOS 应用（iOS 18.6+）                          |
+| StudyPulseWidget | 小组件扩展目标（与主应用共享 App Group）         |
++----------------+---------------------------------------------------+
+
+================================================================================
+
+## 编码标准与约定
+
+### Swift 代码规范
+
++---------------------+---------------------------------------------------+
+| 项目                | 约定                                              |
++---------------------+---------------------------------------------------+
+| 缩进                | 4 空格（不使用 Tab）                              |
+| 类名 / 结构体名     | UpperCamelCase（首字母大写）                      |
+| 方法 / 变量名       | lowerCamelCase（首字母小写）                      |
+| 常量名              | lowerCamelCase（文件级或 static let）             |
+| 文件名              | UpperCamelCase.swift（与主要类型同名）            |
+| 访问控制            | 默认 internal，必要时使用 public / private        |
+| 非隔离              | 纯函数或线程安全类型标记为 nonisolated            |
+| 并发安全            | 新类型应符合 Sendable 协议                        |
+| 强制解包            | 避免使用 ! ；优先 if let / guard let              |
+| 注释                | 公共 API 使用 Markdown 文档注释                   |
+| MARK 标记           | 使用 MARK: - / MARK: 分组代码                     |
++---------------------+---------------------------------------------------+
+
+### 模型设计原则
+
+1. Codable 优先：所有持久化模型必须符合 Codable
+2. Identifiable：列表呈现的模型必须符合 Identifiable
+3. Hashable：用于集合和 SwiftUI 动画的模型应符合 Hashable
+4. Sendable：Swift 6 并发兼容，跨线程安全
+5. nonisolated：纯数据模型在非隔离上下文中可用
+6. 可选字段合理使用：避免滥用 ! 强制解包
+
+### 管理器设计原则
+
+1. 单例模式：辅助管理器（CalendarManager、OCRManager、ImageCache、WidgetDataSyncManager）使用 static let shared
+2. 中央状态：DataManager 作为唯一的 @EnvironmentObject
+3. async/await：所有耗时操作使用 Swift 并发
+4. @MainActor：UI 更新相关的管理器方法标记为主演员
+5. 错误处理：throwing 方法向上传递错误，由视图层显示
+
+### 视图设计原则
+
+1. 轻量级视图：视图仅呈现状态，不包含业务逻辑
+2. @EnvironmentObject：通过 DataManager 访问共享状态
+3. 可复用组件：通用 UI 提取为子视图（SubjectScoreCard、AvatarView 等）
+4. 动画与渐变：卡片使用渐变描边，列表使用进场动画
+5. NavigationStack：使用现代导航 API
+6. .task 修饰符：异步加载数据，不使用 onAppear + @State
+
+### 本地化约定
+
++-------------------+------------------------------------------------+
+| 语言代码          | 说明                                           |
++-------------------+------------------------------------------------+
+| en                | English（英文，默认）                          |
+| zh-Hans           | 简体中文                                       |
+| zh-Hant           | 繁体中文                                       |
+| ja                | 日本語                                         |
+| ko                | 한국어                                         |
+| nil               | 跟随系统                                       |
++-------------------+------------------------------------------------+
+
++ 字符串全部通过 NSLocalizedString() 访问
++ 新增文案需在所有 .lproj 中同步翻译
++ 键名格式: "section_description"（小写 + 下划线 + 描述性）
+
+### 教育体系扩展指南
+
+添加一个新的教育体系需要以下步骤：
+
+1. 确定教育阶段（EducationStage）和分类（EducationCategory）
+2. 设计 SubjectConfig 数组（required + elective 工厂方法）
+3. 在 EducationConfig 中添加 EducationRegion 实例
+4. 实现 availableRegions(for:) 和 defaultRegion(for:) 覆盖
+5. 在数据模型参考和维基文档中添加说明
+6. 更新覆盖矩阵表和评分制参考表
+
+================================================================================
+
+## 变更日志
+
+### v2026.06.13 - iPad 适配
+
+- 项目正式支持 iPad（`TARGETED_DEVICE_FAMILY = "1,2"`）
+- 新增 `Views/Helpers/iPadLayout.swift`，提供以下自适应辅助组件：
+  - `adaptiveMaxWidth(_:)` 修饰符：iPad 上居中并限制最大宽度
+  - `AdaptiveHStack`：iPad 上 HStack，iPhone 上 VStack
+  - `AdaptiveGridColumns`：按设备形态切换列数
+  - `adaptiveCardPadding()`：统一 iPhone/iPad 卡片外边距
+- `ContentView` 使用 `.tabViewStyle(.sidebarAdaptable)`（iOS 18+），
+  iPad 自动获得原生侧边栏 Tab Bar
+- `HomeView`：
+  - iPad 上外层容器 `frame(maxWidth: 1100)` 居中
+  - `MainStatsCard` 在 iPad 上 4 个统计卡片排成一行（iPhone 为 2x2 网格）
+  - 欢迎头部 / 快捷操作 / 考试 / 图表等分区使用 `AdaptiveHStack` 实现双列布局
+- `SettingsView`（720）、`PreferencesView`（640）、`TrendsView`（900）、
+  `MistakeView`（900）、`ExamView`（800）均使用 `.adaptiveMaxWidth` 保持
+  iPad 上表单 / 列表内容居中且可读
+- iPhone 布局完全保持原样；所有 iPad 行为均由
+  `horizontalSizeClass == .regular` 或 `UIDevice.current.userInterfaceIdiom` 控制
+- 在 iPad Pro 11-inch (M5) 模拟器与 iPhone 模拟器上构建通过，无警告
+
+================================================================================
+
+## Git 提交约定
+
+```
+<类型>: <简短描述>
+
+<详细描述（可选）>
+```
+
++ 类型: feat（新功能）、fix（修复）、docs（文档）、style（格式）、refactor（重构）、test（测试）、chore（构建/工具）
++ 简短描述: 英文或中文均可，不超过 72 字符

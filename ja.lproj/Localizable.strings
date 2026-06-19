@@ -124,3 +124,174 @@
 "Art" = "美術";
 "Music" = "音楽";
 "PE & Health" = "体育と健康";
+
+// General UI
+"N/A" = "なし";
+"Name" = "名前";
+"Today" = "今日";
+"Tomorrow" = "明日";
+"%d days left" = "残り %d 日";
+"%d records" = "合計 %d 件";
+"%d / 5" = "%d / 5";
+"Raw Score" = "素点";
+"Time Range" = "期間";
+"All" = "すべて";
+"3 Months" = "3 か月";
+"6 Months" = "6 か月";
+"1 Year" = "1 年";
+"Rank: %d" = "順位：%d";
+"No data available" = "データなし";
+"Read more" = "続きを読む";
+"Tap below to change your avatar" = "下をタップしてアイコンを変更";
+
+// HomeView.swift - Additional
+"Ready to study!" = "勉強の準備完了！";
+"Average" = "平均";
+"Total Grades" = "成績件数";
+"Upcoming" = "近日";
+"Quick Actions" = "クイック操作";
+"Add Grade" = "成績を追加";
+"New Exam" = "試験を追加";
+"New Mistake" = "間違いを追加";
+"Daily Inspiration" = "今日の一言";
+"StudyPulse" = "StudyPulse";
+"See All" = "すべて表示";
+"Grade Detail" = "成績詳細";
+"Subject Trend" = "科目トレンド";
+"Focus: Lowest Score" = "重点：最低点の科目";
+"Focus: Most Data" = "重点：データの多い科目";
+"Focus: Recent Activity" = "重点：最近の活動";
+"Focus: Improvement" = "重点：成長している科目";
+"Random Subject" = "ランダムな科目";
+"Highest" = "最高";
+"Lowest" = "最低";
+"Select a subject to view trends" = "科目を選択してトレンドを表示";
+"Study Suggestions" = "学習の提案";
+"Start adding grades to get suggestions!" = "成績の追加を始めて提案を受け取りましょう！";
+"Focus on %@" = "%@ に集中";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "この科目の成績は平均を下回っています。重要な概念の復習に時間をかけましょう。";
+"Review Mistakes" = "間違いを復習";
+"You have %d mistake notes. Regular review helps prevent similar errors." = "%d 件の間違いノートがあります。定期的な復習は同じミスを防ぐのに役立ちます。";
+"Prepare for Exams" = "試験の準備";
+"You have %d exam(s) coming up in the next 2 weeks. Start your preparations now!" = "今後 2 週間以内に %d 回の試験があります。今すぐ準備を始めましょう！";
+"Great at %@!" = "%@ が得意！";
+"Keep up the good work! You're performing really well in this subject." = "その調子で！この科目の成績は非常に良いです。";
+"Add More Grades" = "さらに成績を追加";
+"Tracking more grades will help you get better insights into your learning progress." = "より多くの成績を記録することで、学習の進捗をよりよく把握できます。";
+
+// TrendsView.swift
+"Subjects Needing Attention" = "注意が必要な科目";
+"Average Score" = "平均点";
+"Average Rank" = "平均順位";
+"Latest" = "最新";
+"History" = "履歴";
+"No grades available" = "成績なし";
+"Unnamed Exam" = "名前のない試験";
+"No Data" = "データなし";
+"Avg Score" = "平均点";
+"Trend" = "トレンド";
+"Improving" = "向上中";
+"Declining" = "下降中";
+"Stable" = "安定";
+
+// MistakeView.swift
+"No Mistakes" = "間違いなし";
+"Tap '+' to add a new mistake note." = "+ をタップして間違いノートを追加。";
+"Suggested for Review" = "復習を推奨";
+"%d mistakes" = "%d 件の間違い";
+"%d added this week" = "今週 %d 件追加";
+"Oldest: %@" = "最古：%@";
+"%d new" = "新着 %d";
+"Source: %@" = "出典：%@";
+"Details" = "詳細";
+"Title" = "タイトル";
+"Source" = "出典";
+"Original Question" = "元の問題";
+"Error Reason" = "間違いの理由";
+"Wrong Solution" = "誤った解答";
+"Correct Solution" = "正しい解答";
+
+// Settings - Additional strings
+"Edit" = "編集";
+"Preferences" = "設定";
+"Academic Info" = "学習情報";
+"Data Management" = "データ管理";
+"About" = "概要";
+"Subjects" = "科目";
+"Toggle the subjects you're studying. Tap the score to adjust the full score for each subject." = "学習している科目を切り替えてください。点数をタップして各科目の満点を調整できます。";
+"Reset to Recommended Subjects" = "推奨科目にリセット";
+"Education Stage" = "教育段階";
+"Stage" = "段階";
+"Region / Education System" = "地域 / 教育制度";
+"Different regions and education systems have different subjects and grading scales. Includes domestic and international curricula (A-Level, IB, AP, SAT, ACT, IGCSE)." = "地域や教育制度によって科目や評価基準は異なります。国内および国際カリキュラム（A-Level、IB、AP、SAT、ACT、IGCSE）に対応しています。";
+"All" = "すべて";
+"Domestic" = "国内";
+"International" = "国際";
+"Apply Smart Subject Recommendation" = "スマート科目推奨を適用";
+"School" = "学校";
+"Student ID" = "生徒 ID";
+"Class" = "クラス";
+"Academic Year" = "学年";
+"Enrollment Year" = "入学年度";
+"Target Exam Year" = "目標試験年度";
+"Goals" = "目標";
+"Track your progress towards your target school and score." = "目標校と目標点に向けた進捗を追跡。";
+"Target School" = "目標校";
+"Target Score" = "目標点";
+"Gender" = "性別";
+"Not Specified" = "未指定";
+"Male" = "男性";
+"Female" = "女性";
+"Other" = "その他";
+
+// Smart Recommendation
+"Apply Smart Recommendation" = "スマート推奨を適用";
+"This will reset subject list and auto-check required subjects for %@ - %@. Existing enabled preferences will be kept." = "科目リストをリセットし、%@ - %@ の必修科目を自動的にチェックします。既存の有効な設定は保持されます。";
+
+// Notifications
+"Exam Countdown" = "試験カウントダウン";
+"%@ - %d day(s) until the exam. Get ready!" = "%@ - 試験まであと %d 日。準備を整えましょう！";
+
+// Data Management / Import Export
+"Import / Export Data" = "データのインポート / エクスポート";
+"Export All Data" = "すべてのデータをエクスポート";
+"Import Data" = "データをインポート";
+"Data exported successfully!" = "データのエクスポートに成功しました！";
+"Failed to export data: %@" = "データのエクスポートに失敗しました：%@";
+"Please select a file to import" = "インポートするファイルを選択してください";
+"Data imported successfully!" = "データのインポートに成功しました！";
+"Failed to import data: %@" = "データのインポートに失敗しました：%@";
+"Warning: This will overwrite your current data. Are you sure?" = "警告：現在のデータが上書きされます。本当によろしいですか？";
+"Data exported to: %@" = "データがエクスポートされました：%@";
+
+// CalendarManager
+"StudyPulse does not have calendar access. Please enable it in Settings." = "StudyPulse はカレンダーへのアクセス権限がありません。設定で有効にしてください。";
+"Failed to save calendar event." = "カレンダーイベントの保存に失敗しました。";
+"Calendar event not found." = "カレンダーイベントが見つかりません。";
+
+// Widget strings
+"Midterm Exam" = "中間試験";
+"No upcoming exams" = "近日中の試験はありません";
+"%d days" = "%d 日";
+"Day %d" = "%d 日目";
+"In %d days" = "%d 日後";
+
+// StudySuggestionsCard new entries
+"Focus on %@" = "%@ に集中しましょう";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "この科目の成績が平均を下回っています。重要な概念の復習に時間をかけましょう。";
+"Exam is almost here!" = "試験が迫っています！";
+"You have %d exam(s) today or tomorrow. Review your notes now!" = "今日または明日に %d 件の試験があります。すぐにノートを復習しましょう！";
+"%@ scores are slipping" = "%@ の成績が下がっています";
+"Your recent scores in this subject show a downward trend. Identify what's causing the gap." = "最近のこの科目の成績は下降傾向です。原因を見つけましょう。";
+"Unreviewed Mistakes" = "未復習の間違い";
+"You have mistakes in %@ that haven't been reviewed. Go through them before the next exam." = "%@ に未復習の間違いがあります。次の試験の前に見直しましょう。";
+"Upcoming Exams" = "今後の試験";
+"%d exam(s) in the next 2 weeks. Organize your review by subject priority." = "今後2週間で %d 件の試験があります。科目の優先順位に従って復習を計画しましょう。";
+"%@ is improving!" = "%@ が向上しています！";
+"Your scores are trending upward. Keep the momentum!" = "成績は上昇傾向です。この勢いを維持しましょう！";
+"Deep dive into %@" = "%@ を深く分析";
+"You have many mistakes in this subject. Categorize your errors to find the root pattern." = "この科目には多くの間違いがあります。エラーを分類して根本的なパターンを見つけましょう。";
+"Keep the streak going!" = "記録を続けましょう！";
+"No new grades in the past week. Regular tracking helps you spot trends early." = "過去1週間、新しい成績がありません。定期的な記録でトレンドを早期に発見できます。";
+"Balance your subjects" = "科目のバランスを";
+"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "%@ の成績記録が他の科目よりはるかに多いです。他の科目も忘れずに。";

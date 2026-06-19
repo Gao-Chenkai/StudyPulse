@@ -18,27 +18,21 @@ enum EditSection: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
     
     var icon: String {
-        if self == .question { return "doc.text" }
-        if self == .reason { return "exclamationmark.triangle" }
-        if self == .wrong { return "xmark.circle" }
-        if self == .correct { return "checkmark.circle" }
-        return "questionmark"
+        switch self {
+        case .question: return "doc.text"
+        case .reason: return "exclamationmark.triangle"
+        case .wrong: return "xmark.circle"
+        case .correct: return "checkmark.circle"
+        }
     }
     
     var title: String {
-        if self == .question { return "题目" }
-        if self == .reason { return "错因" }
-        if self == .wrong { return "错解" }
-        if self == .correct { return "正解" }
-        return ""
-    }
-    
-    var color: Color {
-        if self == .question { return .blue }
-        if self == .reason { return .orange }
-        if self == .wrong { return .red }
-        if self == .correct { return .green }
-        return .gray
+        switch self {
+        case .question: return "Question"
+        case .reason: return "Error Reason"
+        case .wrong: return "Wrong Solution"
+        case .correct: return "Correct Solution"
+        }
     }
 }
 
@@ -46,7 +40,6 @@ struct NewMistakeSetView: View {
     @EnvironmentObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
     
-    // MARK: - State Properties
     @State private var editedTitle = ""
     @State private var selectedSubject = ""
     @State private var editedOriginalQuestion = ""
@@ -58,13 +51,11 @@ struct NewMistakeSetView: View {
     
     @State private var selectedSection: EditSection = .question
     
-    // Image states for each section
     @State private var questionImages: [UIImage] = []
     @State private var reasonImages: [UIImage] = []
     @State private var wrongSolutionImages: [UIImage] = []
     @State private var correctSolutionImages: [UIImage] = []
     
-    // Image picker states
     @State private var showingImagePicker = false
     @State private var showingPhotoCapture = false
     
@@ -73,194 +64,25 @@ struct NewMistakeSetView: View {
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
     
-    // MARK: - Body
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
-                    
-                    // --- Basic Info ---
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Basic Info")
-                            .font(.callout)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
-                        
-                        VStack(spacing: 0) {
-                            let leftPadding: CGFloat = 16
-                            let labelWidth: CGFloat = 60
-                            let iconWidth: CGFloat = 30
-                            let iconLabelSpacing: CGFloat = 12
-                            
-                            // Title
-                            buildInfoRow(icon: "rectangle.and.pencil.and.ellipsis", color: .yellow, label: "Title", text: $editedTitle, leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
-                            
-                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
-                            
-                            // Subject
-                            HStack(spacing: iconLabelSpacing) {
-                                Image(systemName: "book.fill")
-                                    .foregroundColor(.purple)
-                                    .frame(width: iconWidth, alignment: .center)
-                                Text("Subject")
-                                    .frame(width: labelWidth, alignment: .leading)
-                                Picker("", selection: $selectedSubject) {
-                                    Text("Select").tag("")
-                                    ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
-                                        Text(subject.name.localized()).tag(subject.name)
-                                    }
-                                }
-                                .labelsHidden()
-                            }
-                            .padding(leftPadding)
-                            
-                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
-                            
-                            // Source
-                            buildInfoRow(icon: "list.bullet.clipboard", color: .green, label: "Source", text: $editedSource, leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
-                            
-                            Divider().padding(.leading, leftPadding + iconWidth + iconLabelSpacing + labelWidth)
-                            
-                            // Date
-                            buildDateRow(leftPadding: leftPadding, labelWidth: labelWidth, iconWidth: iconWidth, iconLabelSpacing: iconLabelSpacing)
-                        }
-                        .background(Color(.systemBackground))
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    }
-                    .padding(.horizontal)
-                    
-                    // --- Segmented Control ---
-                    VStack(spacing: 0) {
-                        HStack(spacing: 0) {
-                            ForEach(EditSection.allCases) { section in
-                                Button {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        selectedSection = section
-                                    }
-                                } label: {
-                                    VStack {
-                                        Image(systemName: section.icon)
-                                            .font(.system(size: 18, weight: .medium))
-                                            .foregroundColor(selectedSection == section ? section.color : .gray)
-                                            .padding(.bottom, 4)
-                                        
-                                        Text(section.title)
-                                            .font(.caption)
-                                            .fontWeight(selectedSection == section ? .semibold : .regular)
-                                            .foregroundColor(selectedSection == section ? section.color : .gray)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .contentShape(Rectangle())
-                                }
-                                
-                                if section != EditSection.allCases.last {
-                                    Divider()
-                                        .frame(height: 30)
-                                        .padding(.horizontal, 4)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    }
-                    .padding(.horizontal)
-                    
-                    // --- Editor Area (Split: Input + Preview) ---
-                    VStack(alignment: .leading, spacing: 12) {
-                        // Toolbar: OCR + Preview toggle
-                        HStack {
-                            Button(action: { showMarkdownPreview.toggle() }) {
-                                Label(showMarkdownPreview ? "Hide Preview" : "Show Preview", systemImage: showMarkdownPreview ? "eye.slash" : "eye")
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(selectedSection.color)
-                            }
-                            Spacer()
-                            Button(action: { triggerOCR() }) {
-                                Label("OCR", systemImage: "text.viewfinder")
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.orange)
-                            }
-                            .disabled(currentSectionImages.wrappedValue.isEmpty)
-                        }
-                        .padding(.horizontal)
-                        
-                        // Text Input (Top)
-                        TextEditor(text: currentBinding)
-                            .frame(minHeight: 180)
-                            .font(.body)
-                            .padding(8)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(selectedSection.color.opacity(0.5), lineWidth: 2)
-                            )
-                            .padding(.horizontal)
-                        
-                        // Live Markdown Preview (Bottom)
-                        if showMarkdownPreview {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Preview")
-                                    .font(.callout)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.secondary)
-                                
-                                MarkdownPreviewView(text: currentBinding.wrappedValue)
-                                    .frame(minHeight: 120)
-                                    .padding(8)
-                                    .background(Color(.systemGroupedBackground))
-                                    .cornerRadius(8)
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        // Image section for current selected section
-                        imageSectionForCurrentSection
-                    }
-                    
-                    Spacer(minLength: 40)
-                }
-                .padding(.top, 8)
+            Form {
+                basicInfoSection
+                contentEditorSection
+                imagesSection
             }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("New Mistake")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveMistake()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(editedTitle.isEmpty || editedOriginalQuestion.isEmpty)
-                }
-            }
+            .toolbar { toolbar }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePickerWithCompletion(onDismiss: { image in
-                    if let image = image {
-                        addImageToCurrentSection(image)
-                    }
+                    if let image = image { addImageToCurrentSection(image) }
                 })
                 .ignoresSafeArea()
             }
             .sheet(isPresented: $showingPhotoCapture) {
                 PhotoCaptureWithCompletion(onDismiss: { image in
-                    if let image = image {
-                        addImageToCurrentSection(image)
-                    }
+                    if let image = image { addImageToCurrentSection(image) }
                 })
                 .ignoresSafeArea()
             }
@@ -280,66 +102,144 @@ struct NewMistakeSetView: View {
             }
         }
     }
+}
+
+// MARK: - Sections
+private extension NewMistakeSetView {
     
-    // MARK: - Image Section Builder
-    @ViewBuilder
-    private var imageSectionForCurrentSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    var basicInfoSection: some View {
+        Section(header: Text("Basic Info".localized())) {
             HStack {
-                Text("Images")
-                    .font(.callout)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                Spacer()
-                HStack(spacing: 12) {
-                    Button(action: {
-                        showingImagePicker = true
-                    }) {
-                        Label("Library", systemImage: "photo.on.rectangle.angled")
-                            .foregroundColor(selectedSection.color)
-                    }
-                    Button(action: {
-                        showingPhotoCapture = true
-                    }) {
-                        Label("Camera", systemImage: "camera.fill")
-                            .foregroundColor(selectedSection.color)
-                    }
+                Text("Title".localized())
+                TextField("Title".localized(), text: $editedTitle)
+                    .multilineTextAlignment(.trailing)
+            }
+            
+            Picker("Subject".localized(), selection: $selectedSubject) {
+                Text("Select".localized()).tag("")
+                ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
+                    Text(subject.name.localized()).tag(subject.name)
                 }
             }
             
-            // Display images for current section
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(currentSectionImages.indices, id: \.self) { index in
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: currentSectionImages.wrappedValue[index])
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 100, height: 100)
-                                .clipped()
-                                .cornerRadius(8)
-                            
-                            Button(action: {
-                                currentSectionImages.wrappedValue.remove(at: index)
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.red)
-                                    .background(Circle().fill(Color.white))
+            HStack {
+                Text("Source".localized())
+                TextField("Source".localized(), text: $editedSource)
+                    .multilineTextAlignment(.trailing)
+            }
+            
+            DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
+        }
+    }
+    
+    var contentEditorSection: some View {
+        Section(header: Text(selectedSection.title.localized())) {
+            Picker("Section", selection: $selectedSection) {
+                ForEach(EditSection.allCases) { section in
+                    Text(section.title.localized()).tag(section)
+                }
+            }
+            .pickerStyle(.segmented)
+            
+            TextEditor(text: currentBinding)
+                .frame(minHeight: 160)
+                .font(.body)
+            
+            Toggle(isOn: $showMarkdownPreview) {
+                Label(showMarkdownPreview ? "Hide Preview" : "Show Preview",
+                      systemImage: showMarkdownPreview ? "eye.slash" : "eye")
+            }
+            
+            if showMarkdownPreview {
+                MarkdownPreviewView(text: currentBinding.wrappedValue)
+                    .frame(minHeight: 100)
+            }
+        }
+    }
+    
+    var imagesSection: some View {
+        Section(header: Text("Images".localized())) {
+            HStack {
+                Button(action: { showingImagePicker = true }) {
+                    Label("Library".localized(), systemImage: "photo.on.rectangle.angled")
+                }
+                Spacer()
+                Button(action: { showingPhotoCapture = true }) {
+                    Label("Camera".localized(), systemImage: "camera.fill")
+                }
+                Spacer()
+                Button(action: { triggerOCR() }) {
+                    Label("OCR".localized(), systemImage: "text.viewfinder")
+                }
+                .disabled(currentSectionImages.wrappedValue.isEmpty)
+            }
+            .buttonStyle(.borderless)
+            
+            if currentSectionImages.wrappedValue.isEmpty {
+                Text("No images".localized())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(currentSectionImages.wrappedValue.indices, id: \.self) { index in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: currentSectionImages.wrappedValue[index])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 80, height: 80)
+                                    .clipped()
+                                    .cornerRadius(8)
+                                
+                                Button(action: {
+                                    currentSectionImages.wrappedValue.remove(at: index)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.red)
+                                        .background(Circle().fill(Color.white))
+                                }
+                                .padding(2)
                             }
-                            .padding(4)
                         }
                     }
                 }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
     
-    // MARK: - Image Helpers
-    private var currentSectionImages: Binding<[UIImage]> {
+    var toolbar: some ToolbarContent {
+        Group {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    saveMistake()
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .fontWeight(.semibold)
+                .disabled(editedTitle.isEmpty || editedOriginalQuestion.isEmpty)
+            }
+        }
+    }
+}
+
+// MARK: - Helpers
+private extension NewMistakeSetView {
+    
+    var currentBinding: Binding<String> {
+        switch selectedSection {
+        case .question: return $editedOriginalQuestion
+        case .reason: return $editedErrorReason
+        case .wrong: return $editedWrongSolution
+        case .correct: return $editedCorrectSolution
+        }
+    }
+    
+    var currentSectionImages: Binding<[UIImage]> {
         switch selectedSection {
         case .question: return $questionImages
         case .reason: return $reasonImages
@@ -348,8 +248,7 @@ struct NewMistakeSetView: View {
         }
     }
     
-    private func addImageToCurrentSection(_ image: UIImage) {
-        _ = image.jpegData(compressionQuality: 0.8)
+    func addImageToCurrentSection(_ image: UIImage) {
         switch selectedSection {
         case .question: questionImages.append(image)
         case .reason: reasonImages.append(image)
@@ -358,14 +257,13 @@ struct NewMistakeSetView: View {
         }
     }
     
-    private func triggerOCR() {
+    func triggerOCR() {
         guard let lastImage = currentSectionImages.wrappedValue.last else { return }
         isProcessingOCR = true
         
         Task {
             do {
                 let recognizedText = try await OCRManager.recognizeText(in: lastImage)
-                // Append OCR text to current editor
                 if !recognizedText.isEmpty {
                     if !currentBinding.wrappedValue.isEmpty {
                         currentBinding.wrappedValue += "\n\n" + recognizedText
@@ -381,57 +279,9 @@ struct NewMistakeSetView: View {
         }
     }
     
-    // MARK: - Subviews
-    
-    /// 构建单行信息输入
-    private func buildInfoRow(icon: String, color: Color, label: String, text: Binding<String>, leftPadding: CGFloat, labelWidth: CGFloat, iconWidth: CGFloat, iconLabelSpacing: CGFloat) -> some View {
-        HStack(spacing: iconLabelSpacing) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: iconWidth, alignment: .center)
-            
-            Text(label)
-                .frame(width: labelWidth, alignment: .leading)
-            
-            TextField(label, text: text)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(leftPadding)
-    }
-    
-    /// 构建日期选择行
-    private func buildDateRow(leftPadding: CGFloat, labelWidth: CGFloat, iconWidth: CGFloat, iconLabelSpacing: CGFloat) -> some View {
-        HStack(spacing: iconLabelSpacing) {
-            Image(systemName: "calendar")
-                .foregroundColor(.pink)
-                .frame(width: iconWidth, alignment: .center)
-            
-            Text("Date")
-                .frame(width: labelWidth, alignment: .leading)
-            
-            Spacer()
-            
-            DatePicker("", selection: $editedDate, displayedComponents: .date)
-                .labelsHidden()
-                .fixedSize(horizontal: true, vertical: false)
-        }
-        .padding(leftPadding)
-    }
-    
-    /// 动态获取当前选中部分的文本绑定
-    private var currentBinding: Binding<String> {
-        switch selectedSection {
-        case .question: return $editedOriginalQuestion
-        case .reason: return $editedErrorReason
-        case .wrong: return $editedWrongSolution
-        case .correct: return $editedCorrectSolution
-        }
-    }
-    
-    /// 保存逻辑
-    private func saveMistake() {
+    func saveMistake() {
         let newMistake = MistakeNote(
-            title: editedTitle.isEmpty ? "Untitled Mistake" : editedTitle,
+            title: editedTitle.isEmpty ? "Untitled" : editedTitle,
             subject: selectedSubject,
             originalQuestion: editedOriginalQuestion,
             source: editedSource,
@@ -445,7 +295,6 @@ struct NewMistakeSetView: View {
             correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         )
         dataManager.addMistake(newMistake)
-        presentationMode.wrappedValue.dismiss()
     }
 }
 
@@ -468,10 +317,7 @@ struct ImagePickerWithCompletion: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         let parent: ImagePickerWithCompletion
-        
-        init(_ parent: ImagePickerWithCompletion) {
-            self.parent = parent
-        }
+        init(_ parent: ImagePickerWithCompletion) { self.parent = parent }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let uiImage = info[.originalImage] as? UIImage {
@@ -509,10 +355,7 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         let parent: PhotoCaptureWithCompletion
-        
-        init(_ parent: PhotoCaptureWithCompletion) {
-            self.parent = parent
-        }
+        init(_ parent: PhotoCaptureWithCompletion) { self.parent = parent }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let uiImage = info[.originalImage] as? UIImage {
@@ -530,50 +373,7 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Markdown Preview Sheet (kept for backward compat)
-struct MarkdownPreviewSheet: View {
-    @Environment(\.dismiss) var dismiss
-    let title: String
-    let content: String
-    let tintColor: Color
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(title)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(tintColor)
-                    
-                    Divider()
-                    
-                    if content.isEmpty {
-                        Text("No content to preview")
-                            .foregroundColor(.secondary)
-                            .italic()
-                    } else {
-                        MarkdownPreviewView(text: content)
-                    }
-                    
-                    Spacer()
-                }
-                .padding()
-            }
-            .navigationTitle("Markdown Preview")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Inline Markdown Preview View
+// MARK: - Markdown Preview
 struct MarkdownPreviewView: View {
     let text: String
     

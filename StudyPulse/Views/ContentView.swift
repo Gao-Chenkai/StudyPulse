@@ -52,10 +52,10 @@ struct ContentView: View {
             
         }
         .tint(.cyan)
-        
-        
+        // iPad 下显示侧边栏样式的 Tab Bar，更符合 iPad 操作习惯
+        .tabViewStyle(.sidebarAdaptable)
         .onChange(of: selectedTab) { oldValue, newValue in
-            print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)")            
+            print("Tab 切换检测: 从 \(oldValue) 变到 \(newValue)")
             if oldValue != newValue {
                 print("准备触发震动...")
                 triggerHaptic()

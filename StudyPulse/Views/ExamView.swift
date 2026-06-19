@@ -124,6 +124,8 @@ struct ExamView: View {
             }
             .navigationTitle("Exams")
             .background(Color(.systemGroupedBackground))
+            // iPad 上限制最大宽度并居中
+            .adaptiveMaxWidth(800)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewExamSet = true }) {

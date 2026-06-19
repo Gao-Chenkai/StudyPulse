@@ -124,3 +124,174 @@
 "Art" = "Art";
 "Music" = "Music";
 "PE & Health" = "PE & Health";
+
+// General UI
+"N/A" = "N/A";
+"Name" = "Name";
+"Today" = "Today";
+"Tomorrow" = "Tomorrow";
+"%d days left" = "%d days left";
+"%d records" = "%d records";
+"%d / 5" = "%d / 5";
+"Raw Score" = "Raw Score";
+"Time Range" = "Time Range";
+"All" = "All";
+"3 Months" = "3 Months";
+"6 Months" = "6 Months";
+"1 Year" = "1 Year";
+"Rank: %d" = "Rank: %d";
+"No data available" = "No data available";
+"Read more" = "Read more";
+"Tap below to change your avatar" = "Tap below to change your avatar";
+
+// HomeView.swift - Additional
+"Ready to study!" = "Ready to study!";
+"Average" = "Average";
+"Total Grades" = "Total Grades";
+"Upcoming" = "Upcoming";
+"Quick Actions" = "Quick Actions";
+"Add Grade" = "Add Grade";
+"New Exam" = "New Exam";
+"New Mistake" = "New Mistake";
+"Daily Inspiration" = "Daily Inspiration";
+"StudyPulse" = "StudyPulse";
+"See All" = "See All";
+"Grade Detail" = "Grade Detail";
+"Subject Trend" = "Subject Trend";
+"Focus: Lowest Score" = "Focus: Lowest Score";
+"Focus: Most Data" = "Focus: Most Data";
+"Focus: Recent Activity" = "Focus: Recent Activity";
+"Focus: Improvement" = "Focus: Improvement";
+"Random Subject" = "Random Subject";
+"Highest" = "Highest";
+"Lowest" = "Lowest";
+"Select a subject to view trends" = "Select a subject to view trends";
+"Study Suggestions" = "Study Suggestions";
+"Start adding grades to get suggestions!" = "Start adding grades to get suggestions!";
+"Focus on %@" = "Focus on %@";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "Your scores in this subject are lower than average. Spend more time reviewing key concepts.";
+"Review Mistakes" = "Review Mistakes";
+"You have %d mistake notes. Regular review helps prevent similar errors." = "You have %d mistake notes. Regular review helps prevent similar errors.";
+"Prepare for Exams" = "Prepare for Exams";
+"You have %d exam(s) coming up in the next 2 weeks. Start your preparations now!" = "You have %d exam(s) coming up in the next 2 weeks. Start your preparations now!";
+"Great at %@!" = "Great at %@!";
+"Keep up the good work! You're performing really well in this subject." = "Keep up the good work! You're performing really well in this subject.";
+"Add More Grades" = "Add More Grades";
+"Tracking more grades will help you get better insights into your learning progress." = "Tracking more grades will help you get better insights into your learning progress.";
+
+// TrendsView.swift
+"Subjects Needing Attention" = "Subjects Needing Attention";
+"Average Score" = "Average Score";
+"Average Rank" = "Average Rank";
+"Latest" = "Latest";
+"History" = "History";
+"No grades available" = "No grades available";
+"Unnamed Exam" = "Unnamed Exam";
+"No Data" = "No Data";
+"Avg Score" = "Avg Score";
+"Trend" = "Trend";
+"Improving" = "Improving";
+"Declining" = "Declining";
+"Stable" = "Stable";
+
+// MistakeView.swift
+"No Mistakes" = "No Mistakes";
+"Tap '+' to add a new mistake note." = "Tap '+' to add a new mistake note.";
+"Suggested for Review" = "Suggested for Review";
+"%d mistakes" = "%d mistakes";
+"%d added this week" = "%d added this week";
+"Oldest: %@" = "Oldest: %@";
+"%d new" = "%d new";
+"Source: %@" = "Source: %@";
+"Details" = "Details";
+"Title" = "Title";
+"Source" = "Source";
+"Original Question" = "Original Question";
+"Error Reason" = "Error Reason";
+"Wrong Solution" = "Wrong Solution";
+"Correct Solution" = "Correct Solution";
+
+// Settings - Additional strings
+"Edit" = "Edit";
+"Preferences" = "Preferences";
+"Academic Info" = "Academic Info";
+"Data Management" = "Data Management";
+"About" = "About";
+"Subjects" = "Subjects";
+"Toggle the subjects you're studying. Tap the score to adjust the full score for each subject." = "Toggle the subjects you're studying. Tap the score to adjust the full score for each subject.";
+"Reset to Recommended Subjects" = "Reset to Recommended Subjects";
+"Education Stage" = "Education Stage";
+"Stage" = "Stage";
+"Region / Education System" = "Region / Education System";
+"Different regions and education systems have different subjects and grading scales. Includes domestic and international curricula (A-Level, IB, AP, SAT, ACT, IGCSE)." = "Different regions and education systems have different subjects and grading scales. Includes domestic and international curricula (A-Level, IB, AP, SAT, ACT, IGCSE).";
+"All" = "All";
+"Domestic" = "Domestic";
+"International" = "International";
+"Apply Smart Subject Recommendation" = "Apply Smart Subject Recommendation";
+"School" = "School";
+"Student ID" = "Student ID";
+"Class" = "Class";
+"Academic Year" = "Academic Year";
+"Enrollment Year" = "Enrollment Year";
+"Target Exam Year" = "Target Exam Year";
+"Goals" = "Goals";
+"Track your progress towards your target school and score." = "Track your progress towards your target school and score.";
+"Target School" = "Target School";
+"Target Score" = "Target Score";
+"Gender" = "Gender";
+"Not Specified" = "Not Specified";
+"Male" = "Male";
+"Female" = "Female";
+"Other" = "Other";
+
+// Smart Recommendation
+"Apply Smart Recommendation" = "Apply Smart Recommendation";
+"This will reset subject list and auto-check required subjects for %@ - %@. Existing enabled preferences will be kept." = "This will reset subject list and auto-check required subjects for %@ - %@. Existing enabled preferences will be kept.";
+
+// Notifications
+"Exam Countdown" = "Exam Countdown";
+"%@ - %d day(s) until the exam. Get ready!" = "%@ - %d day(s) until the exam. Get ready!";
+
+// Data Management / Import Export
+"Import / Export Data" = "Import / Export Data";
+"Export All Data" = "Export All Data";
+"Import Data" = "Import Data";
+"Data exported successfully!" = "Data exported successfully!";
+"Failed to export data: %@" = "Failed to export data: %@";
+"Please select a file to import" = "Please select a file to import";
+"Data imported successfully!" = "Data imported successfully!";
+"Failed to import data: %@" = "Failed to import data: %@";
+"Warning: This will overwrite your current data. Are you sure?" = "Warning: This will overwrite your current data. Are you sure?";
+"Data exported to: %@" = "Data exported to: %@";
+
+// CalendarManager
+"StudyPulse does not have calendar access. Please enable it in Settings." = "StudyPulse does not have calendar access. Please enable it in Settings.";
+"Failed to save calendar event." = "Failed to save calendar event.";
+"Calendar event not found." = "Calendar event not found.";
+
+// Widget strings
+"Midterm Exam" = "Midterm Exam";
+"No upcoming exams" = "No upcoming exams";
+"%d days" = "%d days";
+"Day %d" = "Day %d";
+"In %d days" = "In %d days";
+
+// StudySuggestionsCard new entries
+"Focus on %@" = "Focus on %@";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "Your scores in this subject are lower than average. Spend more time reviewing key concepts.";
+"Exam is almost here!" = "Exam is almost here!";
+"You have %d exam(s) today or tomorrow. Review your notes now!" = "You have %d exam(s) today or tomorrow. Review your notes now!";
+"%@ scores are slipping" = "%@ scores are slipping";
+"Your recent scores in this subject show a downward trend. Identify what's causing the gap." = "Your recent scores in this subject show a downward trend. Identify what's causing the gap.";
+"Unreviewed Mistakes" = "Unreviewed Mistakes";
+"You have mistakes in %@ that haven't been reviewed. Go through them before the next exam." = "You have mistakes in %@ that haven't been reviewed. Go through them before the next exam.";
+"Upcoming Exams" = "Upcoming Exams";
+"%d exam(s) in the next 2 weeks. Organize your review by subject priority." = "%d exam(s) in the next 2 weeks. Organize your review by subject priority.";
+"%@ is improving!" = "%@ is improving!";
+"Your scores are trending upward. Keep the momentum!" = "Your scores are trending upward. Keep the momentum!";
+"Deep dive into %@" = "Deep dive into %@";
+"You have many mistakes in this subject. Categorize your errors to find the root pattern." = "You have many mistakes in this subject. Categorize your errors to find the root pattern.";
+"Keep the streak going!" = "Keep the streak going!";
+"No new grades in the past week. Regular tracking helps you spot trends early." = "No new grades in the past week. Regular tracking helps you spot trends early.";
+"Balance your subjects" = "Balance your subjects";
+"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "You have significantly more grades in %@ than other subjects. Don't neglect the rest.";

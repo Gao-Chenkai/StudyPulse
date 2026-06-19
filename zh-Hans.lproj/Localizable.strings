@@ -124,3 +124,174 @@
 "Art" = "美术";
 "Music" = "音乐";
 "PE & Health" = "体育与健康";
+
+// General UI
+"N/A" = "无";
+"Name" = "姓名";
+"Today" = "今天";
+"Tomorrow" = "明天";
+"%d days left" = "剩余 %d 天";
+"%d records" = "共 %d 条记录";
+"%d / 5" = "%d / 5";
+"Raw Score" = "原始分";
+"Time Range" = "时间范围";
+"All" = "全部";
+"3 Months" = "3 个月";
+"6 Months" = "6 个月";
+"1 Year" = "1 年";
+"Rank: %d" = "排名：%d";
+"No data available" = "暂无数据";
+"Read more" = "查看更多";
+"Tap below to change your avatar" = "点击下方更换头像";
+
+// HomeView.swift - Additional
+"Ready to study!" = "准备好开始学习了！";
+"Average" = "平均";
+"Total Grades" = "成绩总数";
+"Upcoming" = "即将到来";
+"Quick Actions" = "快捷操作";
+"Add Grade" = "添加成绩";
+"New Exam" = "添加考试";
+"New Mistake" = "添加错题";
+"Daily Inspiration" = "每日励志";
+"StudyPulse" = "StudyPulse";
+"See All" = "查看全部";
+"Grade Detail" = "成绩详情";
+"Subject Trend" = "科目趋势";
+"Focus: Lowest Score" = "重点：最低分科目";
+"Focus: Most Data" = "重点：数据最丰富";
+"Focus: Recent Activity" = "重点：最近活跃度";
+"Focus: Improvement" = "重点：进步科目";
+"Random Subject" = "随机科目";
+"Highest" = "最高";
+"Lowest" = "最低";
+"Select a subject to view trends" = "选择科目查看趋势";
+"Study Suggestions" = "学习建议";
+"Start adding grades to get suggestions!" = "开始添加成绩以获取学习建议！";
+"Focus on %@" = "重点关注 %@";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "你在这门科目的成绩低于平均水平。请花更多时间复习重点知识。";
+"Review Mistakes" = "复习错题";
+"You have %d mistake notes. Regular review helps prevent similar errors." = "你有 %d 条错题笔记。定期复习有助于避免犯类似错误。";
+"Prepare for Exams" = "为考试做准备";
+"You have %d exam(s) coming up in the next 2 weeks. Start your preparations now!" = "你在未来 2 周内有 %d 场考试。现在就开始准备吧！";
+"Great at %@!" = "擅长 %@！";
+"Keep up the good work! You're performing really well in this subject." = "继续保持！你在这门科目的表现非常好。";
+"Add More Grades" = "添加更多成绩";
+"Tracking more grades will help you get better insights into your learning progress." = "记录更多成绩将帮助你更好地了解学习进度。";
+
+// TrendsView.swift
+"Subjects Needing Attention" = "需要关注的科目";
+"Average Score" = "平均分";
+"Average Rank" = "平均排名";
+"Latest" = "最新";
+"History" = "历史";
+"No grades available" = "暂无成绩";
+"Unnamed Exam" = "未命名考试";
+"No Data" = "暂无数据";
+"Avg Score" = "平均分";
+"Trend" = "趋势";
+"Improving" = "进步中";
+"Declining" = "退步中";
+"Stable" = "稳定";
+
+// MistakeView.swift
+"No Mistakes" = "暂无错题";
+"Tap '+' to add a new mistake note." = "点击 + 号添加新的错题笔记。";
+"Suggested for Review" = "建议复习";
+"%d mistakes" = "%d 道错题";
+"%d added this week" = "本周新增 %d 道";
+"Oldest: %@" = "最旧：%@";
+"%d new" = "新增 %d";
+"Source: %@" = "来源：%@";
+"Details" = "详情";
+"Title" = "标题";
+"Source" = "来源";
+"Original Question" = "原题";
+"Error Reason" = "错误原因";
+"Wrong Solution" = "错误解答";
+"Correct Solution" = "正确解答";
+
+// Settings - Additional strings
+"Edit" = "编辑";
+"Preferences" = "偏好设置";
+"Academic Info" = "学业信息";
+"Data Management" = "数据管理";
+"About" = "关于";
+"Subjects" = "科目";
+"Toggle the subjects you're studying. Tap the score to adjust the full score for each subject." = "选择你正在学习的科目。点击分数可调整每门科目的满分设置。";
+"Reset to Recommended Subjects" = "重置为推荐科目";
+"Education Stage" = "教育阶段";
+"Stage" = "阶段";
+"Region / Education System" = "地区 / 教育体系";
+"Different regions and education systems have different subjects and grading scales. Includes domestic and international curricula (A-Level, IB, AP, SAT, ACT, IGCSE)." = "不同地区和教育体系有不同的科目和评分标准。包含国内和国际课程（A-Level、IB、AP、SAT、ACT、IGCSE）。";
+"All" = "全部";
+"Domestic" = "国内";
+"International" = "国际";
+"Apply Smart Subject Recommendation" = "应用智能科目推荐";
+"School" = "学校";
+"Student ID" = "学号";
+"Class" = "班级";
+"Academic Year" = "学年";
+"Enrollment Year" = "入学年份";
+"Target Exam Year" = "目标考试年份";
+"Goals" = "目标";
+"Track your progress towards your target school and score." = "跟踪你为目标学校和目标分数的进展。";
+"Target School" = "目标学校";
+"Target Score" = "目标分数";
+"Gender" = "性别";
+"Not Specified" = "未指定";
+"Male" = "男";
+"Female" = "女";
+"Other" = "其他";
+
+// Smart Recommendation
+"Apply Smart Recommendation" = "应用智能推荐";
+"This will reset subject list and auto-check required subjects for %@ - %@. Existing enabled preferences will be kept." = "这将重置科目列表，并自动勾选 %@ - %@ 的必修科目。已启用的偏好设置将保留。";
+
+// Notifications
+"Exam Countdown" = "考试倒计时";
+"%@ - %d day(s) until the exam. Get ready!" = "%@ - 距离考试还有 %d 天。加油准备！";
+
+// Data Management / Import Export
+"Import / Export Data" = "导入 / 导出数据";
+"Export All Data" = "导出全部数据";
+"Import Data" = "导入数据";
+"Data exported successfully!" = "数据导出成功！";
+"Failed to export data: %@" = "导出数据失败：%@";
+"Please select a file to import" = "请选择要导入的文件";
+"Data imported successfully!" = "数据导入成功！";
+"Failed to import data: %@" = "导入数据失败：%@";
+"Warning: This will overwrite your current data. Are you sure?" = "警告：这将覆盖你当前的数据。确定要继续吗？";
+"Data exported to: %@" = "数据已导出至：%@";
+
+// CalendarManager
+"StudyPulse does not have calendar access. Please enable it in Settings." = "StudyPulse 没有日历访问权限。请在设置中开启。";
+"Failed to save calendar event." = "保存日历事件失败。";
+"Calendar event not found." = "未找到日历事件。";
+
+// Widget strings
+"Midterm Exam" = "期中考试";
+"No upcoming exams" = "暂无即将到来的考试";
+"%d days" = "%d 天";
+"Day %d" = "第 %d 天";
+"In %d days" = "%d 天后";
+
+// StudySuggestionsCard new entries
+"Focus on %@" = "重点关注 %@";
+"Your scores in this subject are lower than average. Spend more time reviewing key concepts." = "你在这个科目的成绩低于平均水平，多花时间复习核心概念。";
+"Exam is almost here!" = "考试快到了！";
+"You have %d exam(s) today or tomorrow. Review your notes now!" = "你有 %d 场考试在今天或明天，马上复习笔记！";
+"%@ scores are slipping" = "%@ 成绩正在下滑";
+"Your recent scores in this subject show a downward trend. Identify what's causing the gap." = "你最近在这个科目的成绩呈下降趋势，找出差距的原因。";
+"Unreviewed Mistakes" = "未复习的错题";
+"You have mistakes in %@ that haven't been reviewed. Go through them before the next exam." = "你在 %@ 中有错题尚未复习，在下次考试前过一遍。";
+"Upcoming Exams" = "即将到来的考试";
+"%d exam(s) in the next 2 weeks. Organize your review by subject priority." = "未来两周有 %d 场考试，按科目优先级安排复习。";
+"%@ is improving!" = "%@ 正在进步！";
+"Your scores are trending upward. Keep the momentum!" = "你的成绩呈上升趋势，保持这个势头！";
+"Deep dive into %@" = "深入分析 %@";
+"You have many mistakes in this subject. Categorize your errors to find the root pattern." = "你在这个科目中有大量错题，分类整理以找到根本规律。";
+"Keep the streak going!" = "保持记录习惯！";
+"No new grades in the past week. Regular tracking helps you spot trends early." = "过去一周没有新成绩记录，定期跟踪有助于及早发现趋势。";
+"Balance your subjects" = "平衡你的科目";
+"You have significantly more grades in %@ than other subjects. Don't neglect the rest." = "你在 %@ 的成绩记录远多于其他科目，不要忽略其他科目。";

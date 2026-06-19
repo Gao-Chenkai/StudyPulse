@@ -8,14 +8,14 @@
 import SwiftUI
 import Charts
 
- //假设你已有 ChartDataPoint 定义，若没有请取消注释下面这段
- struct ChartDataPoint: Identifiable {
-     let id = UUID()
-     let date: Date
-     let score: Double
-     let scoreRate: Double
-     let ranking: Int?
- }
+// 假设你已有 ChartDataPoint 定义，若没有请取消注释下面这段
+struct ChartDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let score: Double
+    let scoreRate: Double
+    let ranking: Int?
+}
 
 struct SubjectScoreCard: View {
     struct Series: Identifiable {
@@ -29,7 +29,19 @@ struct SubjectScoreCard: View {
     let latestGrade: Grade?
     let history: [Grade]
     let displayMode: String // 新增：接收显示模式
+    @EnvironmentObject var dataManager: DataManager
     @State private var animateIn = false
+    
+    var fullScore: Double {
+        dataManager.fullScore(for: subject)
+    }
+    
+    var displayTitle: String {
+        if let s = dataManager.subjects.first(where: { $0.name == subject }) {
+            return s.displayName.isEmpty ? subject.localized() : s.displayName
+        }
+        return subject.localized()
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -43,7 +55,7 @@ struct SubjectScoreCard: View {
                         )
                     )
                     .font(.title3)
-                Text(subject.localized()) // 本地化科目名
+                Text(displayTitle) // 使用自定义显示名
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(Color(.label))
@@ -67,11 +79,16 @@ struct SubjectScoreCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         // 根据模式切换显示内容
                         if displayMode == "score" {
-                            Text(String(format: "%.1f", g.score))
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundStyle(scoreColor(g.score))
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text(String(format: "%.1f", g.score))
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(scoreColor(g.score, fullScore: fullScore))
+                                Text("/ \(Int(fullScore))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                             if let rank = g.ranking {
-                                Text("Rank: \(rank)")
+                                Text(String(format: "Rank: %d".localized(), rank))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -79,12 +96,12 @@ struct SubjectScoreCard: View {
                             if let rank = g.ranking, rank > 0 {
                                 Text("\(rank)")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundStyle(scoreColor(g.score))
+                                    .foregroundStyle(scoreColor(g.score, fullScore: fullScore))
                                 Text(String(format: "%.1f", g.score))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             } else {
-                                Text("N/A")
+                                Text("N/A".localized())
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .foregroundStyle(
                                         LinearGradient(
@@ -100,7 +117,7 @@ struct SubjectScoreCard: View {
                         }
                     }
                     Spacer()
-                    // 传递模式给迷你图表
+                    // 
                     miniChartView(
                         series: [
                             Series(
@@ -109,19 +126,20 @@ struct SubjectScoreCard: View {
                                     ChartDataPoint(
                                         date: $0.date,
                                         score: $0.score,
-                                        scoreRate: $0.scoreRate,
+                                        scoreRate: $0.scoreRate(subjectFullScore: fullScore),
                                         ranking: $0.ranking
                                     )
                                 },
                                 color: displayMode == "score" ? .blue : .indigo
                             )
                         ],
-                        displayMode: displayMode
+                        displayMode: displayMode,
+                        fullScore: fullScore
                     )
                     .frame(width: 100, height: 60)
                 }
             } else {
-                Text("No data available")
+                Text("No data available".localized())
                     .font(.caption)
                     .foregroundColor(Color(.secondaryLabel))
             }
@@ -164,7 +182,7 @@ struct SubjectScoreCard: View {
     private func subjectIcon(_ subject: String) -> String {
         switch subject {
         case "Chinese": return "character.textbox"
-        case "Mathematics": return "function"
+        case "Mathematics", "Mathematics A", "Mathematics B": return "function"
         case "English": return "textformat.abc"
         case "Science": return "atom"
         case "Physics": return "magnet"
@@ -189,6 +207,7 @@ struct miniChartView: View {
     var series: [SubjectScoreCard.Series]
     var showYAxisAsPercentage: Bool = false
     var displayMode: String // 新增：接收显示模式
+    var fullScore: Double = 100 // 科目满分（用于按比例显示颜色）
     
     var body: some View {
         Chart {
@@ -213,7 +232,7 @@ struct miniChartView: View {
                                 .fill(Color(.secondarySystemGroupedBackground))
                                 .frame(width: 8, height: 8)
                                 .overlay {
-                                    Circle().stroke(scoreColor(p.score), lineWidth: 2)
+                                    Circle().stroke(scoreColor(p.score, fullScore: fullScore), lineWidth: 2)
                                 }
                         }
                     } else {
@@ -236,7 +255,7 @@ struct miniChartView: View {
                                     .fill(Color(.secondarySystemGroupedBackground))
                                     .frame(width: 8, height: 8)
                                     .overlay {
-                                        Circle().stroke(scoreColor(p.score), lineWidth: 2)
+                                        Circle().stroke(scoreColor(p.score, fullScore: fullScore), lineWidth: 2)
                                     }
                             }
                         }
@@ -262,6 +281,7 @@ struct miniChartView: View {
             ],
             displayMode: "score"
         )
+        .environmentObject(DataManager())
         
         SubjectScoreCard(
             subject: "Mathematics",
@@ -273,6 +293,7 @@ struct miniChartView: View {
             ],
             displayMode: "ranking"
         )
+        .environmentObject(DataManager())
     }
     .padding()
     .background(Color(.systemGroupedBackground))

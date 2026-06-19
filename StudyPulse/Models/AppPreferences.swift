@@ -8,13 +8,20 @@
 import Foundation
 import SwiftUI
 
-/// 应用内语言和主题偏好
+// MARK: - App Preferences (应用偏好设置)
+
+/// 应用内语言和主题偏好设置模型
+/// 数据持久化于 UserDefaults，通过 AppEnvironmentManager 管理
 nonisolated struct AppPreferences: Codable {
-    /// 语言选项：nil 表示跟随系统
+    /// 语言代码：nil 表示跟随系统
+    /// 可选值："en", "zh-Hans", "zh-Hant", "ja", "ko"
     var appLanguage: String?
-    /// 主题选项：system / light / dark
+    /// 颜色主题选项
     var colorScheme: ColorSchemeOption = .system
     
+    // MARK: - 语言常量
+    
+    /// 支持的语言代码常量
     enum Language {
         static let english = "en"
         static let simplifiedChinese = "zh-Hans"
@@ -22,6 +29,7 @@ nonisolated struct AppPreferences: Codable {
         static let japanese = "ja"
         static let korean = "ko"
         
+        /// 所有支持的语言列表
         static let all: [(code: String?, displayName: String)] = [
             (nil, "Follow System"),
             (english, "English"),
@@ -31,6 +39,7 @@ nonisolated struct AppPreferences: Codable {
             (korean, "한국어")
         ]
         
+        /// 所有支持的语言列表（已本地化）
         @MainActor static var allLocalized: [(code: String?, displayName: String)] {
             [
                 (nil, "Follow System".localized()),
@@ -44,12 +53,15 @@ nonisolated struct AppPreferences: Codable {
     }
 }
 
-/// 颜色主题选项
+// MARK: - Color Scheme Options (颜色主题选项)
+
+/// 应用颜色主题选项
 nonisolated enum ColorSchemeOption: String, Codable, CaseIterable {
-    case system = "system"
-    case light = "light"
-    case dark = "dark"
+    case system = "system"   /// 跟随系统
+    case light = "light"     /// 浅色模式
+    case dark = "dark"       /// 深色模式
     
+    /// 主题对应的 SF Symbol 图标
     var icon: String {
         switch self {
         case .system: "circle.lefthalf.filled"
@@ -58,6 +70,7 @@ nonisolated enum ColorSchemeOption: String, Codable, CaseIterable {
         }
     }
     
+    /// 主题的本地化显示名称
     @MainActor var localizedDisplayName: String {
         switch self {
         case .system: "Follow System".localized()
@@ -66,6 +79,7 @@ nonisolated enum ColorSchemeOption: String, Codable, CaseIterable {
         }
     }
     
+    /// 转换为 SwiftUI ColorScheme（nil = 跟随系统）
     func toSwiftColorScheme() -> ColorScheme? {
         switch self {
         case .system: nil
