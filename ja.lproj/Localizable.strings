@@ -502,3 +502,28 @@
 "Quote 12" = "勉強は未来を照らす灯台、続けることは彼岸に渡る櫂。";
 "Quote 13" = "間違った道には魅惑的な風景が広がっています。見ているうちに足を踏み入れ、歩くうちに抜けられなくなります。";
 "Quote 14" = "成功したければ、覚悟を決めて突っ走れ！";
+
+// New keys (2026-06-20)
+"App Language" = "アプリ言語";
+"Basic Info" = "基本情報";
+"Daily Quote" = "今日の名言";
+"Enable HealthKit access in Settings." = "設定で HealthKit アクセスを有効にしてください。";
+"Error" = "エラー";
+"Exam Grade Reminder" = "試験成績登録のリマインダー";
+"Exam" = "試験";
+"Features:" = "機能：";
+"Grade" = "学年";
+"Grades" = "成績";
+"Home Layout" = "ホームレイアウト";
+"No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "ヘルスケアに HRV データが見つかりません。数晩、Apple Watch を着用して寝てください。";
+"Notes" = "メモ";
+"Question" = "問題";
+"Reset to Default" = "デフォルトに戻す";
+"StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用" = "StudyPulse は学生が学業の進捗を追跡し、学習資料を管理するのを支援します。\nStudyPulse 成績追跡と学習資料管理アプリ";
+"Trend Chart" = "トレンドチャート";
+"You have %d mistake note(s). Regular review helps prevent similar errors." = "%d 件の間違いノートがあります。定期的な復習は同じミスを防ぐのに役立ちます。";
+"Your HRV is below your baseline. You may be stressed or fatigued — consider lighter review or rest." = "HRV がベースラインを下回っています。ストレスや疲労の可能性があるため、軽い復習または休息を検討してください。";
+"Your HRV is significantly above your baseline — great recovery! A prime day for focused studying." = "HRV がベースラインを大幅に上回っています — 回復状態は最高！集中して勉強するのに最適な日です。";
+"Your HRV is within your normal range. Steady study rhythm recommended." = "HRV は正常範囲内です。安定した学習リズムをおすすめします。";
+"Attribution — NonCommercial — ShareAlike — 4.0 International" = "表示 — 非営利 — 継承 — 4.0 国際";
+"Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "クリエイティブ・コモンズ 表示-非営利-継承 4.0 国際ライセンス";

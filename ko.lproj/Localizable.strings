@@ -502,3 +502,28 @@
 "Quote 12" = "학습은 미래를 비추는 등대이고, 坚持는 그 곳에 닿는 노입니다.";
 "Quote 13" = "잘못된 길에는 매혹적인 풍경이 있습니다. 보다가, 보다가, 참지 못하고 들어서면, 걷다가, 걷다가, 다시는 빠져나올 수 없게 됩니다.";
 "Quote 14" = "성공하려면 먼저 미쳐라, 결심을 굳히고 앞으로 돌진하라!";
+
+// New keys (2026-06-20)
+"App Language" = "앱 언어";
+"Basic Info" = "기본 정보";
+"Daily Quote" = "오늘의 명언";
+"Enable HealthKit access in Settings." = "설정에서 HealthKit 접근 권한을 활성화하세요.";
+"Error" = "오류";
+"Exam Grade Reminder" = "시험 성적 등록 알림";
+"Exam" = "시험";
+"Features:" = "기능:";
+"Grade" = "학년";
+"Grades" = "성적";
+"Home Layout" = "홈 화면 레이아웃";
+"No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "건강 앱에서 HRV 데이터를 찾을 수 없습니다. 며칠 밤 Apple Watch를 착용해 주세요.";
+"Notes" = "메모";
+"Question" = "문제";
+"Reset to Default" = "기본값으로 재설정";
+"StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用" = "StudyPulse는 학생이 학습 진행 상황을 추적하고 학습 자료를 관리하도록 도와줍니다.\nStudyPulse 성적 추적 및 학습 자료 관리 앱";
+"Trend Chart" = "추세 차트";
+"You have %d mistake note(s). Regular review helps prevent similar errors." = "오답 노트가 %d개 있습니다. 정기적인 복습은 같은 실수를 방지하는 데 도움이 됩니다.";
+"Your HRV is below your baseline. You may be stressed or fatigued — consider lighter review or rest." = "HRV가 기준선보다 낮습니다. 스트레스나 피로를 느끼고 있을 수 있으니 가벼운 복습이나 휴식을 고려하세요.";
+"Your HRV is significantly above your baseline — great recovery! A prime day for focused studying." = "HRV가 기준선보다 현저히 높습니다 — 회복 상태가 매우 좋습니다! 집중 공부에 최적의 날입니다.";
+"Your HRV is within your normal range. Steady study rhythm recommended." = "HRV가 정상 범위 내에 있습니다. 안정적인 학습 리듬을 유지하세요.";
+"Attribution — NonCommercial — ShareAlike — 4.0 International" = "표시 — 비영리 — 동일조건변경허락 — 4.0 국제";
+"Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "크리에이티브 커먼즈 저작자표시-비영리-동일조건변경허락 4.0 국제 라이선스";

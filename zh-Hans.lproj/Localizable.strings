@@ -502,3 +502,28 @@
 "Quote 12" = "学习是照亮未来的灯塔，坚持是到达彼岸的船桨。";
 "Quote 13" = "因为歧路上有迷人的风景，看着、看着，就忍不住走进去了，走着、走着，就再也走不出来了。";
 "Quote 14" = "要成功，先发疯，下定决心往前冲！";
+
+// New keys (2026-06-20)
+"App Language" = "应用语言";
+"Basic Info" = "基本信息";
+"Daily Quote" = "每日格言";
+"Enable HealthKit access in Settings." = "请在设置中开启 HealthKit 访问权限。";
+"Error" = "错误";
+"Exam Grade Reminder" = "考试登记提醒";
+"Exam" = "考试";
+"Features:" = "功能特色：";
+"Grade" = "年级";
+"Grades" = "成绩";
+"Home Layout" = "主页布局";
+"No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "暂未在健康中找到 HRV 数据。请连续佩戴 Apple Watch 睡眠几个晚上。";
+"Notes" = "备注";
+"Question" = "题目";
+"Reset to Default" = "恢复默认";
+"StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用" = "StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用";
+"Trend Chart" = "趋势图";
+"You have %d mistake note(s). Regular review helps prevent similar errors." = "你有 %d 条错题笔记。定期复习有助于避免类似错误。";
+"Your HRV is below your baseline. You may be stressed or fatigued — consider lighter review or rest." = "你的 HRV 低于基线。你可能压力较大或感到疲劳，建议轻度复习或休息。";
+"Your HRV is significantly above your baseline — great recovery! A prime day for focused studying." = "你的 HRV 显著高于基线——恢复状态极佳！非常适合专注学习。";
+"Your HRV is within your normal range. Steady study rhythm recommended." = "你的 HRV 在正常范围内。建议保持稳定的学习节奏。";
+"Attribution — NonCommercial — ShareAlike — 4.0 International" = "署名 — 非商业性使用 — 相同方式共享 — 4.0 国际";
+"Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "知识共享署名-非商业性使用-相同方式共享 4.0 国际许可协议";

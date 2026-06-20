@@ -502,3 +502,28 @@
 "Quote 12" = "Learning is the lighthouse that lights the future; persistence is the oar that gets you there.";
 "Quote 13" = "A wrong path can have captivating scenery — you look, you step in, you walk, and you can never find your way out.";
 "Quote 14" = "To succeed, go all in — set your mind and charge forward!";
+
+// New keys (2026-06-20)
+"App Language" = "App Language";
+"Basic Info" = "Basic Info";
+"Daily Quote" = "Daily Quote";
+"Enable HealthKit access in Settings." = "Enable HealthKit access in Settings.";
+"Error" = "Error";
+"Exam Grade Reminder" = "Exam Grade Reminder";
+"Exam" = "Exam";
+"Features:" = "Features:";
+"Grade" = "Grade";
+"Grades" = "Grades";
+"Home Layout" = "Home Layout";
+"No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "No HRV data found in Health. Wear your Apple Watch overnight for a few nights.";
+"Notes" = "Notes";
+"Question" = "Question";
+"Reset to Default" = "Reset to Default";
+"StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用" = "StudyPulse helps students track performance and manage study materials.\nStudyPulse 成绩追踪与学习资料管理应用";
+"Trend Chart" = "Trend Chart";
+"You have %d mistake note(s). Regular review helps prevent similar errors." = "You have %d mistake note(s). Regular review helps prevent similar errors.";
+"Your HRV is below your baseline. You may be stressed or fatigued — consider lighter review or rest." = "Your HRV is below your baseline. You may be stressed or fatigued — consider lighter review or rest.";
+"Your HRV is significantly above your baseline — great recovery! A prime day for focused studying." = "Your HRV is significantly above your baseline — great recovery! A prime day for focused studying.";
+"Your HRV is within your normal range. Steady study rhythm recommended." = "Your HRV is within your normal range. Steady study rhythm recommended.";
+"Attribution — NonCommercial — ShareAlike — 4.0 International" = "Attribution — NonCommercial — ShareAlike — 4.0 International";
+"Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International";
