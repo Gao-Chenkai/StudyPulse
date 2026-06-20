@@ -2,6 +2,8 @@
 //  HRVOnboardingView.swift
 //  StudyPulse
 //
+//  Created by Chenkai Gao on 2026/6/19.
+//
 //  Education screen: explains HRV, privacy, and requests consent
 //
 import SwiftUI

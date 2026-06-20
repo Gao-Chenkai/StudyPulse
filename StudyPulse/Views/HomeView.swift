@@ -54,20 +54,7 @@ struct HomeView: View {
                     // 主要统计卡片（全宽，4 个指标横排）
                     MainStatsCard()
 
-                    // HRV 学习准备度卡片（HealthKit）
-                    HRVStatusCard()
-
-                    // 成绩登记提醒（全宽，条件显示）
-                    if !unregisteredExams.isEmpty {
-                        UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
-                    }
-
-                    // iPad 两列网格 / iPhone 单列堆叠
-                    if sizeClass == .regular || isIPad {
-                        iPadGrid
-                    } else {
-                        iPhoneStack
-                    }
+                    dynamicCards
                 }
                 .padding(.horizontal, sizeClass == .regular || isIPad ? 24 : 20)
                 .padding(.vertical, 12)
@@ -79,54 +66,55 @@ struct HomeView: View {
         }
     }
 
-    // iPad 两列网格
-    private var iPadGrid: some View {
-        VStack(spacing: 16) {
-            // 快捷操作 - 全宽（3 个按钮才能横排）
-            QuickActionsCard()
-                .frame(maxWidth: .infinity)
+    // MARK: - Dynamic Cards
 
-            // 学习建议 + 图表
-            HStack(alignment: .top, spacing: 16) {
-                StudySuggestionsCard()
-                    .frame(maxWidth: .infinity)
-                if !recentGrades.isEmpty {
-                    ChartSectionView()
-                        .frame(maxWidth: .infinity)
+    /// 动态渲染可配置卡片：iPhone 单列，iPad 双列网格
+    @ViewBuilder
+    private var dynamicCards: some View {
+        let layout = HomeLayoutPreference.load()
+        let enabledTypes = layout.enabledTypes
+        
+        if isRegularWidth {
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                spacing: 16
+            ) {
+                ForEach(enabledTypes, id: \.self) { type in
+                    cardView(for: type)
                 }
             }
-
-            // 即将考试 + 最近成绩
-            HStack(alignment: .top, spacing: 16) {
-                if !upcomingExams.isEmpty {
-                    UpcomingExamsSection()
-                        .frame(maxWidth: .infinity)
-                }
-                if !recentGrades.isEmpty {
-                    RecentGradesSection()
-                        .frame(maxWidth: .infinity)
-                }
+        } else {
+            ForEach(enabledTypes, id: \.self) { type in
+                cardView(for: type)
             }
-
-            // 每日励志全宽
-            DailyQuoteCard(quote: dailyQuote)
-                .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
 
-    // iPhone 单列堆叠
-    private var iPhoneStack: some View {
-        VStack(spacing: 20) {
+    /// 根据卡片类型返回对应视图；数据不足时自动隐藏
+    @ViewBuilder
+    private func cardView(for type: HomeCardType) -> some View {
+        switch type {
+        case .hrvStatus:
+            HRVStatusCard()
+        case .unregisteredExamsReminder:
+            if !unregisteredExams.isEmpty {
+                UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+            }
+        case .quickActions:
             QuickActionsCard()
+        case .studySuggestions:
             StudySuggestionsCard()
+        case .trendChart:
             if !recentGrades.isEmpty {
                 ChartSectionView()
             }
+        case .upcomingExams:
             if !upcomingExams.isEmpty {
                 UpcomingExamsSection()
             }
+        case .dailyQuote:
             DailyQuoteCard(quote: dailyQuote)
+        case .recentGrades:
             if !recentGrades.isEmpty {
                 RecentGradesSection()
             }

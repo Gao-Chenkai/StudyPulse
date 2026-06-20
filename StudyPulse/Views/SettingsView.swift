@@ -173,6 +173,9 @@ struct SettingsView: View {
             NavigationLink(destination: PreferencesView()) {
                 Label("App Preferences".localized(), systemImage: "gearshape")
             }
+            NavigationLink(destination: HomeLayoutSettingsView()) {
+                Label("Home Layout".localized(), systemImage: "rectangle.3.group")
+            }
         }
     }
 
