@@ -1,728 +1,409 @@
 # StudyPulse — AI Agent Guide
 
-> Complete developer guide for AI agents working on the **StudyPulse** iOS app.
+> 一份面向 AI 代理的完整开发指南。
+> 本文件仅使用纯文本和代码块描述架构，不使用任何表格或 ASCII 流程图。
 
 ---
 
-## 1. Quick Reference
+## 1. 项目速览
 
-| Item              | Details                                                     |
-|-------------------|-------------------------------------------------------------|
-| Platform          | iOS 18.6+ (iPhone & iPad)                                   |
-| Language          | Swift 6.0                                                   |
-| Architecture      | MVVM + `@EnvironmentObject`                                 |
-| IDE               | Xcode 26.x                                                  |
-| Device Family     | iPhone + iPad (`TARGETED_DEVICE_FAMILY = "1,2"`)            |
-| Concurrency       | Swift 6 strict, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` |
-| Dependencies      | WSOnBoarding, swift-markdown-ui, NetworkImage, cmark-gfm (SPM) |
-| Storage           | JSON files in `~/Documents/` + separate image files         |
-| App Group         | `group.com.chenkai.gao.studypulse`                          |
-| Localizations     | en, zh-Hans, zh-Hant, ja, ko (`*.lproj/Localizable.strings`)|
-| Charts            | SwiftUI `Charts` framework                                  |
-| OCR               | `Vision` framework (`VNRecognizeTextRequest`)               |
-| Calendar          | `EventKit`                                                  |
-| Health            | `HealthKit` (HRV / SDNN readiness)                          |
-| Widget            | WidgetKit sources present (target not yet wired in pbxproj)|
-| Bundle ID         | `Gao.Chenkai.StudyPulse`                                    |
-| iPad Layout       | `Views/Helpers/iPadLayout.swift` + custom `NavigationSplitView` in `ContentView.swift` |
+StudyPulse 是一个使用 SwiftUI 构建的 iOS 学业管理应用，帮助学生
+追踪成绩、管理错题、规划考试、与 HealthKit 同步 HRV 数据并分析学习趋势。支持多种全球教育体系（中国大陆、浙江、上海、台湾、香港、新加坡、UK IGCSE 与 A-Level、IB DP、US AP / SAT / ACT、GRE / GMAT、TOEFL / IELTS 等）。
 
----
-
-## 2. Project Overview
-
-**StudyPulse** is an iOS study management app built with SwiftUI. It helps
-students track grades, manage mistakes, schedule exams, sync with HealthKit
-for HRV-based readiness, and analyse learning trends. It supports many global
-education systems (CN, UK, IB, AP, SAT, ACT, A-Level, IGCSE, DSE, etc.).
-
-Differentiators:
-- **HRV readiness** card on Home (Apple Watch SDNN, 14-day baseline, Z-score).
-- **Customizable Home layout** (drag-to-reorder, per-card on/off, persisted).
-- **Unregistered-exam reminder** card (3–7 day window after an exam).
-- **Multi-language** with `.localized()` extension over `Localizable.strings`.
-- **Native iPad sidebar** via `NavigationSplitView` + adaptive content widths.
-- **WidgetKit** sources are committed; widget target still needs to be added
-  to the Xcode project (see §14).
+平台：iOS 18.6+，同时支持 iPhone 与 iPad。
+语言：Swift 6.0。
+架构：MVVM 与 @EnvironmentObject，通过 ObservableObject 向视图层注入 DataManager。
+并发：Swift 6 Strict Concurrency，默认 Actor 隔离为 MainActor。
+构建：Xcode 26.x。
+依赖：本地包 WSOnBoarding、swift-markdown-ui；远程包 NetworkImage（GitHub）；内建 cmark-gfm。
+存储：业务模型序列化为 JSON 文件保存在 ~/Documents/；图片以独立文件保存在 ~/Documents/images/；偏好设置与主页顺序保存在 UserDefaults。
+应用组：group.com.chenkai.gao.studypulse，用于小组件数据同步。
+本地化：English、简体中文、繁體中文、日本語、한국。
+图表：SwiftUI Charts。
+OCR：Vision 框架 VNRecognizeTextRequest。
+日历：EventKit。
+健康：HealthKit HRV / SDNN。
+小组件：WidgetKit，源码已提供，目标暂未接入 Xcode 工程。
+工程文件：StudyPulse.xcodeproj。
 
 ---
 
-## 3. Repository Layout
+## 2. 仓库布局
 
-```
-StudyPulse/                            # Xcode project root
-├── StudyPulse.xcodeproj/              # Xcode project (one target: StudyPulse)
-│
-├── StudyPulse/                        # Main app target sources
-│   ├── StudyPulseApp.swift            # @main entry, NotificationCoordinator, scene setup
-│   ├── StudyPulse.entitlements        # HealthKit entitlement
-│   ├── Assets.xcassets/               # AccentColor, AppIcon (StudyPulseIcon)
-│   │
-│   ├── Models/                        # Plain data structs (Codable, nonisolated)
-│   │   ├── DataModels.swift           # Subject, Grade, MistakeNote, Exam, comprehensiveExam, UserProfile
-│   │   ├── AppPreferences.swift       # Persisted app prefs (language + color scheme)
-│   │   └── HomeLayoutPreference.swift # Home card order + enabled flags, UserDefaults persisted
-│   │
-│   ├── Managers/                      # @MainActor / nonisolated service layer
-│   │   ├── DataManager.swift          # @MainActor ObservableObject + DataFileIO (nonisolated enum)
-│   │   ├── AppEnvironmentManager.swift# Global language + theme
-│   │   ├── AppStyle.swift             # App visual style helpers
-│   │   ├── CalendarManager.swift      # EventKit integration
-│   │   ├── DataExportManager.swift    # CSV export for grades / mistakes / exams
-│   │   ├── EducationConfig.swift      # Global education systems (CN/UK/IB/AP/SAT/ACT/...)
-│   │   ├── ExamWidgetData.swift       # Widget data DTO + AppGroupConfig + WidgetDataStore
-│   │   ├── HealthKitManager.swift     # HRV (SDNN) readiness, baseline, daily history
-│   │   ├── ImageCache.swift           # NSCache + thumbnail (nonisolated)
-│   │   ├── OCRManager.swift           # Vision text recognition
-│   │   ├── StringsLocalized.swift     # String.localized() helper
-│   │   ├── SubjectInfo.swift          # Display names + colour + max-score fallback
-│   │   └── WidgetDataSyncManager.swift# App Group sync (encode + write)
-│   │
-│   ├── Views/                         # SwiftUI screens
-│   │   ├── ContentView.swift          # AppTab enum + iPhoneTabLayout + iPadSidebarLayout (NavigationSplitView)
-│   │   ├── HomeView.swift             # Dashboard (welcome, stats, dynamic cards, daily quote, charts)
-│   │   ├── TrendsView.swift           # Per-subject trends + "needs attention" alerts
-│   │   ├── MistakeView.swift          # Mistake list + suggested review + search
-│   │   ├── ExamView.swift             # Single + comprehensive exam lists
-│   │   ├── SettingsView.swift         # Profile, prefs, academic info, data, about
-│   │   ├── PreferencesView.swift      # Language + appearance
-│   │   ├── HomeLayoutSettingsView.swift# Reorder + toggle Home cards
-│   │   ├── HRVOnboardingView.swift    # 3-page HRV explainer + consent + HealthKit auth
-│   │   ├── AddGradeView.swift         # Modal: add a grade
-│   │   ├── NewExamSetView.swift       # Modal: add an exam (single or comprehensive)
-│   │   ├── NewMistakeSetView.swift    # Modal: new mistake with photo + OCR
-│   │   ├── ExamDetailView.swift       # Single exam detail + related mistakes
-│   │   ├── ExamDetailEditView.swift   # Edit exam
-│   │   ├── MistakeDetailEditView.swift# 4-section mistake editor with OCR
-│   │   ├── SubjectScoreCard.swift     # Reusable subject score card
-│   │   │
-│   │   ├── Admin/                     # Developer / power-user data admin
-│   │   │   └── DataAdminView.swift    # Lists grades/exams/mistakes with bulk actions
-│   │   │
-│   │   ├── Components/                # Reusable building blocks
-│   │   │   ├── GradeChartView.swift
-│   │   │   ├── HRVStatusCard.swift    # Home HRV card (3 detail levels)
-│   │   │   └── SubjectPickerView.swift
-│   │   │
-│   │   ├── Helpers/                   # View-level helpers
-│   │   │   ├── AvatarView.swift       # First-letter fallback
-│   │   │   ├── ImagePicker.swift      # Photo library / camera
-│   │   │   ├── PhotoCaptureView.swift # Camera capture
-│   │   │   ├── ScoreColor.swift       # Proportional score → colour
-│   │   │   ├── ZoomableImageView.swift# Pinch-to-zoom
-│   │   │   └── iPadLayout.swift      # adaptiveMaxWidth, AdaptiveHStack, AdaptiveGridColumns, adaptiveCardPadding
-│   │   │
-│   │   └── OnBoarding/
-│   │       └── WelcomeConfig.swift    # WSOnBoarding welcome config
-│   │
-│   ├── Extensions/                    # Cross-cutting extensions
-│   │   ├── ColorExtensions.swift
-│   │   └── DateExtensions.swift
-│   │
-│   └── NotificationsControl/
-│       └── ExamPrepareNotifications.swift # Local notification scheduling
-│
-├── StudyPulseWidget/                  # WidgetKit sources (NOT yet a build target)
-│   ├── ExamWidget.swift               # Widget definition
-│   ├── ExamWidgetData.swift           # Widget data model
-│   ├── ExamWidgetEntry.swift          # Timeline entry
-│   ├── ExamWidgetProvider.swift       # Timeline provider
-│   ├── ExamWidgetViews.swift          # S/M/L widget UI
-│   ├── StudyPulseWidgetBundle.swift   # @main bundle
-│   ├── Info.plist
-│   └── Assets.xcassets/               # AccentColor, AppIcon, WidgetBackground
-│
-├── TestData/                          # Sample CSVs + generators
-│   ├── README.md
-│   ├── grades_sample.csv
-│   ├── mistakes_sample.csv
-│   ├── single_exams_sample.csv
-│   ├── comprehensive_exams_sample.csv
-│   ├── exams_sample.csv
-│   ├── simple_test.csv
-│   ├── generate_test_data.py
-│   ├── check_csv.py
-│   ├── TestDataGenerator.swift
-│   ├── TestParser.swift
-│   └── test_import.swift
-│
-├── en.lproj/Localizable.strings
-├── zh-Hans.lproj/Localizable.strings
-├── zh-Hant.lproj/Localizable.strings
-├── ja.lproj/Localizable.strings
-├── ko.lproj/Localizable.strings
-│
-├── AGENTS.md                          # This file
-├── CODE_WIKI.md                       # English wiki
-├── CODE_WIKI_CN.md                    # Chinese wiki
-├── README.md
-├── LICENSE                            # CC BY-NC-SA 4.0
-└── scripts/build.sh                   # Bash build helper (xcodebuild)
-```
+仓库根目录包含以下核心内容：
+
+- StudyPulse.xcodeproj：Xcode 工程，单目标 StudyPulse。
+- StudyPulse/：主应用源代码目录。
+  - StudyPulseApp.swift：@main 入口，请求通知授权并以 .task 启动 DataManager.asyncInit()。
+  - StudyPulse.entitlements：开启 com.apple.developer.healthkit 权限。
+  - Assets.xcassets：AccentColor、AppIcon。
+  - Models/：数据模型定义。
+    - DataModels.swift：Subject、Grade、MistakeNote、Exam、comprehensiveExam、UserProfile，以及教育系统相关枚举与结构（EducationStage、EducationCategory、SubjectConfig、EducationRegion）。
+    - AppPreferences.swift：应用偏好（语言与色彩方案）。
+    - HomeLayoutPreference.swift：主页卡片顺序与启用标记（按名称顺序存储，持久化到 UserDefaults）。
+  - Managers/：业务逻辑层。
+    - DataManager.swift：@MainActor ObservableObject，中央状态管理器。管理 grades、subjects、mistakeSets、examSets、comprehensiveExamSets、profile 等 @Published 属性，提供 asyncInit() 与各 save/loadAsync/load 方法。
+    - AppEnvironmentManager.swift：全局语言与主题管理。
+    - AppStyle.swift：应用设计系统骨架。
+    - CalendarManager.swift：EventKit 集成。
+    - DataExportManager.swift：CSV 导出（@MainActor enum）。
+    - EducationConfig.swift：全球教育体系静态配置（nonisolated enum）。
+    - ExamWidgetData.swift：小组件数据模型、AppGroupConfig、WidgetDataStore（App Group 读写）。
+    - HealthKitManager.swift：HRV（SDNN）准备度、14 天基线、日级历史。
+    - ImageCache.swift：nonisolated class，NSCache + 缩略图，单例 50 条缓存。
+    - OCRManager.swift：Vision 文字识别。
+    - StringsLocalized.swift：字符串本地化扩展 .localized()。
+    - SubjectInfo.swift：展示名称与颜色、满分回退。
+    - WidgetDataSyncManager.swift：App Group 数据同步（编码并写入）。
+  - Views/：SwiftUI 视图。
+    - ContentView.swift：根视图，iPhone 使用 TabView（5 个标签），iPad 使用自定义 NavigationSplitView 侧栏。
+    - HomeView.swift：主页仪表盘（欢迎头、统计卡、动态卡片、每日金句、图表、即将到来的考试、近期成绩）。
+    - TrendsView.swift：趋势分析（每科目趋势与需要关注的科目）。
+    - MistakeView.swift：错题列表（建议复习、搜索、卡片布局）。
+    - ExamView.swift：考试列表（单科与综合考试）。
+    - SettingsView.swift：设置（资料、偏好、教育信息、数据管理、关于）。
+    - PreferencesView.swift：语言与外观。
+    - HomeLayoutSettingsView.swift：主页卡片重新排序与开关。
+    - HRVOnboardingView.swift：HRV 介绍、隐私与授权三页。
+    - AddGradeView.swift：添加成绩模态。
+    - NewExamSetView.swift：新增 / 编辑考试（单科或综合）。
+    - NewMistakeSetView.swift：新增错题（带照片与 OCR）。
+    - ExamDetailView.swift：单科考试详情（关联错题）。
+    - ExamDetailEditView.swift：编辑考试。
+    - MistakeDetailEditView.swift：四块错题编辑（每块独立照片 + OCR + Markdown 预览）。
+    - SubjectScoreCard.swift：可复用的科目成绩卡。
+    - Components/：组件目录（GradeChartView、HRVStatusCard、SectionHeader、SubjectPickerView）。
+    - Helpers/：视图辅助（AvatarView、ImagePicker、PhotoCaptureView、ScoreColor、ZoomableImageView、iPadLayout）。
+    - Admin/：开发者页面（DataAdminView）。
+    - OnBoarding/：启动引导（WelcomeConfig）。
+  - Extensions/：ColorExtensions.swift、DateExtensions.swift。
+  - NotificationsControl/：ExamPrepareNotifications.swift（本地通知）。
+- StudyPulseWidget/：WidgetKit 小组件源码（目标暂未接入 Xcode 工程）。
+  - ExamWidget.swift：Widget 定义。
+  - ExamWidgetData.swift：共享数据模型。
+  - ExamWidgetEntry.swift：时间轴条目。
+  - ExamWidgetProvider.swift：时间轴提供者。
+  - ExamWidgetViews.swift：S / M / L 三种尺寸视图。
+  - StudyPulseWidgetBundle.swift：@main bundle。
+  - Info.plist：小组件 Info.plist。
+  - Assets.xcassets：AccentColor、AppIcon、WidgetBackground。
+- TestData/：示例 CSV 与生成脚本。
+- en.lproj、zh-Hans.lproj、zh-Hant.lproj、ja.lproj、ko.lproj：各语言本地化字符串。
+- AGENTS.md / CODE_WIKI.md / CODE_WIKI_CN.md / README.md / LICENSE：文档与许可。
+- scripts/build.sh：构建辅助脚本。
 
 ---
 
-## 4. Architecture
+## 3. 架构说明
 
-```
-+-------------------------------------------------------------------------+
-|                          StudyPulse iOS App                              |
-+-------------------------------------------------------------------------+
-|  Presentation (SwiftUI, MainActor)                                      |
-|  +-------------------------------------------------------------------+  |
-|  |  ContentView                                                     |  |
-|  |   |- iPhoneTabLayout   (TabView, 5 tabs)                         |  |
-|  |   |- iPadSidebarLayout (NavigationSplitView, sidebar list)       |  |
-|  |  Tabs: Home / Trends / Mistakes / Exams / Settings               |  |
-|  +-------------------------------------------------------------------+  |
-|             |  @EnvironmentObject                                      |
-|             v                                                           |
-|  +-------------------------------------------------------------------+  |
-|  |  HomeView  | TrendsView | MistakeView | ExamView | SettingsView  |  |
-|  |  + dynamic cards driven by HomeLayoutPreference                  |  |
-|  |  + HRVStatusCard, UnregisteredExamsReminderCard,                 |  |
-|  |    QuickActionsCard, StudySuggestionsCard, ChartSectionView,     |  |
-|  |    UpcomingExamsSection, DailyQuoteCard, RecentGradesSection     |  |
-|  +-------------------------------------------------------------------+  |
-|             |                                                           |
-|             v                                                           |
-|  +-------------------------------------------------------------------+  |
-|  |  Modal sheets                                                    |  |
-|  |   AddGradeView | NewExamSetView | NewMistakeSetView              |  |
-|  |   MistakeDetailEditView | ExamDetailEditView                     |  |
-|  |   HRVOnboardingView | HomeLayoutSettingsView                     |  |
-|  |   DataAdminView                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|                                                                         |
-|  Business / Service Layer (MainActor unless noted)                      |
-|  +-------------------------------------------------------------------+  |
-|  | DataManager  (@MainActor ObservableObject)                        |  |
-|  |   - grades, subjects, mistakeSets, examSets, comprehensiveExams  |  |
-|  |   - profile                                                       |  |
-|  |   - asyncInit() / save* / load*Async / load*                      |  |
-|  |   - saveGradeImage / loadGradeImage / deleteGradeImage            |  |
-|  |   - saveAvatar / loadAvatar / deleteAvatar                        |  |
-|  |   - applySmartSubjectRecommendation(stage:regionCode:)           |  |
-|  |   - fullScore(for:) / displayName(for:)                           |  |
-|  |                                                                   |  |
-|  | AppEnvironmentManager (@MainActor ObservableObject, singleton)    |  |
-|  |   - preferences: AppPreferences (Codable, UserDefaults)           |  |
-|  |   - effectiveColorScheme / setLanguage / setColorScheme           |  |
-|  |                                                                   |  |
-|  | HealthKitManager (@MainActor ObservableObject, singleton)         |  |
-|  |   - hrvEnabled / hrvOnboardingCompleted / isAuthorized           |  |
-|  |   - readiness: HRVReadiness (Z-score + category + suggestion)     |  |
-|  |   - dailyHRVHistory / lastSampleCount / hrvDetailLevel            |  |
-|  |   - enable() / disable() / refreshReadiness()                     |  |
-|  |                                                                   |  |
-|  | CalendarManager (EventKit)                                        |  |
-|  | DataExportManager (CSV; @MainActor enum)                          |  |
-|  | OCRManager (Vision; .accurate, zh-Hans + en)                     |  |
-|  | ImageCache (nonisolated class, NSCache, 50 entries, 300px thumb)  |  |
-|  | EducationConfig (nonisolated enum)                                |  |
-|  | SubjectInfo (display names + colour fallback)                     |  |
-|  | WidgetDataSyncManager (encode exams → App Group)                  |  |
-|  +-------------------------------------------------------------------+  |
-|                                                                         |
-|  Data Layer                                                             |
-|  +-------------------------------------------------------------------+  |
-|  |  Models: Subject, Grade, MistakeNote, Exam, comprehensiveExam,    |  |
-|  |          UserProfile, AppPreferences, HomeLayoutPreference        |  |
-|  |          (all Codable + nonisolated, value types)                 |  |
-|  +-------------------------------------------------------------------+  |
-|             |                                                           |
-|             v                                                           |
-|  +-------------------------------------------------------------------+  |
-|  |  Persistence                                                     |  |
-|  |   ~/Documents/                                                   |  |
-|  |     profile.json, grades.json, mistakes.json, exams.json,         |  |
-|  |     comprehensiveExams.json, subjects.json                        |  |
-|  |     images/avatar_*.jpg, grade_*.jpg                              |  |
-|  |   UserDefaults: appPreferences, homeLayoutPreference,             |  |
-|  |                 hrv_enabled, hrv_onboarding_completed,            |  |
-|  |                 hrv_detail_level                                  |  |
-|  |   App Group UserDefaults: widgetUpcomingExams                     |  |
-|  +-------------------------------------------------------------------+  |
-|                                                                         |
-|  Extensions / Notifications                                             |
-|  +-------------------------------------------------------------------+  |
-|  | ColorExtensions, DateExtensions, StringsLocalized                 |  |
-|  | ExamPrepareNotifications  (UNUserNotificationCenter, [1,3,5,10,30]|  |
-|  +-------------------------------------------------------------------+  |
-+-------------------------------------------------------------------------+
-```
+应用遵循 MVVM 模式，通过 @EnvironmentObject 在视图层注入 DataManager、AppEnvironmentManager 与 HealthKitManager。视图层负责展示与用户交互，业务逻辑层集中在 Managers/下的管理器，数据层为 Codable 的 value type。数据流从视图触发 DataManager.save*()，DataManager 将变更发布到 @Published 属性，触发 SwiftUI 重渲染；同时写入 ~/Documents/{file}.json。涉及考试的写入还会通过 WidgetDataSyncManager 同步到 App Group。
+
+视图层目录：
+- 根视图使用 ContentView。iPhone 以 TabView 五标签呈现 HomeView、TrendsView、MistakeView、ExamView、SettingsView；iPad 以自定义 NavigationSplitView 呈现侧栏 + 详情，保持 iPhone 布局不变而内容居中。HomeView 动态卡片由 HomeLayoutPreference 的启用顺序渲染，iPad 使用两栏 LazyVGrid，iPhone 使用单列 VStack。模态面板为 AddGradeView、NewExamSetView、NewMistakeSetView、MistakeDetailEditView、ExamDetailEditView、HRVOnboardingView、HomeLayoutSettingsView、DataAdminView，通过 .sheet 或 .navigationDestination 展示。
+
+业务 / 服务层目录：
+- DataManager（@MainActor ObservableObject）集中保存并对外暴露 grades / subjects / mistakeSets / examSets / comprehensiveExamSets / profile；提供 asyncInit()、save*()、load*Async() 与 saveGradeImage() / loadGradeImage() / deleteGradeImage()、saveAvatar() / loadAvatar() / deleteAvatar()，以及 fullScore(for:)、displayName(for:)、applySmartSubjectRecommendation(stage:regionCode:)。
+- AppEnvironmentManager（@MainActor ObservableObject 单例）持有 AppPreferences，并提供 effectiveColorScheme、setLanguage、setColorScheme 等计算属性与方法。
+- HealthKitManager（@MainActor ObservableObject 单例）持有 HRVReadiness（Z-score、分类、建议）、dailyHRVHistory、lastSampleCount、hrvDetailLevel，负责 enable() / disable() / refreshReadiness()。
+- CalendarManager：EventKit 单例，负责添加考试到系统日历。
+- OCRManager：Vision 文本识别（recognitionLanguages = ["zh-Hans", "en"]）。
+- ImageCache：nonisolated class，单例 NSCache 50 项、300px 缩略图。
+- EducationConfig：nonisolated enum，提供全球教育系统配置。
+- SubjectInfo：科目显示辅助。
+- WidgetDataSyncManager：App Group 同步。
+
+数据层目录：
+- 模型为 nonisolated value type，Codable 与 Sendable，可无 ceremony 跨 actor 传递。Subject、Grade、MistakeNote、Exam、comprehensiveExam、UserProfile、AppPreferences、HomeLayoutPreference。
+- 持久化层写入 ~/Documents/ 下的对应 JSON；图片以 grade_UUID.jpg 写入 ~/Documents/images/；头像写入 avatar_UUID.jpg。UserDefaults 保存 AppPreferences、HomeLayoutPreference、hrv 相关偏好；App Group 容器保存 widgetUpcomingExams。
+
+扩展与通知目录：
+- ColorExtensions、DateExtensions、StringsLocalized 提供跨层使用的辅助；ExamPrepareNotifications 使用 UNUserNotificationCenter 调度本地通知，默认提醒天数 [1, 3, 5, 10, 30]。
 
 ---
 
-## 5. Module Dependency Graph
+## 4. 模块依赖关系
 
-```
-+------------+        +-------------------+
-|  Views     |        |  StudyPulseWidget  |
-| ContentView|        |  ExamWidget        |
-| HomeView   |        |  ExamWidgetViews   |
-| TrendsView |        |  ExamWidgetProvider|
-| MistakeView|        |  ExamWidgetEntry   |
-| ExamView   |        |  ExamWidgetData    |
-| ...        |        +---------+---------+
-+-----+------+                  |
-      |  (@EnvironmentObject)  | (App Group UserDefaults)
-      v                         v
-+-----+--------------------+   +----------------------+
-| DataManager (MainActor)  |   | WidgetDataSyncManager|
-| AppEnvironmentManager    |   | WidgetDataStore      |
-| HealthKitManager         |   +----------------------+
-+-----+--------------------+
-      |
-      v
-+-----+----------------+  +----------------+
-| CalendarManager       |  | OCRManager     |
-| DataExportManager     |  | ImageCache     |
-| ExamPrepareNotif.     |  | EducationConfig|
-+-----+----------------+  +----------------+
-      |
-      v
-+--------------------------+
-| Models (Codable structs) |
-+--------------------------+
-```
+模块依赖顺序为：视图层依赖 DataManager（通过 @EnvironmentObject 注入），DataManager 再依赖辅助管理器与模型；模型本身不依赖其它层。
+
+视图层到 DataManager 的调用示例：
+- HomeView、TrendsView、MistakeView、ExamView、SettingsView 通过 @EnvironmentObject 读写 DataManager。
+- DataManager 通过 CalendarManager / OCRManager / ImageCache / EducationConfig / SubjectInfo / WidgetDataSyncManager 等辅助组件。
+- 辅助组件不反向调用视图层。
+- 所有辅助组件与视图层解耦，便于单独测试。
+
+小组件（StudyPulseWidget）通过 App Group 容器读取主应用写入的 ExamWidgetData 数据，自身不依赖 DataManager，依赖链不跨越进程边界。
 
 ---
 
-## 6. Navigation Flow
+## 5. 导航流程
 
-```
-StudyPulseApp  (@main)
-  |- sets NotificationCoordinator as UNUserNotificationCenter.delegate
-  |- requests notification authorization
-  |- calls AppEnvironmentManager.shared.applyLanguageOnLaunch()
-  |- .task { dataManager.asyncInit() }
-       v
-ContentView
-  |- iPhone:  TabView (5 tabs)
-  |- iPad:    NavigationSplitView with sidebar list (5 items)
-       |
-       v
-  HomeView ──────► AddGradeView (sheet)
-       │           NewExamSetView / NewMistakeSetView
-       │           HomeLayoutSettingsView
-       │
-       ├─ HRVStatusCard          ──► HRVOnboardingView (first-time)
-       ├─ UnregisteredExamsReminderCard ──► AddGradeView (pre-filled)
-       ├─ QuickActionsCard       ──► AddGradeView / NewExamSetView / NewMistakeSetView
-       ├─ StudySuggestionsCard
-       ├─ ChartSectionView
-       ├─ UpcomingExamsSection   ──► ExamDetailView
-       ├─ DailyQuoteCard
-       └─ RecentGradesSection
+应用入口在 StudyPulseApp：
+- 设置 NotificationCoordinator 作为 UNUserNotificationCenter delegate。
+- 请求通知授权。
+- 调用 AppEnvironmentManager.shared.applyLanguageOnLaunch() 恢复语言设置。
+- 使用 .task { dataManager.asyncInit() } 后台加载数据。
 
-  TrendsView  ──► per-subject detail
-  MistakeView ──► MistakeDetailEditView  (4 sections + OCR)
-  ExamView    ──► ExamDetailView ──► ExamDetailEditView
-  SettingsView ──► PreferencesView, EditSubjects, ProfileEdit,
-                   DataAdminView, About, Copyright
-```
+ContentView 根据水平 size class 判定设备：
+- iPhone：TabView 五个标签（Home / Trends / Mistakes / Exams / Settings）。
+- iPad：NavigationSplitView，列表项目与 iPhone 五标签一致。
 
----
+HomeView：
+- 快速动作按钮打开 AddGradeView、NewExamSetView、NewMistakeSetView。
+- HRV 状态卡首次出现时会启动 HRVOnboardingView。
+- 未注册考试提醒卡引导到 AddGradeView。
+- 即将到来的考试引导到 ExamDetailView。
 
-## 7. Data Layer
+TrendsView：
+- 点击科目进入 per-subject 详情。
 
-### 7.1 DataManager
+MistakeView：
+- 新建错题进入 MistakeDetailEditView。
+- 已有错题进入 MistakeDetailEditView（编辑模式）。
 
-`@MainActor` `ObservableObject`, exposed as `@EnvironmentObject` to every view.
+ExamView：
+- 点击 + 按钮进入 NewExamSetView。
+- 点击考试进入 ExamDetailView。
+- ExamDetailView 中编辑按钮进入 ExamDetailEditView。
+- ExamDetailView 可跳转关联的 MistakeDetailEditView。
 
-Published properties:
-- `grades: [Grade]`
-- `subjects: [Subject]`
-- `mistakeSets: [MistakeNote]`
-- `examSets: [Exam]`
-- `comprehensiveExamSets: [comprehensiveExam]`
-- `profile: UserProfile`
-
-Lifecycle:
-- `init()` — synchronous eager loads (back-compat).
-- `asyncInit()` — background `Task.detached` then `MainActor.run` to mutate
-  `@Published` properties; also migrates inline `Grade.image` data to files
-  in `images/grade_{UUID}.jpg`.
-
-Persistence files in `~/Documents/`:
-`profile.json`, `grades.json`, `mistakes.json`, `exams.json`,
-`comprehensiveExams.json`, `subjects.json`.
-
-`DataFileIO` is a `nonisolated enum` (thread-safe file I/O):
-- `getDocsDir()`, `getImagesDir()`
-- `load<T: Codable>(url:decoder:) -> T?`
-
-Image storage:
-- Avatars: `images/avatar_{uuid}.jpg`
-- Grade snapshots: `images/grade_{uuid}.jpg` (migrated from inline `Data`).
-
-### 7.2 Data Persistence Flow
-
-```
-[App launch]
-StudyPulseApp
-  └─ .task { dataManager.asyncInit() }
-       └─ Task.detached(priority: .userInitiated)
-            ├─ DataFileIO.load profile.json
-            ├─ DataFileIO.load grades.json  (migrate inline image -> file)
-            ├─ DataFileIO.load mistakes.json
-            ├─ DataFileIO.load exams.json (ISO8601 dates)
-            ├─ DataFileIO.load comprehensiveExams.json (ISO8601 dates)
-            └─ DataFileIO.load subjects.json
-       └─ MainActor.run { assign @Published; initializeDefaultSubjects() }
-
-[Edit]
-View -> DataManager.save*()  -> JSONEncoder -> ~/Documents/{file}.json
-WidgetDataSyncManager.syncExamsToWidget() -> App Group UserDefaults
-```
-
-### 7.3 Key Models
-
-| Model             | Notes                                                                  |
-|-------------------|------------------------------------------------------------------------|
-| `Subject`         | `name`, `displayName`, `enabled`, `fullScore` (customizable)           |
-| `Grade`           | `subject`, `score`, `rawScore?`, `ranking?`, `importance (1..5)`, `image?` (legacy), `imageFileName?`, `date`, `examName`, `fullScore?` |
-| `MistakeNote`     | `title`, `subject`, `originalQuestion`, `source`, `date`, `errorReason`, `wrongSolution`, `correctSolution`, per-section `…Images: [Data]` |
-| `Exam`            | single-subject — `subject: String`                                    |
-| `comprehensiveExam` | multi-subject — `subject: [String]`                                 |
-| `UserProfile`     | username, real name, age, gender, school/grade/class/studentId, enrollment/exam years, educationStage, regionCode, theme, avatar, target school/score, selectedSubjects |
-| `AppPreferences`  | `appLanguage: String?`, `colorScheme: ColorSchemeOption` (UserDefaults) |
-| `HomeLayoutPreference` | ordered `items: [HomeCardItem]` (type + enabled), persisted in UserDefaults, merges on schema changes |
+SettingsView：
+- PreferencesView：语言与外观。
+- ProfileEditView：编辑用户资料（学校、年级、班级、学号、入学年、考试年、目标学校、目标分数）。
+- EditSubjectsView：每科目满分自定义。
+- DataAdminView：开发者数据管理。
+- AboutView / CopyrightView：关于与版权。
 
 ---
 
-## 8. HRV / HealthKit Subsystem
+## 6. 数据层说明
 
-```
-+-----------------------------+
-|  HealthKitManager (singleton)|
-|  - hrvEnabled                |
-|  - hrvOnboardingCompleted    |
-|  - isAuthorized              |
-|  - readiness: HRVReadiness   |
-|  - dailyHRVHistory           |
-|  - lastSampleCount           |
-|  - hrvDetailLevel            |
-+-----------------------------+
-       |  read
-       v
-+------------------+      +------------------+
-| HKHealthStore    |      | HRVStatusCard    |
-| .heartRateVar-   |      |  (3 detail levels|
-|  iabilitySDNN    |      |   suggestion only|
-+------------------+      |   data+suggestion|
-                          |   chart+data)    |
-                          +------------------+
-                                   ^
-                                   |  first-run
-                          +------------------+
-                          | HRVOnboardingView|
-                          |  3 pages: what  |
-                          |  is HRV / privacy|
-                          |  / consent       |
-                          +------------------+
-```
+DataManager 为 @MainActor ObservableObject，作为视图层的 @EnvironmentObject 被注入。
+@Published 属性包括 grades、subjects、mistakeSets、examSets、comprehensiveExamSets，外加 profile 与辅助属性。
+生命周期方法包括 init()（同步加载，为向后兼容保留）、asyncInit()（Task.detached 在后台线程加载，通过 MainActor.run 回主线程，同时迁移 Grade.image 内联数据为独立文件）。
+持久化时，各模型写入 ~/Documents/ 下单独文件，各模型对应 JSON；图片（成绩与头像）写入 ~/Documents/images/ 目录；Widget 数据通过 WidgetDataSyncManager 写入 App Group。
 
-- Window: 14 days of `HKQuantitySample` for `HRVSDNN`.
-- Daily aggregation: first sample per calendar day, sorted desc.
-- Baseline: mean of days **after today** (requires ≥ 7 distinct days).
-- Z-score: `(today - mean) / stdDev` over the past.
-- Categories: `excellent` (z > 1), `normal` (-1 ≤ z ≤ 1), `low` (z < -1),
-  `insufficient` (< 7 days), `noAuthorization`, `queryFailed`.
-- `enable()` requests `requestAuthorization(toShare: [], read: [hrvType])`.
-- `StudyPulse.entitlements` enables `com.apple.developer.healthkit`.
-- Detail-level toggle in Settings: `suggestionOnly` / `dataAndSuggestion` /
-  `chartAndData` (drives `HRVStatusCard` rendering).
+DataFileIO 为 nonisolated enum，负责 getDocsDir()、getImagesDir()、load<T: Codable>(url:) 等纯 I/O 方法。
+
+图像文件命名：
+- 成绩快照：images/grade_UUID.jpg。
+- 头像：images/avatar_UUID.jpg。
+
+持久化数据流：
+- 应用启动：StudyPulseApp 在 .task 中调用 dataManager.asyncInit()。asyncInit 内部在后台 Task.detached（优先级 .userInitiated）并行加载 profile.json、grades.json、mistakes.json、exams.json、comprehensiveExams.json、subjects.json。回到主 Actor 后把结果分配给 @Published 并初始化默认科目。
+- 用户编辑：视图调用 DataManager.save()，序列化写入文件并同步更新 @Published 变更触发 SwiftUI 重渲染。如果 save 涉及考试，还会调用 WidgetDataSyncManager.syncExamsToWidget() 触发 WidgetKit reloadTimelines。
+
+核心模型说明：
+- Subject：name、displayName、enabled、fullScore。
+- Grade：subject、score、rawScore?、ranking?、importance（1..5）、image?（legacy 字段）、imageFileName?、date、examName、fullScore?。
+- MistakeNote：title、subject、originalQuestion、source、date、errorReason、wrongSolution、correctSolution，以及每区块的文件名数组。
+- Exam：subject（String）。
+- comprehensiveExam：subject（[String]）。
+- UserProfile：username、realName、age、gender、school / grade / class / studentId、enrollmentYear / examYear、educationStage、regionCode、theme、avatarFileName、selectedSubjects、targetSchool、targetScore。
+- AppPreferences：appLanguage（可选）、colorScheme（ColorSchemeOption）。
+- HomeLayoutPreference：有序 items（HomeCardItem 数组，每块带 enabled flag），持久化到 UserDefaults。
 
 ---
 
-## 9. Customizable Home Layout
+## 7. HRV / HealthKit 子系统
 
-`HomeLayoutPreference` (Codable) is persisted in `UserDefaults`
-(key: `homeLayoutPreference`). `HomeView` reads it on every body evaluation
-and renders enabled cards in the user-defined order, with iPad using a
-two-column `LazyVGrid` and iPhone a single `VStack`.
+HealthKitManager 为 @MainActor ObservableObject 单例，负责读取 HKHealthStore 的 HRV（SDNN）数据，为用户提供当日学习状态的准备度建议。
 
-Card types (`HomeCardType`):
-- `hrvStatus`             — HRVStatusCard
-- `unregisteredExamsReminder` — UnregisteredExamsReminderCard (hides if empty)
-- `quickActions`          — QuickActionsCard
-- `studySuggestions`      — StudySuggestionsCard
-- `trendChart`            — ChartSectionView (hides if no recent grades)
-- `upcomingExams`         — UpcomingExamsSection (hides if empty)
-- `dailyQuote`            — DailyQuoteCard
-- `recentGrades`          — RecentGradesSection (hides if no recent grades)
+采样窗口：14 天 HKQuantitySample （ heartRateVariabilitySDNN）。
+按日历日聚合：取每个日历日的第一个样本，按日期降序。
+基线计算：仅统计 ≥ 7 个不同天数的样本，计算过去 14 天均值与标准差。
+Z-score：（当日 SDNN − 均值） / 标准差。
+分类：excellent（z > 1）、normal（-1 ≤ z ≤ 1）、low（z < -1）、insufficient（少于 7 天）、noAuthorization（无授权）、queryFailed（查询失败）。
 
-`HomeLayoutSettingsView` provides drag-to-reorder and on/off toggles, then
-calls `preference.save()`.
+对外状态：hrvEnabled、hrvOnboardingCompleted、isAuthorized、readiness、dailyHRVHistory、lastSampleCount、hrvDetailLevel。
 
-`mergeWithDefault` keeps the user's choices when new card types are added
-in future versions.
+enable() 方法请求 HealthKit 授权（read heartRateVariabilitySDNN），disable() 禁用，refreshReadiness() 重新计算。hrvDetailLevel 决定 HRVStatusCard 的呈现模式 suggestionOnly / dataAndSuggestion / chartAndData。
+
+首次启用时，HomeView 调用 HRVOnboardingView 三页介绍 HRV 是什么、隐私保护与授权确认。
 
 ---
 
-## 10. Image, OCR, and CSV Pipelines
+## 8. 可定制主页
 
-### 10.1 Image Pipeline
-- Capture: `PhotoCaptureView` (camera) / `ImagePicker` (photo library).
-- Process: compress → JPEG `Data` → `DataManager.saveGradeImage(_:gradeId:)`
-  or `saveAvatar(_:)` → file in `~/Documents/images/`.
-- Display: cached via `ImageCache` (NSCache, max 50, 300px max dimension,
-  `nonisolated` so safe from any thread).
-- Full-screen: `ZoomableImageView` (pinch + double-tap).
+HomeLayoutPreference 为 Codable struct，持久化到 UserDefaults。HomeView 每一次 body 评估时都从 UserDefaults 读取，按启用顺序渲染启用的卡片。iPad 使用两栏 LazyVGrid，iPhone 使用单列 VStack。
 
-### 10.2 OCR Pipeline
-- `OCRManager.shared.recognizeText(in:completion:)` builds a
-  `VNRecognizeTextRequest` with `recognitionLevel = .accurate` and
-  `recognitionLanguages = ["zh-Hans", "en"]`.
-- Returns top candidate string per text observation, joined by newlines.
+HomeCardType 包括：
+- hrvStatus：HRV 状态。
+- unregisteredExamsReminder：未注册考试提醒，空时隐藏。
+- quickActions：快速动作。
+- studySuggestions：学习建议。
+- trendChart：趋势图。
+- upcomingExams：即将到来的考试。
+- dailyQuote：每日金句。
+- recentGrades：近期成绩。
 
-### 10.3 CSV Export
-- `DataExportManager` (MainActor enum) builds CSV strings for
-  grades, mistakes, exams, comprehensive exams with proper escaping.
-- `UIActivityViewController` shares the CSV via `CSVDocument` (`FileDocument`).
+HomeLayoutSettingsView 提供拖动重新排序与每项启用 / 禁用开关，然后保存回 UserDefaults。HomeLayoutPreference 的 mergeWithDefault 当未来版本新增卡片类型时保留用户的选择。
 
 ---
 
-## 11. iPad Adaptation
+## 9. 图像、OCR 与 CSV 管线
 
-`ContentView` switches on `horizontalSizeClass`:
-- iPhone: classic `TabView` (5 tabs).
-- iPad:   `NavigationSplitView` with a `List(selection:)` sidebar
-  (`AppTab` enum) and a `detail` view that renders the current tab.
-  `navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)`.
+图像管线：
+- 拍摄：PhotoCaptureView（相机）或 ImagePicker（照片库）。
+- 处理：压缩为 JPEG 数据，通过 DataManager.saveGradeImage(:gradeId:) 或 saveAvatar(:) 写入 ~/Documents/images/。
+- 显示：从 ImageCache 读取缩略图（NSCache 最多 50 项，最大 300px，nonisolated）。
+- 全屏：ZoomableImageView（双指缩放与双击缩放）。
 
-`Views/Helpers/iPadLayout.swift` provides:
-- `adaptiveMaxWidth(_:)` — `ViewModifier` (default 720), centers content
-  on iPad and leaves iPhone full-width.
-- `AdaptiveHStack` — HStack on iPad, VStack on iPhone.
-- `AdaptiveGridColumns(compact:regular:spacing:)` — multi-column grids.
-- `adaptiveCardPadding()` — 20pt outer padding on iPhone, 0 on iPad.
+OCR 管线：
+- OCRManager.shared.recognizeText(in:completion:) 使用 VNRecognizeTextRequest，recognitionLevel = .accurate，recognitionLanguages = ["zh-Hans", "en"]。
 
-| View              | Max Width (iPad) |
-|-------------------|------------------|
-| PreferencesView   | 640              |
-| SettingsView      | 720              |
-| ExamView          | 800              |
-| TrendsView        | 900              |
-| MistakeView       | 900              |
-| HomeView          | 1100 (two-column grid for dynamic cards) |
-
-Principles:
-1. iPhone layout is unchanged; all iPad behavior is gated on
-   `horizontalSizeClass == .regular` or `UIDevice.current.userInterfaceIdiom`.
-2. Content is centered, not stretched.
-3. All adaptive logic lives in `iPadLayout.swift`; feature views just call
-   the helpers.
-4. Sidebar uses `.listStyle(.sidebar)` with a `NavigationLink(value: tab)`.
+CSV 管线：
+- DataExportManager（@MainActor enum）按年级 / 错题 / 考试 / 综合考试导出 CSV，使用正确的 CSV 转义规则。
+- 通过 CSVDocument（FileDocument）与 UIActivityViewController 共享。
 
 ---
 
-## 12. Localisation
+## 10. iPad 适配
 
-- `Localizable.strings` lives in each `*.lproj/`.
-- All user-facing strings go through `"…".localized()`
-  (`StringsLocalized.swift` extension).
-- App switches language via `AppEnvironmentManager.setLanguage(_:)` which
-  mutates `UserDefaults` key `AppleLanguages`; `applyLanguageOnLaunch()` is
-  called in `StudyPulseApp.init`.
+ContentView 在水平 size class 为 regular 时使用 NavigationSplitView；iPhone 使用 TabView。iPad 侧栏使用 NavigationLink(value: tab) 选择标签。
 
----
+Views/Helpers/iPadLayout.swift 提供：
+- adaptiveMaxWidth(_:) 修饰符（默认 720），在 iPad 上居中内容，iPhone 上全宽。
+- AdaptiveHStack：iPad 为 HStack，iPhone 为 VStack。
+- AdaptiveGridColumns(compact:regular:spacing:)：在 compact 尺寸下 compact 栏数，regular 尺寸下 regular 栏数。
+- adaptiveCardPadding()：iPhone 加 20pt 外间距，iPad 不加。
 
-## 13. Privacy Permissions
+各页面的 iPad 最大宽度：PreferencesView 为 640；SettingsView 为 720；ExamView 为 800；TrendsView 为 900；MistakeView 为 900；HomeView 为 1100（使用两栏网格呈现动态卡片）。
 
-| Key                              | Value                            |
-|----------------------------------|----------------------------------|
-| `NSCameraUsageDescription`       | Take photos of mistakes          |
-| `NSPhotoLibraryUsageDescription` | Select photos from photo library |
-| `NSCalendarsUsageDescription`    | Add exams to calendar            |
-| `NSHealthShareUsageDescription`  | Read HRV data from Health        |
-| `NSHealthUpdateUsageDescription` | (not used; app does not write)   |
-| `com.apple.developer.healthkit`  | true (entitlement)               |
+适配原则：
+- iPhone 布局保持不变；所有 iPad 分支都在 horizontalSizeClass == .regular 或 UIDevice.current.userInterfaceIdiom == .pad 下判断。
+- 内容居中而非拉伸。
+- 视图层只调用 iPadLayout 辅助组件，不内联写 size class 分支。
 
 ---
 
-## 14. WidgetKit
+## 11. 本地化
 
-The `StudyPulseWidget/` folder contains complete sources (Bundle, Provider,
-Entry, three size Views) and an `Info.plist`. **The widget target is not yet
-added to `StudyPulse.xcodeproj`.**
-
-To enable:
-1. Add a Widget Extension target in Xcode with bundle id
-   `Gao.Chenkai.StudyPulse.Widget`, deployment target iOS 18.6.
-2. Enable App Group `group.com.chenkai.gao.studypulse` on **both** targets.
-3. Replace `AppGroupConfig.identifier` defaults if you change the group.
-4. Trigger `WidgetDataSyncManager.syncExamsToWidget()` from the app on
-   exam add/edit and from `applicationDidBecomeActive` (or `.task`).
-5. Use `WidgetCenter.shared.reloadAllTimelines()` after writes.
-
-`ExamWidgetData` is a small Codable struct (`name`, `subject`, `examDate`,
-`daysRemaining`) shared with the app via `WidgetDataStore` in
-`ExamWidgetData.swift`.
+Localizable.strings 放在 en.lproj / zh-Hans.lproj / zh-Hant.lproj / ja.lproj / ko.lproj 目录。所有用户可见字符串使用 .localized() 扩展（定义在 StringsLocalized.swift）。应用在 AppEnvironmentManager.setLanguage(_:) 中通过修改 UserDefaults 的 AppleLanguages 切换语言，applyLanguageOnLaunch() 在应用启动时读取并应用。
 
 ---
 
-## 15. Dependencies (SPM)
+## 12. 隐私权限
 
-| Package            | Source                          | Purpose                          |
-|--------------------|---------------------------------|----------------------------------|
-| WSOnBoarding       | local (`Swift/Packages/...`)    | First-launch welcome flow        |
-| swift-markdown-ui  | local (`Swift/Packages/...`)    | Markdown preview in mistake view |
-| NetworkImage       | https://github.com/gonzalezreal/NetworkImage @ 6.0.1 | Async image loading |
-| cmark-gfm          | https://github.com/swiftlang/swift-cmark @ 0.8.0 | Markdown core |
-
-Apple frameworks: `SwiftUI`, `Charts`, `Vision`, `EventKit`,
-`UserNotifications`, `HealthKit`, `WidgetKit`, `UniformTypeIdentifiers`.
-
-Resolve packages: **File → Packages → Resolve Package Versions** in Xcode.
-CLI: `xcodebuild -resolvePackageDependencies -project StudyPulse.xcodeproj`.
+需要 Info.plist 与 entitlements 声明以下权限键：
+- NSCameraUsageDescription：用于拍摄错题照片。
+- NSPhotoLibraryUsageDescription：用于从照片库选择照片。
+- NSCalendarsUsageDescription：用于添加考试到系统日历。
+- NSHealthShareUsageDescription：用于读取 HRV 数据。
+- com.apple.developer.healthkit：在 entitlements 文件开启 HealthKit 能力。
+注意 NSHealthUpdateUsageDescription 未使用，应用不向 HealthKit 写入数据。
 
 ---
 
-## 16. Build & Run
+## 13. WidgetKit 扩展
 
-Use the helper script:
+StudyPulseWidget/ 目录提供完整的 WidgetKit 源码：ExamWidget（Widget 定义）、ExamWidgetData（共享数据模型）、ExamWidgetEntry（时间轴条目）、ExamWidgetProvider（时间轴提供者）、ExamWidgetViews（三种尺寸视图）、StudyPulseWidgetBundle（@main bundle）与 Info.plist。注意 WidgetKit 目标尚未添加到 StudyPulse.xcodeproj，需要在 Xcode 中新建 Widget Extension 目标并配置。
+
+启用步骤：
+1. 在 Xcode 中新建 Widget Extension 目标，bundle id 设置为 Gao.Chenkai.StudyPulse.Widget，部署目标 iOS 18.6。
+2. 在主应用与小组件目标上启用 App Group group.com.chenkai.gao.studypulse。
+3. 若修改 App Group 名称，更新 AppGroupConfig.identifier。
+4. 在主应用的 Exam 添加 / 编辑后调用 WidgetDataSyncManager.syncExamsToWidget()，以及在应用变为活跃时也调用。
+5. 使用 WidgetCenter.shared.reloadAllTimelines() 触发刷新。
+
+ExamWidgetData 为小的 Codable struct（name、subject、examDate、daysRemaining），由 WidgetDataStore 在 ExamWidgetData.swift 中管理读写。
+
+---
+
+## 14. 依赖（SPM）
+
+使用 Swift Package Manager 管理依赖：
+- WSOnBoarding：本地包，用于首次启动欢迎流程。
+- swift-markdown-ui：本地包，用于错题 Markdown 预览。
+- NetworkImage：远程包（gonzalezreal/NetworkImage @ 6.0.1），用于异步加载网络图像。
+- cmark-gfm：Swift 项目内部使用的 Markdown 解析核心。
+
+解析包的方式：在 Xcode 中 File → Packages → Resolve Package Versions；或在命令行执行 xcodebuild -resolvePackageDependencies -project StudyPulse.xcodeproj。
+
+Apple 框架：SwiftUI、Charts、Vision、EventKit、UserNotifications、HealthKit、WidgetKit、UniformTypeIdentifiers。
+
+---
+
+## 15. 构建与运行
+
+构建辅助脚本 scripts/build.sh 提供以下选项：
+- 默认：调试构建，iPhone 17 模拟器。
+- release：发布构建。
+- clean：清理构建目录。
+- list：列出可用模拟器。
+- help：显示所有选项。
+
+直接使用 xcodebuild 命令：
 ```bash
-./scripts/build.sh                # Debug, iPhone 17 simulator
-./scripts/build.sh release        # Release configuration
-./scripts/build.sh clean          # Clean build folder
-./scripts/build.sh list           # List available simulators
-./scripts/build.sh help           # Show all options
+xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-Direct `xcodebuild`:
-```bash
-xcodebuild \
-  -project StudyPulse.xcodeproj \
-  -scheme StudyPulse \
-  -configuration Debug \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
-  build
-```
-
-Schemes available: `StudyPulse`, `MarkdownUI`, `WSOnBoarding`.
-Configurations: `Debug`, `Release`.
+可用 scheme：StudyPulse、MarkdownUI、WSOnBoarding。可用配置：Debug、Release。
 
 ---
 
-## 17. Code Conventions
+## 16. 代码规范
 
-- `@EnvironmentObject` for cross-view state (`DataManager`,
-  `AppEnvironmentManager`, `HealthKitManager`).
-- Models are `Codable` and `nonisolated` value types — safe to pass across
-  actors.
-- Managers that own `@Published` UI state are `@MainActor`; pure helpers
-  (`DataFileIO`, `WidgetDataStore`, `EducationConfig`, `ImageCache`,
-  `SubjectConfig`, `EducationRegion`) are `nonisolated`.
-- SwiftUI views live under `Views/`, with `Components/`, `Helpers/`, `Admin/`,
-  `OnBoarding/` as sub-folders for organisation.
-- Strings: always use `"…".localized()` (never inline).
-- Hex/asset colors via `ColorExtensions`; `Date` formatting via
-  `DateExtensions`.
-- Image bytes are persisted as files in `images/`, never inline in JSON
-  (legacy migration is handled in `DataManager.asyncInit`).
-- `EditSection` enum drives the 4-section mistake editor
-  (Question/Reason/Wrong/Correct).
-- `EducationConfig` is a `nonisolated enum` providing global config data.
-- `SubjectConfig` uses factory methods `.required(...)` / `.elective(...)`.
+架构与编码规范：
+- 视图层通过 @EnvironmentObject 注入 DataManager / AppEnvironmentManager / HealthKitManager，不直接持有这些单例。
+- 模型为 Codable 与 nonisolated value type，可安全地跨 actor 传递。
+- 拥有 @Published 状态的管理器使用 @MainActor；纯辅助（DataFileIO / WidgetDataStore / EducationConfig / ImageCache / SubjectConfig / EducationRegion）为 nonisolated。
+- SwiftUI 视图放在 Views/ 目录下；Components/、Helpers/、Admin/、OnBoarding/ 作为子目录。
+- 字符串永远使用 .localized() 扩展。
+- 颜色与日期通过 ColorExtensions / DateExtensions 包装。
+- 图像文件保存在 images/ 目录，不要内联到 JSON（旧的 Grade.image 字段已在 DataManager.asyncInit 中迁移为文件）。
+- MistakeDetailEditView 使用 EditSection 枚举驱动四个编辑块（Question / Reason / Wrong / Correct）。
+- EducationConfig 为 nonisolated enum，提供全球教育系统数据。
+- SubjectConfig 使用 required(...) / elective(...) 工厂方法构造。
 
 ---
 
-## 18. Performance Notes
+## 17. 性能说明
 
-- App launch uses `asyncInit()` in `.task` to load JSON off the main thread;
-  legacy sync `load*()` methods are kept for back-compat.
-- `ImageCache` provides NSCache-backed thumbnails (max 50 entries,
-  300px max dim) — fully thread-safe (`nonisolated`).
-- `ExamRowView` / `ComprehensiveExamRowView` / `UpcomingExamCard` use
-  computed properties for `daysRemaining` instead of `@State` + `onAppear`
-  to avoid spurious re-renders.
-- iPad `HomeView` renders the dashboard in a `LazyVGrid` to keep memory low
-  even when many cards are enabled.
+- 应用启动使用 asyncInit() 异步在 .task 后台加载 JSON，避免阻塞主线程；同步的 load*() 方法为向后兼容保留。
+- ImageCache 提供 NSCache 缓存的缩略图（最多 50 项，最大 300px），完全线程安全（nonisolated）。
+- ExamRowView / ComprehensiveExamRowView / UpcomingExamCard 使用 daysRemaining 计算属性替代 @State + onAppear，避免不必要的重渲染。
+- iPad HomeView 使用 LazyVGrid 呈现仪表盘，保持内存占用低，即使启用了大量卡片。
 
 ---
 
-## 19. Known Issues / TODOs
+## 18. 已知问题与待办
 
-1. Widget target is not wired into `StudyPulse.xcodeproj` — sources are
-   committed but unused at build time.
-2. App Group identifier must be created in the Apple Developer portal and
-   enabled on **both** the main app and (future) widget target.
-3. No iCloud sync — all data is local to the device sandbox.
-4. `NewMistakeSheet.swift` / `Views/Sheets/` directory was removed; the
-   active flow is `NewMistakeSetView`.
+已知问题：
+- Widget 目标尚未接入 StudyPulse.xcodeproj —— 源码已提交但构建时未使用。
+- App Group 标识符需要在 Apple Developer 门户创建并在主应用与（未来的）小组件目标上启用。
+- 目前没有 iCloud 同步 —— 所有数据仅本地存储在设备沙盒。
+- NewMistakeSheet.swift / Views/Sheets/ 目录已移除 —— 新的流程使用 NewMistakeSetView。
 
 ---
 
-## 20. Changelog (Agent-Facing)
+## 19. Agent 工作规则
 
-### v2026.06.20 — Home layout + HRV subsystem
-- Added `HealthKitManager.swift`, `HRVOnboardingView.swift`,
-  `HRVStatusCard.swift` for HRV (SDNN) readiness using a 14-day baseline
-  and a Z-score category.
-- Added `HomeLayoutPreference.swift` and `HomeLayoutSettingsView.swift`
-  for per-card on/off + drag-to-reorder, persisted in `UserDefaults`.
-- Added `Views/Admin/DataAdminView.swift` for power-user bulk data ops.
-- `ContentView` rewritten with a custom `NavigationSplitView` sidebar for
-  iPad (replaces `.sidebarAdaptable`); iPhone keeps the classic `TabView`.
-- `HomeView` now composes its dashboard from
-  `HomeLayoutPreference.load().enabledTypes` using
-  `HomeCardType` cases (`hrvStatus`, `unregisteredExamsReminder`,
-  `quickActions`, `studySuggestions`, `trendChart`, `upcomingExams`,
-  `dailyQuote`, `recentGrades`).
-- Added "Unregistered Exams Reminder" card (3–7 day window after an exam
-  with no matching grade).
-- `StudyPulse.entitlements` now includes `com.apple.developer.healthkit`.
-- Rewrote `AGENTS.md` to match the new structure.
-
-### v2026.06.13 — iPad adaptation
-- iPad (`TARGETED_DEVICE_FAMILY = "1,2"`) via `iPadLayout.swift` helpers
-  (`adaptiveMaxWidth`, `AdaptiveHStack`, `AdaptiveGridColumns`,
-  `adaptiveCardPadding`).
-
-### v2026.06.07 — Full view-layer refactor + design system
-- `HomeView` split into 9 components; gradient / animation polish.
-- `MistakeView`: suggested review + card gradient.
-- `TrendsView`: "Subjects Needing Attention" smart alerts.
-- `ExamDetailView`: related mistakes section.
-- `SubjectScoreCard`: gradient border + entrance animation.
-- `AppStyle` design-system skeleton.
-- First `StudyPulseWidget` skeleton (Bundle / Provider / Entry / S·M·L).
-
-### v2026.06.06 — Multi-language
-- `zh-Hant`, `ja`, `ko` localizations.
-
-### v2026.06.05 — Mistake module launch
-- 4-section mistake editor (Question / Reason / Wrong / Correct).
-- Per-section photo + OCR.
-- Markdown preview.
-- Calendar / notification auto-scheduling.
-- Zoomable image viewer.
-
-### v2026.06 — Global education systems
-- `EducationConfig` for 15+ systems.
-- `SubjectConfig` factories.
-- Avatar system, proportional score colour, expanded profile.
+AI 代理在本仓库工作时遵循以下规则：
+- 每次非 trivial 代码修改后，运行构建（Xcode Cmd+B 或 ./scripts/build.sh）确认通过，留下语法或类型错误。
+- 遵循文件布局：新视图放在 Views/，可复用组件放在 Views/Components/，视图辅助放在 Views/Helpers/，开发者页面放在 Views/Admin/，数据结构放在 Models/，服务放在 Managers/。
+- 使用 nonisolated value-type 模型：新 Codable 模型必须 nonisolated 与 Sendable，以便跨 actor 传递。
+- 本地化所有用户可见字符串：永远不要在源码中直接写英语文本，新文案必须同步添加到 en / zh-Hans / zh-Hant / ja / ko 五份 Localizable.strings 文件。
+- 持久化图像作为文件而非 JSON 内联：使用 DataManager.saveGradeImage / saveAvatar。
+- 优先使用 iPadLayout 辅助而不是在视图里内联写 size class 分支。
+- 不要手工修改 StudyPulse.xcodeproj/project.pbxproj —— 让 Xcode 管理。
 
 ---
 
-## 21. Agent Working Rules
+## 20. 变更记录
 
-- **Always try to build after writing code.** After every non-trivial code
-  change, run the build (Xcode Cmd+B or `./scripts/build.sh`) to make sure
-  the change compiles cleanly. Do not leave syntax / type errors behind.
-- **Respect the file layout.** Put new screens in `Views/`, reusable
-  building blocks in `Views/Components/`, view helpers in
-  `Views/Helpers/`, dev-only screens in `Views/Admin/`, data structs in
-  `Models/`, services in `Managers/`.
-- **Use `nonisolated` value-type models.** New Codable models must be
-  `nonisolated` and `Sendable` so they pass across actors without ceremony.
-- **Localize every user-facing string.** Never ship inline English text.
-  Add the key to **all five** `Localizable.strings` files.
-- **Persist image bytes as files**, not in JSON. Use
-  `DataManager.saveGradeImage` / `saveAvatar`.
-- **Prefer `iPadLayout` helpers** over ad-hoc `if sizeClass == .regular`
-  branches in feature views.
-- **Do not modify `StudyPulse.xcodeproj/project.pbxproj` by hand** unless
-  absolutely required — let Xcode manage it.
+近期变更（给 Agent 参考）：
+- 新增 HealthKitManager.swift / HRVOnboardingView.swift / HRVStatusCard.swift，用于 HRV（SDNN）准备度（14 天基线 + Z-score 分类）。
+- 新增 HomeLayoutPreference.swift 与 HomeLayoutSettingsView.swift，用于卡片启用 / 禁用与拖动重新排序（持久化到 UserDefaults）。
+- 新增 Views/Admin/DataAdminView.swift，用于开发者批量数据操作。
+- 重写 ContentView，使用自定义 NavigationSplitView 为 iPad 提供侧栏（替代 .sidebarAdaptable）；iPhone 保持经典 TabView。
+- HomeView 从 HomeLayoutPreference.load().enabledTypes 按 HomeCardType 组合动态卡片。
+- 新增“未注册考试提醒”卡片（考试后 3–7 天窗口内未录入成绩的提醒）。
+- StudyPulse.entitlements 新增 com.apple.developer.healthkit。
+- AGENTS.md / CODE_WIKI.md / CODE_WIKI_CN.md / README.md 重写以匹配新结构。
+
+更早变更：
+- iPad 适配（TARGETED_DEVICE_FAMILY = "1,2"）通过 iPadLayout.swift 辅助组件（adaptiveMaxWidth / AdaptiveHStack / AdaptiveGridColumns / adaptiveCardPadding）。
+- 视图层全面重构与设计系统骨架。
+- 多语言：en / zh-Hans / zh-Hant / ja / ko。
+- 错题模块启动：四块错题编辑、每块照片 + OCR、Markdown 预览、日历 / 通知自动调度、可缩放图像查看。
+- 全球教育系统（15+ 种体系）。

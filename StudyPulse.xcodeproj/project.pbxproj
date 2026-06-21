@@ -7,13 +7,76 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
 		278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 278969412FD313BE00BEC710 /* WSOnBoarding */; };
 		278969452FD318B800BEC710 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 278969442FD318B800BEC710 /* MarkdownUI */; };
+		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
+		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
+		278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		278D45EF2FE7B9950073EB87 /* AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */; };
+		278D45F22FE7BA3E0073EB87 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F12FE7BA3E0073EB87 /* AGENTS.md */; };
+		278D45F42FE7BA500073EB87 /* CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F32FE7BA500073EB87 /* CODE_WIKI.md */; };
+		278D45F62FE7BA560073EB87 /* CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */; };
+		278D45F82FE7BA5C0073EB87 /* AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */; };
+		278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* DESIGN.md */; };
+		278D45FC2FE7BA6A0073EB87 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FB2FE7BA6A0073EB87 /* README.md */; };
+		278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* SPEC.md */; };
+		27BF505B2FE6D1E50038966E /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* SPEC.md */; };
+		27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505C2FE6D1F10038966E /* AGENTS.md */; };
+		27BF505F2FE6D1FE0038966E /* CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */; };
+		27BF50612FE6D2070038966E /* CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50602FE6D2070038966E /* CODE_WIKI.md */; };
+		27BF50632FE6D2160038966E /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50622FE6D2160038966E /* DESIGN.md */; };
+		27BF50652FE6D2200038966E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50642FE6D2200038966E /* README.md */; };
 		27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		278CBE212FE778660035AA84 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2743C8362F6EAEA000CC1EED /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 278CBE102FE778660035AA84;
+			remoteInfo = StudyPulseWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		278CBE242FE778660035AA84 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		2743C83E2F6EAEA000CC1EED /* StudyPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudyPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		276CC94F2FE6CEE7009F126C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		276CC9512FE6CEF3009F126C /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StudyPulseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		278CBE132FE778660035AA84 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		278CBE152FE778660035AA84 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		278CBE332FE778EE0035AA84 /* StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
+		278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AlgorithmIntroduction.md; sourceTree = "<group>"; };
+		278D45F02FE7BA260073EB87 /* StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
+		278D45F12FE7BA3E0073EB87 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
+		278D45F32FE7BA500073EB87 /* CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI.md; sourceTree = "<group>"; };
+		278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI_CN.md; sourceTree = "<group>"; };
+		278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AlgorithmIntroduction.md; sourceTree = "<group>"; };
+		278D45F92FE7BA650073EB87 /* DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DESIGN.md; sourceTree = "<group>"; };
+		278D45FB2FE7BA6A0073EB87 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		278D45FD2FE7BA750073EB87 /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		27BF505A2FE6D1E50038966E /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		27BF505C2FE6D1F10038966E /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
+		27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI_CN.md; sourceTree = "<group>"; };
+		27BF50602FE6D2070038966E /* CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI.md; sourceTree = "<group>"; };
+		27BF50622FE6D2160038966E /* DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DESIGN.md; sourceTree = "<group>"; };
+		27BF50642FE6D2200038966E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		27E4AFAC2F824DA300D2D7C9 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		27E4AFAF2F824DB400D2D7C9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		27E4AFB02F824DC000D2D7C9 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -21,10 +84,28 @@
 		27E4AFB22F824DC000D2D7C9 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		278CBE272FE778660035AA84 /* Exceptions for "StudyPulseWidget" folder in "StudyPulseWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2743C8402F6EAEA000CC1EED /* StudyPulse */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = StudyPulse;
+			sourceTree = "<group>";
+		};
+		278CBE172FE778660035AA84 /* StudyPulseWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				278CBE272FE778660035AA84 /* Exceptions for "StudyPulseWidget" folder in "StudyPulseWidgetExtension" target */,
+			);
+			path = StudyPulseWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -39,14 +120,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		278CBE0E2FE778660035AA84 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */,
+				278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		2743C8352F6EAEA000CC1EED = {
 			isa = PBXGroup;
 			children = (
+				278CBE332FE778EE0035AA84 /* StudyPulseWidgetExtension.entitlements */,
 				27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */,
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
+				278CBE172FE778660035AA84 /* StudyPulseWidget */,
+				278CBE122FE778660035AA84 /* Frameworks */,
+				278D45FD2FE7BA750073EB87 /* SPEC.md */,
+				278D45FB2FE7BA6A0073EB87 /* README.md */,
+				278D45F92FE7BA650073EB87 /* DESIGN.md */,
+				278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */,
+				278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */,
+				278D45F32FE7BA500073EB87 /* CODE_WIKI.md */,
+				278D45F12FE7BA3E0073EB87 /* AGENTS.md */,
 				2743C83F2F6EAEA000CC1EED /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,8 +155,28 @@
 			isa = PBXGroup;
 			children = (
 				2743C83E2F6EAEA000CC1EED /* StudyPulse.app */,
+				276CC9512FE6CEF3009F126C /* SPEC.md */,
+				276CC94F2FE6CEE7009F126C /* README.md */,
+				27BF505A2FE6D1E50038966E /* SPEC.md */,
+				278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */,
+				27BF50642FE6D2200038966E /* README.md */,
+				278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */,
+				27BF505C2FE6D1F10038966E /* AGENTS.md */,
+				27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */,
+				27BF50622FE6D2160038966E /* DESIGN.md */,
+				27BF50602FE6D2070038966E /* CODE_WIKI.md */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		278CBE122FE778660035AA84 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				278D45F02FE7BA260073EB87 /* StudyPulseWidgetExtension.entitlements */,
+				278CBE132FE778660035AA84 /* WidgetKit.framework */,
+				278CBE152FE778660035AA84 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -69,10 +189,12 @@
 				2743C83A2F6EAEA000CC1EED /* Sources */,
 				2743C83B2F6EAEA000CC1EED /* Frameworks */,
 				2743C83C2F6EAEA000CC1EED /* Resources */,
+				278CBE242FE778660035AA84 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				278CBE222FE778660035AA84 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
@@ -86,6 +208,28 @@
 			productReference = 2743C83E2F6EAEA000CC1EED /* StudyPulse.app */;
 			productType = "com.apple.product-type.application";
 		};
+		278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 278CBE282FE778660035AA84 /* Build configuration list for PBXNativeTarget "StudyPulseWidgetExtension" */;
+			buildPhases = (
+				278CBE0D2FE778660035AA84 /* Sources */,
+				278CBE0E2FE778660035AA84 /* Frameworks */,
+				278CBE0F2FE778660035AA84 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				278CBE172FE778660035AA84 /* StudyPulseWidget */,
+			);
+			name = StudyPulseWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = StudyPulseWidgetExtension;
+			productReference = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -93,11 +237,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					2743C83D2F6EAEA000CC1EED = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					278CBE102FE778660035AA84 = {
+						CreatedOnToolsVersion = 26.5;
 					};
 				};
 			};
@@ -116,7 +263,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */,
-				278969432FD318B800BEC710 /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */,
+				270D4E852FE7CD3F00339A2E /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2743C83F2F6EAEA000CC1EED /* Products */;
@@ -124,6 +271,7 @@
 			projectRoot = "";
 			targets = (
 				2743C83D2F6EAEA000CC1EED /* StudyPulse */,
+				278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -133,7 +281,29 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27BF50612FE6D2070038966E /* CODE_WIKI.md in Resources */,
+				27BF50652FE6D2200038966E /* README.md in Resources */,
+				278D45F62FE7BA560073EB87 /* CODE_WIKI_CN.md in Resources */,
+				27BF505B2FE6D1E50038966E /* SPEC.md in Resources */,
+				278D45FC2FE7BA6A0073EB87 /* README.md in Resources */,
+				278D45F82FE7BA5C0073EB87 /* AlgorithmIntroduction.md in Resources */,
+				278D45F42FE7BA500073EB87 /* CODE_WIKI.md in Resources */,
+				27BF50632FE6D2160038966E /* DESIGN.md in Resources */,
+				278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */,
 				27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */,
+				278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */,
+				27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */,
+				27BF505F2FE6D1FE0038966E /* CODE_WIKI_CN.md in Resources */,
+				278D45EF2FE7B9950073EB87 /* AlgorithmIntroduction.md in Resources */,
+				276CC9502FE6CEE7009F126C /* README.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		278CBE0F2FE778660035AA84 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				278D45F22FE7BA3E0073EB87 /* AGENTS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,7 +317,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		278CBE0D2FE778660035AA84 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		278CBE222FE778660035AA84 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */;
+			targetProxy = 278CBE212FE778660035AA84 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */ = {
@@ -301,13 +486,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = StudyPulse/StudyPulse.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 40;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV) from Apple Health to provide personalized study readiness recommendations. Your data stays on device and is never uploaded or shared.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -320,7 +505,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.49.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -345,13 +530,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = StudyPulse/StudyPulse.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 40;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV) from Apple Health to provide personalized study readiness recommendations. Your data stays on device and is never uploaded or shared.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -364,7 +549,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.49.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -376,6 +561,68 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		278CBE252FE778660035AA84 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = StudyPulseWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StudyPulseWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StudyPulseWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse.StudyPulseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		278CBE262FE778660035AA84 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = StudyPulseWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StudyPulseWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StudyPulseWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse.StudyPulseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -401,16 +648,25 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		278CBE282FE778660035AA84 /* Build configuration list for PBXNativeTarget "StudyPulseWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				278CBE252FE778660035AA84 /* Debug */,
+				278CBE262FE778660035AA84 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		270D4E852FE7CD3F00339A2E /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Packages/swift-markdown-ui-main";
+		};
 		278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../Packages/WSOnBoarding-main";
-		};
-		278969432FD318B800BEC710 /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../Packages/swift-markdown-ui-main";
 		};
 /* End XCLocalSwiftPackageReference section */
 

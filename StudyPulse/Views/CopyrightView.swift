@@ -23,7 +23,11 @@ struct CopyrightView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
 
-                    Text("Version beta0.1")
+                    Group {
+                        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                            Text("Version \(version)")
+                        }
+                    }
                         .font(.subheadline)
                         .foregroundColor(.secondary)
 

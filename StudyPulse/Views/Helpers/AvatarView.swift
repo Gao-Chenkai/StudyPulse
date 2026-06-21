@@ -80,106 +80,98 @@ struct AvatarView: View {
     }
 }
 
-// MARK: - 头像选择器 Sheet
-struct AvatarPickerSheet: View {
+// MARK: - 头像选择器
+struct AvatarEditView: View {
     @EnvironmentObject var dataManager: DataManager
-    @Environment(\.presentationMode) var presentationMode
-    
+    @Environment(\.dismiss) var dismiss
+
     @State private var avatarData: Data?
     @State private var showingImagePicker = false
-    @State private var showingActionSheet = false
     @State private var imagePickerSourceType: UIImagePickerController.SourceType = .photoLibrary
-    
+
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                // 头像预览
-                AvatarView(
-                    username: dataManager.profile.username,
-                    avatarData: avatarData,
-                    size: 140
-                )
-                .padding(.top, 32)
-                
-                Text("Tap below to change your avatar".localized())
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                VStack(spacing: 12) {
+        VStack(spacing: 24) {
+            // 头像预览
+            AvatarView(
+                username: dataManager.profile.username,
+                avatarData: avatarData,
+                size: 140
+            )
+            .padding(.top, 32)
+
+            Text("Tap below to change your avatar".localized())
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 12) {
+                Button(action: {
+                    imagePickerSourceType = .photoLibrary
+                    showingImagePicker = true
+                }) {
+                    Label("Choose from Library".localized(), systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
                     Button(action: {
-                        imagePickerSourceType = .photoLibrary
+                        imagePickerSourceType = .camera
                         showingImagePicker = true
                     }) {
-                        Label("Choose from Library".localized(), systemImage: "photo.on.rectangle")
+                        Label("Take Photo".localized(), systemImage: "camera")
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
+                            .background(Color.purple)
                             .foregroundColor(.white)
                             .cornerRadius(12)
                     }
+                }
 
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        Button(action: {
-                            imagePickerSourceType = .camera
-                            showingImagePicker = true
-                        }) {
-                            Label("Take Photo".localized(), systemImage: "camera")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.purple)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                    }
-
-                    if dataManager.profile.avatarFileName != nil {
-                        Button(action: removeAvatar) {
-                            Label("Remove Avatar".localized(), systemImage: "trash")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.red.opacity(0.1))
-                                .foregroundColor(.red)
-                                .cornerRadius(12)
-                        }
+                if dataManager.profile.avatarFileName != nil {
+                    Button(action: removeAvatar) {
+                        Label("Remove Avatar".localized(), systemImage: "trash")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red.opacity(0.1))
+                            .foregroundColor(.red)
+                            .cornerRadius(12)
                     }
                 }
-                .padding(.horizontal, 32)
+            }
+            .padding(.horizontal, 32)
 
-                Spacer()
-            }
-            .adaptiveMaxWidth(480)
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Change Avatar".localized())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
+            Spacer()
+        }
+        .adaptiveMaxWidth(480)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Change Avatar".localized())
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    saveAvatar()
+                    dismiss()
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveAvatar()
-                    }
-                    .bold()
-                }
+                .bold()
             }
-            .onAppear {
-                avatarData = dataManager.loadAvatar()
-            }
-            .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(sourceType: imagePickerSourceType, image: .constant(nil)) { image in
-                    if let image = image,
-                       let resized = resizeImage(image, targetSize: CGSize(width: 400, height: 400)),
-                       let data = resized.jpegData(compressionQuality: 0.8) {
-                        avatarData = data
-                    }
+        }
+        .onAppear {
+            avatarData = dataManager.loadAvatar()
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(sourceType: imagePickerSourceType, image: .constant(nil)) { image in
+                if let image = image,
+                   let resized = resizeImage(image, targetSize: CGSize(width: 400, height: 400)),
+                   let data = resized.jpegData(compressionQuality: 0.8) {
+                    avatarData = data
                 }
             }
         }
     }
-    
+
     private func resizeImage(_ image: UIImage, targetSize: CGSize) -> UIImage? {
         let size = image.size
         let widthRatio = targetSize.width / size.width
@@ -187,15 +179,15 @@ struct AvatarPickerSheet: View {
         let ratio = min(widthRatio, heightRatio)
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
         let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
-        
+
         UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
         image.draw(in: rect)
         let newImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
-        
+
         return newImage
     }
-    
+
     private func saveAvatar() {
         if let data = avatarData {
             if let filename = dataManager.saveAvatar(data) {
@@ -203,9 +195,8 @@ struct AvatarPickerSheet: View {
                 dataManager.saveProfile()
             }
         }
-        presentationMode.wrappedValue.dismiss()
     }
-    
+
     private func removeAvatar() {
         if let filename = dataManager.profile.avatarFileName {
             dataManager.deleteAvatar(filename: filename)

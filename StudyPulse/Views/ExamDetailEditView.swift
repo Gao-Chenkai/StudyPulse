@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import os
 
 struct ExamDetailEditView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -128,13 +129,14 @@ struct ExamDetailEditView: View {
         // 由于 Exam 是 struct，我们需要手动替换数组中的元素
         if let index = dataManager.examSets.firstIndex(where: { $0.id == originalExam.id }) {
             var examToUpdate = updatedExam
-            examToUpdate.id = originalExam.id // 强制保持 ID 不变
-            
+            examToUpdate.id = originalExam.id // 强制保持 ID 不变 / Force keep the same ID
+
             dataManager.examSets[index] = examToUpdate
             dataManager.saveExamSets()
+            Log.data.info("考试编辑成功 / Exam updated: name=\(examToUpdate.name, privacy: .public) id=\(originalExam.id.uuidString, privacy: .public)")
             presentationMode.wrappedValue.dismiss()
         } else {
-            print("Error: Could not find exam to update.")
+            Log.data.error("考试编辑失败：未找到要更新的考试 / Exam update failed: could not find exam id=\(originalExam.id.uuidString, privacy: .public)")
         }
     }
 }

@@ -6,6 +6,7 @@
 //
  
 import SwiftUI
+import os
 
 struct AddGradeView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -327,13 +328,14 @@ struct RankingControlView: View {
                 .foregroundColor(.secondary)
             
             HStack(spacing: 16) {
-                // 
+                //
                 Button {
                     withAnimation {
                         if ranking ?? 1 <= 1 {
-                            print("Cannot be smaller than 1")
+                            Log.view.debug("排名已是最小值 1 / Ranking already at minimum 1")
                         } else {
                             ranking = (ranking ?? 1) - 1
+                            Log.view.debug("排名递减 / Ranking decremented to \(ranking ?? 0, privacy: .public)")
                         }
                     }
                 } label: {

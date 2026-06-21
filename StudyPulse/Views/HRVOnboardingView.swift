@@ -16,7 +16,7 @@ struct HRVOnboardingView: View {
     @State private var isAuthorizing = false
     @State private var authorizationError: String? = nil
 
-    private let totalPages = 3
+    private let totalPages = 4
 
     var body: some View {
         NavigationStack {
@@ -36,7 +36,8 @@ struct HRVOnboardingView: View {
                 TabView(selection: $currentPage) {
                     pageWhatIsHRV.tag(0)
                     pagePrivacyFirst.tag(1)
-                    pageConsent.tag(2)
+                    pageBodySignals.tag(2)
+                    pageConsent.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -158,7 +159,62 @@ struct HRVOnboardingView: View {
         }
     }
 
-    // MARK: - Page 3: Summary & Consent
+    // MARK: - Page 3: Body Signals (heart rate, breathing, sleep)
+    private var pageBodySignals: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.pink.gradient)
+                    Image(systemName: "wind")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.cyan.gradient)
+                    Image(systemName: "bed.double.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.indigo.gradient)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+
+                Text("Body Signals Tailor Your Suggestions".localized())
+                    .font(.title2.bold())
+
+                Text("StudyPulse also reads your heart rate, breathing rate, and last night's sleep to recommend the right kind of study session for your body.".localized())
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    signalRow(
+                        icon: "heart.fill",
+                        color: .pink,
+                        title: "Resting heart rate".localized(),
+                        detail: "Low = well-recovered, primed for deep work. High = tired or stressed, ease into the day.".localized()
+                    )
+                    signalRow(
+                        icon: "wind",
+                        color: .cyan,
+                        title: "Respiratory rate".localized(),
+                        detail: "Elevated breathing can signal stress or illness — we'll suggest a calming activity first.".localized()
+                    )
+                    signalRow(
+                        icon: "bed.double.fill",
+                        color: .indigo,
+                        title: "Last night's sleep".localized(),
+                        detail: "Under 6 hours of sleep and we'll steer you to lighter review; over 9 hours and we'll suggest a tough subject first.".localized()
+                    )
+                }
+
+                calloutBox(
+                    icon: "info.circle.fill",
+                    color: .blue,
+                    text: "These signals are read alongside HRV in a single HealthKit permission. You stay in control — disable any time in Settings.".localized()
+                )
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: - Page 4: Summary & Consent
     private var pageConsent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -171,19 +227,19 @@ struct HRVOnboardingView: View {
                 Text("Ready to Get Started?".localized())
                     .font(.title2.bold())
 
-                Text("When you enable HRV monitoring, StudyPulse will:".localized())
+                Text("When you enable health monitoring, StudyPulse will:".localized())
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 12) {
                     bulletRow("Compare today's HRV to your personal 14-day baseline".localized(), color: .purple)
                     bulletRow("Show a readiness card on your Dashboard".localized(), color: .purple)
-                    bulletRow("Add personalized study suggestions based on your recovery state".localized(), color: .purple)
+                    bulletRow("Use your heart rate, breathing and sleep to tailor study suggestions".localized(), color: .purple)
                 }
 
                 calloutBox(
                     icon: "applewatch",
                     color: .gray,
-                    text: "You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights.".localized()
+                    text: "Apple Watch users get the most accurate signals. iPhone-only users can still see sleep data from manually logged entries or connected third-party apps.".localized()
                 )
             }
             .padding(24)
@@ -207,6 +263,22 @@ struct HRVOnboardingView: View {
             Image(systemName: icon)
                 .font(.title3)
                 .foregroundStyle(.blue)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private func signalRow(icon: String, color: Color, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

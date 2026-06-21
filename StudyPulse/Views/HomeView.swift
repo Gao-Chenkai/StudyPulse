@@ -1148,22 +1148,23 @@ struct StatisticItem: View {
 // MARK: - 学习建议卡片
 struct StudySuggestionsCard: View {
     @EnvironmentObject var dataManager: DataManager
+    @ObservedObject private var healthManager = HealthKitManager.shared
     @State private var suggestions: [StudySuggestion] = []
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Study Suggestions".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 18))
                     .foregroundColor(.yellow)
             }
-            
+
             if suggestions.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "sparkles")
@@ -1197,11 +1198,19 @@ struct StudySuggestionsCard: View {
         .onAppear {
             generateSuggestions()
         }
+        .onChange(of: healthManager.bodyStatus) { _, _ in
+            generateSuggestions()
+        }
     }
-    
+
     private func generateSuggestions() {
         var newSuggestions: [StudySuggestion] = []
-        
+
+        // 身体状况相关建议 (优先于纯成绩建议)
+        if let bodySuggestion = makeBodyStatusSuggestion() {
+            newSuggestions.append(bodySuggestion)
+        }
+
         if let weakSubject = findWeakSubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1213,7 +1222,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
         let urgentExams = dataManager.examSets.filter {
             Calendar.current.isDate($0.examDate, inSameDayAs: Date()) ||
@@ -1230,7 +1239,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let declining = findDecliningTrend() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1242,7 +1251,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         let unreviewedMistakes = findUnreviewedMistakeSubjects()
         if !unreviewedMistakes.isEmpty {
             newSuggestions.append(
@@ -1265,9 +1274,9 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
-        let upcomingExams = dataManager.examSets.filter { 
-            $0.examDate > Date() && 
+
+        let upcomingExams = dataManager.examSets.filter {
+            $0.examDate > Date() &&
             $0.examDate <= Calendar.current.date(byAdding: .day, value: 14, to: Date())!
         }
         if !upcomingExams.isEmpty {
@@ -1281,7 +1290,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let improving = findImprovingTrend() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1293,7 +1302,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let mistakeHeavy = findMistakeHeavySubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1305,7 +1314,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let lastGradeDate = dataManager.grades.map({ $0.date }).max(),
            Calendar.current.dateComponents([.day], from: lastGradeDate, to: Date()).day ?? 0 >= 7 {
             newSuggestions.append(
@@ -1318,7 +1327,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let strongSubject = findStrongSubject() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1330,7 +1339,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if dataManager.grades.count < 5 {
             newSuggestions.append(
                 StudySuggestion(
@@ -1342,7 +1351,7 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         if let imbalanced = findImbalancedStudy() {
             newSuggestions.append(
                 StudySuggestion(
@@ -1354,8 +1363,28 @@ struct StudySuggestionsCard: View {
                 )
             )
         }
-        
+
         suggestions = newSuggestions
+    }
+
+    // MARK: - Body-status driven suggestions
+    /// Delegate to `StudyReadinessAlgorithm` (see
+    /// `Managers/StudyReadinessAlgorithm.swift`). The algorithm
+    /// combines HRV (primary) with sleep, resting heart rate,
+    /// respiratory rate, today's exercise and recent activity, then
+    /// calibrates every signal against the user's 30-day personal
+    /// baseline (preferred) and an age-adjusted reference range
+    /// (fallback).
+    private func makeBodyStatusSuggestion() -> StudySuggestion? {
+        StudyReadinessAlgorithm.recommend(
+            hrvEnabled: healthManager.hrvEnabled,
+            hrvOnboardingCompleted: healthManager.hrvOnboardingCompleted,
+            isAuthorized: healthManager.isAuthorized,
+            hrv: healthManager.readiness,
+            bodyStatus: healthManager.bodyStatus,
+            baselines: healthManager.personalBaselines,
+            age: dataManager.profile.age
+        )
     }
     
     private func findWeakSubject() -> String? {
@@ -1480,17 +1509,9 @@ struct StudySuggestionsCard: View {
 }
 
 // MARK: - 学习建议模型
-struct StudySuggestion: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let description: String
-    let priority: Priority
-    let color: Color
-    enum Priority {
-        case high, medium, low
-    }
-}
+// (Types are defined in `StudyReadinessAlgorithm.swift`; see
+// `StudySuggestion`, `StudyIntensity`, `StudyFocus`, and
+// `StudyReadinessAlgorithm`.)
 
 // MARK: - 建议行视图
 struct SuggestionRowView: View {

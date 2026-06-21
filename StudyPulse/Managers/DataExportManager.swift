@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 ///  CSV 
 @MainActor
@@ -113,41 +114,41 @@ enum DataExportManager {
         return grades
     }
     
-    ///  CSV 
+    ///  CSV / Parse mistakes from a CSV string
     static func parseMistakes(from csvString: String) -> [MistakeNote] {
         var mistakes: [MistakeNote] = []
-        
-        //  BOM 
+
+        //  BOM / Strip UTF-8 BOM
         var cleanedString = csvString
         if csvString.hasPrefix("\u{FEFF}") {
             cleanedString = String(csvString.dropFirst())
         }
-        
-        // 
+
+        //  / Parse rows
         let rows = parseCSVRows(cleanedString)
-        
-        print("[Data] CSV :  \(rows.count)")
+
+        Log.export.info("开始解析错题 CSV / Parsing mistakes CSV: rowCount=\(rows.count, privacy: .public)")
         if rows.count > 0 {
-            print("[Header] : \(rows[0])")
+            Log.export.debug("CSV 表头 / CSV header: \(rows[0], privacy: .public)")
         }
-        
-        // 
+
+        //  / Need header + at least one data row
         guard rows.count > 1 else {
-            print("[WARN] CSV ")
+            Log.export.warning("CSV 缺少数据行 / CSV has no data rows")
             return []
         }
-        
+
         for (index, row) in rows.dropFirst().enumerated() {
-            print("[DEBUG]  \(index + 1) : \(row)")
+            Log.export.debug("解析第 \(index + 1, privacy: .public) 行 / Parsing row \(index + 1, privacy: .public): fields=\(row.count, privacy: .public)")
             if let mistake = parseMistakeLine(from: row) {
                 mistakes.append(mistake)
-                print("[OK] : \(mistake.title)")
+                Log.export.debug("解析成功 / Parsed mistake: title=\(mistake.title, privacy: .public)")
             } else {
-                print("[ERROR] :  \(row.count) 9 ")
+                Log.export.error("解析失败：字段数量异常 / Parse failed: unexpected field count=\(row.count, privacy: .public), expected 9")
             }
         }
-        
-        print("[Success]  \(mistakes.count) ")
+
+        Log.export.info("错题 CSV 解析完成 / Finished parsing mistakes: success=\(mistakes.count, privacy: .public)")
         return mistakes
     }
     

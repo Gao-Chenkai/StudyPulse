@@ -64,7 +64,8 @@
 "Dashboard" = "ダッシュボード";
 
 // SettingsView.swift
-"User Information" = "ユーザープロフィール";
+"Profile" = "プロフィール";
+"User Information" = "ユーザー情報";
 "Username" = "ユーザー名";
 "Age" = "年齢";
 "Education Level" = "教育段階";
@@ -73,11 +74,22 @@
 "Region" = "国と地域";
 "Edit Profile" = "プロフィールを編集";
 "Edit Subjects" = "科目を編集";
+"Edit Avatar" = "アバターを編集";
+"Personal Information" = "個人情報";
 "About StudyPulse" = "StudyPulse について";
 "Copyright" = "著作権情報";
 "Send Test Notification in 5 Seconds" = "5秒後にローカル通知の受信テストを実行";
 "Personal Info" = "個人情報";
 "Copyright & License" = "著作権とライセンス";
+"Appearance & Layout" = "外観とレイアウト";
+"Language · Theme · Home · Widget" = "言語 · テーマ · ホーム · ウィジェット";
+"HRV · Recovery · Focus" = "心拍変動 · 回復 · 集中";
+"Import · Export · Backup" = "インポート · エクスポート · バックアップ";
+"Version · License" = "バージョン · ライセンス";
+"Customize the look, language, home dashboard layout and widget data." = "外観、言語、ホーム画面レイアウト、ウィジェットデータをカスタマイズします。";
+"Connect Apple Health to read your HRV and get personalized study readiness suggestions." = "Apple ヘルスケアと連携し、HRV データを読み取って個別の学習準備度提案を取得します。";
+"Import, export and manage your grades, mistakes and exams data." = "成績、間違いノート、試験データのインポート、エクスポート、管理を行います。";
+"App information, version and license details." = "アプリ情報、バージョン、ライセンスの詳細。";
 "Preferences" = "アプリの設定";
 "App Preferences" = "アプリの設定";
 "Appearance" = "外観";
@@ -515,6 +527,9 @@
 "Grade" = "学年";
 "Grades" = "成績";
 "Home Layout" = "ホームレイアウト";
+"Widgets" = "ウィジェット";
+"Auto" = "自動";
+"Trend Widget Subject" = "トレンドウィジェット科目";
 "No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "ヘルスケアに HRV データが見つかりません。数晩、Apple Watch を着用して寝てください。";
 "Notes" = "メモ";
 "Question" = "問題";
@@ -527,3 +542,98 @@
 "Your HRV is within your normal range. Steady study rhythm recommended." = "HRV は正常範囲内です。安定した学習リズムをおすすめします。";
 "Attribution — NonCommercial — ShareAlike — 4.0 International" = "表示 — 非営利 — 継承 — 4.0 国際";
 "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "クリエイティブ・コモンズ 表示-非営利-継承 4.0 国際ライセンス";
+
+// Health body signals (HomeView StudySuggestionsCard, HealthSettingsView, HRVOnboardingView)
+"Poor sleep last night" = "昨夜の睡眠不足";
+"Less than 6 hours of sleep — keep today's study light. Review notes and avoid new hard material; aim to sleep earlier tonight." = "睡眠時間が 6 時間未満です。今日の学習は軽めに。ノート復習にとどめ、新しい難題は避け、今夜は早めに就寝しましょう。";
+"Sleep was a bit short" = "睡眠時間がやや短い";
+"Around 6-7 hours of sleep. Stick to revision and easy problems today; save deep focus for after a good night's rest." = "睡眠時間は約 6〜7 時間。今日復習中心・易しい問題にし、深い集中はよく眠った後にとっておきましょう。";
+"Body is ready for deep work" = "深い学習に最適";
+"Excellent sleep and a low resting heart rate — tackle your hardest subject first while energy is highest." = "十分な睡眠と低い安静時心率——エネルギーが最も高いうちに一番難しい科目から取り組みましょう。";
+"Well rested — go for it" = "休息十分——思い切って";
+"9+ hours of sleep last night. A great day to push on the toughest subject or take a practice test." = "昨夜は 9 時間以上眠れました。今日は最も難しい科目に挑戦したり、模擬試験を受けるのに最適な日です。";
+"Breathing is a bit fast" = "呼吸がやや速い";
+"Your resting breathing rate (%.0f brpm) is higher than usual. Start with a 5-minute breathing exercise, then try lighter review tasks." = "安静時呼吸数（%.0f 回/分）が普段より高めです。まず 5 分の呼吸エクササイズをし、その後は軽い復習をしましょう。";
+"Resting heart rate is elevated" = "安静時心率が高め";
+"Your resting heart rate is %.0f bpm — above the typical range. You may be tired or dehydrated; take it easy and review familiar material first." = "安静時心率は %.0f bpm — 通常より高めです。疲労や脱水の可能性があります。無理せず、慣れた内容の復習から始めましょう。";
+"Calm and recovered" = "落ち着いて回復中";
+"A low resting heart rate (%.0f bpm) signals good recovery. A good day for sustained deep-focus study." = "低い安静時心率（%.0f bpm）は良い回復のサイン。長時間ディープフォーカスで学習するのに最適な日です。";
+"Body is still winding down" = "体がまだ冷めきっていない";
+"Your heart rate is well above resting — recently active. Give yourself 10-15 minutes before tackling demanding material." = "心率が安静時よりずっと高い——活動直後です。ハードな学習を始める前に 10〜15 分休みましょう。";
+"Health Monitoring" = "健康モニタリング";
+"Reads HRV, resting heart rate, respiratory rate and last night's sleep from Apple Health with your permission. Your data stays on device and is never uploaded." = "あなたの許可のもと、Apple Health から HRV、安静時心数、呼吸数、昨夜の睡眠を読み取ります。データは端末内にのみ保存され、アップロードされることはありません。";
+"Refresh Now" = "今すぐ更新";
+"Re-reads HRV and today's body signals from Apple Health." = "Apple Health から HRV と今日の体のシグナルを再取得します。";
+"Learn About Health Monitoring" = "健康モニタリングについて";
+"Body Signals Tailor Your Suggestions" = "体のシグナルが提案を最適化";
+"StudyPulse also reads your heart rate, breathing rate, and last night's sleep to recommend the right kind of study session for your body." = "StudyPulse は心拍数、呼吸数、昨夜の睡眠も読み取り、その時の体の状態に合った学習方法を提案します。";
+"Resting heart rate" = "安静時心拍数";
+"Low = well-recovered, primed for deep work. High = tired or stressed, ease into the day." = "低め = 回復良好、深い学習向き。高め = 疲労・ストレスあり、ゆっくり始めましょう。";
+"Respiratory rate" = "呼吸数";
+"Elevated breathing can signal stress or illness — we'll suggest a calming activity first." = "呼吸数の上昇はストレスや体調不良のサインかも——まずは落ち着いた活動を提案します。";
+"Last night's sleep" = "昨夜の睡眠";
+"Under 6 hours of sleep and we'll steer you to lighter review; over 9 hours and we'll suggest a tough subject first." = "6 時間未満なら軽め復習を、9 時間以上なら難問から取り組むことを提案します。";
+"These signals are read alongside HRV in a single HealthKit permission. You stay in control — disable any time in Settings." = "これらのシグナルは HRV と同じ HealthKit 許可で読み取られます。設定からいつでも無効化できます。";
+"When you enable health monitoring, StudyPulse will:" = "健康モニタリングを有効にすると、StudyPulse は次のことを行います：";
+"Use your heart rate, breathing and sleep to tailor study suggestions" = "心拍・呼吸・睡眠に基づいて学習提案を最適化";
+"Apple Watch users get the most accurate signals. iPhone-only users can still see sleep data from manually logged entries or connected third-party apps." = "Apple Watch 使用者は最も正確なシグナルを取得できます。iPhone のみの場合でも、手動入力や連携済みサードパーティ App から睡眠データを確認できます。";
+"When you enable HRV monitoring, StudyPulse will:" = "HRV モニタリングを有効にすると、StudyPulse は次のことを行います：";
+"Add personalized study suggestions based on your recovery state" = "回復状態に応じたパーソナライズされた学習提案を追加";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "HRVを追跡できる Apple Watch が必要です。数晩睡眠時に着用すれば、Health に自動的にデータが現れます。";
+
+// Recovery Radar card (HRVStatusCard)
+"Recovery Radar" = "リカバリーレーダー";
+"Heart Rate" = "心拍数";
+"Recovery Sleep" = "リカバリー睡眠";
+"Respiratory" = "呼吸数";
+
+// 5th radar axis (workout / exercise)
+"Workout" = "運動";
+"Today Exercise" = "本日の運動";
+
+// 30-day baseline & age calibration
+"%@ %@ — vs 30-day mean %@" = "%@ %@ — 30日平均と比較 %@";
+"%@ %@ — using age reference" = "%@ %@ — 年齢範囲を暫定使用";
+"Calibrated against 30-day mean for %d/5 signals" = "30日平均で校正済み %d/5 項目";
+"Not enough 30-day data yet, using age reference" = "30日データが不足しているため年齢範囲を使用";
+"Age %d" = "年齢 %d";
+"Sleep" = "睡眠";
+"Resting heart rate" = "安静時心拍数";
+"Respiratory rate" = "呼吸数";
+"Today exercise" = "本日の運動";
+
+// Q&A 設定（FAQ）
+"FAQ" = "よくある質問";
+"Frequently Asked Questions" = "よくある質問（FAQ）";
+"Answers to common questions about using StudyPulse." = "StudyPulseの使い方に関するよくある質問です。";
+
+"How does StudyPulse track my grades?" = "StudyPulseはどのように成績を管理しますか？";
+"StudyPulse stores all grade data locally on your device as JSON files. You can add scores, rankings, importance levels, and even attach a photo of your graded paper. Grades are organized by subject and can be viewed in trend charts over time." = "StudyPulseはすべての成績データをJSONファイルとして端末のローカルに保存します。点数、順位、重要度に加え、採点済みの答案写真を添付することもできます。成績は科目ごとに整理され、経時的なトレンドグラフで確認できます。";
+
+"What is HRV and why does it matter for studying?" = "HRVとは何ですか？なぜ学習に重要なのですか？";
+"Heart Rate Variability (HRV) measures the variation in time between heartbeats, reflecting your nervous system's recovery state. A higher HRV generally means better recovery and readiness for focused study. StudyPulse uses a 14-day HRV baseline from Apple Watch to classify your readiness as excellent, normal, or low, and provides personalized study suggestions." = "心拍変動（HRV）は心拍間の時間変動を測定し、神経系の回復状態を反映します。HRVが高いほど回復が良好で、集中学習に適した状態です。StudyPulseはApple Watchの14日間のHRVベースラインを使用して状態を「優秀」「正常」「低い」に分類し、個別の学習提案を行います。";
+
+"How do I export my data?" = "データをエクスポートするにはどうすればよいですか？";
+"Go to Settings > Data Management and tap Export. StudyPulse supports CSV export for grades, mistakes, exams, and comprehensive exams. The exported file can be shared via AirDrop, email, or any other sharing extension on your device." = "「設定 > データ管理」から「エクスポート」をタップします。StudyPulseは成績、間違いノート、試験、総合試験のCSVエクスポートに対応しています。エクスポートしたファイルはAirDrop、メール、その他の共有機能で共有できます。";
+
+"Where is my data stored?" = "データはどこに保存されますか？";
+"All your data is stored locally on your device in the app's Documents folder. Grade photos and avatar images are saved as separate files. StudyPulse does not upload any of your data to external servers. If HealthKit is enabled, HRV and other health signals are read directly from Apple Health and remain on your device." = "すべてのデータは端末のアプリのDocumentsフォルダにローカル保存されます。成績写真やアバター画像は別ファイルとして保存されます。StudyPulseはデータを外部サーバーにアップロードしません。HealthKitを有効にすると、HRVなどの健康データはApple Healthから直接読み取られ、端末上に留まります。";
+
+"Does StudyPulse sync across devices?" = "StudyPulseは複数端末で同期できますか？";
+"Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "現在、StudyPulseは各端末にローカル保存され、iCloud同期には対応していません。端末間のデータバックアップと転送は、CSVのエクスポート・インポート、またはDocumentsフォルダのコピーで手動で行う必要があります。複数端末間の同期は将来のアップデートで計画されています。";
+
+"How do I add a mistake note with photos?" = "写真付きの間違いノートを追加するにはどうすればよいですか？";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "「間違い」タブをタップし、+ ボタンで新しい間違いノートを作成します。各ノートには「問題」「原因」「誤答」「正解」の4つの編集セクションがあります。各セクションで写真（カメラまたはフォトライブラリ）を追加でき、OCRが自動的に画像からテキストを抽出します。手動でテキストを編集したり、Markdownで書式設定することもできます。";
+
+"What education systems does StudyPulse support?" = "StudyPulseはどのような教育システムに対応していますか？";
+"StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulseは15以上の教育システムに対応しています：中国大陸（全国、浙江、上海）、台湾、香港、シンガポール、英国（IGCSE、A-Level）、IB DP、米国（AP、SAT、ACT）、GRE/GMAT、TOEFL/IELTSなど。「設定 > プロフィール」で教育システムを選択すると、科目の満点が自動設定されます。";
+
+"Can I customize my home dashboard?" = "ホームダッシュボードをカスタマイズできますか？";
+"Yes! Go to Settings > Appearance & Layout > Home Layout to reorder and toggle dashboard cards. You can enable or disable HRV status, quick actions, trend chart, upcoming exams, recent grades, daily quote, and more." = "はい！「設定 > 外観とレイアウト > ホームレイアウト」でダッシュボードカードの並び替えと表示切替ができます。HRVステータス、クイックアクション、トレンドグラフ、今後の試験、最近の成績、今日の名言などをオン／オフできます。";
+
+
+"Q&A · Help" = "Q&A · ヘルプ";
+"Frequently asked questions about using StudyPulse." = "StudyPulseの使い方に関するよくある質問。";
+
+
+"Health & Readiness" = "健康と準備状態";

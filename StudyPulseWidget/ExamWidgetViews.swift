@@ -8,188 +8,157 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Single exam row view
-struct ExamRowView: View {
+// MARK: - Single exam card
+struct ExamCardView: View {
     let exam: ExamWidgetData
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(exam.name)
-                .font(.headline)
-                .lineLimit(1)
-            
-            HStack(spacing: 6) {
-                Text(exam.subject)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text(daysLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(daysColor)
-            }
-        }
-        .containerBackground(.fill.tertiary, for: .widget)
-    }
-    
-    private var daysLabel: String {
-        switch exam.daysRemaining {
-        case ...0:
-            return String(localized: "Today")
-        case 1:
-            return String(localized: "Tomorrow")
-        default:
-            return String(format: String(localized: "%d days left"), exam.daysRemaining)
-        }
-    }
-    
-    private var daysColor: Color {
-        if exam.daysRemaining <= 0 {
-            return .red
-        } else if exam.daysRemaining == 1 {
-            return .orange
-        } else if exam.daysRemaining <= 3 {
-            return .yellow
-        } else {
-            return .green
-        }
-    }
-}
 
-// MARK: - Empty state view
-struct EmptyExamWidgetView: View {
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-            Text("No upcoming exams", comment: "Widget empty state message")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
+    private var timeProgress: Double {
+        min(Double(exam.daysRemaining) / 30.0, 1.0)
     }
-}
 
-// MARK: - Widget size views
-struct ExamWidgetSmallView: View {
-    let entry: ExamWidgetEntry
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let exam = entry.exams.first {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(exam.name)
-                        .font(.headline)
-                        .lineLimit(1)
-                    
-                    Text(exam.subject)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                    
-                    Spacer()
-                    
-                    HStack {
-                        Image(systemName: "clock.fill")
-                            .font(.caption2)
-                            .foregroundColor(daysColor)
-                        
-                        Text(daysLabel(exam))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(daysColor)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                EmptyExamWidgetView()
-            }
-        }
-        .containerBackground(.fill.tertiary, for: .widget)
+    private var timeLeftColor: Color {
+        if exam.daysRemaining <= 3 { return .red }
+        if exam.daysRemaining <= 7 { return .orange }
+        return .green
     }
-    
-    private func daysLabel(_ exam: ExamWidgetData) -> String {
-        switch exam.daysRemaining {
-        case ...0:
-            return String(localized: "Today")
-        case 1:
-            return String(localized: "Tomorrow")
-        default:
-            return String(format: String(localized: "%d days left"), exam.daysRemaining)
-        }
-    }
-    
-    private var daysColor: Color {
-        guard let exam = entry.exams.first else { return .secondary }
-        if exam.daysRemaining <= 0 {
-            return .red
-        } else if exam.daysRemaining == 1 {
-            return .orange
-        } else if exam.daysRemaining <= 3 {
-            return .yellow
-        } else {
-            return .green
-        }
-    }
-}
 
-struct ExamWidgetMediumView: View {
-    let entry: ExamWidgetEntry
-    
+    private var daysText: String {
+        if exam.daysRemaining <= 0 { return String(localized: "Today!") }
+        return "\(exam.daysRemaining) " + String(localized: "days")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                
-                Text("Upcoming Exams", comment: "Widget section title")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                Text(exam.name)
+                    .font(.headline)
+                Spacer()
+                Text(exam.subject)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(Color.blue.opacity(0.15))
+                    )
+                    .foregroundColor(.blue)
             }
-            
-            Divider()
-            
-            if entry.exams.isEmpty {
-                EmptyExamWidgetView()
-            } else {
-                ForEach(entry.exams.prefix(3), id: \.name) { exam in
-                    ExamRowView(exam: exam)
-                }
+
+            Text(exam.examDate, style: .date)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Time Left")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                ProgressView(value: timeProgress, total: 1.0)
+                    .tint(timeLeftColor)
+                    .scaleEffect(x: 1, y: 1.2, anchor: .center)
+                Text(daysText)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(exam.daysRemaining <= 2 ? .red : .secondary)
             }
         }
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(.thinMaterial)
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.blue.opacity(0.25),
+                                Color.blue.opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }
 
+// MARK: - Empty state
+struct EmptyExamWidgetView: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "calendar.badge.plus")
+                .font(.system(size: 24))
+                .foregroundColor(.secondary)
+            Text("No upcoming exams")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Small widget
+struct ExamWidgetSmallView: View {
+    let entry: ExamWidgetEntry
+
+    var body: some View {
+        if let exam = entry.exams.first {
+            ExamCardView(exam: exam)
+        } else {
+            EmptyExamWidgetView()
+                .containerBackground(.fill.tertiary, for: .widget)
+        }
+    }
+}
+
+// MARK: - Medium widget
+struct ExamWidgetMediumView: View {
+    let entry: ExamWidgetEntry
+
+    var body: some View {
+        if entry.exams.isEmpty {
+            EmptyExamWidgetView()
+                .containerBackground(.fill.tertiary, for: .widget)
+        } else {
+            HStack(spacing: 10) {
+                ForEach(entry.exams.prefix(2), id: \.name) { exam in
+                    ExamCardView(exam: exam)
+                }
+            }
+            .padding(.horizontal, 2)
+            .containerBackground(.fill.tertiary, for: .widget)
+        }
+    }
+}
+
+// MARK: - Large widget
 struct ExamWidgetLargeView: View {
     let entry: ExamWidgetEntry
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-                
-                Text("Upcoming Exams", comment: "Widget section title")
-                    .font(.headline)
-            }
-            
-            if entry.exams.isEmpty {
-                Spacer()
-                EmptyExamWidgetView()
-                Spacer()
-            } else {
-                ForEach(entry.exams.prefix(5), id: \.name) { exam in
-                    ExamRowView(exam: exam)
+        if entry.exams.isEmpty {
+            EmptyExamWidgetView()
+                .containerBackground(.fill.tertiary, for: .widget)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                    Text("Upcoming Exams")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                 }
-                
+
+                ForEach(entry.exams.prefix(2), id: \.name) { exam in
+                    ExamCardView(exam: exam)
+                }
+
                 Spacer()
             }
+            .containerBackground(.fill.tertiary, for: .widget)
         }
-        .containerBackground(.fill.tertiary, for: .widget)
     }
 }

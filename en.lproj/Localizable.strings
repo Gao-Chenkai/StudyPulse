@@ -63,6 +63,7 @@
 "Dashboard" = "Dashboard";
 
 // SettingsView.swift
+"Profile" = "Profile";
 "User Information" = "User Information";
 "Username" = "Username";
 "Age" = "Age";
@@ -72,6 +73,8 @@
 "Region" = "Region";
 "Edit Profile" = "Edit Profile";
 "Edit Subjects" = "Edit Subjects";
+"Edit Avatar" = "Edit Avatar";
+"Personal Information" = "Personal Information";
 "About StudyPulse" = "About StudyPulse";
 "Copyright" = "Copyright";
 "Send Test Notification in 5 Seconds" = "Send Test Notification in 5 Seconds";
@@ -79,6 +82,15 @@
 "Copyright & License" = "Copyright & License";
 
 // Preferences
+"Appearance & Layout" = "Appearance & Layout";
+"Language · Theme · Home · Widget" = "Language · Theme · Home · Widget";
+"HRV · Recovery · Focus" = "HRV · Recovery · Focus";
+"Import · Export · Backup" = "Import · Export · Backup";
+"Version · License" = "Version · License";
+"Customize the look, language, home dashboard layout and widget data." = "Customize the look, language, home dashboard layout and widget data.";
+"Connect Apple Health to read your HRV and get personalized study readiness suggestions." = "Connect Apple Health to read your HRV and get personalized study readiness suggestions.";
+"Import, export and manage your grades, mistakes and exams data." = "Import, export and manage your grades, mistakes and exams data.";
+"App information, version and license details." = "App information, version and license details.";
 "Preferences" = "Preferences";
 "App Preferences" = "App Preferences";
 "Appearance" = "Appearance";
@@ -363,6 +375,16 @@
 "Show a readiness card on your Dashboard" = "Show a readiness card on your Dashboard";
 "Add personalized study suggestions based on your recovery state" = "Add personalized study suggestions based on your recovery state";
 "You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights.";
+
+// Recovery Radar card (HRVStatusCard)
+"Recovery Radar" = "Recovery Radar";
+"Heart Rate" = "Heart Rate";
+"Recovery Sleep" = "Recovery Sleep";
+"Respiratory" = "Respiratory";
+
+// 5th radar axis (workout / exercise)
+"Workout" = "Workout";
+"Today Exercise" = "Today Exercise";
 "HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse." = "HealthKit access was denied. You can enable it later in the iOS Settings app under Privacy → Health → StudyPulse.";
 
 // HRVStatusCard.swift
@@ -515,6 +537,9 @@
 "Grade" = "Grade";
 "Grades" = "Grades";
 "Home Layout" = "Home Layout";
+"Widgets" = "Widgets";
+"Auto" = "Auto";
+"Trend Widget Subject" = "Trend Widget Subject";
 "No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "No HRV data found in Health. Wear your Apple Watch overnight for a few nights.";
 "Notes" = "Notes";
 "Question" = "Question";
@@ -527,3 +552,85 @@
 "Your HRV is within your normal range. Steady study rhythm recommended." = "Your HRV is within your normal range. Steady study rhythm recommended.";
 "Attribution — NonCommercial — ShareAlike — 4.0 International" = "Attribution — NonCommercial — ShareAlike — 4.0 International";
 "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International";
+
+// Health body signals (HomeView StudySuggestionsCard, HealthSettingsView, HRVOnboardingView)
+"Poor sleep last night" = "Poor sleep last night";
+"Less than 6 hours of sleep — keep today's study light. Review notes and avoid new hard material; aim to sleep earlier tonight." = "Less than 6 hours of sleep — keep today's study light. Review notes and avoid new hard material; aim to sleep earlier tonight.";
+"Sleep was a bit short" = "Sleep was a bit short";
+"Around 6-7 hours of sleep. Stick to revision and easy problems today; save deep focus for after a good night's rest." = "Around 6-7 hours of sleep. Stick to revision and easy problems today; save deep focus for after a good night's rest.";
+"Body is ready for deep work" = "Body is ready for deep work";
+"Excellent sleep and a low resting heart rate — tackle your hardest subject first while energy is highest." = "Excellent sleep and a low resting heart rate — tackle your hardest subject first while energy is highest.";
+"Well rested — go for it" = "Well rested — go for it";
+"9+ hours of sleep last night. A great day to push on the toughest subject or take a practice test." = "9+ hours of sleep last night. A great day to push on the toughest subject or take a practice test.";
+"Breathing is a bit fast" = "Breathing is a bit fast";
+"Your resting breathing rate (%.0f brpm) is higher than usual. Start with a 5-minute breathing exercise, then try lighter review tasks." = "Your resting breathing rate (%.0f brpm) is higher than usual. Start with a 5-minute breathing exercise, then try lighter review tasks.";
+"Resting heart rate is elevated" = "Resting heart rate is elevated";
+"Your resting heart rate is %.0f bpm — above the typical range. You may be tired or dehydrated; take it easy and review familiar material first." = "Your resting heart rate is %.0f bpm — above the typical range. You may be tired or dehydrated; take it easy and review familiar material first.";
+"Calm and recovered" = "Calm and recovered";
+"A low resting heart rate (%.0f bpm) signals good recovery. A good day for sustained deep-focus study." = "A low resting heart rate (%.0f bpm) signals good recovery. A good day for sustained deep-focus study.";
+"Body is still winding down" = "Body is still winding down";
+"Your heart rate is well above resting — recently active. Give yourself 10-15 minutes before tackling demanding material." = "Your heart rate is well above resting — recently active. Give yourself 10-15 minutes before tackling demanding material.";
+"Health Monitoring" = "Health Monitoring";
+"Reads HRV, resting heart rate, respiratory rate and last night's sleep from Apple Health with your permission. Your data stays on device and is never uploaded." = "Reads HRV, resting heart rate, respiratory rate and last night's sleep from Apple Health with your permission. Your data stays on device and is never uploaded.";
+"Refresh Now" = "Refresh Now";
+"Re-reads HRV and today's body signals from Apple Health." = "Re-reads HRV and today's body signals from Apple Health.";
+"Learn About Health Monitoring" = "Learn About Health Monitoring";
+"Body Signals Tailor Your Suggestions" = "Body Signals Tailor Your Suggestions";
+"StudyPulse also reads your heart rate, breathing rate, and last night's sleep to recommend the right kind of study session for your body." = "StudyPulse also reads your heart rate, breathing rate, and last night's sleep to recommend the right kind of study session for your body.";
+"Resting heart rate" = "Resting heart rate";
+"Low = well-recovered, primed for deep work. High = tired or stressed, ease into the day." = "Low = well-recovered, primed for deep work. High = tired or stressed, ease into the day.";
+"Respiratory rate" = "Respiratory rate";
+"Elevated breathing can signal stress or illness — we'll suggest a calming activity first." = "Elevated breathing can signal stress or illness — we'll suggest a calming activity first.";
+"Last night's sleep" = "Last night's sleep";
+"Under 6 hours of sleep and we'll steer you to lighter review; over 9 hours and we'll suggest a tough subject first." = "Under 6 hours of sleep and we'll steer you to lighter review; over 9 hours and we'll suggest a tough subject first.";
+"These signals are read alongside HRV in a single HealthKit permission. You stay in control — disable any time in Settings." = "These signals are read alongside HRV in a single HealthKit permission. You stay in control — disable any time in Settings.";
+"When you enable health monitoring, StudyPulse will:" = "When you enable health monitoring, StudyPulse will:";
+"Use your heart rate, breathing and sleep to tailor study suggestions" = "Use your heart rate, breathing and sleep to tailor study suggestions";
+"Apple Watch users get the most accurate signals. iPhone-only users can still see sleep data from manually logged entries or connected third-party apps." = "Apple Watch users get the most accurate signals. iPhone-only users can still see sleep data from manually logged entries or connected third-party apps.";
+"When you enable HRV monitoring, StudyPulse will:" = "When you enable HRV monitoring, StudyPulse will:";
+"Add personalized study suggestions based on your recovery state" = "Add personalized study suggestions based on your recovery state";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights.";
+
+// Recovery Radar card (HRVStatusCard)
+"Recovery Radar" = "Recovery Radar";
+"Heart Rate" = "Heart Rate";
+"Recovery Sleep" = "Recovery Sleep";
+"Respiratory" = "Respiratory";
+
+// 5th radar axis (workout / exercise)
+"Workout" = "Workout";
+"Today Exercise" = "Today Exercise";
+
+// Q&A Settings (FAQ)
+"FAQ" = "FAQ";
+"Frequently Asked Questions" = "Frequently Asked Questions";
+"Answers to common questions about using StudyPulse." = "Answers to common questions about using StudyPulse.";
+
+"How does StudyPulse track my grades?" = "How does StudyPulse track my grades?";
+"StudyPulse stores all grade data locally on your device as JSON files. You can add scores, rankings, importance levels, and even attach a photo of your graded paper. Grades are organized by subject and can be viewed in trend charts over time." = "StudyPulse stores all grade data locally on your device as JSON files. You can add scores, rankings, importance levels, and even attach a photo of your graded paper. Grades are organized by subject and can be viewed in trend charts over time.";
+
+"What is HRV and why does it matter for studying?" = "What is HRV and why does it matter for studying?";
+"Heart Rate Variability (HRV) measures the variation in time between heartbeats, reflecting your nervous system's recovery state. A higher HRV generally means better recovery and readiness for focused study. StudyPulse uses a 14-day HRV baseline from Apple Watch to classify your readiness as excellent, normal, or low, and provides personalized study suggestions." = "Heart Rate Variability (HRV) measures the variation in time between heartbeats, reflecting your nervous system's recovery state. A higher HRV generally means better recovery and readiness for focused study. StudyPulse uses a 14-day HRV baseline from Apple Watch to classify your readiness as excellent, normal, or low, and provides personalized study suggestions.";
+
+"How do I export my data?" = "How do I export my data?";
+"Go to Settings > Data Management and tap Export. StudyPulse supports CSV export for grades, mistakes, exams, and comprehensive exams. The exported file can be shared via AirDrop, email, or any other sharing extension on your device." = "Go to Settings > Data Management and tap Export. StudyPulse supports CSV export for grades, mistakes, exams, and comprehensive exams. The exported file can be shared via AirDrop, email, or any other sharing extension on your device.";
+
+"Where is my data stored?" = "Where is my data stored?";
+"All your data is stored locally on your device in the app's Documents folder. Grade photos and avatar images are saved as separate files. StudyPulse does not upload any of your data to external servers. If HealthKit is enabled, HRV and other health signals are read directly from Apple Health and remain on your device." = "All your data is stored locally on your device in the app's Documents folder. Grade photos and avatar images are saved as separate files. StudyPulse does not upload any of your data to external servers. If HealthKit is enabled, HRV and other health signals are read directly from Apple Health and remain on your device.";
+
+"Does StudyPulse sync across devices?" = "Does StudyPulse sync across devices?";
+"Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update.";
+
+"How do I add a mistake note with photos?" = "How do I add a mistake note with photos?";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown.";
+
+"What education systems does StudyPulse support?" = "What education systems does StudyPulse support?";
+"StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically.";
+
+"Can I customize my home dashboard?" = "Can I customize my home dashboard?";
+"Yes! Go to Settings > Appearance & Layout > Home Layout to reorder and toggle dashboard cards. You can enable or disable HRV status, quick actions, trend chart, upcoming exams, recent grades, daily quote, and more." = "Yes! Go to Settings > Appearance & Layout > Home Layout to reorder and toggle dashboard cards. You can enable or disable HRV status, quick actions, trend chart, upcoming exams, recent grades, daily quote, and more.";
+"Q&A · Help" = "Q&A · Help";
+"Frequently asked questions about using StudyPulse." = "Frequently asked questions about using StudyPulse.";
+
+
+"Health & Readiness" = "Health & Readiness";

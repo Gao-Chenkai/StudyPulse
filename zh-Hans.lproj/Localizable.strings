@@ -64,7 +64,8 @@
 "Dashboard" = "数据概览";
 
 // SettingsView.swift
-"User Information" = "用户档案";
+"Profile" = "个人资料";
+"User Information" = "用户信息";
 "Username" = "用户名";
 "Age" = "年龄";
 "Education Level" = "教育阶段";
@@ -73,11 +74,22 @@
 "Region" = "国家与地区";
 "Edit Profile" = "编辑档案";
 "Edit Subjects" = "编辑科目";
+"Edit Avatar" = "编辑头像";
+"Personal Information" = "个人信息";
 "About StudyPulse" = "关于 StudyPulse";
 "Copyright" = "版权信息";
 "Send Test Notification in 5 Seconds" = "在 5 秒后进行本地通知接收测试";
 "Personal Info" = "个人信息";
 "Copyright & License" = "版权与许可";
+"Appearance & Layout" = "外观与布局";
+"Language · Theme · Home · Widget" = "语言 · 主题 · 主页 · 小组件";
+"HRV · Recovery · Focus" = "心率变异 · 恢复 · 专注";
+"Import · Export · Backup" = "导入 · 导出 · 备份";
+"Version · License" = "版本 · 许可";
+"Customize the look, language, home dashboard layout and widget data." = "自定义外观、语言、主页仪表盘布局与小组件数据。";
+"Connect Apple Health to read your HRV and get personalized study readiness suggestions." = "连接 Apple 健康，读取 HRV 数据，获取个性化的学习准备度建议。";
+"Import, export and manage your grades, mistakes and exams data." = "导入、导出与管理你的成绩、错题与考试数据。";
+"App information, version and license details." = "应用信息、版本号与许可详情。";
 "Preferences" = "应用偏好";
 "App Preferences" = "应用偏好";
 "Appearance" = "外观";
@@ -515,6 +527,9 @@
 "Grade" = "年级";
 "Grades" = "成绩";
 "Home Layout" = "主页布局";
+"Widgets" = "小组件";
+"Auto" = "自动";
+"Trend Widget Subject" = "趋势小组件科目";
 "No HRV data found in Health. Wear your Apple Watch overnight for a few nights." = "暂未在健康中找到 HRV 数据。请连续佩戴 Apple Watch 睡眠几个晚上。";
 "Notes" = "备注";
 "Question" = "题目";
@@ -527,3 +542,98 @@
 "Your HRV is within your normal range. Steady study rhythm recommended." = "你的 HRV 在正常范围内。建议保持稳定的学习节奏。";
 "Attribution — NonCommercial — ShareAlike — 4.0 International" = "署名 — 非商业性使用 — 相同方式共享 — 4.0 国际";
 "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International" = "知识共享署名-非商业性使用-相同方式共享 4.0 国际许可协议";
+
+// Health body signals (HomeView StudySuggestionsCard, HealthSettingsView, HRVOnboardingView)
+"Poor sleep last night" = "昨晚睡眠不足";
+"Less than 6 hours of sleep — keep today's study light. Review notes and avoid new hard material; aim to sleep earlier tonight." = "睡眠不足 6 小时——今天的学习要轻松一些。复习笔记就好，避免接触新内容；今晚记得早点睡。";
+"Sleep was a bit short" = "睡眠偏少";
+"Around 6-7 hours of sleep. Stick to revision and easy problems today; save deep focus for after a good night's rest." = "睡眠约 6-7 小时。今天以复习和简单题为主；充分休息后再进行深度学习。";
+"Body is ready for deep work" = "身体已准备好深度学习";
+"Excellent sleep and a low resting heart rate — tackle your hardest subject first while energy is highest." = "睡眠充足且静息心率低——趁着精力最旺盛，先攻克最难的科目。";
+"Well rested — go for it" = "睡眠充足，放手去做";
+"9+ hours of sleep last night. A great day to push on the toughest subject or take a practice test." = "昨晚睡了 9 小时以上。今天非常适合攻克最难的科目或做一次模拟测试。";
+"Breathing is a bit fast" = "呼吸频率偏高";
+"Your resting breathing rate (%.0f brpm) is higher than usual. Start with a 5-minute breathing exercise, then try lighter review tasks." = "你的静息呼吸频率（%.0f 次/分钟）比平时高。先做 5 分钟呼吸练习，再做轻松的复习。";
+"Resting heart rate is elevated" = "静息心率偏高";
+"Your resting heart rate is %.0f bpm — above the typical range. You may be tired or dehydrated; take it easy and review familiar material first." = "你的静息心率为 %.0f 次/分钟——高于正常范围。你可能疲劳或脱水；先从熟悉的内容开始，不要太紧绷。";
+"Calm and recovered" = "状态平稳，恢复良好";
+"A low resting heart rate (%.0f bpm) signals good recovery. A good day for sustained deep-focus study." = "较低的静息心率（%.0f 次/分钟）说明恢复良好，非常适合长时间深度学习。";
+"Body is still winding down" = "身体尚未完全放松";
+"Your heart rate is well above resting — recently active. Give yourself 10-15 minutes before tackling demanding material." = "你的心率仍远高于静息水平——刚结束活动。给自己 10-15 分钟再开始高强度学习。";
+"Health Monitoring" = "健康监测";
+"Reads HRV, resting heart rate, respiratory rate and last night's sleep from Apple Health with your permission. Your data stays on device and is never uploaded." = "经你授权后从 Apple 健康读取 HRV、静息心率、呼吸频率和昨晚的睡眠。数据仅保存在本机，永远不会上传。";
+"Refresh Now" = "立即刷新";
+"Re-reads HRV and today's body signals from Apple Health." = "从 Apple 健康重新读取 HRV 和今日的身体信号。";
+"Learn About Health Monitoring" = "了解健康监测";
+"Body Signals Tailor Your Suggestions" = "身体信号让建议更贴切";
+"StudyPulse also reads your heart rate, breathing rate, and last night's sleep to recommend the right kind of study session for your body." = "StudyPulse 还会读取你的心率、呼吸频率和昨晚的睡眠，为你推荐适合当前身体状态的学习方式。";
+"Resting heart rate" = "静息心率";
+"Low = well-recovered, primed for deep work. High = tired or stressed, ease into the day." = "偏低 = 恢复良好，适合深度学习；偏高 = 疲劳或压力大，今天悠着来。";
+"Respiratory rate" = "呼吸频率";
+"Elevated breathing can signal stress or illness — we'll suggest a calming activity first." = "呼吸频率升高可能意味着压力或身体不适——我们会先建议舒缓的活动。";
+"Last night's sleep" = "昨晚睡眠";
+"Under 6 hours of sleep and we'll steer you to lighter review; over 9 hours and we'll suggest a tough subject first." = "睡眠不足 6 小时我们会建议轻松复习；超过 9 小时则推荐先攻克难题。";
+"These signals are read alongside HRV in a single HealthKit permission. You stay in control — disable any time in Settings." = "这些信号与 HRV 一起在同一次 HealthKit 授权中读取。你可随时在设置中关闭。";
+"When you enable health monitoring, StudyPulse will:" = "开启健康监测后，StudyPulse 会：";
+"Use your heart rate, breathing and sleep to tailor study suggestions" = "结合你的心率、呼吸和睡眠给出更贴切的学习建议";
+"Apple Watch users get the most accurate signals. iPhone-only users can still see sleep data from manually logged entries or connected third-party apps." = "Apple Watch 用户可获得最准确的信号。仅使用 iPhone 的用户也能看到睡眠数据，前提是手动记录或连接了第三方 App。";
+"When you enable HRV monitoring, StudyPulse will:" = "开启 HRV 监测后，StudyPulse 会：";
+"Add personalized study suggestions based on your recovery state" = "根据恢复状态生成个性化学习建议";
+"You need an Apple Watch that tracks HRV. Data appears in Health automatically after wearing it to sleep for a few nights." = "你需要一个能追踪 HRV 的 Apple Watch。佩戴睡眠几晚后，数据会自动出现在健康 App 中。";
+
+// Recovery Radar card (HRVStatusCard)
+"Recovery Radar" = "恢复雷达";
+"Heart Rate" = "心率";
+"Recovery Sleep" = "恢复性睡眠";
+"Respiratory" = "呼吸频率";
+
+// 5th radar axis (workout / exercise)
+"Workout" = "锻炼";
+"Today Exercise" = "今日锻炼";
+
+// 30-day baseline & age calibration
+"%@ %@ — 对比 30 天均值 %@" = "%@ %@ — 对比 30 天均值 %@";
+"%@ %@ — 暂用年龄段参考" = "%@ %@ — 暂用年龄段参考";
+"已用 30 天均值校准 %d/5 项" = "已用 30 天均值校准 %d/5 项";
+"尚无 30 天数据,使用年龄参考" = "尚无 30 天数据,使用年龄参考";
+"年龄 %d" = "年龄 %d";
+"Sleep" = "睡眠";
+"Resting heart rate" = "静息心率";
+"Respiratory rate" = "呼吸";
+"Today exercise" = "今日锻炼";
+
+// Q&A 设置（FAQ）
+"FAQ" = "常见问题";
+"Frequently Asked Questions" = "常见问题解答";
+"Answers to common questions about using StudyPulse." = "关于使用 StudyPulse 的常见问题解答。";
+
+"How does StudyPulse track my grades?" = "StudyPulse 如何追踪我的成绩？";
+"StudyPulse stores all grade data locally on your device as JSON files. You can add scores, rankings, importance levels, and even attach a photo of your graded paper. Grades are organized by subject and can be viewed in trend charts over time." = "StudyPulse 将所有成绩数据以 JSON 文件形式存储在设备本地。您可以添加分数、排名、重要级别，甚至附加批改后的试卷照片。成绩按科目组织，并可通过趋势图表查看随时间的变化。";
+
+"What is HRV and why does it matter for studying?" = "什么是 HRV，为什么它对学习很重要？";
+"Heart Rate Variability (HRV) measures the variation in time between heartbeats, reflecting your nervous system's recovery state. A higher HRV generally means better recovery and readiness for focused study. StudyPulse uses a 14-day HRV baseline from Apple Watch to classify your readiness as excellent, normal, or low, and provides personalized study suggestions." = "心率变异性（HRV）测量心跳间的时间变化，反映您神经系统的恢复状态。较高的 HRV 通常表示恢复更好，适合专注学习。StudyPulse 使用 Apple Watch 的 14 天 HRV 基线将您的状态分类为优秀、正常或较低，并提供个性化的学习建议。";
+
+"How do I export my data?" = "如何导出我的数据？";
+"Go to Settings > Data Management and tap Export. StudyPulse supports CSV export for grades, mistakes, exams, and comprehensive exams. The exported file can be shared via AirDrop, email, or any other sharing extension on your device." = "前往「设置 > 数据管理」并点击导出。StudyPulse 支持以 CSV 格式导出成绩、错题、考试和综合考试。导出的文件可通过 AirDrop、电子邮件或设备上的任何共享扩展进行分享。";
+
+"Where is my data stored?" = "我的数据存储在哪里？";
+"All your data is stored locally on your device in the app's Documents folder. Grade photos and avatar images are saved as separate files. StudyPulse does not upload any of your data to external servers. If HealthKit is enabled, HRV and other health signals are read directly from Apple Health and remain on your device." = "您的所有数据都存储在设备本地的应用 Documents 文件夹中。成绩照片和头像图片保存为独立文件。StudyPulse 不会将您的任何数据上传到外部服务器。如果启用了 HealthKit，HRV 和其他健康信号将直接从 Apple Health 读取并保留在您的设备上。";
+
+"Does StudyPulse sync across devices?" = "StudyPulse 支持跨设备同步吗？";
+"Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "目前 StudyPulse 将数据存储在每个设备的本地，不支持 iCloud 同步。设备间的数据备份和传输需要通过 CSV 导出‑导入或复制 Documents 文件夹手动完成。跨设备同步是未来版本计划中的功能。";
+
+"How do I add a mistake note with photos?" = "如何添加带有照片的错题？";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "点击「错题」标签页，然后点击 + 按钮创建新的错题。每道错题有四个可编辑区块：题目、原因、错误解答和正确解答。在每个区块中，您可以添加照片（相机或相册），OCR 将自动从图片中提取文字。您也可以手动编写或编辑文本，并使用 Markdown 格式化。";
+
+"What education systems does StudyPulse support?" = "StudyPulse 支持哪些教育体系？";
+"StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulse 支持 15 种以上教育体系，包括：中国大陆（全国、浙江、上海）、台湾、香港、新加坡、英国（IGCSE、A-Level）、IB DP、美国（AP、SAT、ACT）、GRE/GMAT 和 TOEFL/IELTS。您可以在「设置 > 个人资料」中选择教育体系，科目满分将自动配置。";
+
+"Can I customize my home dashboard?" = "我可以自定义主页仪表盘吗？";
+"Yes! Go to Settings > Appearance & Layout > Home Layout to reorder and toggle dashboard cards. You can enable or disable HRV status, quick actions, trend chart, upcoming exams, recent grades, daily quote, and more." = "可以！前往「设置 > 外观与布局 > 主页布局」重新排列和开关仪表盘卡片。您可以启用或禁用 HRV 状态、快捷操作、趋势图、即将到来的考试、近期成绩、每日金句等。";
+
+
+"Q&A · Help" = "问答 · 帮助";
+"Frequently asked questions about using StudyPulse." = "关于使用 StudyPulse 的常见问题。";
+
+
+"Health & Readiness" = "健康与准备状态";
