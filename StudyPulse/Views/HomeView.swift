@@ -39,6 +39,10 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
+    /// 分阶段渲染计数器，避免一次性构建所有复杂子视图
+    @State private var renderPhase = 0
 
     private var isRegularWidth: Bool {
         sizeClass == .regular || isIPad
@@ -52,9 +56,13 @@ struct HomeView: View {
                     WelcomeHeaderView(selectedTab: $selectedTab)
 
                     // 主要统计卡片（全宽，4 个指标横排）
-                    MainStatsCard()
+                    if renderPhase >= 1 {
+                        MainStatsCard()
+                    }
 
-                    dynamicCards
+                    if renderPhase >= 2 {
+                        dynamicCards
+                    }
                 }
                 .padding(.horizontal, sizeClass == .regular || isIPad ? 24 : 20)
                 .padding(.vertical, 12)
@@ -64,8 +72,14 @@ struct HomeView: View {
             .navigationTitle("Dashboard".localized())
             .toolbar(.hidden, for: .navigationBar)
         }
+        .task {
+            // 分三帧渲染：欢迎区 → 统计卡 → 动态卡片（含 Charts）
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            renderPhase = 1
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            renderPhase = 2
+        }
     }
-
     // MARK: - Dynamic Cards
 
     /// 动态渲染可配置卡片：iPhone 单列，iPad 双列网格
@@ -161,6 +175,8 @@ struct HomeView: View {
 struct UnregisteredExamsReminderCard: View {
     let unregisteredExams: [Exam]
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     @State private var showingAddGrade = false
     
     var body: some View {
@@ -241,6 +257,8 @@ struct WelcomeHeaderView: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
@@ -265,12 +283,15 @@ struct WelcomeHeaderView: View {
             } label: {
                 AvatarView(
                     username: dataManager.profile.username,
-                    avatarData: dataManager.loadAvatar(),
+                    avatarData: avatarData,
                     size: 50,
                     showBorder: true
                 )
             }
             .buttonStyle(.plain)
+        }
+        .task {
+            avatarData = await dataManager.loadAvatarAsync()
         }
     }
     
@@ -295,6 +316,8 @@ struct WelcomeHeaderView: View {
 // MARK: - 主要统计卡片
 struct MainStatsCard: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateGradient = false
 
@@ -466,6 +489,8 @@ struct StatItemView: View {
 // MARK: - 快捷操作卡片
 struct QuickActionsCard: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     @State private var showingAddGrade = false
     @State private var showingNewExam = false
     @State private var showingNewMistake = false
@@ -576,6 +601,8 @@ struct ScaleButtonStyle: ButtonStyle {
 // MARK: - 即将到来的考试区域
 struct UpcomingExamsSection: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     
     var upcomingExams: [Exam] {
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
@@ -780,6 +807,8 @@ struct DailyQuoteCard: View {
 // MARK: - 最近成绩区域
 struct RecentGradesSection: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     
     var recentGrades: [Grade] {
         Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(5))
@@ -871,6 +900,8 @@ enum SubjectSelectionRule {
 /// 单科目趋势图表，用户通过 Menu 选择聚焦规则
 struct ChartSectionView: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var currentRule: SubjectSelectionRule = .lowestScore
     @State private var selectedSubject: String? = nil
@@ -1148,6 +1179,8 @@ struct StatisticItem: View {
 // MARK: - 学习建议卡片
 struct StudySuggestionsCard: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
     @ObservedObject private var healthManager = HealthKitManager.shared
     @State private var suggestions: [StudySuggestion] = []
 

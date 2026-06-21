@@ -13,34 +13,79 @@ extension WSWelcomeConfig {
     /// 应用的欢迎页配置
     static var welcomeInfo: WSWelcomeConfig {
         return WSWelcomeConfig(
-            appName: "StudyPulse", // 显示的应用名称
-            introText: nil,
+            appName: "StudyPulse",
+            introText: "Track grades, master mistakes, plan exams — and let your body guide when to study with HealthKit insights.".localized(),
             features: [
                 FeatureItem(
-                    icon: "list.clipboard",
-                    title: "Chart Analysis".localized(),
-                    description: "Intuitive visualization of your trends.".localized(),
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: "Tracking & Trends".localized(),
+                    description: "Log scores across subjects and watch your progress unfold with interactive trend charts.".localized(),
                     color: .blue
                 ),
                 FeatureItem(
-                    icon: "bolt.fill",
-                    title: "Lightning Fast".localized(),
-                    description: "Millisecond response with no waiting for results.".localized(),
+                    icon: "doc.text.magnifyingglass",
+                    title: "Mistake Notes".localized(),
+                    description: "Snap photos of errors, auto-extract text with OCR, and review with built-in Markdown.".localized(),
                     color: .orange
                 ),
                 FeatureItem(
-                    icon: "wifi.slash",
-                    title: "Offline Support".localized(),
-                    description: "Works fully offline. No internet required.".localized(),
+                    icon: "heart.text.square",
+                    title: "HealthKit Ready".localized(),
+                    description: "Connect Apple Health for daily study suggestions tailored to your HRV and recovery state.".localized(),
+                    color: .pink
+                ),
+                FeatureItem(
+                    icon: "calendar.badge.clock",
+                    title: "Exam Planning".localized(),
+                    description: "Schedule exams with countdown, calendar sync, and smart preparation reminders.".localized(),
                     color: .green
                 ),
             ],
             iconSymbol: "graduationcap.fill",
-//            iconName: "StudyPulseIcon", // 应用图标图片文件名称
-            backgroundImageName: nil,
             primaryColor: .blue,
             continueButtonText: "Continue".localized(),
-            disclaimerText: "Your device information and usage data will not be used to provide a personalized experience, improve app functionality, or prevent fraud. Please review our privacy policy for more information. By tapping Continue, you agree to the User Agreement.".localized()
+            disclaimerText: "All your data stays on device — StudyPulse never uploads grades, mistakes, or health data to external servers.".localized()
+        )
+    }
+    /// 应用的"新功能"页配置 — 每次版本更新后展示
+    static var whatsNewInfo: WSWelcomeConfig {
+        // ═══════════════════════════════════════════════
+        // 每次发布新版本时，在这里更新 features 内容
+        // 把本次新增/改进的功能写进来
+        // ═══════════════════════════════════════════════
+        return WSWelcomeConfig(
+            appName: "StudyPulse",
+            introText: "Here's what's new in this version.".localized(),
+            features: [
+                FeatureItem(
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: "Tracking & Trends".localized(),
+                    description: "Log scores across subjects and watch your progress unfold with interactive trend charts.".localized(),
+                    color: .blue
+                ),
+                FeatureItem(
+                    icon: "doc.text.magnifyingglass",
+                    title: "Mistake Notes".localized(),
+                    description: "Snap photos of errors, auto-extract text with OCR, and review with built-in Markdown.".localized(),
+                    color: .orange
+                ),
+                FeatureItem(
+                    icon: "heart.text.square",
+                    title: "HealthKit Ready".localized(),
+                    description: "Connect Apple Health for daily study suggestions tailored to your HRV and recovery state.".localized(),
+                    color: .pink
+                ),
+                FeatureItem(
+                    icon: "calendar.badge.clock",
+                    title: "Exam Planning".localized(),
+                    description: "Schedule exams with countdown, calendar sync, and smart preparation reminders.".localized(),
+                    color: .green
+                ),
+            ],
+            iconSymbol: "graduationcap.fill",
+            primaryColor: .blue,
+            continueButtonText: "Continue".localized(),
+            pageType: .whatsNew
         )
     }
 }

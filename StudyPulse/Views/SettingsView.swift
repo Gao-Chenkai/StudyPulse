@@ -9,6 +9,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
+    /// 异步加载的头像数据，避免 body 中同步读文件
+    @State private var avatarData: Data? = nil
 
     var body: some View {
         NavigationStack {
@@ -29,6 +31,9 @@ struct SettingsView: View {
                     }
                 }
             }
+        .task {
+            avatarData = await dataManager.loadAvatarAsync()
+        }
   .listStyle(.insetGrouped)
   .navigationTitle("Settings".localized())
         }
@@ -38,7 +43,7 @@ struct SettingsView: View {
         HStack(spacing: 14) {
             AvatarView(
                 username: dataManager.profile.username,
-                avatarData: dataManager.loadAvatar(),
+                avatarData: avatarData,
                 size: 64
             )
 

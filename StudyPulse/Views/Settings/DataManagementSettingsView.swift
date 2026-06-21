@@ -17,6 +17,11 @@ struct DataManagementSettingsView: View {
     @State private var exportSuccessMessage = ""
     @State private var showingExportSuccess = false
 
+    // Log export state
+    @State private var isExportingLog = false
+    @State private var exportLogDocument: LogDocument?
+    @State private var showingLogExportSuccess = false
+
     // Import state
     @State private var isImporting = false
     @State private var importType: ImportType = .grades
@@ -54,6 +59,12 @@ struct DataManagementSettingsView: View {
                         }
                     } label: {
                         Label("Export Data".localized(), systemImage: "tray.and.arrow.up")
+                    }
+
+                    Button {
+                        exportLog()
+                    } label: {
+                        Label("Export Log".localized(), systemImage: "doc.text.magnifyingglass")
                     }
                 }
 
@@ -100,13 +111,30 @@ struct DataManagementSettingsView: View {
         ) { result in
             switch result {
             case .success(let url):
-                Log.export.info("导出成功 / Export succeeded: url=\(url.path, privacy: .public)")
+                Log.record(.info, category: "Export", message: "数据导出成功 / Data export succeeded: url=\(url.path)")
                 showingExportSuccess = true
             case .failure(let error):
-                Log.export.error("导出失败 / Export failed: \(error.localizedDescription, privacy: .public)")
+                Log.record(.error, category: "Export", message: "数据导出失败 / Data export failed: \(error.localizedDescription)")
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 exportDocument = nil
+            }
+        }
+        .fileExporter(
+            isPresented: $isExportingLog,
+            document: exportLogDocument,
+            contentType: .log,
+            defaultFilename: exportLogDocument?.fileName
+        ) { result in
+            switch result {
+            case .success(let url):
+                Log.record(.info, category: "Export", message: "日志导出成功 / Log export succeeded: url=\(url.path)")
+                showingLogExportSuccess = true
+            case .failure(let error):
+                Log.record(.error, category: "Export", message: "日志导出失败 / Log export failed: \(error.localizedDescription)")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                exportLogDocument = nil
             }
         }
         .fileImporter(
@@ -132,6 +160,11 @@ struct DataManagementSettingsView: View {
             Button("OK".localized()) { }
         } message: {
             Text(exportSuccessMessage)
+        }
+        .alert("Log Export Success".localized(), isPresented: $showingLogExportSuccess) {
+            Button("OK".localized()) { }
+        } message: {
+            Text("Application logs have been exported.".localized())
         }
         .alert("Import Success".localized(), isPresented: $showingImportSuccess) {
             Button("OK".localized()) { }
@@ -192,6 +225,19 @@ struct DataManagementSettingsView: View {
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExporting = true
+        }
+    }
+
+    // MARK: - Log Export
+
+    private func exportLog() {
+        let logText = LogStore.shared.exportAsText()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let fileName = "StudyPulse_Log_\(dateFormatter.string(from: Date())).log"
+        exportLogDocument = LogDocument(content: logText, fileName: fileName)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isExportingLog = true
         }
     }
 
@@ -296,9 +342,9 @@ struct DataManagementSettingsView: View {
         center.add(request) { error in
             DispatchQueue.main.async {
                 if let error = error {
-                    Log.notification.error("测试通知发送失败 / Test notification send failed: \(error.localizedDescription, privacy: .public)")
+                    Log.record(.error, category: "Notification", message: "测试通知发送失败 / Test notification send failed: \(error.localizedDescription)")
                 } else {
-                    Log.notification.info("测试通知发送成功 / Test notification sent: identifier=\(identifier, privacy: .public)")
+                    Log.record(.info, category: "Notification", message: "测试通知发送成功 / Test notification sent: identifier=\(identifier)")
                 }
             }
         }

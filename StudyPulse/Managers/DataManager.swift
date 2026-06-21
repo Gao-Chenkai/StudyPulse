@@ -93,6 +93,7 @@ class DataManager: ObservableObject {
     /// Await with `await dataManager.asyncInit()` inside a `.task` modifier.
     func asyncInit() async {
         Log.data.info("asyncInit 开始 / asyncInit start")
+        Log.record(.info, category: "Data", message: "asyncInit 开始 / asyncInit start")
         let docsDir = DataFileIO.getDocsDir()
         let imagesDir = DataFileIO.getImagesDir()
         Log.data.debug("数据目录 / Docs dir: \(docsDir.path, privacy: .public); 图片目录 / Images dir: \(imagesDir.path, privacy: .public)")
@@ -168,6 +169,7 @@ class DataManager: ObservableObject {
             self.isReady = true
 
             Log.data.info("asyncInit 完成 / asyncInit done; grades=\(self.grades.count, privacy: .public) mistakes=\(self.mistakeSets.count, privacy: .public) exams=\(self.examSets.count, privacy: .public) compExams=\(self.comprehensiveExamSets.count, privacy: .public) subjects=\(self.subjects.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "asyncInit 完成 / asyncInit done; grades=\(self.grades.count) mistakes=\(self.mistakeSets.count) exams=\(self.examSets.count) compExams=\(self.comprehensiveExamSets.count) subjects=\(self.subjects.count)")
 
             // 启动时同步考试与趋势数据到 Widget（在主线程上，因为 @MainActor 标注的 widget sync）
             WidgetDataSyncManager.syncUpcomingExams(
@@ -336,8 +338,10 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("profile.json")
             try data.write(to: url)
             Log.data.debug("保存 profile 成功 / Saved profile: bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存 profile 成功 / Saved profile: bytes=\(data.count)")
         } catch {
             Log.data.error("保存 profile 失败 / Error saving profile: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存 profile 失败 / Error saving profile: \(error.localizedDescription)")
         }
     }
 
@@ -391,6 +395,7 @@ class DataManager: ObservableObject {
         }
         if migratedInline > 0 {
             Log.data.info("保存时迁移了内嵌图片 / Migrated inline images during saveGrades: count=\(migratedInline, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存时迁移了内嵌图片 / Migrated inline images during saveGrades: count=\(migratedInline)")
         }
 
         let encoder = JSONEncoder()
@@ -399,8 +404,10 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("grades.json")
             try data.write(to: url)
             Log.data.debug("保存 grades 成功 / Saved grades: count=\(self.grades.count, privacy: .public) bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存 grades 成功 / Saved grades: count=\(self.grades.count) bytes=\(data.count)")
         } catch {
             Log.data.error("保存 grades 失败 / Error saving grades: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存 grades 失败 / Error saving grades: \(error.localizedDescription)")
         }
 
         // 同步趋势数据到 Widget
@@ -471,8 +478,10 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("mistakes.json")
             try data.write(to: url)
             Log.data.debug("保存 mistakes 成功 / Saved mistakes: count=\(self.mistakeSets.count, privacy: .public) bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存 mistakes 成功 / Saved mistakes: count=\(self.mistakeSets.count) bytes=\(data.count)")
         } catch {
             Log.data.error("保存 mistakes 失败 / Error saving mistakes: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存 mistakes 失败 / Error saving mistakes: \(error.localizedDescription)")
         }
     }
 
@@ -515,6 +524,7 @@ class DataManager: ObservableObject {
     func addMistake(_ mistake: MistakeNote) {
         mistakeSets.append(mistake)
         Log.data.info("新增错题 / Added mistake: title=\(mistake.title, privacy: .public) subject=\(mistake.subject, privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增错题 / Added mistake: title=\(mistake.title) subject=\(mistake.subject)")
         saveMistakeSets()
     }
 
@@ -530,6 +540,7 @@ class DataManager: ObservableObject {
         if let index = mistakeSets.firstIndex(where: { $0.id == mistake.id }) {
             mistakeSets.remove(at: index)
             Log.data.info("删除错题 / Deleted mistake: title=\(mistake.title, privacy: .public)")
+            Log.record(.info, category: "Data", message: "删除错题 / Deleted mistake: title=\(mistake.title)")
             saveMistakeSets()
         } else {
             Log.data.warning("未找到要删除的错题 / Mistake to delete not found: id=\(mistake.id.uuidString, privacy: .public)")
@@ -557,6 +568,7 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("exams.json")
             try data.write(to: url)
             Log.data.info("保存 exams 成功 / Saved exams: count=\(self.examSets.count, privacy: .public) bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存 exams 成功 / Saved exams: count=\(self.examSets.count) bytes=\(data.count)")
 
             // 同步到 Widget
             Task {
@@ -567,6 +579,7 @@ class DataManager: ObservableObject {
             }
         } catch {
             Log.data.error("保存 exams 失败 / Error saving exams: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存 exams 失败 / Error saving exams: \(error.localizedDescription)")
         }
     }
 
@@ -603,6 +616,7 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("comprehensiveExams.json")
             try data.write(to: url)
             Log.data.info("保存综合考试成功 / Saved comprehensive exams: count=\(self.comprehensiveExamSets.count, privacy: .public) bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存综合考试成功 / Saved comprehensive exams: count=\(self.comprehensiveExamSets.count) bytes=\(data.count)")
 
             // 同步到 Widget
             Task {
@@ -613,6 +627,7 @@ class DataManager: ObservableObject {
             }
         } catch {
             Log.data.error("保存综合考试失败 / Error saving comprehensive exams: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存综合考试失败 / Error saving comprehensive exams: \(error.localizedDescription)")
         }
     }
 
@@ -620,6 +635,7 @@ class DataManager: ObservableObject {
     func addGrade(_ grade: Grade) {
         grades.append(grade)
         Log.data.info("新增成绩 / Added grade: subject=\(grade.subject, privacy: .public) score=\(grade.score, privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增成绩 / Added grade: subject=\(grade.subject) score=\(grade.score)")
         saveGrades()
     }
 
@@ -632,10 +648,12 @@ class DataManager: ObservableObject {
                 let fileURL = imagesDir.appendingPathComponent(imageFileName)
                 try? FileManager.default.removeItem(at: fileURL)
                 Log.data.debug("删除成绩图片 / Removed grade image: \(imageFileName, privacy: .public)")
+                Log.record(.debug, category: "Data", message: "删除成绩图片 / Removed grade image: \(imageFileName)")
             }
 
             grades.remove(at: index)
             Log.data.info("删除成绩 / Deleted grade: subject=\(grade.subject, privacy: .public)")
+            Log.record(.info, category: "Data", message: "删除成绩 / Deleted grade: subject=\(grade.subject)")
             saveGrades()
         } else {
             Log.data.warning("未找到要删除的成绩 / Grade to delete not found: id=\(grade.id.uuidString, privacy: .public)")
@@ -648,6 +666,7 @@ class DataManager: ObservableObject {
         let count = newGrades.count
         grades.append(contentsOf: newGrades)
         Log.data.info("批量新增成绩 / Batch added grades: count=\(count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增成绩 / Batch added grades: count=\(count)")
         saveGrades()
     }
 
@@ -657,6 +676,7 @@ class DataManager: ObservableObject {
         let count = newMistakes.count
         mistakeSets.append(contentsOf: newMistakes)
         Log.data.info("批量新增错题 / Batch added mistakes: count=\(count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增错题 / Batch added mistakes: count=\(count)")
         saveMistakeSets()
     }
 
@@ -666,6 +686,7 @@ class DataManager: ObservableObject {
         examSets.append(contentsOf: single)
         comprehensiveExamSets.append(contentsOf: comprehensive)
         Log.data.info("批量新增考试 / Batch added exams: single=\(single.count, privacy: .public) comprehensive=\(comprehensive.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增考试 / Batch added exams: single=\(single.count) comprehensive=\(comprehensive.count)")
         saveExamSets()
         saveComprehensiveExams()
     }
@@ -701,8 +722,10 @@ class DataManager: ObservableObject {
             let url = getDocumentsDirectory().appendingPathComponent("subjects.json")
             try data.write(to: url)
             Log.data.debug("保存 subjects 成功 / Saved subjects: count=\(self.subjects.count, privacy: .public) bytes=\(data.count, privacy: .public)")
+            Log.record(.info, category: "Data", message: "保存 subjects 成功 / Saved subjects: count=\(self.subjects.count) bytes=\(data.count)")
         } catch {
             Log.data.error("保存 subjects 失败 / Error saving subjects: \(error.localizedDescription, privacy: .public)")
+            Log.record(.error, category: "Data", message: "保存 subjects 失败 / Error saving subjects: \(error.localizedDescription)")
         }
     }
 

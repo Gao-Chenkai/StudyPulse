@@ -48,6 +48,7 @@ struct StudyPulseApp: App {
         // 3. 将代理设置为我们的协调器实例 / Set our coordinator as the delegate
         UNUserNotificationCenter.current().delegate = notificationCoordinator
         Log.notification.info("通知代理已注册 / Notification delegate registered")
+        Log.record(.info, category: "Notification", message: "通知代理已注册 / Notification delegate registered")
 
         // 请求通知权限 / Request notification authorization
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -65,10 +66,16 @@ struct StudyPulseApp: App {
         // 启动时清除角标 / Clear badge on launch
         UNUserNotificationCenter.current().setBadgeCount(0)
         Log.app.info("启动时已清除角标 / Badge cleared on launch")
+        Log.record(.info, category: "App", message: "启动时已清除角标 / Badge cleared on launch")
 
         // 应用已保存的语言偏好 / Apply saved language preference
         AppEnvironmentManager.shared.applyLanguageOnLaunch()
         Log.app.info("已应用语言偏好 / Language preference applied")
+        Log.record(.info, category: "App", message: "已应用语言偏好 / Language preference applied")
+
+        // 启动主线程卡顿监测 / Start main thread lag monitoring
+        LagMonitor.shared.start()
+        Log.record(.info, category: "App", message: "主线程卡顿监测已启动 / Lag monitor started")
     }
 
     var body: some Scene {
@@ -78,20 +85,20 @@ struct StudyPulseApp: App {
                 .environmentObject(envManager)
                 .environmentObject(hrvManager)
                 .preferredColorScheme(envManager.effectiveColorScheme)
-                .wsWelcomeView(
-                    config: WSWelcomeConfig.welcomeInfo,
-                    style: .standard
-                )
+                .versionedWelcomeView()
                 .task {
                     // 后台并行加载所有 JSON，避免阻塞主线程
                     // Load all JSON files in parallel to avoid blocking the main thread
                     Log.app.info("开始异步加载数据 / Starting async data load")
+                    Log.record(.info, category: "App", message: "开始异步加载数据 / Starting async data load")
                     await dataManager.asyncInit()
                     Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady, privacy: .public)")
+                    Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady)")
                     // 主数据加载就绪后再去问 HealthKit，避免启动期 I/O 竞争
                     // Ask HealthKit only after the main data is ready to avoid I/O contention at launch
                     await hrvManager.bootstrap()
                     Log.app.info("HealthKit bootstrap 完成 / HealthKit bootstrap complete")
+                    Log.record(.info, category: "App", message: "HealthKit bootstrap 完成 / HealthKit bootstrap complete")
                 }
                 .onChange(of: scenePhase) {
                     let phase = scenePhase
@@ -104,6 +111,7 @@ struct StudyPulseApp: App {
                             return
                         }
                         Log.widget.info("应用进入前台，开始同步 widget / App became active, syncing widgets")
+                        Log.record(.info, category: "Widget", message: "应用进入前台，开始同步 widget / App became active, syncing widgets")
                         WidgetDataSyncManager.syncUpcomingExams(
                             examSets: dataManager.examSets,
                             comprehensiveExamSets: dataManager.comprehensiveExamSets
