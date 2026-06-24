@@ -97,7 +97,9 @@ struct ExamDetailView: View {
                     }
                 }
             } footer: {
-                Text("Will create an all-day event with a 1-day advance reminder in your system calendar.".localized())
+                Text(exam.timeSlot != nil
+                     ? "Will create a timed event with a 1-day advance reminder in your system calendar.".localized()
+                     : "Will create an all-day event with a 1-day advance reminder in your system calendar.".localized())
                     .foregroundColor(.secondary)
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
@@ -167,6 +169,8 @@ struct ExamDetailView: View {
                     examName: exam.name,
                     subject: exam.subject,
                     examDate: exam.examDate,
+                    startTime: exam.timeSlot?.startTime,
+                    endTime: exam.timeSlot?.endTime,
                     note: exam.examName.isEmpty ? nil : exam.examName
                 )
                 await MainActor.run {

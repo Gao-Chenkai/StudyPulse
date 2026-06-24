@@ -25,7 +25,7 @@ extension WSWelcomeConfig {
                 FeatureItem(
                     icon: "doc.text.magnifyingglass",
                     title: "Mistake Notes".localized(),
-                    description: "Snap photos of errors, auto-extract text with OCR, and review with built-in Markdown.".localized(),
+                    description: "Snap photos of errors, auto-extract text with OCR, and review with plain text.".localized(),
                     color: .orange
                 ),
                 FeatureItem(
@@ -66,7 +66,7 @@ extension WSWelcomeConfig {
                 FeatureItem(
                     icon: "doc.text.magnifyingglass",
                     title: "Mistake Notes".localized(),
-                    description: "Snap photos of errors, auto-extract text with OCR, and review with built-in Markdown.".localized(),
+                    description: "Snap photos of errors, auto-extract text with OCR, and review with plain text.".localized(),
                     color: .orange
                 ),
                 FeatureItem(

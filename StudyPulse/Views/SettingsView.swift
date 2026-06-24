@@ -71,3 +71,15 @@ struct SettingsView: View {
         }
     }
 }
+
+#Preview {
+    SettingsView()
+        .environmentObject(DataManager())
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode") {
+    SettingsView()
+        .environmentObject(DataManager())
+        .preferredColorScheme(.dark)
+}

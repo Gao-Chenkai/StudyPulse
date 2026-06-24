@@ -331,6 +331,13 @@
 "Add this exam to your system calendar with a 1-day advance reminder." = "将此考试添加到你的系统日历，并提前 1 天提醒。";
 "Successfully added to calendar!" = "已成功添加到日历！";
 "Calendar" = "日历";
+
+"Start Time" = "开始时间";
+"End Time" = "结束时间";
+"Start Date" = "开始日期";
+"End Date" = "结束日期";
+"Exam Time" = "考试时间";
+"Will create a timed event with a 1-day advance reminder in your system calendar." = "将在系统日历中创建一个定时事件，并提前 1 天提醒。";
 "Exam Name (e.g., Midterm)" = "考试名称（如：期中考试）";
 "Exam Numbers" = "考试科目数";
 
@@ -623,7 +630,7 @@
 "Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "目前 StudyPulse 将数据存储在每个设备的本地，不支持 iCloud 同步。设备间的数据备份和传输需要通过 CSV 导出‑导入或复制 Documents 文件夹手动完成。跨设备同步是未来版本计划中的功能。";
 
 "How do I add a mistake note with photos?" = "如何添加带有照片的错题？";
-"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "点击「错题」标签页，然后点击 + 按钮创建新的错题。每道错题有四个可编辑区块：题目、原因、错误解答和正确解答。在每个区块中，您可以添加照片（相机或相册），OCR 将自动从图片中提取文字。您也可以手动编写或编辑文本，并使用 Markdown 格式化。";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image." = "点击「错题」标签页，然后点击 + 按钮创建新的错题。每道错题有四个可编辑区块：题目、原因、错误解答和正确解答。在每个区块中，您可以添加照片（相机或相册），OCR 将自动从图片中提取文字。";
 
 "What education systems does StudyPulse support?" = "StudyPulse 支持哪些教育体系？";
 "StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulse 支持 15 种以上教育体系，包括：中国大陆（全国、浙江、上海）、台湾、香港、新加坡、英国（IGCSE、A-Level）、IB DP、美国（AP、SAT、ACT）、GRE/GMAT 和 TOEFL/IELTS。您可以在「设置 > 个人资料」中选择教育体系，科目满分将自动配置。";

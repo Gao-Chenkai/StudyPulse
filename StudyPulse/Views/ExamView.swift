@@ -363,8 +363,14 @@ struct ExamRowView: View {
                     .foregroundColor(Color(.systemBlue))
             }
             
-            Text("\(exam.examDate, style: .date)")
-                .font(.caption)
+            Group {
+                if let endDate = exam.examEndDate, !Calendar.current.isDate(exam.examDate, inSameDayAs: endDate) {
+                    Text("\(exam.examDate.formatted(date: .abbreviated, time: .omitted)) - \(endDate.formatted(date: .abbreviated, time: .omitted))")
+                } else {
+                    Text("\(exam.examDate, style: .date)")
+                }
+            }
+            .font(.caption)
                 .foregroundColor(Color(.secondaryLabel))
             
             HStack(spacing: 20) {
@@ -492,8 +498,14 @@ struct ComprehensiveExamRowView: View {
                     .foregroundColor(Color(.systemPurple))
             }
             
-            Text("\(exam.examDate, style: .date)")
-                .font(.caption)
+            Group {
+                if let endDate = exam.examEndDate, !Calendar.current.isDate(exam.examDate, inSameDayAs: endDate) {
+                    Text("\(exam.examDate.formatted(date: .abbreviated, time: .omitted)) - \(endDate.formatted(date: .abbreviated, time: .omitted))")
+                } else {
+                    Text("\(exam.examDate, style: .date)")
+                }
+            }
+            .font(.caption)
                 .foregroundColor(Color(.secondaryLabel))
             
             HStack(spacing: 20) {

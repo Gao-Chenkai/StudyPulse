@@ -412,3 +412,4 @@ struct ProfileEditView: View {
         dataManager.saveSubjects()
     }
 }
+

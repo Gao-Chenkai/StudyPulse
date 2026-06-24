@@ -331,6 +331,13 @@
 "Add this exam to your system calendar with a 1-day advance reminder." = "この試験をシステムカレンダーに追加し、1 日前にリマインドします。";
 "Successfully added to calendar!" = "カレンダーに追加しました！";
 "Calendar" = "カレンダー";
+
+"Start Time" = "開始時間";
+"End Time" = "終了時間";
+"Start Date" = "開始日";
+"End Date" = "終了日";
+"Exam Time" = "試験時間";
+"Will create a timed event with a 1-day advance reminder in your system calendar." = "システムカレンダーに時間指定イベントを作成し、1日前にリマインダーを設定します。";
 "Exam Name (e.g., Midterm)" = "試験名（例：中間試験）";
 "Exam Numbers" = "試験科目数";
 
@@ -623,7 +630,7 @@
 "Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "現在、StudyPulseは各端末にローカル保存され、iCloud同期には対応していません。端末間のデータバックアップと転送は、CSVのエクスポート・インポート、またはDocumentsフォルダのコピーで手動で行う必要があります。複数端末間の同期は将来のアップデートで計画されています。";
 
 "How do I add a mistake note with photos?" = "写真付きの間違いノートを追加するにはどうすればよいですか？";
-"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "「間違い」タブをタップし、+ ボタンで新しい間違いノートを作成します。各ノートには「問題」「原因」「誤答」「正解」の4つの編集セクションがあります。各セクションで写真（カメラまたはフォトライブラリ）を追加でき、OCRが自動的に画像からテキストを抽出します。手動でテキストを編集したり、Markdownで書式設定することもできます。";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image." = "「間違い」タブをタップし、+ ボタンで新しい間違いノートを作成します。各ノートには「問題」「原因」「誤答」「正解」の4つの編集セクションがあります。各セクションで写真（カメラまたはフォトライブラリ）を追加でき、OCRが自動的に画像からテキストを抽出します。";
 
 "What education systems does StudyPulse support?" = "StudyPulseはどのような教育システムに対応していますか？";
 "StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulseは15以上の教育システムに対応しています：中国大陸（全国、浙江、上海）、台湾、香港、シンガポール、英国（IGCSE、A-Level）、IB DP、米国（AP、SAT、ACT）、GRE/GMAT、TOEFL/IELTSなど。「設定 > プロフィール」で教育システムを選択すると、科目の満点が自動設定されます。";

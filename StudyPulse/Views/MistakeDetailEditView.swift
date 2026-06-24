@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import MarkdownUI
 
 struct MistakeDetailEditView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -31,7 +30,6 @@ struct MistakeDetailEditView: View {
     @State private var showingPhotoCapture = false
     
     @State private var selectedSection: EditSection = .question
-    @State private var showMarkdownPreview = false
     @State private var isProcessingOCR = false
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
@@ -118,16 +116,6 @@ private extension MistakeDetailEditView {
             TextEditor(text: currentBinding)
                 .frame(minHeight: 160)
                 .font(.body)
-            
-            Toggle(isOn: $showMarkdownPreview) {
-                Label(showMarkdownPreview ? "Hide Preview".localized() : "Show Preview".localized(),
-                      systemImage: showMarkdownPreview ? "eye.slash" : "eye")
-            }
-            
-            if showMarkdownPreview {
-                MarkdownPreviewView(text: currentBinding.wrappedValue)
-                    .frame(minHeight: 100)
-            }
         }
     }
     

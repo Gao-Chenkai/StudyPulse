@@ -22,6 +22,8 @@ struct ExamDetailEditView: View {
     @State private var importance: Int
     @State private var masteryDegree: Int
     @State private var examNote: String
+    @State private var subjectStartTime: Date
+    @State private var subjectEndTime: Date
     
     init(exam: Exam) {
         self.originalExam = exam
@@ -32,6 +34,9 @@ struct ExamDetailEditView: View {
         _importance = State(initialValue: exam.importance)
         _masteryDegree = State(initialValue: exam.masteryDegree)
         _examNote = State(initialValue: exam.examName)
+        let slot = exam.timeSlot
+        _subjectStartTime = State(initialValue: slot?.startTime ?? exam.examDate)
+        _subjectEndTime = State(initialValue: slot?.endTime ?? Calendar.current.date(byAdding: .hour, value: 2, to: slot?.startTime ?? exam.examDate) ?? exam.examDate)
     }
     
     private var availableSubjects: [String] {
@@ -51,6 +56,9 @@ struct ExamDetailEditView: View {
                     }
 
                     DatePicker("Date".localized(), selection: $examDate, displayedComponents: .date)
+
+                    DatePicker("Start Time".localized(), selection: $subjectStartTime, displayedComponents: .hourAndMinute)
+                    DatePicker("End Time".localized(), selection: $subjectEndTime, displayedComponents: .hourAndMinute)
                 }
 
                 Section(header: Text("Assessment".localized())) {
@@ -122,7 +130,8 @@ struct ExamDetailEditView: View {
             importance: importance,
             subject: selectedSubject,
             examName: examNote.trimmingCharacters(in: .whitespaces),
-            masteryDegree: masteryDegree
+            masteryDegree: masteryDegree,
+            timeSlot: ExamTimeSlot(startTime: subjectStartTime, endTime: subjectEndTime)
         )
         
         // 关键：保留原始 ID，这样才能在数组中找到它

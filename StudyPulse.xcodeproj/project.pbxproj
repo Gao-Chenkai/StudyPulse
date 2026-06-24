@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
 		278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 278969412FD313BE00BEC710 /* WSOnBoarding */; };
-		278969452FD318B800BEC710 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 278969442FD318B800BEC710 /* MarkdownUI */; };
 		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
 		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
 		278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -116,7 +115,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */,
-				278969452FD318B800BEC710 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,7 +200,6 @@
 			name = StudyPulse;
 			packageProductDependencies = (
 				278969412FD313BE00BEC710 /* WSOnBoarding */,
-				278969442FD318B800BEC710 /* MarkdownUI */,
 			);
 			productName = StudyPulse;
 			productReference = 2743C83E2F6EAEA000CC1EED /* StudyPulse.app */;
@@ -263,7 +260,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */,
-				270D4E852FE7CD3F00339A2E /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2743C83F2F6EAEA000CC1EED /* Products */;
@@ -412,6 +408,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
 			};
@@ -660,10 +657,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		270D4E852FE7CD3F00339A2E /* XCLocalSwiftPackageReference "../Packages/swift-markdown-ui-main" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../Packages/swift-markdown-ui-main";
-		};
 		278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../Packages/WSOnBoarding-main";
@@ -674,10 +667,6 @@
 		278969412FD313BE00BEC710 /* WSOnBoarding */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WSOnBoarding;
-		};
-		278969442FD318B800BEC710 /* MarkdownUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

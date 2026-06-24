@@ -331,6 +331,13 @@
 "Add this exam to your system calendar with a 1-day advance reminder." = "이 시험을 시스템 캘린더에 추가하고 1일 전 미리 알림을 받습니다.";
 "Successfully added to calendar!" = "캘린더에 성공적으로 추가되었습니다!";
 "Calendar" = "캘린더";
+
+"Start Time" = "시작 시간";
+"End Time" = "종료 시간";
+"Start Date" = "시작 날짜";
+"End Date" = "종료 날짜";
+"Exam Time" = "시험 시간";
+"Will create a timed event with a 1-day advance reminder in your system calendar." = "시스템 캘린더에 시간 지정 이벤트를 생성하고 1일 전에 알림을 설정합니다.";
 "Exam Name (e.g., Midterm)" = "시험 이름 (예: 중간고사)";
 "Exam Numbers" = "시험 과목 수";
 
@@ -623,7 +630,7 @@
 "Currently StudyPulse stores data locally on each device and does not support iCloud sync. Data backup and transfer between devices must be done manually via CSV export-import or by copying the Documents folder. Cross-device sync is a planned feature for a future update." = "현재 StudyPulse는 각 기기에 데이터를 로컬로 저장하며 iCloud 동기화를 지원하지 않습니다. 기기 간 데이터 백업 및 전송은 CSV 내보내기-가져오기 또는 Documents 폴더 복사를 통해 수동으로 수행해야 합니다. 기기 간 동기화는 향후 업데이트에서 계획된 기능입니다.";
 
 "How do I add a mistake note with photos?" = "사진이 포함된 오답 노트를 추가하려면 어떻게 하나요？";
-"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image. You can also write or edit the text manually and format it with Markdown." = "「오답」탭을 탭한 후 + 버튼을 눌러 새 오답 노트를 만드세요. 각 오답 노트에는 '문제', '이유', '오답', '정답'의 네 가지 편집 섹션이 있습니다. 각 섹션에서 사진(카메라 또는 사진 라이브러리)을 추가할 수 있으며 OCR이 이미지에서 자동으로 텍스트를 추출합니다. 텍스트를 수동으로 작성하거나 편집하고 Markdown으로 서식을 지정할 수도 있습니다.";
+"Tap the Mistakes tab, then tap the + button to create a new mistake note. Each mistake has four editable sections: Question, Reason, Wrong Solution, and Correct Solution. In each section, you can add a photo (camera or photo library) and OCR will automatically extract text from the image." = "「오답」탭을 탭한 후 + 버튼을 눌러 새 오답 노트를 만드세요. 각 오답 노트에는 '문제', '이유', '오답', '정답'의 네 가지 편집 섹션이 있습니다. 각 섹션에서 사진(카메라 또는 사진 라이브러리)을 추가할 수 있으며 OCR이 이미지에서 자동으로 텍스트를 추출합니다.";
 
 "What education systems does StudyPulse support?" = "StudyPulse는 어떤 교육 시스템을 지원하나요？";
 "StudyPulse supports 15+ education systems including: Mainland China (National, Zhejiang, Shanghai), Taiwan, Hong Kong, Singapore, UK (IGCSE, A-Level), IB DP, US (AP, SAT, ACT), GRE/GMAT, and TOEFL/IELTS. You can select your education system in Settings > Profile, and subject full scores will be configured automatically." = "StudyPulse는 15개 이상의 교육 시스템을 지원합니다: 중국 본토(전국, 저장, 상하이), 대만, 홍콩, 싱가포르, 영국(IGCSE, A-Level), IB DP, 미국(AP, SAT, ACT), GRE/GMAT, TOEFL/IELTS 등. 「설정 > 프로필」에서 교육 시스템을 선택하면 과목별 만점이 자동으로 설정됩니다.";

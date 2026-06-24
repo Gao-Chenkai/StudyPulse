@@ -193,6 +193,14 @@ nonisolated struct UserProfile: Codable {
     var targetScore: Double = 0
 }
 
+// MARK: - Exam Time Slot (考试时间段)
+
+/// 考试时间段（开始和结束时间）
+nonisolated struct ExamTimeSlot: Codable, Hashable, Sendable {
+    var startTime: Date
+    var endTime: Date
+}
+
 // MARK: - Exam Models (考试)
 
 /// 单科目考试
@@ -200,8 +208,10 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
     var id = UUID()
     /// 考试名称
     var name: String
-    /// 考试日期
+    /// 考试开始日期
     var examDate: Date
+    /// 考试结束日期（多日考试，nil 表示与开始日期相同）
+    var examEndDate: Date?
     /// 重要程度（1-5 星）
     var importance: Int
     /// 科目名称
@@ -210,14 +220,18 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
     var examName: String
     /// 掌握程度（0-100）
     var masteryDegree: Int
+
+	/// 考试具体时间（用于日历同步，nil 时表示全天事件）
+	var timeSlot: ExamTimeSlot?
     
-    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int) {
+    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil) {
         self.name = name
         self.examDate = date
         self.importance = importance
         self.subject = subject
         self.examName = examName
         self.masteryDegree = masteryDegree
+		self.timeSlot = timeSlot
     }
 }
 
@@ -226,8 +240,10 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
     var id = UUID()
     /// 考试名称
     var name: String
-    /// 考试日期
+    /// 考试开始日期
     var examDate: Date
+    /// 考试结束日期（多日考试，nil 表示与开始日期相同）
+    var examEndDate: Date?
     /// 重要程度（1-5 星）
     var importance: Int
     /// 科目列表
@@ -236,13 +252,18 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
     var examName: String
     /// 掌握程度（0-100）
     var masteryDegree: Int
+
+	/// 各科目具体时间（用于日历同步，nil 时表示全天事件）
+	var subjectTimeSlots: [String: ExamTimeSlot]?
     
-    init(name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int) {
+    init(name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int, examEndDate: Date? = nil, subjectTimeSlots: [String: ExamTimeSlot]? = nil) {
         self.name = name
         self.examDate = date
+        self.examEndDate = examEndDate
         self.importance = importance
         self.subject = subject
         self.examName = examName
         self.masteryDegree = masteryDegree
+		self.subjectTimeSlots = subjectTimeSlots
     }
 }

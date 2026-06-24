@@ -27,12 +27,15 @@ class CalendarManager {
     ///   - examName: Exam name
     ///   - subject: Subject name
     ///   - examDate: Exam date
+	///   - startTime: Specific start time (nil = all-day event)
     ///   - note: Additional notes (optional)
     /// - Returns: Whether the event was added successfully
     func addExamToCalendar(
         examName: String,
         subject: String,
         examDate: Date,
+		startTime: Date? = nil,
+		endTime: Date? = nil,
         note: String? = nil
     ) async throws -> Bool {
         let granted = try await requestAccess()
@@ -40,21 +43,26 @@ class CalendarManager {
             throw CalendarError.accessDenied
         }
         
-        let event = EKEvent(eventStore: eventStore)
-        event.title = "Exam: \(examName)"
-        event.notes = note ?? "Subject: \(subject)\nFrom StudyPulse"
-        event.startDate = examDate
-        event.endDate = Calendar.current.date(byAdding: .hour, value: 2, to: examDate) ?? examDate
-        event.isAllDay = true
-        
-        let alarm = EKAlarm(relativeOffset: -86400)
-        event.alarms = [alarm]
-        
-        event.calendar = eventStore.defaultCalendarForNewEvents
-        
-        try eventStore.save(event, span: .thisEvent)
-        return true
-    }
+		let event = EKEvent(eventStore: eventStore)
+		event.title = "Exam: \(examName)"
+		event.notes = note ?? "Subject: \(subject)\nFrom StudyPulse"
+		let effectiveStart = startTime ?? examDate
+		event.startDate = effectiveStart
+		if let endTime = endTime, endTime > effectiveStart {
+			event.endDate = endTime
+		} else {
+			event.endDate = Calendar.current.date(byAdding: .hour, value: 2, to: effectiveStart) ?? effectiveStart
+		}
+		event.isAllDay = (startTime == nil)
+		
+		let alarm = EKAlarm(relativeOffset: -86400)
+		event.alarms = [alarm]
+		
+		event.calendar = eventStore.defaultCalendarForNewEvents
+		
+		try eventStore.save(event, span: .thisEvent)
+		return true
+	}
     
     /// Remove a previously added exam event
     /// - Parameter eventIdentifier: Event unique identifier

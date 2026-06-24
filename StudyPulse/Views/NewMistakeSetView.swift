@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import MarkdownUI
 
 // MARK: - EditSection Enum
 enum EditSection: String, CaseIterable, Identifiable {
@@ -59,7 +58,6 @@ struct NewMistakeSetView: View {
     @State private var showingImagePicker = false
     @State private var showingPhotoCapture = false
     
-    @State private var showMarkdownPreview = false
     @State private var isProcessingOCR = false
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
@@ -145,16 +143,6 @@ private extension NewMistakeSetView {
             TextEditor(text: currentBinding)
                 .frame(minHeight: 160)
                 .font(.body)
-
-            Toggle(isOn: $showMarkdownPreview) {
-                Label(showMarkdownPreview ? "Hide Preview".localized() : "Show Preview".localized(),
-                      systemImage: showMarkdownPreview ? "eye.slash" : "eye")
-            }
-
-            if showMarkdownPreview {
-                MarkdownPreviewView(text: currentBinding.wrappedValue)
-                    .frame(minHeight: 100)
-            }
         }
     }
     
@@ -374,24 +362,3 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Markdown Preview
-struct MarkdownPreviewView: View {
-    let text: String
-
-    var body: some View {
-        if text.isEmpty {
-            Text("No content to preview".localized())
-                .foregroundColor(.secondary)
-                .italic()
-                .frame(maxWidth: .infinity, alignment: .center)
-        } else {
-            Markdown(text)
-                .markdownTheme(.gitHub)
-        }
-    }
-}
-
-#Preview {
-    NewMistakeSetView()
-        .environmentObject(DataManager())
-}
