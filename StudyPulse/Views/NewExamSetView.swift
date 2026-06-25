@@ -200,11 +200,11 @@ struct NewExamSetView: View {
                 }
             }
             .adaptiveForm()
-            .onChange(of: isComprehensiveExam) { _ in syncSubjectTimeEntries() }
-            .onChange(of: selectedSingleSubject) { _ in syncSubjectTimeEntries() }
-            .onChange(of: selectedMultipleSubjects) { _ in syncSubjectTimeEntries() }
-            .onChange(of: examDate) { _ in syncSubjectTimeEntries() }
-            .onChange(of: examEndDate) { _ in syncSubjectTimeEntries() }
+            .onChange(of: isComprehensiveExam) { syncSubjectTimeEntries() }
+            .onChange(of: selectedSingleSubject) { syncSubjectTimeEntries() }
+            .onChange(of: selectedMultipleSubjects) { syncSubjectTimeEntries() }
+            .onChange(of: examDate) { syncSubjectTimeEntries() }
+            .onChange(of: examEndDate) { syncSubjectTimeEntries() }
             .navigationTitle("New Exam".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -243,7 +243,7 @@ struct NewExamSetView: View {
             let compsEnd   = Calendar.current.dateComponents([.hour, .minute], from: oldEnd)
 
             // 在 examDate 上重新组合
-            var newStart = Calendar.current.date(bySettingHour: compsStart.hour ?? 8,
+            let newStart = Calendar.current.date(bySettingHour: compsStart.hour ?? 8,
                                                   minute: compsStart.minute ?? 0,
                                                   second: 0,
                                                   of: examDate) ?? examDate

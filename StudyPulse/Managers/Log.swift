@@ -38,7 +38,7 @@ struct LogEntry: Sendable, Identifiable {
 /// 线程安全（NSLock），上限 5000 条，超出后丢弃最早条目。
 nonisolated final class LogStore: @unchecked Sendable {
     /// 全局共享实例。
-    nonisolated(unsafe) static let shared = LogStore()
+    static let shared = LogStore()
 
     private var entries: [LogEntry] = []
     private let maxEntries = 5_000
