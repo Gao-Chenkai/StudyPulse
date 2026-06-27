@@ -18,12 +18,14 @@ enum HomeCardType: String, CaseIterable, Codable {
     case studySuggestions = "studySuggestions"
     case trendChart = "trendChart"
     case upcomingExams = "upcomingExams"
+    case studyTimer = "studyTimer"
     case dailyQuote = "dailyQuote"
     case recentGrades = "recentGrades"
 
     /// 本地化显示名称
     var displayName: String {
         switch self {
+        case .studyTimer: return "Study Timer".localized()
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
         case .flashcardReview: return "Flashcard Review".localized()
@@ -39,6 +41,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// SF Symbol 图标
     var icon: String {
         switch self {
+        case .studyTimer: return "timer"
         case .hrvStatus: return "heart.text.square"
         case .unregisteredExamsReminder: return "exclamationmark.bubble.fill"
         case .flashcardReview: return "rectangle.stack.fill"
@@ -74,6 +77,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),
+        HomeCardItem(type: .studyTimer, enabled: true),
         HomeCardItem(type: .studySuggestions, enabled: true),
         HomeCardItem(type: .trendChart, enabled: true),
         HomeCardItem(type: .upcomingExams, enabled: true),

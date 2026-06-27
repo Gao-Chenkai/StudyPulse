@@ -7,6 +7,7 @@
 
 import WidgetKit
 import SwiftUI
+import ActivityKit
 
 @main
 struct StudyPulseWidgetBundle: WidgetBundle {
@@ -14,5 +15,6 @@ struct StudyPulseWidgetBundle: WidgetBundle {
         ExamWidget()
         TrendWidget()
         HRVWidget()
+        StudyTimerLiveActivity()
     }
 }

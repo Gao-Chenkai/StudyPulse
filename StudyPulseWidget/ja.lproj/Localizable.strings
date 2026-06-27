@@ -14,4 +14,15 @@
 "Today" = "今日";
 "Baseline" = "基準値";
 "Z-Score" = "Z値";
-"HRV not available" = "HRV 利用不可";
+"HRV not available" = "HRV 利用不可";"Session Complete" = "セッション完了";
+"Session Ended" = "終了しました";
+"Paused" = "一時停止中";
+
+// StudyTimer Live Activity / Dynamic Island
+"Focus session" = "集中中";
+"%d min session" = "%d 分の学習";
+"%d min remaining" = "残り %d 分";
+"%d:%02d remaining" = "残り %d:%02d";
+"%d sec remaining" = "残り %d 秒";
+"Elapsed %d:%02d" = "経過 %d:%02d";
+"Pomodoro" = "ポモドーロ";

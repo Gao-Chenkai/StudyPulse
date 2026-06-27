@@ -14,4 +14,15 @@
 "Today" = "오늘";
 "Baseline" = "기준선";
 "Z-Score" = "Z점수";
-"HRV not available" = "HRV 사용 불가";
+"HRV not available" = "HRV 사용 불가";"Session Complete" = "세션 완료";
+"Session Ended" = "종료됨";
+"Paused" = "일시 정지됨";
+
+// StudyTimer Live Activity / Dynamic Island
+"Focus session" = "집중 중";
+"%d min session" = "%d분 학습";
+"%d min remaining" = "%d분 남음";
+"%d:%02d remaining" = "%d:%02d 남음";
+"%d sec remaining" = "%d초 남음";
+"Elapsed %d:%02d" = "경과 %d:%02d";
+"Pomodoro" = "포모도로";

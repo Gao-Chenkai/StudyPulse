@@ -14,4 +14,15 @@
 "Today" = "今日";
 "Baseline" = "基線";
 "Z-Score" = "Z值";
-"HRV not available" = "HRV 不可用";
+"HRV not available" = "HRV 不可用";"Session Complete" = "學習完成";
+"Session Ended" = "已結束";
+"Paused" = "已暫停";
+
+// StudyTimer Live Activity / Dynamic Island
+"Focus session" = "專注中";
+"%d min session" = "%d 分鐘學習";
+"%d min remaining" = "剩餘 %d 分鐘";
+"%d:%02d remaining" = "剩餘 %d:%02d";
+"%d sec remaining" = "剩餘 %d 秒";
+"Elapsed %d:%02d" = "已專注 %d:%02d";
+"Pomodoro" = "番茄鐘";

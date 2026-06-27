@@ -198,6 +198,9 @@ struct HomeView: View {
     private func cardView(for type: HomeCardType) -> some View {
         // 每个分支都用 `.contextMenu` 包一层，支持长按分享该卡片。
         switch type {
+        case .studyTimer:
+            StudyTimerCard()
+                .contextMenu { shareCardMenu(for: type) }
         case .hrvStatus:
             HRVStatusCard()
                 .contextMenu { shareCardMenu(for: type) }
@@ -349,6 +352,7 @@ struct HomeView: View {
         case .unregisteredExamsReminder: return "Pending Grades".localized()
         case .flashcardReview: return "Flashcard Review".localized()
         case .quickActions: return "Quick Actions".localized()
+        case .studyTimer: return "Study Timer".localized()
         case .studySuggestions: return "Study Suggestions".localized()
         case .trendChart: return "Trend Chart".localized()
         case .upcomingExams: return "Upcoming Exams".localized()
@@ -367,6 +371,7 @@ struct HomeView: View {
         VStack {
             Group {
                 switch type {
+                case .studyTimer: StudyTimerCard()
                 case .hrvStatus: HRVStatusCard()
                 case .unregisteredExamsReminder:
                     if !unregisteredExams.isEmpty {

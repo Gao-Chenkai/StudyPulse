@@ -14,4 +14,15 @@
 "Today" = "Today";
 "Baseline" = "Baseline";
 "Z-Score" = "Z-Score";
-"HRV not available" = "HRV not available";
+"HRV not available" = "HRV not available";"Session Complete" = "Session Complete";
+"Session Ended" = "Session Ended";
+"Paused" = "Paused";
+
+// StudyTimer Live Activity / Dynamic Island
+"Focus session" = "Focus session";
+"%d min session" = "%d min session";
+"%d min remaining" = "%d min remaining";
+"%d:%02d remaining" = "%d:%02d remaining";
+"%d sec remaining" = "%d sec remaining";
+"Elapsed %d:%02d" = "Elapsed %d:%02d";
+"Pomodoro" = "Pomodoro";

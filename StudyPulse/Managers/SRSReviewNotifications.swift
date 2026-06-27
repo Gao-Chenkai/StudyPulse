@@ -9,7 +9,7 @@
 //
 
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 import os
 
 /// 错题 SRS 复习通知管理器（单例）

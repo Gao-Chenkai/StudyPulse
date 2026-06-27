@@ -38,6 +38,7 @@ struct StudyPulseApp: App {
     @StateObject private var dataManager = DataManager()
     @StateObject private var envManager = AppEnvironmentManager.shared
     @StateObject private var hrvManager = HealthKitManager.shared
+    @StateObject private var timerManager = StudyTimerManager.shared
     @Environment(\.scenePhase) private var scenePhase
     
     // 2. 声明协调器实例
@@ -83,6 +84,7 @@ struct StudyPulseApp: App {
                 .environmentObject(dataManager)
                 .environmentObject(envManager)
                 .environmentObject(hrvManager)
+                .environmentObject(timerManager)
                 .preferredColorScheme(envManager.effectiveColorScheme)
                 .versionedWelcomeView()
                 .task {
@@ -118,6 +120,7 @@ struct StudyPulseApp: App {
                         TrendWidgetSyncManager.syncTrend(grades: dataManager.grades, subjects: dataManager.subjects)
                         HRVWidgetSyncManager.syncHRV(from: hrvManager)
                         // 同步 SRS 复习通知（错题已 opt-in 但尚未到期的）
+                        timerManager.cleanupStaleActivities()
                         SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
                         Task { await hrvManager.refreshBodyStatus() }
                     }
