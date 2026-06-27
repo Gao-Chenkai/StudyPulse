@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyPulse &mdash; 智能学业管理 | iOS Study Tracker</title>
+    <meta name="description" content="StudyPulse 是一款面向全球学生的 iOS 学业管理应用。成绩追踪、错题本、考试规划、HRV 健康准备度，支持 15+ 教育体系与 5 种语言。">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-alt: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent: #0891b2;
+            --accent-light: #06b6d4;
+            --accent-gradient: linear-gradient(135deg, #0891b2, #6366f1);
+            --accent-gradient-subtle: linear-gradient(135deg, rgba(8,145,178,0.08), rgba(99,102,241,0.06));
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+            --shadow-glow: 0 0 40px rgba(8, 145, 178, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --max-width: 1100px;
+        }
+
+        html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+            background-image:
+                linear-gradient(var(--border-light) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 70%);
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+        .nav-logo-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: block;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-cta a {
+            padding: 8px 20px;
+            background: var(--accent-gradient);
+            color: #fff;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+
+        .hero {
+            position: relative;
+            z-index: 1;
+            padding: 120px 24px 100px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 900px;
+            background: radial-gradient(circle, rgba(8,145,178,0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            background: rgba(8, 145, 178, 0.08);
+            border: 1px solid rgba(8, 145, 178, 0.15);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .hero h1 {
+            font-size: clamp(2.8rem, 6vw, 4.2rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.08;
+            margin-bottom: 24px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+        }
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 20px;
+            line-height: 1.75;
+            position: relative;
+        }
+        .hero-detail {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            max-width: 520px;
+            margin: 0 auto 40px;
+            line-height: 1.65;
+            position: relative;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            margin-bottom: 64px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 30px;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            box-shadow: 0 4px 24px rgba(99, 102, 241, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 32px rgba(99, 102, 241, 0.4);
+        }
+        .btn-ghost {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+        .hero-mockup {
+            max-width: 860px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .mockup-frame {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+        .mockup-frame img {
+            width: 100%;
+            height: auto;
+            border-radius: var(--radius-sm);
+            display: block;
+        }
+        .mockup-placeholder {
+            width: 100%;
+            aspect-ratio: 2.2;
+            background: var(--accent-gradient-subtle);
+            border-radius: var(--radius-sm);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .mockup-placeholder .ph-icon { font-size: 2.5rem; opacity: 0.5; }
+        .mockup-label {
+            margin-top: 14px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .stats-strip {
+            position: relative;
+            z-index: 1;
+            padding: 0 24px;
+            margin-top: -28px;
+        }
+        .stats-inner {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .stat-item {
+            background: var(--bg-card);
+            padding: 36px 24px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .stat-detail {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 24px;
+        }
+        .section-alt { background: var(--bg-secondary); }
+        .section-inner { max-width: var(--max-width); margin: 0 auto; }
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .section h2 {
+            font-size: 2.1rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 18px;
+            color: var(--text-primary);
+        }
+        .section-desc {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin-bottom: 56px;
+            line-height: 1.7;
+        }
+
+        .feature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+            margin-bottom: 80px;
+        }
+        .feature-row:last-child { margin-bottom: 0; }
+        .feature-row.reverse { direction: rtl; }
+        .feature-row.reverse > * { direction: ltr; }
+        .feature-text h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: var(--text-primary);
+        }
+        .feature-text .feature-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(8, 145, 178, 0.08);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .feature-text p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        .feature-text ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .feature-text ul li {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            padding-left: 20px;
+            position: relative;
+        }
+        .feature-text ul li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .feature-img {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+        }
+        .feature-img img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .feature-img .img-placeholder {
+            aspect-ratio: 0.5625;
+            background: var(--accent-gradient-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .feature-img .img-placeholder .ph-label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 28px;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(8, 145, 178, 0.25);
+        }
+        .card-icon {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 18px;
+        }
+        .card-icon.cyan { background: rgba(8, 145, 178, 0.1); color: var(--accent); }
+        .card-icon.indigo { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+        .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+        .card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.65; }
+
+        .sys-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .sys-group { margin-bottom: 32px; }
+        .sys-group:last-child { margin-bottom: 0; }
+        .sys-group-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .sys-chip {
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .sys-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            list-style: none;
+            margin-bottom: 40px;
+        }
+        .tech-list li {
+            padding: 9px 20px;
+            background: rgba(8, 145, 178, 0.05);
+            border: 1px solid rgba(8, 145, 178, 0.1);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 40px;
+            overflow-x: auto;
+        }
+        .arch-diagram pre {
+            font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
+            font-size: 0.82rem;
+            line-height: 1.65;
+            color: var(--text-secondary);
+            white-space: pre;
+        }
+        .arch-diagram pre .hl-box { color: var(--accent); font-weight: 600; }
+        .arch-diagram pre .hl-arrow { color: var(--text-muted); }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 24px;
+        }
+        .step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 28px;
+            position: relative;
+        }
+        .step-num {
+            width: 32px; height: 32px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+        .step h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .step p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .gallery-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .gallery-item img {
+            width: 100%;
+            display: block;
+        }
+        .gallery-item .img-placeholder {
+            aspect-ratio: 0.5625;
+            background: var(--accent-gradient-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .gallery-caption {
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+        .compare-col {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .compare-col-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .compare-col-header h4 { font-size: 1.05rem; font-weight: 700; }
+        .compare-col-body { padding: 20px 24px; }
+        .compare-col-body ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .compare-col-body ul li {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            padding-left: 20px;
+            position: relative;
+        }
+        .compare-col-body ul li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .footer {
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+        }
+        .footer-inner {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 32px;
+        }
+        .footer-col h5 {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .footer-col ul li a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+        .footer-col ul li a:hover { color: var(--accent); }
+        .footer-bottom {
+            max-width: var(--max-width);
+            margin: 32px auto 0;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 900px) {
+            .feature-row { grid-template-columns: 1fr; gap: 32px; }
+            .feature-row.reverse { direction: ltr; }
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .stats-inner { grid-template-columns: repeat(2, 1fr); }
+            .hero { padding: 80px 20px 60px; }
+            .section { padding: 64px 20px; }
+            .footer-inner { flex-direction: column; }
+        }
+        @media (max-width: 480px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .stats-inner { grid-template-columns: 1fr 1fr; }
+            .hero h1 { font-size: 2rem; }
+            .steps { grid-template-columns: 1fr; }
+            .gallery { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">
+            <img class="nav-logo-icon" src="images/logo.png" alt="StudyPulse">
+            StudyPulse
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">功能</a></li>
+            <li><a href="#systems">教育体系</a></li>
+            <li><a href="#gallery">截图</a></li>
+            <li><a href="#tech">技术</a></li>
+        </ul>
+        <span class="nav-cta"><a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">GitHub</a></span>
+    </div>
+</nav>
+
+<header class="hero">
+    <span class="hero-badge">iOS 18.6+ &middot; SwiftUI &middot; Swift 6.0</span>
+    <h1>Study smarter.<br>Stay in pulse.</h1>
+    <p class="hero-subtitle">一款面向全球学生的 iOS 学业管理应用，覆盖成绩追踪、错题整理、考试规划与 HRV 健康准备度。</p>
+    <p class="hero-detail">预置 15+ 全球教育体系 &middot; 5 种界面语言 &middot; iPhone / iPad 原生适配 &middot; 小组件支持 &middot; CSV 数据导入导出 &middot; 完全离线，数据仅存于你的设备。</p>
+    <div class="hero-actions">
+        <a href="#features" class="btn btn-primary">查看完整功能 &darr;</a>
+        <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener" class="btn btn-ghost">&#9900; GitHub</a>
+    </div>
+    <div class="hero-mockup">
+        <div class="mockup-frame">
+            <img src="images/hero-mockup.png" alt="StudyPulse App 预览" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="mockup-placeholder" style="display:none">
+                <span class="ph-icon">&#9638;</span>
+                <span>App 预览截图</span>
+            </div>
+        </div>
+        <div class="mockup-label">将截图保存为 <code>images/hero-mockup.png</code>（推荐 1600&times;730，展示首页 Dashboard）</div>
+    </div>
+</header>
+
+<div class="stats-strip">
+    <div class="stats-inner">
+        <div class="stat-item">
+            <div class="stat-value">15+</div>
+            <div class="stat-label">全球教育体系</div>
+            <div class="stat-detail">从中考到 GRE</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">5</div>
+            <div class="stat-label">界面语言</div>
+            <div class="stat-detail">中英日韩繁</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">3 档</div>
+            <div class="stat-label">设计风格</div>
+            <div class="stat-detail">Minimal / Literature / Tech</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">4 大</div>
+            <div class="stat-label">核心模块</div>
+            <div class="stat-detail">成绩 &middot; 错题 &middot; 考试 &middot; HRV</div>
+        </div>
+    </div>
+</div>
+
+<section class="section" id="features">
+    <div class="section-inner">
+        <div class="section-label">Core Features</div>
+        <h2>一切学习数据，尽在掌握</h2>
+        <p class="section-desc">StudyPulse 将成绩、错题、考试与健康数据统一管理，让你对自己的学习状态始终保持清晰的全局视角。</p>
+
+        <!-- Feature 1: Grade Tracking -->
+        <div class="feature-row">
+            <div class="feature-text">
+                <span class="feature-tag">成绩模块</span>
+                <h3>成绩追踪与可视化</h3>
+                <p>支持多科目成绩录入，可自定义满分、原始分、排名（1&ndash;5）和重要程度。每次录入均可附加试卷照片作为凭证。</p>
+                <ul>
+                    <li>交互式趋势图 &mdash; 每科平均分、最高/最低分一目了然</li>
+                    <li>"需要关注的科目"智能提醒 &mdash; 均分 &lt; 70% 或近期下滑 &gt; 15 分</li>
+                    <li>得分率色彩映射 &mdash; &ge;90% 绿 / &ge;75% 蓝 / &ge;60% 橙 / &lt;60% 红</li>
+                    <li>支持按科目、时间段筛选和排序</li>
+                </ul>
+            </div>
+            <div class="feature-img">
+                <img src="images/grade-tracking.png" alt="成绩追踪" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9670;</span>
+                    <span class="ph-label">images/grade-tracking.png</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 2: Mistake Notebook -->
+        <div class="feature-row reverse">
+            <div class="feature-text">
+                <span class="feature-tag">错题模块</span>
+                <h3>四区结构错题本</h3>
+                <p>独创四区块结构（题目 / 错误原因 / 错误解法 / 正确解法），每个区块可独立添加照片、OCR 识别与 Markdown 预览。</p>
+                <ul>
+                    <li>Vision OCR 文字识别 &mdash; 支持中文和英文，一键提取</li>
+                    <li>Markdown 实时预览 &mdash; 每文本区独立编辑/预览切换</li>
+                    <li>关联科目与来源 &mdash; 按考试、练习册分类检索</li>
+                    <li>智能复习建议 &mdash; 基于错题时间和科目优先级推荐</li>
+                </ul>
+            </div>
+            <div class="feature-img">
+                <img src="images/mistake-notebook.png" alt="错题本" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9638;</span>
+                    <span class="ph-label">images/mistake-notebook.png</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 3: Exam -->
+        <div class="feature-row">
+            <div class="feature-text">
+                <span class="feature-tag">考试模块</span>
+                <h3>考试日程与智能提醒</h3>
+                <p>支持单科考试与多科综合考试（如模拟高考）。关联系统日历，自动调度本地通知。</p>
+                <ul>
+                    <li>考前多级提醒 &mdash; 30天 / 10天 / 5天 / 3天 / 1天</li>
+                    <li>关联错题 &mdash; 考前自动聚合同科错题，精准复习</li>
+                    <li>日历集成 &mdash; 一键添加至系统日历（EventKit）</li>
+                    <li>"未录入成绩提醒"卡片 &mdash; 考后 3&ndash;7 天自动提示</li>
+                </ul>
+            </div>
+            <div class="feature-img">
+                <img src="images/exam-schedule.png" alt="考试日程" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9708;</span>
+                    <span class="ph-label">images/exam-schedule.png</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature 4: HRV -->
+        <div class="feature-row reverse">
+            <div class="feature-text">
+                <span class="feature-tag">健康模块</span>
+                <h3>HRV 健康准备度</h3>
+                <p>读取 Apple Watch 夜间 HRV（SDNN）数据，使用 14 天个性化基线与 Z-score 评估当日学习状态。</p>
+                <ul>
+                    <li>三级展示 &mdash; 简洁建议 / 数据详情 / 趋势图表</li>
+                    <li>Z-score 分类 &mdash; 优秀(z&gt;1.0) / 正常 / 偏低(z&lt;-1.0)</li>
+                    <li>隐私优先 &mdash; 数据仅存本地，不外传</li>
+                    <li>引导式授权 &mdash; 首次使用前完成 HealthKit 授权引导</li>
+                </ul>
+            </div>
+            <div class="feature-img">
+                <img src="images/hrv-readiness.png" alt="HRV 健康准备度" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9825;</span>
+                    <span class="ph-label">images/hrv-readiness.png</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview cards -->
+        <div class="cards-grid" style="margin-top: 40px;">
+            <div class="card">
+                <div class="card-icon cyan">&#9636;</div>
+                <h3>可定制主页</h3>
+                <p>8 种卡片自由启用/禁用、拖动排序。iPad 双栏网格布局，iPhone 单列布局，你的主页你做主。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon indigo">&#9000;</div>
+                <h3>小组件 Widget</h3>
+                <p>WidgetKit 主屏小组件展示即将到来的考试，通过 App Group 容器与主应用实时同步数据。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon cyan">&#8617;</div>
+                <h3>数据导入导出</h3>
+                <p>CSV 格式导入/导出成绩、错题与考试数据。内置开发者工具页，支持批量删除与统计概览。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="systems">
+    <div class="section-inner">
+        <div class="section-label">Global Education</div>
+        <h2>覆盖全球 15+ 教育体系</h2>
+        <p class="section-desc">StudyPulse 预置了常见教育体系下的科目名称与默认满分定义。选择你的体系后，科目列表自动填充，无需手动逐一创建。也支持自定义满分和添加额外科目。</p>
+
+        <div class="sys-group">
+            <div class="sys-group-label">中国大陆</div>
+            <div class="sys-grid">
+                <div class="sys-chip">CN 中考</div>
+                <div class="sys-chip">CN 高考</div>
+                <div class="sys-chip">浙江 3+3</div>
+                <div class="sys-chip">上海 3+3</div>
+                <div class="sys-chip">台湾 GSAT</div>
+                <div class="sys-chip">香港 DSE</div>
+            </div>
+        </div>
+
+        <div class="sys-group">
+            <div class="sys-group-label">国际课程</div>
+            <div class="sys-grid">
+                <div class="sys-chip">IGCSE</div>
+                <div class="sys-chip">A-Level</div>
+                <div class="sys-chip">IB DP</div>
+                <div class="sys-chip">新加坡 O-Level</div>
+            </div>
+        </div>
+
+        <div class="sys-group">
+            <div class="sys-group-label">美国 &amp; 标化考试</div>
+            <div class="sys-grid">
+                <div class="sys-chip">AP</div>
+                <div class="sys-chip">SAT</div>
+                <div class="sys-chip">ACT</div>
+                <div class="sys-chip">GRE</div>
+                <div class="sys-chip">GMAT</div>
+                <div class="sys-chip">TOEFL</div>
+                <div class="sys-chip">IELTS</div>
+            </div>
+        </div>
+
+        <div class="feature-img" style="margin-top: 40px; max-width: 600px;">
+            <img src="images/education-systems.png" alt="教育体系选择" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="img-placeholder" style="display:none">
+                <span>&#9776;</span>
+                <span class="ph-label">images/education-systems.png</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="gallery">
+    <div class="section-inner">
+        <div class="section-label">App Screenshots</div>
+        <h2>截图展示</h2>
+        <p class="section-desc">以下为 App 各主要界面的截图预览。将你的截图按下方文件名保存至 <code>images/</code> 目录即可自动显示。</p>
+        <div class="gallery">
+            <div class="gallery-item">
+                <img src="images/home-iphone.png" alt="iPhone 主页" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9636;</span>
+                    <span>home-iphone.png</span>
+                </div>
+                <div class="gallery-caption">iPhone 主页 Dashboard</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/home-ipad.png" alt="iPad 主页" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9636;</span>
+                    <span>home-ipad.png</span>
+                </div>
+                <div class="gallery-caption">iPad 主页（双栏网格）</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/grade-chart.png" alt="成绩趋势" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9670;</span>
+                    <span>grade-chart.png</span>
+                </div>
+                <div class="gallery-caption">成绩趋势图表</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/settings.png" alt="设置" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9881;</span>
+                    <span>settings.png</span>
+                </div>
+                <div class="gallery-caption">个人设置 / 偏好</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/onboarding.png" alt="新手引导" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9758;</span>
+                    <span>onboarding.png</span>
+                </div>
+                <div class="gallery-caption">WSOnBoarding 新手引导</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/widget.png" alt="小组件" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9636;</span>
+                    <span>widget.png</span>
+                </div>
+                <div class="gallery-caption">主屏小组件</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="compare">
+    <div class="section-inner">
+        <div class="section-label">Platform</div>
+        <h2>iPhone 与 iPad 双端原生适配</h2>
+        <p class="section-desc">StudyPulse 不是简单的 iPhone 放大版。针对 iPad 做了专项优化，充分利用大屏空间。</p>
+        <div class="compare-grid">
+            <div class="compare-col">
+                <div class="compare-col-header">
+                    <span style="font-size:1.4rem">&#63743;</span>
+                    <h4>iPhone</h4>
+                </div>
+                <div class="compare-col-body">
+                    <ul>
+                        <li>5 标签 TabView 底部导航</li>
+                        <li>全宽单列布局，适合单手操作</li>
+                        <li>Sheet 弹窗录入成绩/错题/考试</li>
+                        <li>硬件键盘 Tab 切换 / 数字跳转</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="compare-col">
+                <div class="compare-col-header">
+                    <span style="font-size:1.4rem">&#63743;</span>
+                    <h4>iPad</h4>
+                </div>
+                <div class="compare-col-body">
+                    <ul>
+                        <li>NavigationSplitView 侧栏导航</li>
+                        <li>两栏 LazyVGrid 首页布局（16pt 间距）</li>
+                        <li>居中约束内容（640&ndash;1100pt 最大宽度）</li>
+                        <li>自适应 HStack / GridColumns / CardPadding</li>
+                        <li>硬件键盘导航 + 中强度触觉反馈</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="walkthrough">
+    <div class="section-inner">
+        <div class="section-label">Getting Started</div>
+        <h2>快速上手</h2>
+        <p class="section-desc">从下载到开始记录第一条成绩，只需四步。</p>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h4>选择教育体系</h4>
+                <p>在"设置 &rarr; 学术信息"中选择你的教育阶段与地区，科目列表将自动填充。</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h4>完善个人资料</h4>
+                <p>填写姓名、学校、年级、目标院校等信息，让 App 更懂你的学习背景。</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h4>录入首条成绩</h4>
+                <p>在首页点击"+"或从快速操作卡片进入，选择科目、填写分数、可附上试卷照片。</p>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <h4>自定义主页</h4>
+                <p>在"设置 &rarr; 主页布局"中拖拽排序、开关卡片，打造属于你的专属 Dashboard。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="tech">
+    <div class="section-inner">
+        <div class="section-label">Tech Stack</div>
+        <h2>为 Apple 平台原生打造</h2>
+        <p class="section-desc">基于 Swift 6.0 与 SwiftUI，采用严格并发模型，确保性能与代码质量。</p>
+        <ul class="tech-list">
+            <li>Swift 6.0</li>
+            <li>SwiftUI</li>
+            <li>Swift Charts</li>
+            <li>Vision (OCR)</li>
+            <li>HealthKit</li>
+            <li>EventKit</li>
+            <li>WidgetKit</li>
+            <li>MVVM Architecture</li>
+            <li>Strict Concurrency</li>
+            <li>JSON Persistence</li>
+            <li>SPM Package Manager</li>
+            <li>MarkdownUI</li>
+        </ul>
+
+        <h3 style="font-size:1.1rem;margin-bottom:16px;color:var(--text-primary)">架构概览</h3>
+        <div class="arch-diagram">
+            <pre>StudyPulseApp (<span class="hl-box">@main</span>)
+<span class="hl-arrow">|</span>
+<span class="hl-arrow">├──</span> LagMonitor ─────────────────────────────&gt; LogStore
+<span class="hl-arrow">├──</span> NotificationCoordinator (UNUserNotificationCenter delegate)
+<span class="hl-arrow">|</span>
+<span class="hl-arrow">├──</span> <span class="hl-box">DataManager.asyncInit()</span>
+<span class="hl-arrow">|   └──</span> DataFileIO (<span class="hl-box">nonisolated</span> enum, ~/Documents/)
+<span class="hl-arrow">|       ├──</span> profile / grades / subjects / mistakes / exams
+<span class="hl-arrow">|       ├──</span> comprehensiveExams / health_history / srs_decks
+<span class="hl-arrow">|       └──</span> images/ (grade/mistake/avatar jpg)
+<span class="hl-arrow">|</span>
+<span class="hl-arrow">├──</span> <span class="hl-box">HealthKitManager.bootstrap()</span>
+<span class="hl-arrow">|   ├──</span> HKHealthStore (HRV SDNN, 心率, 呼吸率, 睡眠, 锻炼)
+<span class="hl-arrow">|   ├──</span> HealthHistoryStore → health_history.json (30天滚动, NSLock)
+<span class="hl-arrow">|   └──</span> StudyReadinessAlgorithm
+<span class="hl-arrow">|       ├──</span> PersonalBaselines (30天个人基线, ≥7天启用)
+<span class="hl-arrow">|       └──</span> AgeReference (年龄段参考, 样本不足时回退)
+<span class="hl-arrow">|</span>
+<span class="hl-arrow">└──</span> scenePhase.active: sync all widgets
+
+<span class="hl-box">Models</span> ── Codable + Sendable value types
+<span class="hl-arrow">├──</span> Subject / Grade / MistakeNote / Exam / comprehensiveExam
+<span class="hl-arrow">├──</span> UserProfile / AppPreferences / HomeLayoutPreference
+<span class="hl-arrow">├──</span> DailyHealthSnapshot / Flashcard / FlashcardDeck
+<span class="hl-arrow">└──</span> StudyReport / SubjectSummary / HealthCorrelation...
+
+<span class="hl-box">Managers</span> ── @MainActor ObservableObject / nonisolated
+<span class="hl-arrow">├──</span> DataManager ── 中央枢纽, <span class="hl-box">@EnvironmentObject</span>
+<span class="hl-arrow">├──</span> AppEnvironmentManager ── 语言 / 主题
+<span class="hl-arrow">├──</span> HealthKitManager ── HRV / 身体状态
+<span class="hl-arrow">├──</span> CalendarManager / OCRManager / ImageCache
+<span class="hl-arrow">├──</span> DataExportManager (CSV) / ReportRenderer (PDF)
+<span class="hl-arrow">├──</span> WidgetDataSync / TrendWidgetSync / HRVWidgetSync
+<span class="hl-arrow">└──</span> StudyReadinessAlgorithm ── 5档强度 × 5类重点
+
+<span class="hl-box">Views</span> ── SwiftUI
+<span class="hl-arrow">├──</span> [iPhone] TabView: Home / Trends / Mistakes / Exams / Settings
+<span class="hl-arrow">├──</span> [iPad] NavigationSplitView + 侧栏
+<span class="hl-arrow">├──</span> HomeView ── 8 可定制卡片 (HRV / 提醒 / 快捷 / 建议 / 图表 / 考试 / 名言 / 成绩)
+<span class="hl-arrow">├──</span> FlashcardStudyView ── SM-2 间隔重复
+<span class="hl-arrow">├──</span> Intents ── Siri Shortcuts (AddGrade / CheckReadiness / ...)
+<span class="hl-arrow">└──</span> Widgets: ExamWidget / TrendWidget / HRVWidget
+
+<span class="hl-box">Persistence</span>
+<span class="hl-arrow">├──</span> ~/Documents/ ── 8 个 JSON + images/ 目录
+<span class="hl-arrow">├──</span> UserDefaults ── AppPreferences, HomeLayout, HRV flags
+<span class="hl-arrow">└──</span> App Group ── group.com.chenkai.gao.studypulse</pre>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-col">
+            <h5>产品</h5>
+            <ul>
+                <li><a href="#features">功能概览</a></li>
+                <li><a href="#systems">教育体系</a></li>
+                <li><a href="#gallery">截图展示</a></li>
+                <li><a href="#compare">平台适配</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h5>技术</h5>
+            <ul>
+                <li><a href="#tech">技术栈</a></li>
+                <li><a href="#walkthrough">快速上手</a></li>
+                <li><a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">源代码</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h5>法律</h5>
+            <ul>
+                <li><a href="terms.html">使用条款</a></li>
+                <li>CC BY-NC-SA 4.0</li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h5>联系</h5>
+            <ul>
+                <li><a href="mailto:developer@studypulse.app">Email</a></li>
+                <li><a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">GitHub</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>&copy; 2025 Gao Chenkai (Gao-Chenkai / Ken8891837)</span>
+        <span>CC BY-NC-SA 4.0</span>
+    </div>
+</footer>
+
+</body>
+</html>

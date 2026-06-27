@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户使用协议 &mdash; StudyPulse</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent: #0891b2;
+            --accent-gradient: linear-gradient(135deg, #0891b2, #6366f1);
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.75;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.2;
+            background-image:
+                linear-gradient(var(--border-light) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 70%);
+        }
+
+        .nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
+            text-decoration: none; letter-spacing: -0.01em;
+        }
+        .nav-logo-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: block;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .nav-back {
+            font-size: 0.85rem; color: var(--text-muted); text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-back:hover { color: var(--accent); }
+
+        .content {
+            position: relative; z-index: 1;
+            max-width: 860px; margin: 0 auto; padding: 60px 24px 80px;
+        }
+
+        .content h1 {
+            font-size: 2rem; font-weight: 800; letter-spacing: -0.025em;
+            margin-bottom: 12px;
+        }
+        .content h2 {
+            font-size: 1.35rem; font-weight: 700; margin-top: 48px; margin-bottom: 16px;
+            padding-bottom: 8px; border-bottom: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.1rem; font-weight: 700; margin-top: 36px; margin-bottom: 12px;
+        }
+        .content h4 {
+            font-size: 1rem; font-weight: 700; margin-top: 28px; margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+        .content p {
+            font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 16px;
+            line-height: 1.8;
+        }
+        .content strong { color: var(--text-primary); }
+        .content li {
+            font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 6px;
+            padding-left: 24px; position: relative; list-style: none;
+        }
+        .content li::before {
+            content: ""; position: absolute; left: 8px; top: 10px;
+            width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+        }
+        .content hr {
+            border: none; border-top: 1px solid var(--border); margin: 32px 0;
+        }
+        .content blockquote {
+            background: rgba(8,145,178,0.04);
+            border-left: 3px solid var(--accent);
+            padding: 16px 20px; margin: 20px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        .content blockquote p { margin-bottom: 8px; }
+        .content blockquote p:last-child { margin-bottom: 0; }
+        .content code {
+            font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
+            font-size: 0.85em; background: rgba(8,145,178,0.06);
+            padding: 2px 6px; border-radius: 4px;
+        }
+        .content table {
+            width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.88rem;
+        }
+        .content th {
+            background: rgba(8,145,178,0.06); padding: 10px 14px; text-align: left;
+            font-weight: 700; color: var(--text-primary); border-bottom: 2px solid var(--border);
+        }
+        .content td {
+            padding: 10px 14px; border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .content .meta {
+            font-size: 0.85rem; color: var(--text-muted); margin-bottom: 32px;
+        }
+
+        .back-top {
+            position: fixed; bottom: 32px; right: 32px; z-index: 50;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--accent-gradient); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; font-size: 1.2rem; box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+            transition: transform 0.2s;
+        }
+        .back-top:hover { transform: translateY(-2px); }
+
+        @media (max-width: 768px) {
+            .content { padding: 40px 20px 60px; }
+            .content h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
+            <img class="nav-logo-icon" src="images/logo.png" alt="StudyPulse">
+            StudyPulse
+        </a>
+        <a href="index.html" class="nav-back">&larr; 返回首页</a>
+    </div>
+</nav>
+
+<div class="content">
+<h1>StudyPulse 用户使用协议</h1>
+
+<blockquote><p><strong>User Agreement / Terms of Service for StudyPulse</strong></p></blockquote>
+<blockquote><p>适用于 iOS / iPadOS 平台的 StudyPulse 应用</p></blockquote>
+<blockquote><p>协议版本: v1.0 · 最后更新: 2026-06-27</p></blockquote>
+
+<hr>
+
+<h2>协议前言</h2>
+
+<p>本《用户使用协议》(以下简称"本协议")由您(以下简称"用户")与 <strong>StudyPulse 开发团队</strong>(开发者: <strong>Gao Chenkai</strong>,以下简称"我们"或"开发者")就 StudyPulse(以下简称"本应用")的下载、安装、使用及相关服务所订立。</p>
+
+<p><strong>在下载、安装或使用本应用之前,请您仔细阅读本协议的全部条款,特别是涉及您重大权益的条款,包括但不限于:</strong></p>
+
+<li><strong>免责条款</strong>(第六条)</li>
+<li><strong>责任限制条款</strong>(第七条)</li>
+<li><strong>个人信息收集与使用</strong>(第三条)</li>
+<li><strong>第三方服务与数据</strong>(第八条)</li>
+<li><strong>协议变更</strong>(第十一条)</li>
+<li><strong>法律适用与争议解决</strong>(第十三条)</li>
+
+<p><strong>您一旦点击"同意"、开始下载、安装或使用本应用,即视为您已充分阅读、理解并同意接受本协议全部条款的约束,并与开发者达成具有法律效力的协议。如您不同意本协议任何条款,请勿下载、安装或使用本应用。</strong></p>
+
+<hr>
+
+<h2>第一条 · 定义与适用范围</h2>
+
+<p><strong>1.1 定义</strong></p>
+
+<li><strong>"本应用"</strong>:指由开发者 Gao Chenkai 独立开发、运营、维护,适用于 iOS 18.6+ / iPadOS 18.6+ 设备,名称为 "StudyPulse" 的学业管理与健康辅助应用程序及其相关 WidgetKit 扩展(StudyPulseWidgetExtension)。</li>
+<li><strong>"用户"</strong> 或 <strong>"您"</strong>:指下载、安装、注册或使用本应用的自然人。</li>
+<li><strong>"用户数据"</strong>:指用户在使用本应用过程中产生、输入、上传、存储、生成的与个人学习、健康、隐私相关的全部数据。</li>
+<li><strong>"个人信息"</strong>:指以电子或其他方式记录的与已识别或可识别的自然人有关的各种信息,不包括匿名化处理后的信息。</li>
+<li><strong>"敏感个人信息"</strong>:指一旦泄露或非法使用,容易导致自然人的人格尊严受到侵害或人身、财产安全受到危害的个人信息,包括健康信息、行踪轨迹等。</li>
+
+<p><strong>1.2 适用范围</strong></p>
+
+<p>本协议适用于您与开发者之间就本应用的使用所发生的全部权利义务关系,包括但不限于下载、安装、注册、登录、激活、使用、升级、卸载等全部环节。</p>
+
+<p><strong>1.3 关联协议</strong></p>
+
+<p>本应用可能根据不同场景向您展示单独的协议条款,例如《隐私政策》(如有)、第三方 SDK 协议等,这些协议构成本协议不可分割的组成部分,与本协议具有同等法律效力。</p>
+
+<hr>
+
+<h2>第二条 · 本应用的功能与服务</h2>
+
+<p><strong>2.1 核心功能</strong></p>
+
+<p>本应用是一款面向学生群体的本地化学业管理与健康辅助工具,主要功能包括:</p>
+
+<li><strong>成绩追踪</strong>:记录、查询、可视化分析用户的考试成绩、排名、得分占比等;</li>
+<li><strong>错题管理</strong>:支持用户拍照、OCR 识别、手动录入错题,生成错题笔记;</li>
+<li><strong>考试规划</strong>:支持单科与综合考试的时间管理,可同步至系统日历与本地通知提醒;</li>
+<li><strong>趋势分析</strong>:基于历史成绩生成科目成绩趋势图,辅助学习策略调整;</li>
+<li><strong>多教育体系适配</strong>:内置中国大陆、浙江、上海、台湾、香港、新加坡、UK IGCSE / A-Level、IB DP、US AP / SAT / ACT、GRE / GMAT、TOEFL / IELTS 等教育体系的科目配置;</li>
+<li><strong>多语言支持</strong>:支持 English、简体中文、繁體中文、日本語、한국어 五种语言;</li>
+<li><strong>小组件</strong>:在主屏幕提供即将到来的考试、成绩趋势、HRV 准备度三类 WidgetKit 小组件;</li>
+<li><strong>数据导出</strong>:支持 CSV 格式导出成绩、错题、考试、综合考试等数据。</li>
+
+<p><strong>2.2 健康辅助功能(可选)</strong></p>
+
+<p>在用户明确授权后,本应用可通过 HealthKit 读取以下数据,<strong>仅用于本地学习准备度评估,不向开发者或任何第三方上传或传输</strong>:</p>
+
+<li>心率变异性 SDNN(HRV);</li>
+<li>静息心率、最近心率;</li>
+<li>呼吸频率;</li>
+<li>总睡眠时长、深睡时长、REM 时长;</li>
+<li>Apple 锻炼时长。</li>
+
+<p>健康数据用于本地计算「学习准备度」与个性化学习建议。<strong>该建议仅为基于一般性算法的参考,不构成医疗建议、医疗诊断或治疗方案</strong>(详见第六条免责声明)。</p>
+
+<p><strong>2.3 服务变更</strong></p>
+
+<p>开发者保留随时修改、升级、暂停或终止本应用全部或部分功能的权利,无需事先通知。开发者不就服务变更对用户承担任何责任,但应通过应用内公告等方式给予合理通知。</p>
+
+<hr>
+
+<h2>第三条 · 用户数据、隐私与个人信息保护</h2>
+
+<p><strong>3.1 我们的承诺</strong></p>
+
+<p>我们<strong>高度重视用户隐私与数据安全</strong>,承诺:</p>
+
+<li>本应用<strong>不上传、不存储、不向任何第三方传输</strong>用户的个人成绩、错题、考试、头像、笔记等学习数据;</li>
+<li>健康数据(HealthKit)与学习数据<strong>仅在用户设备本地存储与处理</strong>,不经过开发者控制的任何服务器;</li>
+<li>开发者<strong>不在自有服务器上收集</strong>任何用户的个人信息;</li>
+<li>本应用<strong>未集成任何用户行为追踪、广告 SDK、统计 SDK、社交分享 SDK</strong>(以实际发布版本为准)。</li>
+
+<p><strong>3.2 数据存储位置</strong></p>
+
+<li>用户数据(成绩、错题、考试、错题图片、头像)保存于设备的 <code>~/Documents/</code> 目录,序列化为 JSON 文件;</li>
+<li>健康历史聚合数据保存于 <code>~/Documents/health_history.json</code>;</li>
+<li>Widget 共享数据通过 iOS App Group(<code>group.com.chenkai.gao.studypulse</code>)在主应用与 WidgetKit 扩展之间共享,仍位于设备本地沙盒;</li>
+<li>偏好设置(语言、主题、主页布局)保存于 <code>UserDefaults</code>;<strong>不涉及任何个人敏感信息</strong>。</li>
+
+<p><strong>3.3 权限申请</strong></p>
+
+<p>本应用仅在提供对应功能所必需时申请相关权限,且<strong>全部权限需用户明确授权后才会启用</strong>:</p>
+
+<table>
+<tr><th>权限</th><th>用途</th><th>是否必选</th></tr>
+<tr><td>相机</td><td>拍摄错题照片、头像</td><td>否</td></tr>
+<tr><td>照片库</td><td>从相册选择错题照片、头像</td><td>否</td></tr>
+<tr><td>日历</td><td>将考试同步至系统日历</td><td>否</td></tr>
+<tr><td>HealthKit(读取)</td><td>计算学习准备度</td><td>否</td></tr>
+<tr><td>本地通知</td><td>考试提醒</td><td>否</td></tr>
+<tr><td>小组件(WidgetKit)</td><td>展示考试、趋势、HRV 小组件</td><td>否</td></tr>
+</table>
+
+<p>您可以随时在 iOS <strong>设置 → 隐私</strong> 中关闭上述任一权限,关闭后对应功能将不可用,但不影响本应用其他功能的正常使用。</p>
+
+<p><strong>3.4 您的数据权利</strong></p>
+
+<p>您对您的数据享有以下权利,本应用<strong>全部支持且不收取费用</strong>:</p>
+
+<li><strong>知情权</strong>:您有权知道本应用如何处理您的数据(本协议即承担告知义务);</li>
+<li><strong>访问权</strong>:您可在应用内查看、编辑所有学习数据;</li>
+<li><strong>导出权</strong>:您可通过 CSV 导出功能导出您的数据;</li>
+<li><strong>删除权</strong>:您可在应用内删除单项数据,或通过卸载应用删除全部本地数据;</li>
+<li><strong>撤回授权权</strong>:您可随时在 iOS 设置中撤回 HealthKit、相机、照片库等权限。</li>
+
+<p><strong>3.5 HealthKit 数据特别说明</strong></p>
+
+<li>本应用<strong>仅读取</strong> HealthKit 数据,<strong>不写入</strong>任何 HealthKit 数据;</li>
+<li>读取的 HRV、心率、呼吸率、睡眠、锻炼数据<strong>仅用于本地计算</strong>学习准备度与个性化建议,生成的数据(健康历史 JSON)保存于设备本地;</li>
+<li>本应用使用 HealthKit 数据时,严格遵守 Apple 的《HealthKit 指南》,并在应用内显著提示该数据不用于医疗用途;</li>
+<li>任何 HealthKit 数据<strong>均不用于广告、市场营销、数据挖掘或向第三方出售</strong>。</li>
+
+<p><strong>3.6 数据迁移与设备更换</strong></p>
+
+<p>由于本应用数据<strong>完全存储于本地</strong>,<strong>不提供云端同步服务</strong>。设备更换、系统重装、误卸载等情形可能导致数据丢失,开发者<strong>不对数据丢失承担任何责任</strong>。请定期通过 CSV 导出功能备份您的数据。</p>
+
+<p><strong>3.7 儿童与未成年人保护</strong></p>
+
+<li>本应用面向具备完全民事行为能力的用户,亦可在家长/监护人同意下由未成年人(尤其学生用户)使用;</li>
+<li><strong>14 周岁以下儿童使用本应用必须由其父母或法定监护人代为同意本协议</strong>,监护人代为同意的,视为监护人已充分理解并接受本协议全部条款;</li>
+<li>监护人应指导未成年人在合理范围内使用本应用,合理安排学习与休息时间,避免过度依赖本应用的学习建议;</li>
+<li>我们<strong>不会主动收集或核实</strong>用户的年龄信息,若您发现未成年人在未经监护人同意下使用本应用,请通过本协议第十五条联系方式告知我们。</li>
+
+<hr>
+
+<h2>第四条 · 用户行为规范</h2>
+
+<p><strong>4.1 合法使用</strong></p>
+
+<p>您承诺不在使用本应用时从事任何违反中华人民共和国法律、法规、规章、政策、决定、命令,或您所在国家/地区法律法规的活动,包括但不限于:</p>
+
+<li>反对宪法所确定的基本原则的;</li>
+<li>危害国家安全,泄露国家秘密,颠覆国家政权,破坏国家统一的;</li>
+<li>损害国家荣誉和利益的;</li>
+<li>煽动民族仇恨、民族歧视,破坏民族团结的;</li>
+<li>破坏国家宗教政策,宣扬邪教和封建迷信的;</li>
+<li>散布谣言,扰乱社会秩序,破坏社会稳定的;</li>
+<li>散布淫秽、色情、赌博、暴力、凶杀、恐怖或者教唆犯罪的;</li>
+<li>侮辱或者诽谤他人,侵害他人合法权益的;</li>
+<li>含有法律、行政法规禁止的其他内容的。</li>
+
+<p><strong>4.2 不当使用禁止</strong></p>
+
+<p>您不得:</p>
+
+<li>利用本应用从事任何商业活动(本应用明确禁止商业使用,见第五条);</li>
+<li>通过逆向工程、反编译、反汇编等方式试图获取本应用源代码、核心算法、商业秘密(本应用源代码已以 CC BY-NC-SA 4.0 协议公开,前述限制不阻碍合法学习与研究);</li>
+<li>干扰本应用正常运行,传播病毒、木马、恶意代码;</li>
+<li>冒用、伪造、变造他人身份信息使用本应用;</li>
+<li>批量录入虚假成绩、错题、考试数据,或录入与本人无关的他人的隐私数据;</li>
+<li>录入他人的健康数据、个人敏感信息;</li>
+<li>录入、存储、展示违反公序良俗的内容(错题照片中如涉及他人隐私,应事先取得同意);</li>
+<li>利用本应用骚扰、威胁、恐吓他人。</li>
+
+<p><strong>4.3 内容责任</strong></p>
+
+<p>您应对您录入、生成、上传至本应用的全部内容承担完全责任,包括但不限于成绩数据、错题照片、文字笔记、头像等。如因您录入的内容侵犯第三方合法权益或违反法律法规,而导致开发者遭受索赔、行政处罚、诉讼的,您应承担全部赔偿责任。</p>
+
+<p><strong>4.4 通知提醒的合理使用</strong></p>
+
+<p>本应用提供本地通知作为考试提醒工具,您应合理设置提醒频率,避免通知打扰他人或影响正常学习生活节奏。开发者不就通知延迟、丢失、漏触发对用户承担任何责任。</p>
+
+<hr>
+
+<h2>第五条 · 知识产权与许可</h2>
+
+<p><strong>5.1 开发者权利</strong></p>
+
+<p>本应用(包括但不限于源代码、UI 设计、图标、Logo、品牌名称"StudyPulse"、文档、内置算法 StudyReadinessAlgorithm 等)的所有知识产权,<strong>除明确声明外</strong>,均由开发者 <strong>Gao Chenkai</strong> 单独享有,受中华人民共和国著作权法、商标法、专利法及国际公约保护。</p>
+
+<p><strong>5.2 开源许可</strong></p>
+
+<p>本应用源代码以 <strong>Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International(CC BY-NC-SA 4.0)</strong> 协议开源发布(详见根目录 <code>LICENSE</code> 文件)。开源许可<strong>不构成</strong>对本协议其他条款的放弃:</p>
+
+<li>用户可在 <strong>CC BY-NC-SA 4.0</strong> 范围内复制、再分发、修改源代码;</li>
+<li>任何基于本应用源代码的衍生作品<strong>不得用于任何商业目的</strong>;</li>
+<li>衍生作品<strong>必须以相同协议</strong>(CC BY-NC-SA 4.0)发布;</li>
+<li><strong>任何商业使用本应用或其衍生作品的行为,均需事先获得开发者的书面许可</strong>。</li>
+
+<p><strong>5.3 商标与品牌</strong></p>
+
+<li>"StudyPulse" 名称、Logo、图标、UI 元素属于开发者所有;</li>
+<li>在未经开发者事先书面同意的情况下,您不得将 "StudyPulse" 名称、Logo 用于商业宣传、商标注册、域名注册等可能造成混淆或误导的行为。</li>
+
+<p><strong>5.4 第三方组件</strong></p>
+
+<p>本应用使用了若干第三方开源组件(详见 AGENTS.md 与依赖清单),其版权归各自原作者所有,遵循各自的开源协议。本应用尊重并遵守所有适用的第三方开源协议。</p>
+
+<p><strong>5.5 用户内容的许可</strong></p>
+
+<p>为实现本应用的正常功能(包括但不限于数据本地存储、错题展示、头像显示等),您授予开发者一项<strong>全球、免费、非独占、不可转让</strong>的许可,用于在您的设备上存储、显示、复制、加工您录入的内容。该许可<strong>仅在为您提供本应用服务所必需的范围内使用</strong>,开发者<strong>不会将您的内容用于其他任何目的</strong>,且本许可在您删除内容或卸载应用时自动终止。</p>
+
+<hr>
+
+<h2>第六条 · 免责声明</h2>
+
+<p><strong>6.1 "按现状"提供</strong></p>
+
+<p>本应用按"现状"(As-Is)和"可用"(As-Available)原则提供。在适用法律允许的最大范围内,开发者<strong>不就以下事项向用户作出任何明示或默示的保证或承诺</strong>:</p>
+
+<li>本应用将满足您的全部需求;</li>
+<li>本应用将不间断、及时、安全、可靠、无错误地运行;</li>
+<li>通过本应用取得的任何建议、信息、趋势分析、准备度评估的准确性、可靠性、完整性、时效性;</li>
+<li>本应用所含瑕疵或错误将被更正。</li>
+
+<p><strong>6.2 健康建议免责</strong></p>
+
+<p>本应用中的学习准备度评估与学习建议<strong>仅基于一般性算法与用户授权范围内的健康数据</strong>,包括但不限于:</p>
+
+<li>HRV(心率变异性)Z-score 与趋势;</li>
+<li>静息心率、最近心率、呼吸率;</li>
+<li>总睡眠、深睡、REM 睡眠;</li>
+<li>锻炼时长。</li>
+
+<p><strong>本应用提供的所有健康相关建议、准备度评级、学习强度建议:</strong></p>
+
+<li><strong>不构成任何医疗建议、医疗意见、医疗诊断、医疗预防或医疗治疗方案</strong>;</li>
+<li><strong>不能替代专业医生、心理咨询师、营养师、睡眠专家或其他专业医疗健康人员的意见</strong>;</li>
+<li><strong>不应作为任何医疗决策的唯一依据</strong>;</li>
+<li><strong>存在算法局限、数据缺失、个体差异、设备精度等导致的偏差</strong>。</li>
+
+<p>如您存在健康问题、疾病、睡眠障碍、心理困扰等情形,请务必咨询专业医疗人员。如出现紧急健康问题,请立即拨打急救电话或前往最近医疗机构。</p>
+
+<p><strong>6.3 学术成绩免责</strong></p>
+
+<p>成绩追踪与趋势分析功能依赖于用户自行录入的数据,其准确性完全取决于用户。开发者<strong>不对您录入数据的真实性、完整性、准确性承担责任</strong>。本应用的成绩分析与趋势预测<strong>不构成任何学术评价、升学建议或择校建议</strong>。</p>
+
+<p><strong>6.4 第三方服务免责</strong></p>
+
+<p>本应用调用 iOS 系统服务(EventKit、HealthKit、Vision、UserNotifications、WidgetKit 等),其可用性、稳定性、API 变更由 Apple Inc. 控制。开发者<strong>不对任何第三方服务的中断、变更、故障对用户造成的影响承担责任</strong>。</p>
+
+<p><strong>6.5 数据丢失免责</strong></p>
+
+<p>由于本应用数据完全存储于本地,因设备损坏、误操作、系统异常、未及时备份、卸载应用、Apple 政策变更等任何原因导致的数据丢失,开发者<strong>不承担任何责任</strong>。请用户定期通过 CSV 导出功能自行备份。</p>
+
+<p><strong>6.6 不可抗力</strong></p>
+
+<p>因不可抗力(包括但不限于自然灾害、战争、政策法规变化、网络中断、电信故障、Apple 政策变更等)导致本应用无法正常运行的,开发者<strong>不承担任何责任</strong>。</p>
+
+<hr>
+
+<h2>第七条 · 责任限制</h2>
+
+<p>在适用法律允许的最大范围内,<strong>无论本协议项下的任何救济措施是否达到其基本目的</strong>,对于用户因使用或无法使用本应用而产生的任何间接的、偶然的、特殊的、惩罚性的、衍生性的损害,包括但不限于:</p>
+
+<li>利润损失;</li>
+<li>商誉损失;</li>
+<li>数据丢失;</li>
+<li>业务中断;</li>
+<li>替代商品或服务的成本;</li>
+<li>精神损害,</li>
+
+<p><strong>开发者向用户承担的全部责任</strong>,<strong>不超过</strong>用户为使用本应用而实际支付的费用(本应用为免费应用,因此此上限为 <strong>0 元 / 人民币零元</strong>)。</p>
+
+<p>前述责任限制条款<strong>不适用于</strong>因开发者的故意或重大过失导致用户损失的情形;亦<strong>不适用于</strong>适用法律明确禁止责任限制的情形(如人身损害、因故意或重大过失造成财产损失等)。</p>
+
+<hr>
+
+<h2>第八条 · 第三方服务</h2>
+
+<p><strong>8.1 系统服务</strong></p>
+
+<p>本应用集成 Apple 系统级服务,这些服务由 Apple Inc. 控制与运营:</p>
+
+<li><strong>HealthKit</strong>:仅读取 HRV / 心率 / 呼吸率 / 睡眠 / 锻炼数据,详见第三条;</li>
+<li><strong>EventKit</strong>:在用户授权后将考试同步至系统日历;</li>
+<li><strong>Vision 框架</strong>:对错题照片进行本地 OCR 识别,识别结果不离开设备;</li>
+<li><strong>UserNotifications</strong>:在本地调度考试提醒通知,不向任何远程服务器发送;</li>
+<li><strong>WidgetKit</strong>:在主屏幕展示本地小组件,数据来源于 App Group 共享容器;</li>
+<li><strong>App Group(group.com.chenkai.gao.studypulse)</strong>:用于主应用与 WidgetKit 扩展之间共享数据,数据不离开设备。</li>
+
+<p><strong>8.2 第三方数据使用规范</strong></p>
+
+<li>上述系统服务的数据使用严格遵守 Apple 的开发者协议与各框架的使用规范;</li>
+<li>本应用<strong>不向任何 Apple 系统服务以外的服务</strong>传输用户数据;</li>
+<li>任何 Apple 政策的变更、Apple ID 账号的禁用、Apple 开发者计划的终止等情形,均可能影响本应用的正常使用,开发者<strong>不对此承担责任</strong>。</li>
+
+<p><strong>8.3 Apple 协议</strong></p>
+
+<li>本应用尚未通过 Apple App Store 分发,<strong>用户与 Apple 之间的协议</strong>(如 Apple Media Services Terms and Conditions)<strong>不构成本协议的一部分</strong>;</li>
+<li>开发者(而非 Apple)负责本应用的全部内容、维护、问题处理与法律责任,除非适用法律另有规定;</li>
+<li>Apple 不就本应用向用户承担任何责任;</li>
+<li>如本应用出现任何问题,您可以联系开发者(见第十五条),也可以通过 App Store 报告问题。</li>
+
+<hr>
+
+<h2>第九条 · 协议生效、变更与终止</h2>
+
+<p><strong>9.1 生效</strong></p>
+
+<p>本协议自您点击"同意"、开始下载、安装或使用本应用之时起生效。</p>
+
+<p><strong>9.2 协议变更</strong></p>
+
+<li>开发者保留根据法律法规变更、业务调整、产品迭代等原因随时修改本协议的权利;</li>
+<li>修改后的协议将在应用内以推送通知、应用内公告、首次启动提示等方式通知用户;</li>
+<li>修改后的协议自通知发布之日起 <strong>7 个自然日后</strong> 生效(以下称"生效日");</li>
+<li><strong>如您不同意修改后的协议,您应在生效日前停止使用本应用并卸载之;如您在生效日后继续使用本应用,即视为您接受修改后的协议</strong>;</li>
+<li>对于重大变更(例如涉及个人信息处理目的、方式、范围变化),开发者将<strong>取得您的再次明确同意</strong>。</li>
+
+<p><strong>9.3 终止</strong></p>
+
+<li><strong>用户主动终止</strong>:您可随时停止使用本应用并通过设备设置卸载;</li>
+<li><strong>开发者终止</strong>:如您严重违反本协议(包括但不限于第四条用户行为规范、第五条商业使用限制),开发者有权立即终止本协议,停止向您提供服务;</li>
+<li><strong>法律终止</strong>:如法律法规变化、政府命令、诉讼等情形导致本应用无法继续运营,开发者可以终止本协议。</li>
+
+<p><strong>9.4 终止后的效力</strong></p>
+
+<li>协议终止后,本协议第五条、第六条、第七条、第十三条、第十五条等<strong>按其性质应继续有效的条款</strong>继续有效;</li>
+<li>您使用本应用所产生的数据应在合理期限内自行处理(导出或删除),协议终止后,开发者<strong>不承担为您保留或恢复数据的义务</strong>。</li>
+
+<hr>
+
+<h2>第十条 · 未成年人使用</h2>
+
+<p><strong>10.1 年龄限制</strong></p>
+
+<li>本应用面向具备完全民事行为能力或限制民事行为能力的用户;</li>
+<li><strong>14 周岁以下的儿童</strong>使用本应用<strong>必须由其父母或法定监护人代为同意</strong>本协议,并在监护下使用;</li>
+<li>14~18 周岁的未成年人使用本应用,<strong>视为其监护人已阅读、理解并同意本协议</strong>;</li>
+<li>如您是未成年人用户,请在父母或监护人的陪同下阅读本协议。</li>
+
+<p><strong>10.2 学习与休息平衡</strong></p>
+
+<li>本应用的目标是辅助学习,<strong>不应成为您学习生活的全部</strong>;</li>
+<li>我们鼓励用户合理安排学习与休息时间,避免长时间连续使用本应用,合理作息、适度运动、均衡饮食、保持心理健康;</li>
+<li>监护人应监督未成年人的使用时长与方式,避免未成年人过度依赖本应用的学习建议与提醒功能。</li>
+
+<p><strong>10.3 健康数据的未成年人使用</strong></p>
+
+<p>未成年人使用 HealthKit 功能时,需由其监护人代为同意 HealthKit 权限申请,并在监护下使用学习准备度功能。监护人应充分理解:</p>
+
+<li>准备度评估<strong>不构成医疗建议</strong>;</li>
+<li>如未成年人存在健康问题,应咨询专业医疗人员;</li>
+<li>监护人有权随时撤回 HealthKit 权限。</li>
+
+<hr>
+
+<h2>第十一条 · 关于应用内提示与公告</h2>
+
+<p>应用内可能展示以下形式的内容:</p>
+
+<li><strong>引导页</strong>:首次启动时的版本感知欢迎页、新功能介绍页;</li>
+<li><strong>设置项说明</strong>:在功能设置中说明对应功能的目的、所需权限、数据用途;</li>
+<li><strong>权限申请弹窗</strong>:iOS 系统弹窗或应用内解释页;</li>
+<li><strong>HRV 介绍页</strong>:首次启用 HRV 时的隐私保护与授权说明。</li>
+
+<p><strong>应用内提示与公告构成本协议的有效组成部分</strong>,您应仔细阅读。</p>
+
+<hr>
+
+<h2>第十二条 · 不可转让</h2>
+
+<p><strong>12.1 用户权利不可转让</strong></p>
+
+<p>本协议项下您的全部权利与义务<strong>仅属于您本人</strong>,<strong>不得转让、赠与、出借、出售或以其他方式转移给第三方</strong>。您的 Apple ID 账号仅供您本人使用,不得与他人共享。</p>
+
+<p><strong>12.2 应用使用限制</strong></p>
+
+<p>您不得:</p>
+
+<li>在商业机构、学校、培训机构等场所将本应用作为商业服务提供;</li>
+<li>通过本应用开展任何形式的代写作业、代整理错题、代考等违反学术诚信的活动;</li>
+<li>出售、出租本应用的下载账号、激活码、使用权;</li>
+<li>利用本应用从事任何违反教育公平、考试纪律的活动。</li>
+
+<hr>
+
+<h2>第十三条 · 法律适用与争议解决</h2>
+
+<p><strong>13.1 法律适用</strong></p>
+
+<p>本协议的订立、执行、解释、变更、终止及争议解决均适用 <strong>中华人民共和国法律</strong>(为本协议之目的,不包括香港特别行政区、澳门特别行政区、台湾地区的法律)。如本协议的任何条款与中华人民共和国法律相抵触,该条款将按相关法律规定重新解释或视为无效,<strong>不影响其他条款的效力</strong>。</p>
+
+<p><strong>13.2 争议解决</strong></p>
+
+<p>因本协议产生的或与本协议相关的任何争议,双方应首先通过友好协商解决;协商不成的,任何一方均有权将争议提交至<strong>开发者所在地</strong>有管辖权的人民法院通过诉讼解决。</p>
+
+<p><strong>13.3 协议可分割性</strong></p>
+
+<p>如本协议的任何条款被有管辖权的人民法院认定为无效、非法或不可执行,该条款的无效性、非法性或不可执行性<strong>不影响本协议其他条款</strong>的效力,其他条款仍应继续有效并可执行。</p>
+
+<hr>
+
+<h2>第十四条 · 完整协议</h2>
+
+<p>本协议(包括不时修订的版本)连同:</p>
+
+<li>《CC BY-NC-SA 4.0 协议》(详见 <code>LICENSE</code> 文件);</li>
+<li>应用内各项功能说明;</li>
+<li>应用内引导页、提示页、权限申请说明;</li>
+
+<p>共同构成您与开发者之间就本应用使用所达成的<strong>完整协议</strong>,并取代您与开发者之间此前就该事项达成的任何口头或书面协议、谅解、陈述。</p>
+
+<hr>
+
+<h2>第十五条 · 联系方式</h2>
+
+<p>如您对本协议的任何条款有疑问、意见、建议,或需要行使您的数据权利、举报违规行为、提出法律事务相关需求,请通过以下方式联系我们:</p>
+
+<li><strong>开发者</strong>:Gao Chenkai</li>
+<li><strong>应用名称</strong>:StudyPulse</li>
+<li><strong>应用 Bundle ID</strong>(主应用):<code>Gao.Chenkai.StudyPulse</code></li>
+<li><strong>应用 Bundle ID</strong>(WidgetKit 扩展):<code>Gao.Chenkai.StudyPulse.Widget</code></li>
+<li><strong>App Group</strong>:<code>group.com.chenkai.gao.studypulse</code></li>
+<li><strong>应用设置页</strong>:StudyPulse → Settings → About → User Agreement</li>
+
+<p>我们将在收到您的反馈后 <strong>15 个工作日内</strong> 予以回复。</p>
+
+<hr>
+
+<h2>第十六条 · 其他</h2>
+
+<p><strong>16.1 不弃权</strong></p>
+
+<p>开发者未行使或延迟行使本协议项下任何权利,不应视为对该权利的放弃;单独或部分行使任何权利,亦不妨碍日后进一步行使该权利或行使任何其他权利。</p>
+
+<p><strong>16.2 标题</strong></p>
+
+<p>本协议各条款的标题仅为方便阅读而设,<strong>不影响</strong>对相关条款内容的解释。</p>
+
+<p><strong>16.3 协议语言</strong></p>
+
+<p>本协议以<strong>简体中文</strong>为正本。其他语言版本(如有)仅为方便阅读,<strong>如与其他语言版本存在不一致,以简体中文版本为准</strong>。</p>
+
+<p><strong>16.4 协议保存</strong></p>
+
+<p>本协议的最新版本将在应用内与项目仓库中持续发布,您可随时查看。</p>
+
+<hr>
+
+<h2>附录:核心信息一览</h2>
+
+<table>
+<tr><th>项目</th><th>内容</th></tr>
+<tr><td>应用名称</td><td>StudyPulse</td></tr>
+<tr><td>开发者</td><td>Gao Chenkai</td></tr>
+<tr><td>平台</td><td>iOS 18.6+ / iPadOS 18.6+</td></tr>
+<tr><td>主要功能</td><td>成绩追踪 · 错题管理 · 考试规划 · HRV 学习准备度 · 趋势分析</td></tr>
+<tr><td>数据存储</td><td>仅本地(设备 <code>~/Documents/</code> + UserDefaults + App Group)</td></tr>
+<tr><td>上传服务器</td><td><strong>无</strong></td></tr>
+<tr><td>第三方追踪</td><td><strong>无</strong></td></tr>
+<tr><td>广告 SDK</td><td><strong>无</strong></td></tr>
+<tr><td>开源协议</td><td>CC BY-NC-SA 4.0</td></tr>
+<tr><td>商业使用</td><td><strong>禁止</strong></td></tr>
+<tr><td>HealthKit</td><td>仅读取,本地处理,不上传</td></tr>
+<tr><td>协议版本</td><td>v1.0</td></tr>
+<tr><td>最后更新</td><td>2026-06-27</td></tr>
+</table>
+
+<hr>
+
+<p><strong>请您仔细阅读本协议后,做出审慎的决定。</strong></p>
+<p><strong>下载、安装或使用本应用,即视为您已阅读、理解并同意本协议全部条款。</strong></p>
+
+<p>— 完 / End —</p>
+
+</div>
+
+<a href="#" class="back-top" title="回到顶部">&uarr;</a>
+
+</body>
+</html>
