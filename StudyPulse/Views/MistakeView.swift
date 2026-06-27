@@ -14,13 +14,14 @@ import SwiftStreamingMarkdown
 struct MistakeView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingNewMistakeSet = false
+    @State private var showingFlashcards = false
     @State private var searchText = ""
-    
+
     // 按科目分组错题
     var subjectGroups: [String: [MistakeNote]] {
         Dictionary(grouping: dataManager.mistakeSets) { $0.subject.isEmpty ? "Uncategorized" : $0.subject }
     }
-    
+
     // 科目列表（按错题数降序排列）
     var sortedSubjects: [String] {
         subjectGroups.keys.sorted { a, b in
@@ -32,7 +33,7 @@ struct MistakeView: View {
             return a.localizedCompare(b) == .orderedAscending
         }
     }
-    
+
     // 搜索过滤
     var filteredSubjects: [String] {
         if searchText.isEmpty {
@@ -46,11 +47,16 @@ struct MistakeView: View {
             } ?? false)
         }
     }
-    
+
     var totalMistakeCount: Int {
         dataManager.mistakeSets.count
     }
-    
+
+    /// SRS 队列总览
+    var srsOverview: SRSOverview {
+        SRSAlgorithm.overview(from: dataManager.mistakeSets)
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -61,18 +67,26 @@ struct MistakeView: View {
                             systemImage: "exclamationmark.triangle",
                             description: Text("Tap '+' to add a new mistake note.".localized())
                         )
-                        
+
                         Spacer()
                     }
                     .background(Color(.systemGroupedBackground))
-                    
+
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 24) {
-                            // 统计概览
+                            // 待复习横幅（搜索时不显示）
                             if searchText.isEmpty {
                                 OverviewStatsCard(totalCount: totalMistakeCount, subjectCount: sortedSubjects.count)
                                     .padding(.horizontal)
+                            }
+
+                            // SRS 待复习入口
+                            if searchText.isEmpty && srsOverview.dueCount > 0 {
+                                DueReviewBanner(overview: srsOverview) {
+                                    showingFlashcards = true
+                                }
+                                .padding(.horizontal)
                             }
 
                             // 科目列表
@@ -102,6 +116,29 @@ struct MistakeView: View {
             .navigationTitle("Mistakes".localized())
             .searchable(text: $searchText, prompt: "Search subjects or mistakes...".localized())
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if srsOverview.totalEnrolled > 0 {
+                        Button {
+                            showingFlashcards = true
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "rectangle.stack")
+                                if srsOverview.dueCount > 0 {
+                                    Text("\(srsOverview.dueCount)")
+                                        .font(.system(size: 10).weight(.bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(
+                                            Capsule().fill(Color.red)
+                                        )
+                                        .offset(x: 8, y: -6)
+                                }
+                            }
+                        }
+                        .accessibilityLabel("Flashcard Review".localized())
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewMistakeSet = true }) {
                         Image(systemName: "plus")
@@ -113,8 +150,96 @@ struct MistakeView: View {
                     .environmentObject(dataManager)
                     .adaptiveSheet()
             }
+            .fullScreenCover(isPresented: $showingFlashcards) {
+                NavigationStack {
+                    FlashcardStudyView()
+                        .environmentObject(dataManager)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button {
+                                    showingFlashcards = false
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .accessibilityLabel("Close".localized())
+                            }
+                        }
+                }
+            }
             .background(Color(.systemGroupedBackground))
         }
+    }
+}
+
+// MARK: - Due Review Banner
+
+/// 「待复习」横幅：突出显示到期的错题数量，引导用户进入闪卡模式
+struct DueReviewBanner: View {
+    let overview: SRSOverview
+    let onStart: () -> Void
+
+    var body: some View {
+        Button(action: onStart) {
+            HStack(spacing: 14) {
+                // 图标
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "rectangle.stack.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Time to Review".localized())
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        if overview.dueCount > 0 {
+                            Text("\(overview.dueCount)")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.red))
+                        }
+                    }
+                    Text(String(format: "%d due · %d upcoming this week".localized(), overview.dueCount, overview.upcomingCount))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
+            .padding(16)
+            .background(
+                LinearGradient(
+                    colors: [Color.purple.opacity(0.12), Color.blue.opacity(0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(LinearGradient(
+                        colors: [.purple.opacity(0.35), .blue.opacity(0.20)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -538,6 +663,7 @@ struct MistakeSetDetailView: View {
     let mistakeSet: MistakeNote
     @EnvironmentObject var dataManager: DataManager
     @State private var showingEditSheet = false
+    @State private var showingQuickReview = false
     
     var body: some View {
         List {
@@ -661,9 +787,38 @@ struct MistakeSetDetailView: View {
                 }
             }
         }
+        .toolbar {
+            if mistakeSet.isInReviewQueue {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingQuickReview = true
+                    } label: {
+                        Image(systemName: "rectangle.stack")
+                    }
+                    .accessibilityLabel("Quick Review".localized())
+                }
+            }
+        }
         .sheet(isPresented: $showingEditSheet) {
             MistakeDetailEditView(mistakeSet: mistakeSet)
                 .adaptiveSheet()
+        }
+        .fullScreenCover(isPresented: $showingQuickReview) {
+            NavigationStack {
+                FlashcardStudyView(filter: .single(mistakeSet))
+                    .environmentObject(dataManager)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button {
+                                showingQuickReview = false
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .accessibilityLabel("Close".localized())
+                        }
+                    }
+            }
         }
     }
     

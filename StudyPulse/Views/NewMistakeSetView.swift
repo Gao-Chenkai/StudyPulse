@@ -62,11 +62,20 @@ struct NewMistakeSetView: View {
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
 
+    /// SRS opt-in 开关，新错题默认入队
+    @State private var reviewEnabled: Bool = true
+
     /// Default empty-state initializer used by the app and previews that
     /// don't need to seed the form.
-    init() {}
+   init() {}
 
-    /// Initialiser that seeds the editable fields with sample content.
+    /// Convenience init that seeds the form with Siri-provided values.
+    init(presetSubject: String, presetTitle: String) {
+        self._selectedSubject = State(initialValue: presetSubject)
+        self._editedTitle = State(initialValue: presetTitle)
+    }
+
+   /// Initialiser that seeds the editable fields with sample content.
     /// Used by the `#Preview` to demonstrate the editor + live preview
     /// without forcing the developer to type in the canvas first.
     init(sampleMistake: SampleMistake) {
@@ -132,21 +141,31 @@ private extension NewMistakeSetView {
                 TextField("Title".localized(), text: $editedTitle)
                     .multilineTextAlignment(.trailing)
             }
-            
+
             Picker("Subject".localized(), selection: $selectedSubject) {
                 Text("Select".localized()).tag("")
                 ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
                 }
             }
-            
+
             HStack {
                 Text("Source".localized())
                 TextField("Source".localized(), text: $editedSource)
                     .multilineTextAlignment(.trailing)
             }
-            
+
             DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
+
+            // SRS opt-in 开关
+            Toggle(isOn: $reviewEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Spaced Repetition".localized())
+                    Text("Auto-schedule reviews using SM-2 algorithm".localized())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
     
@@ -159,10 +178,35 @@ private extension NewMistakeSetView {
             }
             .pickerStyle(.segmented)
 
-            MarkdownEditorView(
-                text: currentBinding,
-                placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-            )
+            // 用 switch + 直接 binding，绑定到对应 State；
+            // .id(selectedSection) 强制 SwiftUI 在切换栏目时重建 MarkdownTextEditor
+            // 内部持有的 UITextView，避免计算属性 binding 在 UIViewRepresentable
+            // 包裹层中无法正确切换 state 的问题。
+            Group {
+                switch selectedSection {
+                case .question:
+                    MarkdownEditorView(
+                        text: $editedOriginalQuestion,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .reason:
+                    MarkdownEditorView(
+                        text: $editedErrorReason,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .wrong:
+                    MarkdownEditorView(
+                        text: $editedWrongSolution,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .correct:
+                    MarkdownEditorView(
+                        text: $editedCorrectSolution,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                }
+            }
+            .id(selectedSection)
             .frame(minHeight: 620)
         }
     }
@@ -302,9 +346,15 @@ private extension NewMistakeSetView {
             questionImages: questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
             reasonImages: reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
             wrongSolutionImages: wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+            correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
+            reviewState: reviewEnabled ? .initial() : nil
         )
         dataManager.addMistake(newMistake)
+
+        // 调度 SRS 复习通知
+        if reviewEnabled {
+            SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+        }
     }
 }
 
@@ -526,4 +576,3 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
         }
     }
 }
-

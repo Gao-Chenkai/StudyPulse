@@ -404,7 +404,7 @@ Apple 框架：SwiftUI、Charts、Vision、EventKit、UserNotifications、Health
 xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-可用 scheme：StudyPulse、MarkdownUI、WSOnBoarding。可用配置：Debug、Release。
+可用 scheme：StudyPulse、MarkdownUI。可用配置：Debug、Release。
 
 ---
 
@@ -465,6 +465,7 @@ AI 代理在本仓库工作时遵循以下规则：
 ## 20. 变更记录
 
 近期变更（给 Agent 参考）：
+- 移除 WSOnBoarding 依赖，OnBoarding 改为原生 iOS 26 风格：新增 Views/OnBoarding/OnboardingConfig.swift（数据模型）+ OnboardingView.swift（TabView 分页 + 渐变背景 + 玻璃质感卡片，iOS 26+ 使用 `glassEffect`、老版本回退到 `.regularMaterial`），VersionedWelcomeModifier 改用 OnboardingView，project.pbxproj 移除 WSOnBoarding 包引用与 Link 阶段配置。
 - 接入 StudyPulseWidgetExtension 目标 + 三个小组件（ExamWidget / TrendWidget / HRVWidget）及其 *WidgetData.swift / *WidgetSyncManager.swift，每个 widget 完整本地化 en/zh-Hans/zh-Hant/ja/ko。
 - 新增 HealthKit 扩展：BodyStatus（心率 / 呼吸率 / 深睡+REM / 锻炼）、HealthHistory（DailyHealthSnapshot）、HealthHistoryStore（30 天滚动持久化 ~/Documents/health_history.json）、StudyReadinessAlgorithm（5 强度 × 5 重点）；详见 AlgorithmIntroduction.md。
 - 新增 Log.swift（LogLevel / LogEntry / LogStore，5000 条上限，NSLock 线程安全）+ LogDocument（FileDocument）+ DataManagementSettingsView 的 Export Log 按钮，统一 os.Logger + 内存双写日志。

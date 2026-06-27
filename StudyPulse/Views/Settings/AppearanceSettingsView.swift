@@ -7,6 +7,7 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
 
   var body: some View {
          List {
@@ -15,7 +16,7 @@ struct AppearanceSettingsView: View {
                      .listRowInsets(EdgeInsets())
                      .listRowBackground(Color.clear)
              }
- 
+
                 // Language & Theme
                 Section {
                     NavigationLink(destination: PreferencesView()) {
@@ -28,6 +29,21 @@ struct AppearanceSettingsView: View {
                     NavigationLink(destination: HomeLayoutSettingsView()) {
                         Label("Home Layout".localized(), systemImage: "rectangle.3.group")
                     }
+                }
+
+                // Chart Type
+                Section {
+                    NavigationLink(destination: ChartTypeSettingsView()) {
+                        HStack {
+                            Label("Chart Type".localized(), systemImage: "chart.xyaxis.line")
+                            Spacer()
+                            Text(envManager.preferences.chartType.localizedDisplayName)
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } footer: {
+                    Text("Choose how grades are visualized: line, bar, pie, scatter, or heatmap.".localized())
                 }
 
                 // Widget

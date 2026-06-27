@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import WSOnBoarding
 import UserNotifications
 import WidgetKit
 import os
@@ -118,6 +117,8 @@ struct StudyPulseApp: App {
                         )
                         TrendWidgetSyncManager.syncTrend(grades: dataManager.grades, subjects: dataManager.subjects)
                         HRVWidgetSyncManager.syncHRV(from: hrvManager)
+                        // 同步 SRS 复习通知（错题已 opt-in 但尚未到期的）
+                        SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
                         Task { await hrvManager.refreshBodyStatus() }
                     }
                 }

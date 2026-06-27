@@ -1,10 +1,9 @@
 //
-//  QASettingsView.swift
+//  ContributionSettingsView.swift
 //  StudyPulse
 //
-//  设置页 - 常见问题 (FAQ)
-//  内容从 FAQ.json 加载,使用 List + DisclosureGroup 展开模式呈现。
-//  支持 .searchable() 全文搜索与匹配高亮。
+//  设置页 - 贡献指南 (Contribution Guide)
+//  内容从 CONTRIBUTING.json 加载,使用 List + DisclosureGroup 展开模式呈现。
 //
 
 import SwiftUI
@@ -12,43 +11,45 @@ import SwiftStreamingMarkdown
 
 // MARK: - 数据模型 (Codable)
 
-/// FAQ 顶层文档结构
-struct FAQDocument: Codable {
+/// 贡献指南顶层文档结构
+struct ContributionDocument: Codable {
     let version: String
     let lastUpdated: String
     let title: String
     let subtitle: String
-    let categories: [FAQCategory]
+    let repository: String
+    let license: String
+    let welcome: String
+    let sections: [ContributionSection]
 }
 
-/// FAQ 分类
-struct FAQCategory: Codable, Identifiable, Hashable {
+/// 贡献指南章节
+struct ContributionSection: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let icon: String
-    let items: [FAQItem]
+    let items: [ContributionItem]
 }
 
-/// FAQ 单条问答
-struct FAQItem: Codable, Identifiable, Hashable {
+/// 贡献指南单条目
+struct ContributionItem: Codable, Identifiable, Hashable {
     let id: String
     let icon: String?
-    let question: String
-    let answer: String
+    let title: String
+    let content: String
 }
 
 // MARK: - 加载器
 
-/// 负责从 Bundle / 备用路径加载并解析 FAQ.json
-enum FAQLoader {
-    /// 加载 FAQ 内容,优先从主 Bundle 读取,缺失时回退到项目根目录
+/// 负责从 Bundle / 备用路径加载并解析 CONTRIBUTING.json
+enum ContributionLoader {
     @MainActor
-    static func load() async -> Result<FAQDocument, Error> {
+    static func load() async -> Result<ContributionDocument, Error> {
         // 1. 主 Bundle
-        if let url = Bundle.main.url(forResource: "FAQ", withExtension: "json") {
+        if let url = Bundle.main.url(forResource: "CONTRIBUTING", withExtension: "json") {
             do {
                 let data = try Data(contentsOf: url)
-                let doc = try JSONDecoder().decode(FAQDocument.self, from: data)
+                let doc = try JSONDecoder().decode(ContributionDocument.self, from: data)
                 return .success(doc)
             } catch {
                 return .failure(error)
@@ -56,43 +57,43 @@ enum FAQLoader {
         }
         // 2. 项目根目录(开发态回退)
         let candidates = [
-            "/Users/chenkaigao/Documents/Program/Swift/StudyPulse/FAQ.json"
+            "/Users/chenkaigao/Documents/Program/Swift/StudyPulse/CONTRIBUTING.json"
         ]
         for path in candidates {
             if FileManager.default.fileExists(atPath: path) {
                 do {
                     let data = try Data(contentsOf: URL(fileURLWithPath: path))
-                    let doc = try JSONDecoder().decode(FAQDocument.self, from: data)
+                    let doc = try JSONDecoder().decode(ContributionDocument.self, from: data)
                     return .success(doc)
                 } catch {
                     return .failure(error)
                 }
             }
         }
-        return .failure(FAQLoadError.fileNotFound)
+        return .failure(ContributionLoadError.fileNotFound)
     }
 }
 
-private enum FAQLoadError: LocalizedError {
+private enum ContributionLoadError: LocalizedError {
     case fileNotFound
     var errorDescription: String? {
         switch self {
-        case .fileNotFound: return "FAQ.json was not found in the app bundle."
+        case .fileNotFound: return "CONTRIBUTING.json was not found in the app bundle."
         }
     }
 }
 
 // MARK: - 主视图
 
-struct QASettingsView: View {
-    @State private var document: FAQDocument? = nil
+struct ContributionSettingsView: View {
+    @State private var document: ContributionDocument? = nil
     @State private var loadError: String? = nil
     @State private var searchText: String = ""
 
     var body: some View {
         Group {
             if let document {
-                faqList(document: document)
+                contentList(document: document)
             } else if let loadError {
                 errorView(message: loadError)
             } else {
@@ -100,27 +101,27 @@ struct QASettingsView: View {
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("FAQ".localized())
+        .navigationTitle("Contribution".localized())
         .navigationBarTitleDisplayMode(.inline)
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search FAQ".localized()
+            prompt: "Search Guide".localized()
         )
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
         .task {
-            await loadFAQ()
+            await loadDoc()
         }
     }
 
-    // MARK: 列表
+    // MARK: 内容列表
 
     @ViewBuilder
-    private func faqList(document: FAQDocument) -> some View {
-        let categories = filteredCategories(in: document)
+    private func contentList(document: ContributionDocument) -> some View {
+        let sections = filteredSections(in: document)
         let isSearching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let totalMatched = categories.reduce(0) { $0 + $1.items.count }
+        let totalMatched = sections.reduce(0) { $0 + $1.items.count }
 
         List {
             Section {
@@ -129,33 +130,55 @@ struct QASettingsView: View {
 
             if isSearching {
                 Section {
-                    searchStatusBar(matched: totalMatched)
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.caption)
+                        Text("\(totalMatched) result\(totalMatched == 1 ? "" : "s") for \"\(searchText)\"")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                // 欢迎语区块
+                Section {
+                    welcomeCard(text: document.welcome)
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
             }
 
-            if categories.isEmpty && isSearching {
+            if sections.isEmpty && isSearching {
                 Section {
                     noResultsView(query: searchText)
                         .listRowInsets(EdgeInsets(top: 32, leading: 16, bottom: 32, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
             } else {
-                ForEach(categories) { category in
+                ForEach(sections) { section in
                     Section {
-                        ForEach(category.items) { item in
-                            QARow(item: item, searchQuery: searchText)
+                        ForEach(section.items) { item in
+                            ContributionRow(item: item, searchQuery: searchText)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         }
                     } header: {
-                        categoryHeader(category: category)
+                        sectionHeader(section: section)
                     }
                 }
             }
 
             Section {
-                footerNote
+                footerNote(document: document)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
                     .listRowBackground(Color.clear)
             }
@@ -166,35 +189,35 @@ struct QASettingsView: View {
 
     // MARK: 过滤逻辑
 
-    private func filteredCategories(in doc: FAQDocument) -> [FAQCategory] {
+    private func filteredSections(in doc: ContributionDocument) -> [ContributionSection] {
         let raw = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return doc.categories }
+        guard !raw.isEmpty else { return doc.sections }
         let query = raw.lowercased()
-        return doc.categories.compactMap { category in
-            let matched = category.items.filter { item in
-                item.question.lowercased().contains(query) ||
-                item.answer.lowercased().contains(query)
+        return doc.sections.compactMap { section in
+            let matched = section.items.filter { item in
+                item.title.lowercased().contains(query) ||
+                item.content.lowercased().contains(query)
             }
             guard !matched.isEmpty else { return nil }
-            return FAQCategory(
-                id: category.id,
-                title: category.title,
-                icon: category.icon,
+            return ContributionSection(
+                id: section.id,
+                title: section.title,
+                icon: section.icon,
                 items: matched
             )
         }
     }
 
-    // MARK: 头部卡片 (修复对齐 - 使用 listRowBackground 与 list 行边对齐)
+    // MARK: 头部卡片
 
-    private func headerCard(document: FAQDocument) -> some View {
+    private func headerCard(document: ContributionDocument) -> some View {
         VStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.blue.opacity(0.18))
-                Image(systemName: "questionmark.circle.fill")
+                    .fill(Color.purple.opacity(0.18))
+                Image(systemName: "hand.raised.fingers.spread.fill")
                     .font(.system(size: 56, weight: .regular))
-                    .foregroundColor(.blue)
+                    .foregroundColor(.purple)
             }
             .frame(width: 110, height: 110)
 
@@ -212,11 +235,11 @@ struct QASettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 14) {
-                metaItem(icon: "doc.text", text: "FAQ.json")
+                metaItem(icon: "doc.text", text: "CONTRIBUTING.json")
                 Divider().frame(height: 12)
                 metaItem(icon: "calendar", text: document.lastUpdated)
                 Divider().frame(height: 12)
-                metaItem(icon: "list.bullet.rectangle", text: "\(totalCount(of: document)) Q&A")
+                metaItem(icon: "doc.badge.gearshape", text: document.license)
             }
             .padding(.top, 4)
         }
@@ -230,6 +253,34 @@ struct QASettingsView: View {
         )
     }
 
+    // MARK: 欢迎语卡片
+
+    private func welcomeCard(text: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.purple)
+                Text("Welcome".localized())
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+            }
+            if text.contains("**") || text.contains("\n-") || text.contains("`") {
+                MarkdownView(text: text, config: .previewConfig)
+            } else {
+                Text(text)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.purple.opacity(0.08))
+        )
+    }
+
     private func metaItem(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
@@ -238,33 +289,6 @@ struct QASettingsView: View {
                 .font(.caption)
         }
         .foregroundColor(.secondary)
-    }
-
-    private func totalCount(of doc: FAQDocument) -> Int {
-        doc.categories.reduce(0) { $0 + $1.items.count }
-    }
-
-    // MARK: 搜索状态条
-
-    private func searchStatusBar(matched: Int) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.caption)
-            Text("\(matched) result\(matched == 1 ? "" : "s") for \"\(searchText)\"")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Spacer()
-            Button {
-                searchText = ""
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Clear search")
-        }
-        .padding(.vertical, 4)
     }
 
     // MARK: 无结果视图
@@ -276,7 +300,7 @@ struct QASettingsView: View {
                 .foregroundColor(.secondary)
             Text("No results found".localized())
                 .font(.headline)
-            Text("No FAQ item matches \"\(query)\".".localized())
+            Text("No contribution entry matches \"\(query)\".".localized())
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -292,17 +316,17 @@ struct QASettingsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: 分类头
+    // MARK: 章节头
 
-    private func categoryHeader(category: FAQCategory) -> some View {
+    private func sectionHeader(section: ContributionSection) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: category.icon)
+            Image(systemName: section.icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.blue)
-            Text(category.title)
+                .foregroundColor(.purple)
+            Text(section.title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.primary)
-            Text("(\(category.items.count))")
+            Text("(\(section.items.count))")
                 .font(.caption)
                 .foregroundColor(.secondary)
             Spacer()
@@ -315,7 +339,7 @@ struct QASettingsView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-            Text("Loading FAQ...".localized())
+            Text("Loading...".localized())
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -327,14 +351,14 @@ struct QASettingsView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
-            Text("FAQ Not Available".localized())
+            Text("Contribution Guide Not Available".localized())
                 .font(.headline)
             Text(message)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-            Text("Please add FAQ.json to the StudyPulse target in Xcode (Copy Bundle Resources).".localized())
+            Text("Please add CONTRIBUTING.json to the StudyPulse target in Xcode (Copy Bundle Resources).".localized())
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -345,29 +369,29 @@ struct QASettingsView: View {
 
     // MARK: 底部注释
 
-    private var footerNote: some View {
+    private func footerNote(document: ContributionDocument) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "info.circle")
+                Image(systemName: "link")
                     .font(.caption)
-                Text("FAQ content is stored in FAQ.json and shipped as a bundle resource.".localized())
+                Text("Repository: \(document.repository)")
                     .font(.caption)
             }
             .foregroundColor(.secondary)
             HStack(spacing: 6) {
-                Image(systemName: "envelope")
+                Image(systemName: "info.circle")
                     .font(.caption)
-                Text("Still have questions? Reach us via Settings → About → Feedback.".localized())
+                Text("Content stored in CONTRIBUTING.json and shipped as a bundle resource.".localized())
                     .font(.caption)
             }
             .foregroundColor(.secondary)
         }
     }
 
-    // MARK: 加载 FAQ
+    // MARK: 加载
 
-    private func loadFAQ() async {
-        let result = await FAQLoader.load()
+    private func loadDoc() async {
+        let result = await ContributionLoader.load()
         switch result {
         case .success(let doc):
             document = doc
@@ -377,59 +401,59 @@ struct QASettingsView: View {
     }
 }
 
-// MARK: - 单条问答行 (DisclosureGroup)
+// MARK: - 单条贡献条目行 (DisclosureGroup)
 
-struct QARow: View {
-    let item: FAQItem
+struct ContributionRow: View {
+    let item: ContributionItem
     var searchQuery: String = ""
     @State private var isExpanded = false
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
-            answerView
+            contentView
                 .padding(.top, 8)
                 .padding(.leading, 4)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.blue.opacity(0.12))
-                    Image(systemName: item.icon ?? "questionmark.circle")
+                        .fill(Color.purple.opacity(0.12))
+                    Image(systemName: item.icon ?? "chevron.right.circle")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.purple)
                 }
                 .frame(width: 30, height: 30)
 
-                highlightedQuestion
+                highlightedTitle
             }
         }
         .padding(.vertical, 6)
     }
 
-    /// 高亮问题文本中的搜索匹配
     @ViewBuilder
-    private var highlightedQuestion: some View {
+    private var highlightedTitle: some View {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            Text(item.question)
+            Text(item.title)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
-            highlightedText(item.question, query: trimmed)
+            highlightedText(item.title, query: trimmed)
                 .font(.system(size: 15, weight: .medium))
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// 用 AttributedString 高亮匹配子串
     private func highlightedText(_ text: String, query: String) -> Text {
         var attr = AttributedString(text)
+        let lowerQuery = query.lowercased()
+        // 在 AttributedString 上直接搜索(不依赖 NSRange 转换)
         var searchStart = attr.startIndex
         while searchStart < attr.endIndex,
-              let range = attr[searchStart..<attr.endIndex].range(of: query, options: .caseInsensitive) {
+              let range = attr[searchStart..<attr.endIndex].range(of: lowerQuery, options: .caseInsensitive) {
             attr[range].backgroundColor = .yellow.opacity(0.45)
             attr[range].foregroundColor = .primary
             searchStart = range.upperBound
@@ -437,15 +461,13 @@ struct QARow: View {
         return Text(attr)
     }
 
-    /// 答案渲染:行内 Markdown(`**bold**` / 列表 / `code`),借助 SwiftStreamingMarkdown
     @ViewBuilder
-    private var answerView: some View {
-        if item.answer.contains("**") || item.answer.contains("\n-") || item.answer.contains("`") {
-            // 含 Markdown 的答案
-            MarkdownView(text: item.answer, config: .previewConfig)
+    private var contentView: some View {
+        if item.content.contains("**") || item.content.contains("\n-") || item.content.contains("`") || item.content.contains("```") {
+            MarkdownView(text: item.content, config: .previewConfig)
                 .padding(.vertical, 4)
         } else {
-            Text(item.answer)
+            Text(item.content)
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -453,28 +475,8 @@ struct QARow: View {
     }
 }
 
-// MARK: - 辅助扩展
-
-private extension NSRange {
-    /// 将 NSRange 转换为 String 的 Range<String.Index>
-    func range(in text: String) -> Range<String.Index>? {
-        guard location != NSNotFound,
-              let utf16Start = text.utf16.index(text.utf16.startIndex,
-                                                 offsetBy: location,
-                                                 limitedBy: text.utf16.endIndex),
-              let utf16End = text.utf16.index(utf16Start,
-                                              offsetBy: length,
-                                              limitedBy: text.utf16.endIndex),
-              let start = String.Index(utf16Start, within: text),
-              let end = String.Index(utf16End, within: text) else {
-            return nil
-        }
-        return start..<end
-    }
-}
-
 #Preview {
     NavigationStack {
-        QASettingsView()
+        ContributionSettingsView()
     }
 }

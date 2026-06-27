@@ -18,6 +18,8 @@ nonisolated struct AppPreferences: Codable {
     var appLanguage: String?
     /// 颜色主题选项
     var colorScheme: ColorSchemeOption = .system
+    /// 成绩趋势图表显示类型（折线/柱状/饼图/散点/热力）
+    var chartType: ChartType = .line
     
     // MARK: - 语言常量
     
@@ -85,6 +87,62 @@ nonisolated enum ColorSchemeOption: String, Codable, CaseIterable {
         case .system: nil
         case .light: .light
         case .dark: .dark
+        }
+    }
+}
+
+// MARK: - Chart Type (成绩趋势图表类型)
+
+/// 成绩趋势图表显示类型
+/// - line: 折线图（默认）
+/// - bar: 柱状图
+/// - pie: 饼图（按分数段占比展示）
+/// - scatter: 散点图
+/// - heatmap: 热力图（按日期-星期分布密度）
+/// - histogram: 频数直方图（按 20% 得分率分组统计次数）
+nonisolated enum ChartType: String, Codable, CaseIterable, Identifiable {
+    case line = "line"
+    case bar = "bar"
+    case pie = "pie"
+    case scatter = "scatter"
+    case heatmap = "heatmap"
+    case histogram = "histogram"
+
+    var id: String { rawValue }
+
+    /// SF Symbol 图标
+    var icon: String {
+        switch self {
+        case .line: "chart.xyaxis.line"
+        case .bar: "chart.bar.fill"
+        case .pie: "chart.pie.fill"
+        case .scatter: "chart.dots.scatter"
+        case .heatmap: "square.grid.4x3.fill"
+        case .histogram: "chart.bar.xaxis"
+        }
+    }
+
+    /// 本地化显示名称
+    @MainActor var localizedDisplayName: String {
+        switch self {
+        case .line: "Line Chart".localized()
+        case .bar: "Bar Chart".localized()
+        case .pie: "Pie Chart".localized()
+        case .scatter: "Scatter Plot".localized()
+        case .heatmap: "Heatmap".localized()
+        case .histogram: "Frequency Histogram".localized()
+        }
+    }
+
+    /// 本地化描述
+    @MainActor var localizedDescription: String {
+        switch self {
+        case .line: "Show score trend over time with connected points.".localized()
+        case .bar: "Show each grade as a separate bar.".localized()
+        case .pie: "Show distribution across score ranges.".localized()
+        case .scatter: "Show each grade as an independent dot.".localized()
+        case .heatmap: "Show grade density by weekday and week.".localized()
+        case .histogram: "Count how often scores fall into each 20% bucket.".localized()
         }
     }
 }

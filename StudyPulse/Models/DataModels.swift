@@ -124,11 +124,15 @@ nonisolated struct MistakeNote: Identifiable, Codable {
     var wrongSolutionImages: [Data]
     /// 正确解法图片
     var correctSolutionImages: [Data]
-    
+    /// 间隔重复（SRS）状态，nil = 未加入复习队列
+    /// Spaced repetition state; nil means not enrolled in the review queue.
+    var reviewState: ReviewState?
+
     init(title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
          questionImages: [Data] = [], reasonImages: [Data] = [],
-         wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = []) {
+         wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = [],
+         reviewState: ReviewState? = nil) {
         self.title = title
         self.subject = subject
         self.originalQuestion = originalQuestion
@@ -141,6 +145,7 @@ nonisolated struct MistakeNote: Identifiable, Codable {
         self.reasonImages = reasonImages
         self.wrongSolutionImages = wrongSolutionImages
         self.correctSolutionImages = correctSolutionImages
+        self.reviewState = reviewState
     }
 }
 

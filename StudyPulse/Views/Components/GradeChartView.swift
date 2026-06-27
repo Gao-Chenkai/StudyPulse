@@ -12,6 +12,7 @@ struct GradeChartView: View {
     let grades: [Grade]
     let subject: String
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var filteredGrades: [Grade] {
@@ -28,19 +29,11 @@ struct GradeChartView: View {
 
     var body: some View {
         if !filteredGrades.isEmpty {
-            Chart(filteredGrades) { grade in
-                LineMark(
-                    x: .value("Date", grade.date),
-                    y: .value("Score", grade.score)
-                )
-                .foregroundStyle(.blue)
-
-                PointMark(
-                    x: .value("Date", grade.date),
-                    y: .value("Score", grade.score)
-                )
-                .foregroundStyle(scoreColor(grade.score, fullScore: fullScore))
-            }
+            TrendChartView(
+                grades: filteredGrades,
+                fullScore: fullScore,
+                chartType: envManager.preferences.chartType
+            )
             .frame(height: chartHeight)
             .padding()
         } else {

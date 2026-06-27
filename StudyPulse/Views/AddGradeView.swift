@@ -33,10 +33,24 @@ struct AddGradeView: View {
         var ranking: Int? = 1
     }
     
-    @State private var subjectScores: [SubjectScore] = []
-    @StateObject private var subjectInfo = SubjectInfo()
-    
-    // 可用科目
+   @State private var subjectScores: [SubjectScore] = []
+   @StateObject private var subjectInfo = SubjectInfo()
+
+   // MARK: - Pre-fill from App Intent
+
+    /// Default initializer (required since we added a custom init).
+    init() {}
+
+   /// Convenience init that seeds the form with Siri-provided values.
+   init(presetSubject: String, presetScore: Double, presetExamName: String? = nil) {
+        self._selectedSingleSubject = State(initialValue: presetSubject)
+        self._examName = State(initialValue: presetExamName ?? "")
+        self._subjectScores = State(initialValue: [
+            SubjectScore(subject: presetSubject, score: presetScore)
+        ])
+    }
+
+   // 可用科目
     var availableSubjects: [String] {
         dataManager.subjects.filter {
             $0.enabled && !$0.name.starts(with: "GROUP:")

@@ -39,13 +39,36 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject var dataManager: DataManager
+    @ObservedObject private var hrvManager = HealthKitManager.shared
     /// 异步加载的头像数据，避免 body 中同步读文件
     @State private var avatarData: Data? = nil
     /// 分阶段渲染计数器，避免一次性构建所有复杂子视图
     @State private var renderPhase = 0
+    /// 闪卡复习 fullScreenCover 状态
+    @State private var showingFlashcards = false
+
+    // MARK: - 学习报告图片导出状态
+    /// 选项 sheet
+    @State private var showingReportOptions = false
+    /// 渲染进度
+    @State private var isRenderingReport = false
+    /// 已渲染的整页报告图片（用于分享）
+    @State private var reportImage: UIImage?
+    /// 已渲染的单卡图片（用于分享）
+    @State private var singleCardImage: UIImage?
+    @State private var singleCardTitle: String = ""
+    /// 分享 sheet 控制
+    @State private var showingShareSheet = false
+    /// 错误提示
+    @State private var reportErrorMessage: String?
 
     private var isRegularWidth: Bool {
         sizeClass == .regular || isIPad
+    }
+
+    /// SRS 队列总览
+    var srsOverview: SRSOverview {
+        SRSAlgorithm.overview(from: dataManager.mistakeSets)
     }
 
     var body: some View {
@@ -70,7 +93,73 @@ struct HomeView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard".localized())
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingReportOptions = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .accessibilityLabel("Share Report".localized())
+                    .disabled(isRenderingReport)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .fullScreenCover(isPresented: $showingFlashcards) {
+                NavigationStack {
+                    FlashcardStudyView()
+                        .environmentObject(dataManager)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button {
+                                    showingFlashcards = false
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .accessibilityLabel("Close".localized())
+                            }
+                        }
+                }
+            }
+            .sheet(isPresented: $showingReportOptions) {
+                ReportOptionsSheet { options in
+                    generateReport(options: options)
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                if let image = reportImage {
+                    ReportShareSheet(items: [image], subject: "StudyPulse Report")
+                } else if let image = singleCardImage {
+                    ReportShareSheet(items: [image], subject: singleCardTitle)
+                }
+            }
+            .alert(
+                "Report export failed".localized(),
+                isPresented: Binding(
+                    get: { reportErrorMessage != nil },
+                    set: { if !$0 { reportErrorMessage = nil } }
+                )
+            ) {
+                Button("OK".localized(), role: .cancel) { }
+            } message: {
+                Text(reportErrorMessage ?? "")
+            }
+            .overlay {
+                if isRenderingReport {
+                    ZStack {
+                        Color.black.opacity(0.15)
+                        ProgressView()
+                            .scaleEffect(1.4)
+                            .padding(24)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    }
+                    .transition(.opacity)
+                    .zIndex(99)
+                }
+            }
         }
         .task {
             // 分三帧渲染：欢迎区 → 统计卡 → 动态卡片（含 Charts）
@@ -107,31 +196,57 @@ struct HomeView: View {
     /// 根据卡片类型返回对应视图；数据不足时自动隐藏
     @ViewBuilder
     private func cardView(for type: HomeCardType) -> some View {
+        // 每个分支都用 `.contextMenu` 包一层，支持长按分享该卡片。
         switch type {
         case .hrvStatus:
             HRVStatusCard()
+                .contextMenu { shareCardMenu(for: type) }
         case .unregisteredExamsReminder:
             if !unregisteredExams.isEmpty {
                 UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+                    .contextMenu { shareCardMenu(for: type) }
+            }
+        case .flashcardReview:
+            if srsOverview.dueCount > 0 {
+                FlashcardReviewHomeCard(overview: srsOverview) {
+                    showingFlashcards = true
+                }
+                .contextMenu { shareCardMenu(for: type) }
             }
         case .quickActions:
             QuickActionsCard()
+                .contextMenu { shareCardMenu(for: type) }
         case .studySuggestions:
             StudySuggestionsCard()
+                .contextMenu { shareCardMenu(for: type) }
         case .trendChart:
             if !recentGrades.isEmpty {
                 ChartSectionView()
+                    .contextMenu { shareCardMenu(for: type) }
             }
         case .upcomingExams:
             if !upcomingExams.isEmpty {
                 UpcomingExamsSection()
+                    .contextMenu { shareCardMenu(for: type) }
             }
         case .dailyQuote:
             DailyQuoteCard(quote: dailyQuote)
+                .contextMenu { shareCardMenu(for: type) }
         case .recentGrades:
             if !recentGrades.isEmpty {
                 RecentGradesSection()
+                    .contextMenu { shareCardMenu(for: type) }
             }
+        }
+    }
+
+    /// 单卡片长按分享：contextMenu 内显示的按钮。
+    @ViewBuilder
+    private func shareCardMenu(for type: HomeCardType) -> some View {
+        Button {
+            Task { await renderAndShareSingleCard(type: type) }
+        } label: {
+            Label("Share Report".localized(), systemImage: "square.and.arrow.up")
         }
     }
     
@@ -159,7 +274,7 @@ struct HomeView: View {
             guard exam.examDate < threeDaysAgo && exam.examDate >= sevenDaysAgo else {
                 return false
             }
-            
+
             let hasGrade = dataManager.grades.contains { grade in
                 grade.subject == exam.subject &&
                 grade.examName == exam.examName &&
@@ -167,6 +282,132 @@ struct HomeView: View {
             }
             return !hasGrade
         }.sorted { $0.examDate < $1.examDate }
+    }
+
+    // MARK: - 学习报告图片导出
+
+    /// 渲染并分享整页学习报告。
+    /// Render the full report and present the share sheet.
+    @MainActor
+    private func generateReport(options: ReportOptions) {
+        isRenderingReport = true
+        Task {
+            defer { isRenderingReport = false }
+            let report = StudyReport.make(
+                from: dataManager,
+                hrvManager: hrvManager,
+                start: options.startDate,
+                end: options.endDate
+            )
+            let view = ReportContentView(report: report)
+            guard let image = ReportRenderer.render(view) else {
+                reportErrorMessage = "Report export failed".localized()
+                Log.record(.error, category: "Export", message: "整页报告渲染失败 / Full report render returned nil")
+                return
+            }
+            // PNG 始终可用；JPEG 编码在外部保存时再处理。
+            self.reportImage = image
+            self.singleCardImage = nil
+            // 短暂延迟，确保 isRendering 状态先变化（让 ProgressView 闪一下再消失）
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            self.showingShareSheet = true
+            Log.record(.info, category: "Export", message: "整页报告已生成 / Full report generated: size=\(Int(image.size.width))x\(Int(image.size.height))")
+        }
+    }
+
+    /// 渲染并分享单张 Home 卡片。
+    /// Render a single Home card and present the share sheet.
+    @MainActor
+    private func renderAndShareSingleCard(type: HomeCardType) async {
+        isRenderingReport = true
+        defer { isRenderingReport = false }
+        let snapshot = StudyReport.make(
+            from: dataManager,
+            hrvManager: hrvManager,
+            start: Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date(),
+            end: Date()
+        )
+        let title = cardShareTitle(for: type)
+        let view = cardShareView(for: type, report: snapshot)
+        guard let image = ReportRenderer.render(view) else {
+            reportErrorMessage = "Report export failed".localized()
+            Log.record(.error, category: "Export", message: "单卡渲染失败 / Single card render returned nil: type=\(type.rawValue)")
+            return
+        }
+        self.singleCardImage = image
+        self.singleCardTitle = title
+        self.reportImage = nil
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        self.showingShareSheet = true
+        Log.record(.info, category: "Export", message: "单卡已生成 / Single card generated: type=\(type.rawValue) size=\(Int(image.size.width))x\(Int(image.size.height))")
+    }
+
+    /// 单卡分享时使用的本地化标题。
+    private func cardShareTitle(for type: HomeCardType) -> String {
+        switch type {
+        case .hrvStatus: return "Recovery Radar".localized()
+        case .unregisteredExamsReminder: return "Pending Grades".localized()
+        case .flashcardReview: return "Flashcard Review".localized()
+        case .quickActions: return "Quick Actions".localized()
+        case .studySuggestions: return "Study Suggestions".localized()
+        case .trendChart: return "Trend Chart".localized()
+        case .upcomingExams: return "Upcoming Exams".localized()
+        case .dailyQuote: return "Daily Quote".localized()
+        case .recentGrades: return "Recent Grades".localized()
+        }
+    }
+
+    /// 把单卡渲染成 PDF 友好的 SwiftUI 视图。
+    /// Wrap the home card into a self-contained view ready for rendering.
+    @ViewBuilder
+    private func cardShareView(for type: HomeCardType, report: StudyReport) -> some View {
+        // 报告内容卡片固定 612pt 宽，上下加 padding 让小卡片也居中。
+        // 不同卡片自身可能依赖 @EnvironmentObject / @ObservedObject，
+        // 这里直接复用 HomeView 的环境上下文。
+        VStack {
+            Group {
+                switch type {
+                case .hrvStatus: HRVStatusCard()
+                case .unregisteredExamsReminder:
+                    if !unregisteredExams.isEmpty {
+                        UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                case .flashcardReview:
+                    if srsOverview.dueCount > 0 {
+                        FlashcardReviewHomeCard(overview: srsOverview) {}
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                case .quickActions: QuickActionsCard()
+                case .studySuggestions: StudySuggestionsCard()
+                case .trendChart:
+                    if !recentGrades.isEmpty {
+                        ChartSectionView()
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                case .upcomingExams:
+                    if !upcomingExams.isEmpty {
+                        UpcomingExamsSection()
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                case .dailyQuote: DailyQuoteCard(quote: dailyQuote)
+                case .recentGrades:
+                    if !recentGrades.isEmpty {
+                        RecentGradesSection()
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(16)
+        .frame(width: ReportRenderer.defaultWidth, alignment: .topLeading)
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -900,6 +1141,7 @@ enum SubjectSelectionRule {
 /// 单科目趋势图表，用户通过 Menu 选择聚焦规则
 struct ChartSectionView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     /// 异步加载的头像数据，避免 body 中同步读文件
     @State private var avatarData: Data? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -965,34 +1207,11 @@ struct ChartSectionView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    Chart(grades.sorted(by: { $0.date < $1.date })) { grade in
-                        LineMark(
-                            x: .value("Date", grade.date),
-                            y: .value("Score", grade.score)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color(.systemBlue), Color(.cyan)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .symbol(by: .value("Score", grade.score))
-                        
-                        PointMark(
-                            x: .value("Date", grade.date),
-                            y: .value("Score", grade.score)
-                        )
-                        .symbol {
-                            Circle()
-                                .fill(Color(.secondarySystemGroupedBackground))
-                                .frame(width: 10, height: 10)
-                                .overlay {
-                                    Circle()
-                                        .stroke(scoreColor(grade.score), lineWidth: 2)
-                                }
-                        }
-                    }
+                    TrendChartView(
+                        grades: grades.sorted(by: { $0.date < $1.date }),
+                        fullScore: dataManager.fullScore(for: subject),
+                        chartType: envManager.preferences.chartType
+                    )
                     .frame(height: chartHeight)
                     .opacity(animateChart ? 1 : 0)
                     .offset(y: animateChart ? 0 : 20)
@@ -1626,6 +1845,91 @@ struct PriorityIndicator: View {
         case .medium: return .orange
         case .low: return .green
         }
+    }
+}
+
+// MARK: - Flashcard Review Home Card
+
+/// 主页「待复习」卡片：显示到期错题数量，引导用户进入闪卡模式
+struct FlashcardReviewHomeCard: View {
+    let overview: SRSOverview
+    let onStart: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "rectangle.stack.fill")
+                        .foregroundStyle(LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .font(.title3)
+                    Text("Flashcard Review".localized())
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Spacer()
+                if overview.dueCount > 0 {
+                    Text("\(overview.dueCount)")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.red))
+                }
+            }
+
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(overview.dueCount)")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("Due Today".localized())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Divider().frame(height: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(overview.upcomingCount)")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("Upcoming".localized())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            Button {
+                onStart()
+            } label: {
+                Label("Start Review".localized(), systemImage: "play.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.purple)
+        }
+        .padding(20)
+        .background(
+            LinearGradient(
+                colors: [Color.purple.opacity(0.12), Color.blue.opacity(0.06)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(LinearGradient(
+                    colors: [.purple.opacity(0.30), .blue.opacity(0.18)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 }
 

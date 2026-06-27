@@ -74,10 +74,13 @@ class DataManager: ObservableObject {
     @Published var examSets: [Exam] = []
     /// 用户资料
     @Published var profile: UserProfile = UserProfile()
-    /// 多科目综合考试列表
-    @Published var comprehensiveExamSets: [comprehensiveExam] = []
-    
-    /// 异步加载完成后置为 true。视图与 widget 同步可据此判断数据是否就绪。
+   /// 多科目综合考试列表
+   @Published var comprehensiveExamSets: [comprehensiveExam] = []
+
+    /// Set by open-app App Intents to trigger pre-filled sheets in ContentView.
+    @Published var pendingIntentAction: IntentAction? = nil
+
+   /// 异步加载完成后置为 true。视图与 widget 同步可据此判断数据是否就绪。
     @Published private(set) var isReady: Bool = false
 
     init() {
@@ -170,6 +173,9 @@ class DataManager: ObservableObject {
 
             Log.data.info("asyncInit 完成 / asyncInit done; grades=\(self.grades.count, privacy: .public) mistakes=\(self.mistakeSets.count, privacy: .public) exams=\(self.examSets.count, privacy: .public) compExams=\(self.comprehensiveExamSets.count, privacy: .public) subjects=\(self.subjects.count, privacy: .public)")
             Log.record(.info, category: "Data", message: "asyncInit 完成 / asyncInit done; grades=\(self.grades.count) mistakes=\(self.mistakeSets.count) exams=\(self.examSets.count) compExams=\(self.comprehensiveExamSets.count) subjects=\(self.subjects.count)")
+
+            // 启动时同步 SRS 复习通知
+            SRSReviewNotifications.shared.rescheduleAll(mistakes: self.mistakeSets)
 
             // 启动时同步考试与趋势数据到 Widget（在主线程上，因为 @MainActor 标注的 widget sync）
             WidgetDataSyncManager.syncUpcomingExams(
@@ -538,6 +544,8 @@ class DataManager: ObservableObject {
 
     func deleteMistake(_ mistake: MistakeNote) {
         if let index = mistakeSets.firstIndex(where: { $0.id == mistake.id }) {
+            // 取消该错题的 SRS 复习通知
+            SRSReviewNotifications.shared.cancel(for: mistake.id)
             mistakeSets.remove(at: index)
             Log.data.info("删除错题 / Deleted mistake: title=\(mistake.title, privacy: .public)")
             Log.record(.info, category: "Data", message: "删除错题 / Deleted mistake: title=\(mistake.title)")
@@ -556,6 +564,20 @@ class DataManager: ObservableObject {
         } else {
             Log.data.warning("未找到要更新的错题 / Mistake to update not found: id=\(updatedMistake.id.uuidString, privacy: .public)")
         }
+    }
+
+    /// 更新某张错题的 SRS 复习状态（不修改其它字段）
+    /// - Parameters:
+    ///   - mistakeId: 错题 UUID
+    ///   - newState: 新复习状态，传入 nil 表示退出队列
+    func updateMistakeReviewState(_ mistakeId: UUID, newState: ReviewState?) {
+        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
+            Log.data.warning("未找到要更新 SRS 的错题 / Mistake to update SRS not found: id=\(mistakeId.uuidString, privacy: .public)")
+            return
+        }
+        mistakeSets[index].reviewState = newState
+        saveMistakeSets()
+        Log.data.info("更新错题 SRS 状态 / Updated mistake SRS state: id=\(mistakeId.uuidString, privacy: .public) enrolled=\(newState != nil, privacy: .public)")
     }
 
     // 新增：保存考试集合 / Save exam sets

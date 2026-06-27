@@ -13,18 +13,20 @@ import Foundation
 enum HomeCardType: String, CaseIterable, Codable {
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
+    case flashcardReview = "flashcardReview"
     case quickActions = "quickActions"
     case studySuggestions = "studySuggestions"
     case trendChart = "trendChart"
     case upcomingExams = "upcomingExams"
     case dailyQuote = "dailyQuote"
     case recentGrades = "recentGrades"
-    
+
     /// 本地化显示名称
     var displayName: String {
         switch self {
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
+        case .flashcardReview: return "Flashcard Review".localized()
         case .quickActions: return "Quick Actions".localized()
         case .studySuggestions: return "Study Suggestions".localized()
         case .trendChart: return "Trend Chart".localized()
@@ -33,12 +35,13 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .recentGrades: return "Recent Grades".localized()
         }
     }
-    
+
     /// SF Symbol 图标
     var icon: String {
         switch self {
         case .hrvStatus: return "heart.text.square"
         case .unregisteredExamsReminder: return "exclamationmark.bubble.fill"
+        case .flashcardReview: return "rectangle.stack.fill"
         case .quickActions: return "bolt.fill"
         case .studySuggestions: return "lightbulb.fill"
         case .trendChart: return "chart.line.uptrend.xyaxis"
@@ -55,7 +58,7 @@ enum HomeCardType: String, CaseIterable, Codable {
 struct HomeCardItem: Identifiable, Codable, Equatable {
     var type: HomeCardType
     var enabled: Bool
-    
+
     var id: String { type.rawValue }
 }
 
@@ -64,11 +67,12 @@ struct HomeCardItem: Identifiable, Codable, Equatable {
 /// 主页布局偏好：控制卡片的显示顺序和是否显示
 struct HomeLayoutPreference: Codable, Equatable {
     var items: [HomeCardItem]
-    
+
     /// 默认配置：全部启用，标准顺序
     static let `default` = HomeLayoutPreference(items: [
         HomeCardItem(type: .hrvStatus, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
+        HomeCardItem(type: .flashcardReview, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),
         HomeCardItem(type: .studySuggestions, enabled: true),
         HomeCardItem(type: .trendChart, enabled: true),

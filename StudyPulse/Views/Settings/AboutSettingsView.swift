@@ -8,6 +8,7 @@ import SwiftUI
 struct AboutSettingsView: View {
     @State private var showingAbout = false
     @State private var showingCopyright = false
+    @State private var showingUserAgreement = false
 
   var body: some View {
          List {
@@ -16,7 +17,7 @@ struct AboutSettingsView: View {
                      .listRowInsets(EdgeInsets())
                      .listRowBackground(Color.clear)
              }
- 
+
                 Section {
                     Button {
                         showingAbout = true
@@ -32,6 +33,16 @@ struct AboutSettingsView: View {
                         Label("Copyright & License".localized(), systemImage: "checkmark.shield")
                     }
                 }
+
+                Section {
+                    Button {
+                        showingUserAgreement = true
+                    } label: {
+                        Label("User Agreement".localized(), systemImage: "doc.text")
+                    }
+                } footer: {
+                    Text("Please read the terms carefully before using StudyPulse.".localized())
+                }
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))
@@ -43,6 +54,10 @@ struct AboutSettingsView: View {
         }
         .sheet(isPresented: $showingCopyright) {
             CopyrightView()
+                .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingUserAgreement) {
+            UserAgreementView()
                 .adaptiveSheet()
         }
     }

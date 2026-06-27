@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2709FD172FEFB8F900FAB5CE /* FAQ.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709FD152FEFB8D000FAB5CE /* FAQ.json */; };
 		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
 		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
 		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
@@ -19,6 +20,7 @@
 		278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* DESIGN.md */; };
 		278D45FC2FE7BA6A0073EB87 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FB2FE7BA6A0073EB87 /* README.md */; };
 		278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* SPEC.md */; };
+		27A00001FEFB900000FAB5C0 /* CONTRIBUTING.json in Resources */ = {isa = PBXBuildFile; fileRef = 27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */; };
 		27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */; };
 		27BF505B2FE6D1E50038966E /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* SPEC.md */; };
 		27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505C2FE6D1F10038966E /* AGENTS.md */; };
@@ -54,6 +56,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2709FD152FEFB8D000FAB5CE /* FAQ.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = FAQ.json; sourceTree = "<group>"; };
 		2743C83E2F6EAEA000CC1EED /* StudyPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudyPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		276CC94F2FE6CEE7009F126C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		276CC9512FE6CEF3009F126C /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
@@ -70,6 +73,7 @@
 		278D45F92FE7BA650073EB87 /* DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DESIGN.md; sourceTree = "<group>"; };
 		278D45FB2FE7BA6A0073EB87 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		278D45FD2FE7BA750073EB87 /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = CONTRIBUTING.json; sourceTree = "<group>"; };
 		27BF505A2FE6D1E50038966E /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
 		27BF505C2FE6D1F10038966E /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 		27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI_CN.md; sourceTree = "<group>"; };
@@ -115,7 +119,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */,
-				278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +134,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		270900382FEFBF4F00FAB5CE /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		2743C8352F6EAEA000CC1EED = {
 			isa = PBXGroup;
 			children = (
@@ -140,6 +151,7 @@
 				278CBE172FE778660035AA84 /* StudyPulseWidget */,
 				278CBE122FE778660035AA84 /* Frameworks */,
 				278D45FD2FE7BA750073EB87 /* SPEC.md */,
+				2709FD152FEFB8D000FAB5CE /* FAQ.json */,
 				278D45FB2FE7BA6A0073EB87 /* README.md */,
 				278D45F92FE7BA650073EB87 /* DESIGN.md */,
 				278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */,
@@ -147,6 +159,7 @@
 				278D45F32FE7BA500073EB87 /* CODE_WIKI.md */,
 				278D45F12FE7BA3E0073EB87 /* AGENTS.md */,
 				2743C83F2F6EAEA000CC1EED /* Products */,
+				270900382FEFBF4F00FAB5CE /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -259,7 +272,6 @@
 			mainGroup = 2743C8352F6EAEA000CC1EED;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */,
 				27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -283,6 +295,8 @@
 				278D45F62FE7BA560073EB87 /* CODE_WIKI_CN.md in Resources */,
 				27BF505B2FE6D1E50038966E /* SPEC.md in Resources */,
 				278D45FC2FE7BA6A0073EB87 /* README.md in Resources */,
+				2709FD172FEFB8F900FAB5CE /* FAQ.json in Resources */,
+				27A00001FEFB900000FAB5C0 /* CONTRIBUTING.json in Resources */,
 				278D45F82FE7BA5C0073EB87 /* AlgorithmIntroduction.md in Resources */,
 				278D45F42FE7BA500073EB87 /* CODE_WIKI.md in Resources */,
 				27BF50632FE6D2160038966E /* DESIGN.md in Resources */,
@@ -484,7 +498,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = StudyPulse/StudyPulse.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
@@ -493,6 +507,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSSiriUsageDescription = "StudyPulse uses Siri to let you log scores, check exams, and get study suggestions using your voice.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -503,7 +518,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.43.0;
+				MARKETING_VERSION = 1.46.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -528,7 +543,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = StudyPulse/StudyPulse.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
@@ -537,6 +552,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSSiriUsageDescription = "StudyPulse uses Siri to let you log scores, check exams, and get study suggestions using your voice.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -547,7 +563,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.43.0;
+				MARKETING_VERSION = 1.46.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

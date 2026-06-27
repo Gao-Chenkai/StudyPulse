@@ -13,6 +13,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case data
     case about
     case faq
+    case contribution
 
     var id: String { rawValue }
 
@@ -21,9 +22,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .appearance: return "Appearance & Layout".localized()
         case .health: return "Health & Readiness".localized()
         case .data: return "Data Management".localized()
-  case .about: return "About".localized()
+        case .about: return "About".localized()
         case .faq: return "FAQ".localized()
-  }
+        case .contribution: return "Contribution".localized()
+        }
     }
 
     // Compact caption shown in the main list row
@@ -34,6 +36,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .data: return "Import · Export · Backup".localized()
         case .about: return "Version · License".localized()
         case .faq: return "Q&A · Help".localized()
+        case .contribution: return "Open Source · How to Help".localized()
         }
     }
 
@@ -45,6 +48,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .data: return "Import, export and manage your grades, mistakes and exams data.".localized()
         case .about: return "App information, version and license details.".localized()
         case .faq: return "Frequently asked questions about using StudyPulse.".localized()
+        case .contribution: return "How to contribute to the open source project, code of conduct, and submission process.".localized()
         }
     }
 
@@ -55,6 +59,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .data: return "externaldrive.fill"
         case .about: return "info.circle.fill"
         case .faq: return "questionmark.circle.fill"
+        case .contribution: return "hand.raised.fingers.spread.fill"
         }
     }
 
@@ -65,6 +70,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .data: return .green
         case .about: return .orange
         case .faq: return .blue
+        case .contribution: return .purple
         }
     }
 
@@ -76,6 +82,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .data: DataManagementSettingsView()
         case .about: AboutSettingsView()
         case .faq: QASettingsView()
+        case .contribution: ContributionSettingsView()
         }
     }
 }

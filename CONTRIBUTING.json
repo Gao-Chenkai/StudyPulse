@@ -1,0 +1,244 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-06-27",
+  "title": "StudyPulse 贡献指南",
+  "subtitle": "How to contribute to the StudyPulse open source project.",
+  "repository": "github.com/chenkaigao/StudyPulse",
+  "license": "CC BY-NC-SA 4.0",
+  "welcome": "感谢你考虑为 StudyPulse 做出贡献!StudyPulse 是一个由独立开发者 Gao Chenkai 维护的开源 iOS 应用,以 CC BY-NC-SA 4.0 协议发布。无论是提交 Bug、上游改进、翻译、文档还是传播,都欢迎你参与。",
+  "sections": [
+    {
+      "id": "how_to_start",
+      "title": "如何开始",
+      "icon": "flag.checkered",
+      "items": [
+        {
+          "id": "ways",
+          "icon": "list.bullet.rectangle",
+          "title": "我可以通过哪些方式贡献?",
+          "content": "StudyPulse 接受以下形式的贡献(按难度递增):\n\n- **报告 Bug** — 在 GitHub Issues 提交复现步骤、设备信息、运行日志\n- **提议功能** — 在 Issues 中描述使用场景、目标用户、备选方案\n- **改进文档** — 修正错别字、补充示例、翻译为其他语言\n- **提交代码** — 修复 Bug、实现新功能、性能优化、重构\n- **设计贡献** — 图标、UI 草图、动效建议、可用性测试\n- **社区支持** — 在 Issues / Discussions 中帮助其他用户、回答问题\n- **传播推广** — 撰写评测、推荐给同学、提交到应用聚合站"
+        },
+        {
+          "id": "before_start",
+          "icon": "checklist",
+          "title": "开始前需要了解什么?",
+          "content": "在开始贡献前,请先阅读:\n\n1. **本贡献指南** — 你正在阅读\n2. **AGENTS.md** — 项目架构、开发约定、Agent 工作规则\n3. **CODE_WIKI.md** / **CODE_WIKI_CN.md** — 详细代码文档(中英)\n4. **USER_AGREEMENT.md** — 用户协议与隐私政策\n5. **README.md** — 项目概览、构建方式、依赖清单\n6. **SPEC.md** / **DESIGN.md** — 产品规范与设计文档\n7. **AlgorithmIntroduction.md** — 学习准备度算法说明\n\n建议先在本地完整构建项目并跑通主流程(成绩 → 错题 → 考试 → HRV → 小组件)。"
+        },
+        {
+          "id": "first_time",
+          "icon": "person.crop.circle.badge.questionmark",
+          "title": "第一次贡献?",
+          "content": "完全没有问题!推荐从以下低门槛任务开始:\n\n- 标记为 `good first issue` 的 Issue\n- 改进现有文档的错别字或翻译\n- 提交一个明确的 Bug 复现\n\n首次贡献流程:\n\n1. Fork 仓库到你的 GitHub 账户\n2. 克隆到本地:`git clone https://github.com/<你的用户名>/StudyPulse.git`\n3. 创建特性分支:`git checkout -b fix/issue-123`\n4. 提交修改并推送\n5. 在原仓库发起 Pull Request,关联对应 Issue\n\n有任何问题,可在 Issue 中提问,维护者会耐心回复。"
+        }
+      ]
+    },
+    {
+      "id": "code_of_conduct",
+      "title": "行为准则",
+      "icon": "person.2.fill",
+      "items": [
+        {
+          "id": "principles",
+          "icon": "heart",
+          "title": "社区原则",
+          "content": "StudyPulse 社区遵循以下原则:\n\n- **尊重** — 尊重每一位贡献者、用户和读者,无论经验、背景、身份\n- **包容** — 欢迎不同年龄、性别、种族、宗教、性取向、技术水平的参与者\n- **建设性** — 批评针对问题而非个人,提供替代方案而非单纯否定\n- **耐心** — 对新手保持耐心,提供清晰的引导\n- **诚实** — 不夸大功能、不隐瞒 Bug、不抄袭他人代码\n- **隐私** — 严格保护用户数据,绝不公开任何用户隐私信息"
+        },
+        {
+          "id": "unacceptable",
+          "icon": "hand.raised.slash",
+          "title": "不可接受的行为",
+          "content": "以下行为**严格禁止**:\n\n- 任何形式的骚扰、辱骂、人身攻击\n- 性别歧视、种族歧视、宗教歧视、地域歧视\n- 公开他人隐私信息(doxing)\n- 性暗示、性别化语言、不当性表达\n- 持续打断讨论、刷屏、灌水\n- 未经允许发布商业广告\n- 传播盗版、破解、违规内容\n\n违反以上准则可能导致警告、临时禁言或永久封禁。"
+        },
+        {
+          "id": "report",
+          "icon": "exclamationmark.shield",
+          "title": "举报违规行为",
+          "content": "如遇到违反行为准则的情况,请通过以下方式举报:\n\n- 邮件联系开发者(应用内「设置 → 关于」中获取联系方式)\n- 在对应 Issue / Discussion 中 @ 维护者\n- 如涉及人身安全,请联系当地执法部门\n\n所有举报会被保密处理,通常 7 个工作日内回复处理结果。"
+        }
+      ]
+    },
+    {
+      "id": "dev_setup",
+      "title": "开发环境",
+      "icon": "hammer.fill",
+      "items": [
+        {
+          "id": "requirements",
+          "icon": "checklist.checked",
+          "title": "环境要求",
+          "content": "**硬件**\n- macOS Sonoma (14.0) 或更高\n- 至少 16 GB RAM(推荐 32 GB,用于 Xcode 模拟器)\n- 至少 30 GB 可用磁盘空间(Xcode + 模拟器 + DerivedData)\n\n**软件**\n- **Xcode 26.x**(必须,项目使用 Swift 6.0 严格并发与 iOS 18.6 SDK)\n- **iOS Simulator**:iPhone 17 / iPad Pro (M-series 推荐)\n- **Git**:用于版本控制\n- **(可选)GitHub CLI**:用于 PR / Issue 管理\n\n**Apple 开发者账户**\n- 用于真机调试需要付费账户($99/年)\n- 模拟器调试可使用免费账户"
+        },
+        {
+          "id": "clone_build",
+          "icon": "arrow.down.app.fill",
+          "title": "克隆与构建",
+          "content": "**克隆仓库**\n\n```\ngit clone https://github.com/chenkaigao/StudyPulse.git\ncd StudyPulse\n```\n\n**安装依赖(Swift Package Manager)**\n\nXcode 首次打开项目时会自动解析 SPM 依赖,或手动:\n\n```\nxcodebuild -resolvePackageDependencies \\\n  -project StudyPulse.xcodeproj\n```\n\n**命令行构建**\n\n```\nbash scripts/build.sh\n```\n\n或直接使用 xcodebuild:\n\n```\nxcodebuild -project StudyPulse.xcodeproj \\\n  -scheme StudyPulse \\\n  -configuration Debug \\\n  -destination 'platform=iOS Simulator,name=iPhone 17' build\n```\n\n可用的 scheme:`StudyPulse`、`MarkdownUI`、`StudyPulseWidgetExtension`。"
+        },
+        {
+          "id": "project_structure",
+          "icon": "folder.fill",
+          "title": "项目结构",
+          "content": "```\nStudyPulse/\n├── StudyPulse/                 # 主应用源码\n│   ├── StudyPulseApp.swift     # @main 入口\n│   ├── Managers/               # 业务逻辑层\n│   ├── Models/                 # 数据模型\n│   ├── Views/                  # SwiftUI 视图\n│   ├── Views/Settings/         # 设置子页\n│   ├── Extensions/             # 扩展\n│   ├── NotificationsControl/   # 本地通知\n│   ├── *.entitlements          # 权限声明\n│   └── en/zh-Hans/...          # 多语言字符串\n├── StudyPulseWidget/           # WidgetKit 扩展\n├── Packages/                   # 本地 SPM 包\n│   ├── SwiftStreamingMarkdown\n│   ├── WSOnBoarding (已移除)\n│   └── MarkdownUI\n├── scripts/                    # 构建脚本\n├── *.md                        # 文档\n├── LICENSE                     # CC BY-NC-SA 4.0\n└── FAQ.json                    # FAQ 数据\n```"
+        }
+      ]
+    },
+    {
+      "id": "coding_standards",
+      "title": "代码规范",
+      "icon": "text.alignleft",
+      "items": [
+        {
+          "id": "swift_style",
+          "icon": "curlybraces",
+          "title": "Swift 编码规范",
+          "content": "**基础约定**\n- 4 空格缩进,行尾无尾随空格\n- 文件名采用 PascalCase,类型/协议/枚举大写开头\n- 变量/函数/属性使用 camelCase\n- 单文件单主类型,辅助类型置于同一文件\n\n**Swift 6 严格并发**\n- 默认 `@MainActor` 隔离\n- 跨 actor 数据使用 `Sendable` 值类型\n- 异步 I/O 使用 `Task.detached(priority: .userInitiated)` + `await MainActor.run { ... }`\n- 避免在视图 body 中执行同步 I/O\n\n**视图层**\n- 通过 `@EnvironmentObject` 注入 `DataManager`、`AppEnvironmentManager`、`HealthKitManager`\n- 不在视图层直接持有这些单例\n- 视图按职责拆分到 `Views/` 子目录(`Components/`、`Helpers/`、`Admin/`、`OnBoarding/`、`Settings/`)\n- 字符串永远使用 `.localized()` 扩展"
+        },
+        {
+          "id": "models",
+          "icon": "doc.text.fill",
+          "title": "数据模型约定",
+          "content": "新 `Codable` 模型必须:\n\n- 标记为 `nonisolated` value type\n- 实现 `Sendable`(跨 actor 传递)\n- 字段命名与 JSON 完全一致\n- 包含必要字段的默认值,确保旧版本数据可迁移\n\n新增/修改模型后:\n\n1. 在 `DataManager` 中添加对应 `load*Async` 与 `save*` 方法\n2. 在 `asyncInit()` 中加入并发加载列表\n3. 涉及考试 → 调用 `WidgetDataSyncManager.syncExamsToWidget()`\n4. 涉及成绩趋势 → 调用 `TrendWidgetSyncManager.syncTrend(...)`\n5. 涉及 HRV → 调用 `HRVWidgetSyncManager.syncHRV(from:)`\n6. **写入 widget 前**必须确认 `dataManager.isReady == true`"
+        },
+        {
+          "id": "localization",
+          "icon": "globe",
+          "title": "本地化规范",
+          "content": "所有用户可见字符串必须本地化为 **5 种语言**:\n\n- `en.lproj/Localizable.strings`\n- `zh-Hans.lproj/Localizable.strings`\n- `zh-Hant.lproj/Localizable.strings`\n- `ja.lproj/Localizable.strings`\n- `ko.lproj/Localizable.strings`\n\n**绝对不要**在 Swift 源码中直接写英文字符串作为用户可见文本。\n\n新增 key 时,五份 Localizable.strings 必须**同步增量更新**,不允许遗漏任何一种语言。\n\nWidgetKit 扩展拥有独立的小组件字符串文件:`StudyPulseWidget/{lang}.lproj/Localizable.strings`,也需要同步更新。"
+        },
+        {
+          "id": "i18n_notes",
+          "icon": "character.bubble",
+          "title": "i18n 注意事项",
+          "content": "实施本地化时需要注意:\n\n- 使用 `String(localized:)` 而非硬编码字符串\n- 复数形式使用 `%d` + `.stringsdict` 或手动 `((n == 1) ? \"\" : \"s\")`\n- 时间、数字使用 `Date.FormatStyle` / `IntegerFormatStyle`\n- 避免在字符串中拼接语言相关的顺序\n- 测试 RTL 布局(Arabic / Hebrew)下的对齐\n- Emoji 与 SF Symbols 优先于位图\n\n参考项目 `AGENTS.md` 与 `CODE_WIKI_CN.md` 了解更详细的国际化实践。"
+        }
+      ]
+    },
+    {
+      "id": "pull_request",
+      "title": "提交流程",
+      "icon": "arrow.triangle.pull",
+      "items": [
+        {
+          "id": "branch",
+          "icon": "arrow.triangle.branch",
+          "title": "分支命名",
+          "content": "请从 `main` 分支创建新的特性分支,采用以下命名:\n\n- `feat/<name>` — 新功能(如 `feat/icloud-sync`)\n- `fix/<name>` — Bug 修复(如 `fix/grade-trend-empty`)\n- `refactor/<name>` — 重构(如 `refactor/datamanager-save`)\n- `docs/<name>` — 文档(如 `docs/update-readme`)\n- `i18n/<lang>` — 翻译(如 `i18n/ja`)\n- `test/<name>` — 测试(如 `test/widget-sync`)\n\n保持分支单一职责,避免混杂多个不相关改动。"
+        },
+        {
+          "id": "commits",
+          "icon": "checklist.checked",
+          "title": "Commit 规范",
+          "content": "Commit message 采用 Conventional Commits 风格:\n\n```\n<type>(<scope>): <subject>\n\n<body (optional)>\n\n<footer (optional)>\n```\n\n**Type**\n- `feat` — 新功能\n- `fix` — Bug 修复\n- `refactor` — 重构(无功能变化)\n- `docs` — 文档\n- `style` — 格式(空格、缩进等)\n- `test` — 测试\n- `chore` — 构建/工具/依赖\n\n**示例**\n\n```\nfeat(grade): add weighted average by importance\n\n- 计算成绩加权平均时考虑重要度\n- 修正边界条件(空成绩列表)\n- 单元测试覆盖\n\nCloses #123\n```\n\n提交前确保每个 commit 都能独立编译运行。"
+        },
+        {
+          "id": "pr_process",
+          "icon": "arrow.up.doc.on.clipboard",
+          "title": "Pull Request 流程",
+          "content": "**提交 PR 前**\n\n1. 在本地 `Cmd+B` 完整构建,确保无 error / warning\n2. 运行 `bash scripts/build.sh` 验证\n3. 在至少一个真机或模拟器上手动测试主流程\n4. 同步更新五份 Localizable.strings\n5. 更新相关文档(AGENTS.md / README.md / SPEC.md)\n6. 关联对应 Issue(使用 `Closes #123` 或 `Fixes #456`)\n\n**PR 描述模板**\n\n```\n## 改动简述\n<!-- 一句话描述本次改动 -->\n\n## 改动类型\n- [ ] Bug 修复\n- [ ] 新功能\n- [ ] 重构\n- [ ] 文档\n- [ ] 翻译\n\n## 截图 / 录屏(视觉改动必须)\n<!-- iPhone 模拟器截图 -->\n\n## 测试情况\n<!-- 描述手动测试的步骤与结果 -->\n\n## 关联 Issue\nCloses #\n\n## Checklist\n- [ ] 本地构建通过\n- [ ] 五份 Localizable.strings 已同步\n- [ ] AGENTS.md / 相关文档已更新\n- [ ] 在真机/模拟器上测试通过\n```\n\n**Review 流程**\n\n- 维护者会在 7 天内 review\n- 接受 review 意见并 push fix\n- 至少 1 位维护者 approve 后合并"
+        }
+      ]
+    },
+    {
+      "id": "bug_reports",
+      "title": "报告 Bug",
+      "icon": "ladybug.fill",
+      "items": [
+        {
+          "id": "before_report",
+          "icon": "magnifyingglass.circle",
+          "title": "报告前请先确认",
+          "content": "在提交 Bug 之前:\n\n1. **搜索现有 Issues** — 避免重复提交,可在已有 Issue 下追加补充信息\n2. **尝试最新版本** — 确认 Bug 在最新 main 分支 / TestFlight 仍存在\n3. **重启应用** — 关闭后台并重新打开\n4. **导出运行日志** — 「设置 → 数据管理 → 导出日志」获取运行期日志\n5. **重装应用** — 极端情况下,卸载重装可重置所有缓存\n\n如果以上步骤无法解决,再提交 Bug 报告。"
+        },
+        {
+          "id": "report_template",
+          "icon": "doc.text",
+          "title": "Bug 报告模板",
+          "content": "请使用以下格式:\n\n```\n## Bug 简述\n<!-- 一句话描述 -->\n\n## 复现步骤\n1. 进入「XX」页\n2. 点击「XX」按钮\n3. 看到「XX」\n4. 实际却是「XX」\n\n## 预期行为\n<!-- 你认为应该发生什么 -->\n\n## 实际行为\n<!-- 实际发生了什么 -->\n\n## 截图 / 录屏\n<!-- 关键步骤的截图 -->\n\n## 环境信息\n- 设备:iPhone 14 / iPad Pro 11 (M2)\n- iOS 版本:18.6.0\n- StudyPulse 版本:1.2.3 (build 456)\n- Apple Watch:Series 9 (watchOS 10.5)\n\n## 严重程度\n- [ ] 崩溃 / 数据丢失\n- [ ] 主要功能不可用\n- [ ] 次要功能异常\n- [ ] 视觉 / 文案小问题\n\n## 运行日志(可选,推荐附上)\n<!-- 从「设置 → 数据管理 → 导出日志」获取 -->\n```"
+        }
+      ]
+    },
+    {
+      "id": "feature_request",
+      "title": "功能请求",
+      "icon": "lightbulb.fill",
+      "items": [
+        {
+          "id": "fr_template",
+          "icon": "doc.append",
+          "title": "功能请求模板",
+          "content": "请使用以下格式提交功能请求:\n\n```\n## 功能简述\n<!-- 一句话描述 -->\n\n## 动机与使用场景\n<!-- 解决什么问题、为谁解决 -->\n\n## 详细描述\n<!-- 完整的功能描述,包括交互流程 -->\n\n## 备选方案\n<!-- 是否考虑过其他实现方式 -->\n\n## 优先级\n- [ ] P0 必须(影响核心体验)\n- [ ] P1 重要(明显提升体验)\n- [ ] P2 一般(锦上添花)\n- [ ] P3 可选(留作未来)\n\n## 草图 / 参考(可选)\n<!-- 截图、Figma 链接、参考应用截图 -->\n\n## 愿意贡献吗?\n- [ ] 我愿意提交 PR 实现该功能\n- [ ] 仅建议,不参与实现\n```\n\n维护者会评估:\n\n- 与项目目标的一致性\n- 实施成本与维护成本\n- 对现有功能的影响\n- 用户覆盖度"
+        }
+      ]
+    },
+    {
+      "id": "testing",
+      "title": "测试指南",
+      "icon": "checkmark.seal.fill",
+      "items": [
+        {
+          "id": "manual_testing",
+          "icon": "hand.tap.fill",
+          "title": "手动测试",
+          "content": "提交 PR 前,请在以下场景手动测试:\n\n**核心功能**\n- 添加/编辑/删除成绩、错题、考试、综合考试\n- 切换教育体系与科目配置\n- 修改主页布局(顺序、启用/禁用)\n- 切换语言(English / 简体中文 / 繁體中文 / 日本語 / 한국어)\n- 切换深色 / 浅色主题\n\n**HRV 与健康**\n- 首次启用 HRV 时的引导流程\n- 授权 HealthKit 后数据填充\n- 14 天基线建立过程\n- BodyStatus 5 个维度的数据展示\n\n**小组件**\n- 添加 3 个小组件到主屏幕\n- 主应用数据变化时小组件自动更新\n- 切回主应用时小组件自动同步\n\n**iPad 适配**\n- 横屏 / 竖屏切换\n- NavigationSplitView 侧栏\n- iPad 上的两栏布局"
+        },
+        {
+          "id": "build_verification",
+          "icon": "hammer.circle",
+          "title": "构建验证",
+          "content": "**必须通过的检查**\n\n1. 完整构建:`Cmd+B` 或 `bash scripts/build.sh`,无 error\n2. 主 scheme `StudyPulse` 编译成功\n3. Widget 扩展 `StudyPulseWidgetExtension` 编译成功\n4. 模拟器运行无崩溃\n5. 主数据加载完成(`isReady = true`)\n\n**避免的常见问题**\n\n- SPM 缓存过时 → 清理 DerivedData + `xcodebuild -resolvePackageDependencies`\n- 重复 Bundle 资源 → 移除 pbxproj 中重复条目\n- iOS 部署目标不一致 → 统一为 18.6\n- 权限缺失 → 检查 entitlements 与 Info.plist\n- 本地化遗漏 → 五份 Localizable.strings 同步\n\n参考 `AGENTS.md` 第 19 条「Agent 工作规则」。"
+        }
+      ]
+    },
+    {
+      "id": "translations",
+      "title": "翻译贡献",
+      "icon": "character.book.closed.fill",
+      "items": [
+        {
+          "id": "how_to_translate",
+          "icon": "translate",
+          "title": "如何翻译?",
+          "content": "StudyPulse 支持 5 种语言,翻译工作流:\n\n**已有语言**\n- 校对 `en/zh-Hans/zh-Hant/ja/ko` 五份 `Localizable.strings`\n- 修正错译、补充漏译、统一术语\n\n**新增语言**\n1. 在 Xcode 中添加新语言到 Project Info\n2. 复制 `en.lproj/Localizable.strings` 为新语言(如 `fr.lproj`)\n3. 翻译所有 `key = \"value\"` 中的 value\n4. 测试新语言下界面布局(尤其是 RTL / 长文本)\n5. 同步更新 `AppEnvironmentManager` 的语言枚举\n\n**翻译质量要求**\n- 保持术语统一(如「学习准备度」在 zh-Hans 全局统一)\n- 避免机翻,优先意译\n- 保留 `%@`、`%d` 等格式化占位符\n- UI 截断测试:长字符串是否被截断或换行合理"
+        }
+      ]
+    },
+    {
+      "id": "license",
+      "title": "许可协议",
+      "icon": "doc.badge.gearshape.fill",
+      "items": [
+        {
+          "id": "cc_by_nc_sa",
+          "icon": "checkmark.shield",
+          "title": "CC BY-NC-SA 4.0",
+          "content": "本项目源代码以 **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International(CC BY-NC-SA 4.0)** 协议开源发布。\n\n**你可以**\n- ✅ 自由下载、修改、再分发源代码\n- ✅ 用于个人学习、非商业项目\n- ✅ 二次开发并以相同协议发布\n\n**你必须**\n- 📌 注明原作者(Gao Chenkai)与项目链接\n- 📌 衍生作品采用相同协议(CC BY-NC-SA 4.0)\n- 📌 不得添加额外限制\n\n**你不能**\n- ❌ 将源代码用于任何商业目的\n- ❌ 修改后闭源\n- ❌ 移除原作者署名\n\n完整条款见根目录 `LICENSE` 文件。"
+        },
+        {
+          "id": "commercial_use",
+          "icon": "dollarsign.circle",
+          "title": "商业使用授权",
+          "content": "CC BY-NC-SA 4.0 协议**禁止商业使用**。如需将 StudyPulse 用于:\n\n- 商业应用发布(App Store 付费应用)\n- 企业内部分发 / SaaS\n- 学校 / 培训机构商业部署\n- 二次开发并销售\n- 集成到商业产品\n\n**必须**事先获得开发者的书面商业授权。\n\n申请方式:通过应用内「设置 → 关于 → 反馈」联系开发者,说明:\n\n1. 公司 / 个人主体信息\n2. 商业使用场景与规模\n3. 是否需要定制开发\n4. 预期上线时间\n\n授权费用与具体条款面议。"
+        }
+      ]
+    },
+    {
+      "id": "community",
+      "title": "社区与致谢",
+      "icon": "person.3.fill",
+      "items": [
+        {
+          "id": "communication",
+          "icon": "bubble.left.and.bubble.right",
+          "title": "沟通渠道",
+          "content": "**首选**\n- **GitHub Issues** — Bug 报告、功能请求(支持 Markdown)\n- **GitHub Discussions** — 提问、想法交流、Show & Tell\n- **应用内反馈** — 「设置 → 关于 → 反馈」\n\n**次选**\n- **App Store 评论** — 公开反馈\n- **邮件** — 通过 App Store 详情页联系开发者\n\n**避免**\n- 个人社交媒体私信(响应较慢)\n- 电话(不提供电话支持)"
+        },
+        {
+          "id": "ack",
+          "icon": "hands.sparkles.fill",
+          "title": "致谢",
+          "content": "StudyPulse 的诞生离不开以下贡献:\n\n**核心开发者**\n- **Gao Chenkai** — 架构设计、全栈开发、UI/UX、文档\n\n**开源依赖**\n- **swift-markdown-ui** — Markdown 渲染\n- **NetworkImage**(gonzalezreal) — 异步网络图像\n- **cmark-gfm** — GitHub Flavored Markdown\n- **WSOnBoarding**(已移除) — 早期启动引导(现改为原生 iOS 26 风格)\n- **SwiftStreamingMarkdown** — 流式 Markdown 渲染\n\n**灵感与参考**\n- Apple Human Interface Guidelines\n- SwiftUI 官方文档与 Sample Code\n- WWDC Sessions(SwiftUI、HealthKit、WidgetKit)\n\n**测试与反馈**\n- 感谢所有提交 Issue、PR、评论、推荐的贡献者!\n\n如果你做出了有价值的贡献,会在下次版本更新中致谢。"
+        }
+      ]
+    }
+  ]
+}

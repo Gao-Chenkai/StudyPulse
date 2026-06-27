@@ -3,12 +3,15 @@
 //  StudyPulse
 //
 //  Created by Chenkai Gao on 2026/6/21.
+//  替换原 WSOnBoarding 自带的 `.wsWelcomeView()`：
+//  - 首次启动 → 欢迎页
+//  - 版本更新 → 新功能介绍页
+//  使用原生 iOS 26 风格的 OnboardingView。
 //
-//  版本感知欢迎页：首次启动 → 欢迎页；版本更新 → 新功能介绍页。
-//  每次发布新版本时记得更新 WSWelcomeConfig.whatsNewInfo 里的 features。
+//  每次发布新版本时记得更新 OnboardingConfig.whatsNew 里的 features。
+//
 
 import SwiftUI
-import WSOnBoarding
 
 // MARK: - 版本号读取
 
@@ -22,12 +25,7 @@ enum AppVersion {
 
 // MARK: - ViewModifier
 
-/// 替换 WSOnBoarding 自带的 `.wsWelcomeView()`，自动判断显示欢迎页还是新功能介绍页。
-///
-/// 决策逻辑：
-///   - 从未启动过（lastSeenAppVersion == nil）→ 欢迎页
-///   - 版本号变了（lastSeenAppVersion != current）→ 新功能页
-///   - 版本号没变 → 什么都不显示
+/// 版本感知的欢迎 / 新功能介绍页面。
 struct VersionedWelcomeModifier: ViewModifier {
     @State private var showWelcome = false
     @State private var showWhatsNew = false
@@ -39,13 +37,24 @@ struct VersionedWelcomeModifier: ViewModifier {
                 isPresented: $showWelcome,
                 onDismiss: markVersionSeen
             ) {
-                StandardWelcomeView(config: WSWelcomeConfig.welcomeInfo)
+                OnboardingView(config: .welcome) {
+                    showWelcome = false
+                }
+                .interactiveDismissDisabled()
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.hidden)
             }
-            .fullScreenCover(
+            .sheet(
                 isPresented: $showWhatsNew,
                 onDismiss: markVersionSeen
             ) {
-                StandardWelcomeView(config: WSWelcomeConfig.whatsNewInfo)
+                OnboardingView(config: .whatsNew) {
+                    showWhatsNew = false
+                }
+                .presentationDetents([.large])
+                .presentationBackground(.clear)
+                .presentationDragIndicator(.hidden)
             }
     }
 
@@ -80,7 +89,6 @@ private enum UserDefaultsKey {
 
 extension View {
     /// 版本感知的欢迎 / 新功能介绍页面。
-    /// 替代 `.wsWelcomeView(config:style:welcomeKey:)`。
     func versionedWelcomeView() -> some View {
         modifier(VersionedWelcomeModifier())
     }

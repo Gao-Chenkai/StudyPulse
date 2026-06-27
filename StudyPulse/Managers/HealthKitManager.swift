@@ -481,8 +481,9 @@ final class HealthKitManager: ObservableObject {
         // history); here we just record what we have so far and
         // `fetchHRVForHistory` back-fills today's HRV specifically.
         let todayHRV = await fetchTodayHRV()
-        recordTodaySnapshot(todayHRV: todayHRV)
-    }
+       recordTodaySnapshot(todayHRV: todayHRV)
+        writeIntentHealthCache()
+   }
 
     /// Fetch today's first HRV sample for the daily history snapshot.
     private func fetchTodayHRV() async -> Double? {
@@ -584,9 +585,10 @@ final class HealthKitManager: ObservableObject {
         }
         readiness = HRVReadiness(zScore: z, todayHRV: today, baselineMean: mean,
             baselineSampleCount: daily.count, category: category, suggestion: suggestion)
-        Log.healthKit.info("refreshReadiness 完成 / refreshReadiness done; category=\(category.rawValue, privacy: .public) z=\(z ?? 0, privacy: .public) today=\(today ?? 0, privacy: .public) baseline=\(mean, privacy: .public) stdDev=\(stdDev, privacy: .public) days=\(daily.count, privacy: .public)")
-        HRVWidgetSyncManager.syncHRV(from: self)
-    }
+       Log.healthKit.info("refreshReadiness 完成 / refreshReadiness done; category=\(category.rawValue, privacy: .public) z=\(z ?? 0, privacy: .public) today=\(today ?? 0, privacy: .public) baseline=\(mean, privacy: .public) stdDev=\(stdDev, privacy: .public) days=\(daily.count, privacy: .public)")
+       HRVWidgetSyncManager.syncHRV(from: self)
+        writeIntentHealthCache()
+   }
 
 
     private func extractDailyHRV(from samples: [HKQuantitySample]) -> [DailyHRV] {
@@ -600,5 +602,35 @@ final class HealthKitManager: ObservableObject {
         return map.values.sorted { $0.0 > $1.0 }.map { DailyHRV(date: $0.0, value: $0.1) }
     }
 
-    struct DailyHRV { let date: Date; let value: Double }
+   struct DailyHRV { let date: Date; let value: Double }
+
+    // MARK: - Intent Health Cache
+
+    /// Writes the latest readiness + body-status snapshot so background
+    /// App Intents can surface health-aware study suggestions without
+    /// opening the app.
+    private func writeIntentHealthCache() {
+        let qualityStr: String = switch bodyStatus.sleepQuality {
+        case .unknown: "unknown"
+        case .poor: "poor"
+        case .short: "short"
+        case .good: "good"
+        case .excellent: "excellent"
+        }
+
+        let cache = IntentHealthCache(
+            readinessCategory: readiness.category.rawValue,
+            readinessSuggestion: readiness.suggestion,
+            sleepHours: bodyStatus.lastNightSleepHours,
+            sleepQuality: qualityStr,
+            restingHeartRate: bodyStatus.restingHeartRate,
+            exerciseMinutes: bodyStatus.exerciseMinutesToday,
+            lastUpdated: Date()
+        )
+
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("readiness_cache.json")
+        try? data.write(to: url)
+    }
 }

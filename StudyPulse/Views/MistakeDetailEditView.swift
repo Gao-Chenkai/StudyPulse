@@ -28,11 +28,14 @@ struct MistakeDetailEditView: View {
     
     @State private var showingImagePicker = false
     @State private var showingPhotoCapture = false
-    
+
     @State private var selectedSection: EditSection = .question
     @State private var isProcessingOCR = false
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
+
+    /// 是否加入 SRS 复习队列（opt-in）
+    @State private var reviewEnabled: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -86,21 +89,31 @@ private extension MistakeDetailEditView {
                 TextField("Title".localized(), text: $editedTitle)
                     .multilineTextAlignment(.trailing)
             }
-            
+
             Picker("Subject".localized(), selection: $selectedSubject) {
                 Text("Select".localized()).tag("")
                 ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
                 }
             }
-            
+
             HStack {
                 Text("Source".localized())
                 TextField("Source".localized(), text: $editedSource)
                     .multilineTextAlignment(.trailing)
             }
-            
+
             DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
+
+            // SRS opt-in 开关
+            Toggle(isOn: $reviewEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Spaced Repetition".localized())
+                    Text("Auto-schedule reviews using SM-2 algorithm".localized())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
     
@@ -112,11 +125,36 @@ private extension MistakeDetailEditView {
                 }
             }
             .pickerStyle(.segmented)
-            
-            MarkdownEditorView(
-                text: currentBinding,
-                placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-            )
+
+            // 用 switch + 直接 binding，绑定到对应 State；
+            // .id(selectedSection) 强制 SwiftUI 在切换栏目时重建 MarkdownTextEditor
+            // 内部持有的 UITextView，避免计算属性 binding 在 UIViewRepresentable
+            // 包裹层中无法正确切换 state 的问题。
+            Group {
+                switch selectedSection {
+                case .question:
+                    MarkdownEditorView(
+                        text: $editedOriginalQuestion,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .reason:
+                    MarkdownEditorView(
+                        text: $editedErrorReason,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .wrong:
+                    MarkdownEditorView(
+                        text: $editedWrongSolution,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                case .correct:
+                    MarkdownEditorView(
+                        text: $editedCorrectSolution,
+                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+                    )
+                }
+            }
+            .id(selectedSection)
             .frame(minHeight: 620)
         }
     }
@@ -251,13 +289,15 @@ private extension MistakeDetailEditView {
         editedWrongSolution = mistakeSet.wrongSolution
         editedCorrectSolution = mistakeSet.correctSolution
         editedDate = mistakeSet.date
-        
+
         questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
         reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
         wrongSolutionImages = mistakeSet.wrongSolutionImages.compactMap { UIImage(data: $0) }
         correctSolutionImages = mistakeSet.correctSolutionImages.compactMap { UIImage(data: $0) }
+
+        reviewEnabled = mistakeSet.isInReviewQueue
     }
-    
+
     func saveChanges() {
         var updatedMistake = mistakeSet
         updatedMistake.title = editedTitle
@@ -268,13 +308,34 @@ private extension MistakeDetailEditView {
         updatedMistake.wrongSolution = editedWrongSolution
         updatedMistake.correctSolution = editedCorrectSolution
         updatedMistake.date = editedDate
-        
+
         updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.wrongSolutionImages = wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.correctSolutionImages = correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
-        
+
+        // 同步 SRS 状态
+        if reviewEnabled && !updatedMistake.isInReviewQueue {
+            // 开启 opt-in：创建初始状态
+            updatedMistake.reviewState = .initial()
+        } else if !reviewEnabled && updatedMistake.isInReviewQueue {
+            // 关闭 opt-in：保留复习历史但退出队列（设为 nextReviewDate = far future）
+            // 注：保留 state 字段便于用户重新开启时复用
+            if var state = updatedMistake.reviewState {
+                state.nextReviewDate = Date.distantFuture
+                updatedMistake.reviewState = state
+            }
+        }
+
         dataManager.updateMistake(updatedMistake)
+
+        // 重调度该错题的通知
+        if reviewEnabled {
+            // 重新调度所有（简化：调 rescheduleAll）
+            SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+        } else {
+            SRSReviewNotifications.shared.cancel(for: updatedMistake.id)
+        }
     }
 }
 

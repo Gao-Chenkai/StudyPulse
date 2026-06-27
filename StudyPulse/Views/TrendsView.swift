@@ -182,6 +182,7 @@ struct TrendsView: View {
 struct SubjectDetailView: View {
     let subject: String
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明
     @Environment(\.horizontalSizeClass) private var sizeClass
 
@@ -342,37 +343,23 @@ struct SubjectDetailView: View {
                 
                 //  displayMode /
                 if !filteredGrades.isEmpty {
-                    Chart(filteredGrades) { grade in
-                        // 
-                        if displayMode == "score" {
-                            LineMark(
-                                x: .value("Date", grade.date),
-                                y: .value("Score", grade.score)
-                            )
-                            .foregroundStyle(Color(.systemBlue))
-                            
-                            PointMark(
-                                x: .value("Date", grade.date),
-                                y: .value("Score", grade.score)
-                            )
-                            .symbol {
-                                Circle()
-                                    .fill(Color(.systemBackground))
-                                    .frame(width: 10, height: 10)
-                                    .overlay {
-                                        Circle().stroke(scoreColor(grade.score), lineWidth: 2)
-                                    }
-                            }
-                        }
-                        // 5
-                        else {
+                    if displayMode == "score" {
+                        TrendChartView(
+                            grades: filteredGrades,
+                            fullScore: dataManager.fullScore(for: subject),
+                            chartType: envManager.preferences.chartType
+                        )
+                        .frame(height: chartHeight)
+                    } else {
+                        // 排名仅保留折线图
+                        Chart(filteredGrades) { grade in
                             if let rank = grade.ranking, rank > 0 {
                                 LineMark(
                                     x: .value("Date", grade.date),
                                     y: .value("Rank", rank)
                                 )
                                 .foregroundStyle(Color(.indigo))
-                                
+
                                 PointMark(
                                     x: .value("Date", grade.date),
                                     y: .value("Rank", rank)
@@ -387,8 +374,8 @@ struct SubjectDetailView: View {
                                 }
                             }
                         }
+                        .frame(height: chartHeight)
                     }
-                    .frame(height: chartHeight)
                 } else {
                     ContentUnavailableView("No Data".localized(), systemImage: "chart.line.xaxis.dashed")
                         .frame(height: chartHeight)

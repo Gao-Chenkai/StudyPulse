@@ -203,30 +203,64 @@ struct SubjectScoreCard: View {
     }
 }
 
-// MARK: - 迷你折线图（支持分数/排名切换）
+// MARK: - 迷你图表（支持用户自选图表类型）
 struct miniChartView: View {
     var series: [SubjectScoreCard.Series]
     var showYAxisAsPercentage: Bool = false
-    var displayMode: String // 新增：接收显示模式
+    var displayMode: String // 接收显示模式：score / ranking
     var fullScore: Double = 100 // 科目满分（用于按比例显示颜色）
-    
+    @EnvironmentObject var envManager: AppEnvironmentManager
+
+    private var history: [Grade] {
+        // 合并所有 series 的成绩（这里通常只有一个 subject）
+        series.flatMap { s in
+            s.dataPoints.map { dp in
+                Grade(
+                    subject: s.name,
+                    score: dp.score,
+                    ranking: dp.ranking,
+                    date: dp.date
+                )
+            }
+        }
+    }
+
     var body: some View {
+        if displayMode == "ranking" {
+            // 排名仍用折线图（排名只有 1 个维度，不适合饼/直方图/热力）
+            rankingLineChart
+        } else {
+            // 分数模式：按设置里选定的图表类型渲染
+            let grades = history
+            if grades.isEmpty {
+                Color.clear
+            } else {
+                TrendChartView(
+                    grades: grades,
+                    fullScore: fullScore,
+                    chartType: envManager.preferences.chartType,
+                    compact: true
+                )
+            }
+        }
+    }
+
+    private var rankingLineChart: some View {
         Chart {
             ForEach(series) { s in
-                ForEach(s.dataPoints) { p in
-                    if displayMode == "score" {
-                        // 分数图表
+                ForEach(s.dataPoints.filter { ($0.ranking ?? 0) > 0 }) { p in
+                    if let rank = p.ranking, rank > 0 {
                         LineMark(
-                            x: .value("时间", p.date),
-                            y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score),
-                            series: .value("科目", s.name)
+                            x: .value("Time", p.date),
+                            y: .value("Rank", rank),
+                            series: .value("Subject", s.name)
                         )
                         .foregroundStyle(s.color)
                         .lineStyle(StrokeStyle(lineWidth: 2))
-                        
+
                         PointMark(
-                            x: .value("时间", p.date),
-                            y: .value("分数", showYAxisAsPercentage ? p.scoreRate : p.score)
+                            x: .value("Time", p.date),
+                            y: .value("Rank", rank)
                         )
                         .symbol {
                             Circle()
@@ -235,30 +269,6 @@ struct miniChartView: View {
                                 .overlay {
                                     Circle().stroke(scoreColor(p.score, fullScore: fullScore), lineWidth: 2)
                                 }
-                        }
-                    } else {
-                        // 排名图表（只画有效排名）
-                        if let rank = p.ranking, rank > 0 {
-                            LineMark(
-                                x: .value("时间", p.date),
-                                y: .value("排名", rank),
-                                series: .value("科目", s.name)
-                            )
-                            .foregroundStyle(s.color)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                            
-                            PointMark(
-                                x: .value("时间", p.date),
-                                y: .value("排名", rank)
-                            )
-                            .symbol {
-                                Circle()
-                                    .fill(Color(.secondarySystemGroupedBackground))
-                                    .frame(width: 8, height: 8)
-                                    .overlay {
-                                        Circle().stroke(scoreColor(p.score, fullScore: fullScore), lineWidth: 2)
-                                    }
-                            }
                         }
                     }
                 }

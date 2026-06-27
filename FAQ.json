@@ -1,0 +1,445 @@
+{
+  "version": "1.1",
+  "lastUpdated": "2026-06-27",
+  "title": "StudyPulse 常见问题",
+  "subtitle": "Comprehensive answers to common questions about using StudyPulse.",
+  "categories": [
+    {
+      "id": "getting_started",
+      "title": "入门与首次使用",
+      "icon": "sparkles",
+      "items": [
+        {
+          "id": "gs_01",
+          "icon": "1.circle",
+          "question": "第一次打开应用我应该做什么?",
+          "answer": "建议按以下顺序完成初始设置:\n\n1. **选择教育体系** —— 「设置 → 个人资料 → 教育体系」中选择你所在的体系(中国大陆/浙江/上海/台湾/香港/新加坡/英国/IB/美国/语言考试等),系统会自动配置科目满分。\n2. **填写个人资料** —— 学校、年级、班级、学号、入学年与考试年,这些信息会用于趋势分析中的群体对比。\n3. **配置科目满分** —— 「设置 → 个人资料 → 编辑科目」中确认各科目满分,部分体系下系统已自动配置。\n4. **添加第一条成绩** —— 进入「成绩」页,点击右上角 + 录入。\n5. **(可选)启用 HRV** —— 「设置 → 健康与准备度」中开启 HRV 学习准备度功能。"
+        },
+        {
+          "id": "gs_02",
+          "icon": "globe",
+          "question": "我可以同时使用多个教育体系吗?",
+          "answer": "**当前版本仅支持单个教育体系**。如需切换,所有科目成绩将沿用,但科目名称、满分等配置会按新体系重置。建议在切换前通过「设置 → 数据管理 → 导出 CSV」备份。"
+        },
+        {
+          "id": "gs_03",
+          "icon": "trash",
+          "question": "误删了应用,数据还能恢复吗?",
+          "answer": "应用数据**完全存储于设备本地**,没有云端备份。如已卸载,数据将**无法恢复**。请:\n\n- **定期备份**:「设置 → 数据管理 → 导出 CSV」,将成绩/错题/考试/综合考试数据保存到云盘或电脑。\n- **开启 iCloud Drive / iTunes / Finder 备份**:整设备备份可保留应用沙盒,但恢复时数据可能与新版格式不兼容。"
+        }
+      ]
+    },
+    {
+      "id": "grade",
+      "title": "成绩管理",
+      "icon": "chart.bar.fill",
+      "items": [
+        {
+          "id": "gr_01",
+          "icon": "plus.circle",
+          "question": "如何添加一条成绩?",
+          "answer": "1. 进入「成绩」页,点击右上角 `+` 按钮;\n2. 填写:科目、原始分(可选)、最终得分、排名(可选)、重要度(1-5 颗星)、所属考试名称、日期;\n3. (可选)点击「添加照片」,使用相机或从相册选择,系统会自动 OCR 识别题目内容;\n4. 点击「保存」。"
+        },
+        {
+          "id": "gr_02",
+          "icon": "function",
+          "question": "原始分(Raw Score)和最终得分(Score)有什么区别?",
+          "answer": "- **原始分(Raw Score)**:答对题目数对应的分数。例如数学卷面满分 120,实际答对 105 分 = 105。\n- **最终得分(Score)**:经过赋分、等级换算、加权后的最终成绩。例如原始 105 经过 1.2 倍赋分 = 126。\n\n趋势图**优先使用最终得分**;当只有原始分时,系统会用原始分替代。"
+        },
+        {
+          "id": "gr_03",
+          "icon": "star",
+          "question": "重要度 1-5 颗星有什么作用?",
+          "answer": "重要度用于趋势分析的「加权」计算:\n\n- ⭐ 重要度 5:期中/期末/模拟考,影响最大;\n- ⭐ 重要度 1-2:日常小测、单元练习,影响较小。\n\n主页的「需要关注的科目」会优先展示**重要度高且近期下降**的科目。"
+        },
+        {
+          "id": "gr_04",
+          "icon": "chart.xyaxis.line",
+          "question": "为什么我的成绩趋势图显示为「暂无数据」?",
+          "answer": "可能原因:\n\n1. 该科目下尚未添加任何成绩 —— 请录入至少 1 条;\n2. 录入的日期格式异常 —— 请确认日期选择正确;\n3. 该科目被关闭 —— 「设置 → 个人资料 → 编辑科目」中确认科目为「启用」状态。"
+        },
+        {
+          "id": "gr_05",
+          "icon": "pencil",
+          "question": "如何删除或编辑一条成绩?",
+          "answer": "- **删除**:在「成绩」页长按某条记录,弹出操作菜单 → 删除。删除后该条记录与其照片会一并清除(此操作**不可撤销**)。\n- **编辑**:点击该条记录进入详情页,点击右上角「编辑」按钮。"
+        },
+        {
+          "id": "gr_06",
+          "icon": "photo",
+          "question": "成绩照片存放在哪里?会占用大量空间吗?",
+          "answer": "成绩照片保存在 `~/Documents/images/grade_<UUID>.jpg`,每张图经过 JPEG 压缩,通常 200-500KB。如需释放空间,可在「设置 → 数据管理 → 清理照片」中批量删除未关联成绩的照片。"
+        }
+      ]
+    },
+    {
+      "id": "mistake",
+      "title": "错题管理",
+      "icon": "doc.text.fill",
+      "items": [
+        {
+          "id": "mk_01",
+          "icon": "square.stack.3d.up",
+          "question": "错题的四块编辑结构是什么?",
+          "answer": "每条错题包含四个独立可编辑的模块:\n\n1. **原始题目(Question)**:题干,可拍照 + OCR 或手写;\n2. **错误原因(Reason)**:为什么会做错,如「概念不清」「计算失误」「审题错误」等;\n3. **错误解法(Wrong)**:你当时写的错误解题步骤;\n4. **正确解法(Correct)**:参考答案、解析或你自己的订正。\n\n每个模块都支持**独立照片 + OCR + Markdown 笔记**。"
+        },
+        {
+          "id": "mk_02",
+          "icon": "text.viewfinder",
+          "question": "OCR 文字识别准确度不高怎么办?",
+          "answer": "OCR 准确度受以下因素影响:\n\n- **光线与拍摄角度**:请在光线充足、字迹清晰、四角对齐的情况下拍摄;\n- **手写体**:手写体识别准确度低于印刷体;\n- **中英混排**:可识别但偶尔出现字符替换。\n\n**解决方案**:OCR 识别后请**逐字校对**。同时,长按识别文本可手动编辑;Markdown 工具栏提供 **LaTeX 公式、列表、代码块**等格式化能力。"
+        },
+        {
+          "id": "mk_03",
+          "icon": "arrow.clockwise.circle",
+          "question": "错题如何复习?",
+          "answer": "应用提供两种复习入口:\n\n1. **错题列表**:「错题」页可按科目、时间、复习状态筛选;\n2. **建议复习**:在「主页 → 学习建议」或「错题 → 建议复习」中,系统会推荐「超过 7 天未复习」「错误率较高的题目」等。\n\n复习时可点击「标记已复习」,记录复习时间。"
+        },
+        {
+          "id": "mk_04",
+          "icon": "tray.and.arrow.down",
+          "question": "错题照片能否批量导入?",
+          "answer": "当前版本**不支持批量导入**。批量导入计划在未来版本中支持。当前推荐做法:逐条拍照或从相册选择,系统会自动 OCR。"
+        },
+        {
+          "id": "mk_05",
+          "icon": "link",
+          "question": "错题与考试如何关联?",
+          "answer": "在「考试详情」页可以查看该考试关联的错题。添加错题时,在「所属考试」字段下拉中选择即可。关联后,可在「考试详情 → 错题」中一键跳转。"
+        }
+      ]
+    },
+    {
+      "id": "exam",
+      "title": "考试与日历",
+      "icon": "calendar",
+      "items": [
+        {
+          "id": "ex_01",
+          "icon": "plus.circle",
+          "question": "如何添加一场考试?",
+          "answer": "1. 进入「考试」页,点击右上角 `+`;\n2. 填写:考试名称、日期、科目(可多选 = 综合考试)、重要度、掌握度;\n3. (可选)勾选「多日考试」,设置结束日期;\n4. (可选)勾选「同步至日历」,设置具体时间段;\n5. 保存后,系统会按默认窗口 [1, 3, 5, 10, 30 天] 调度本地通知提醒。"
+        },
+        {
+          "id": "ex_02",
+          "icon": "list.bullet.indent",
+          "question": "单科考试和综合考试有什么区别?",
+          "answer": "- **单科考试(Exam)**:单一科目考试,如「数学期中」;\n- **综合考试(Comprehensive Exam)**:多科目同时进行的考试,如「高考」「IB DP Mock Exam」,按列表展示多科目。"
+        },
+        {
+          "id": "ex_03",
+          "icon": "calendar.badge.clock",
+          "question": "多日考试如何处理?",
+          "answer": "勾选「多日考试」并设置结束日期后:\n\n- 考试卡片显示「日期范围」(如 6/7 - 6/9);\n- 通知提醒按开始日期调度;\n- 日历事件自动创建为多日全天事件。"
+        },
+        {
+          "id": "ex_04",
+          "icon": "calendar.circle",
+          "question": "如何同步考试到系统日历?",
+          "answer": "添加/编辑考试时,勾选「同步至系统日历」即可:\n\n- 若设置了具体时间段:创建**定时段事件**;\n- 若未设置:创建**全天事件**;\n- 删除考试时,系统会提示是否同步删除日历事件。\n\n需要权限:iOS **设置 → 隐私 → 日历 → StudyPulse** 中授权。"
+        },
+        {
+          "id": "ex_05",
+          "icon": "bell.slash",
+          "question": "通知提醒没有弹出怎么办?",
+          "answer": "请依次检查:\n\n1. **iOS 系统通知权限**:`设置 → 通知 → StudyPulse`,确保通知已开启;\n2. **应用内通知设置**:`设置 → 关于 → Test Notifications` 测试通知是否能正常弹出;\n3. **专注模式 / 勿扰模式**:iOS 系统设置中的「专注模式」可能屏蔽通知;\n4. **考试日期**:通知仅对**未来日期**的考试调度,过期考试不会触发。"
+        },
+        {
+          "id": "ex_06",
+          "icon": "alarm",
+          "question": "默认提醒窗口是几天?可以自定义吗?",
+          "answer": "默认提醒窗口为 **[1, 3, 5, 10, 30] 天**,可在「考试详情 → 编辑 → 提醒设置」中调整。"
+        }
+      ]
+    },
+    {
+      "id": "hrv",
+      "title": "HRV 与学习准备度",
+      "icon": "heart.text.square.fill",
+      "items": [
+        {
+          "id": "hr_01",
+          "icon": "heart",
+          "question": "HRV 是什么?为什么能反映学习状态?",
+          "answer": "**HRV(心率变异性,Heart Rate Variability)** 是指心跳之间的时间间隔变化程度:\n\n- **HRV 高**:副交感神经活跃,身体恢复良好,适合高强度学习;\n- **HRV 低**:交感神经主导,身体疲劳或压力大,适合轻量复习或休息。\n\nStudyPulse 读取 Apple Watch / iPhone 收集的 SDNN 数据,与您的 **14 天个人基线**对比,给出 Z-score 与学习准备度评估。"
+        },
+        {
+          "id": "hr_02",
+          "icon": "applewatch",
+          "question": "HRV 数据从哪里来?需要 Apple Watch 吗?",
+          "answer": "数据来源:\n\n- **Apple Watch**(推荐):通过 HealthKit 持续采集 SDNN;\n- **iPhone**:部分第三方心率应用可写入 HealthKit;\n- **第三方设备**:兼容 HealthKit 的心率带/胸带均可。\n\n如未使用 Apple Watch,HRV 数据可能样本不足,系统会显示「insufficient」(数据不足)。"
+        },
+        {
+          "id": "hr_03",
+          "icon": "exclamationmark.triangle",
+          "question": "为什么我的 HRV 显示「insufficient」?",
+          "answer": "通常是以下原因:\n\n1. **样本不足** —— HRV Z-score 计算需要 **≥ 7 个不同日历日** 的 SDNN 样本。少于 7 天会显示数据不足;\n2. **未授权** —— 请在 iOS **设置 → 隐私 → 健康 → StudyPulse** 中开启 HRV 读取权限;\n3. **查询失败** —— HealthKit 在系统升级或网络异常时可能失败,可尝试重启应用。"
+        },
+        {
+          "id": "hr_04",
+          "icon": "gauge.with.dots.needle.bottom.50percent",
+          "question": "学习准备度评估包含哪些维度?",
+          "answer": "StudyReadinessAlgorithm 综合以下五个维度(每个 0-1 归一化打分):\n\n1. **HRV**(Z-score)—— 硬覆盖项,异常时优先降低强度;\n2. **深睡 + REM 睡眠** —— 恢复性睡眠时长;\n3. **静息心率** —— 偏离个人基线的程度;\n4. **呼吸率** —— 偏离个人基线的程度;\n5. **Apple 锻炼时长** —— 当日运动量。\n\n综合评分映射为 5 档学习强度(从「rest」到「intense」)× 5 类重点(从「review」到「push」)。详见 [AlgorithmIntroduction.md](./AlgorithmIntroduction.md)。"
+        },
+        {
+          "id": "hr_05",
+          "icon": "stethoscope",
+          "question": "学习准备度建议可以作为医疗建议吗?",
+          "answer": "**不可以**。学习准备度建议是**基于一般性算法的参考**,**不构成**:\n\n- 医疗建议、诊断、治疗方案;\n- 心理咨询、营养建议;\n- 升学、考试策略建议。\n\n如存在健康问题、持续疲劳、睡眠障碍等,请**咨询专业医生**。详见《用户使用协议》第六条免责声明。"
+        },
+        {
+          "id": "hr_06",
+          "icon": "power",
+          "question": "如何关闭 HRV 功能?",
+          "answer": "「设置 → 健康与准备度 → 启用 HRV」中关闭即可。关闭后:\n\n- 不再读取 HealthKit HRV 数据;\n- 历史 HRV 数据保留在本地,可在「健康设置 → 清除历史」中删除;\n- 不影响其他功能。"
+        }
+      ]
+    },
+    {
+      "id": "widget",
+      "title": "主页与小组件",
+      "icon": "rectangle.3.group.fill",
+      "items": [
+        {
+          "id": "wg_01",
+          "icon": "rectangle.3.group",
+          "question": "如何自定义主页卡片?",
+          "answer": "1. 「设置 → 外观与布局 → 主页布局」进入编辑模式;\n2. **拖动**调整卡片顺序;\n3. 点击卡片右侧开关,**启用/禁用**对应卡片;\n4. 点击「完成」保存。\n\n可定制的卡片包括:HRV 状态、快速动作、学习建议、趋势图、即将到来的考试、每日金句、近期成绩、未注册考试提醒。"
+        },
+        {
+          "id": "wg_02",
+          "icon": "ipad.landscape",
+          "question": "主页支持 iPad 两栏布局吗?",
+          "answer": "是的。StudyPulse 在 iPad 上使用 **LazyVGrid 两栏布局**,iPhone 保持单列 VStack。iPad 上主页最大宽度为 1100pt,内容居中而非拉伸。"
+        },
+        {
+          "id": "wg_03",
+          "icon": "plus.app",
+          "question": "如何添加小组件?",
+          "answer": "1. 长按 iPhone/iPad 主屏幕空白处,进入「抖动模式」;\n2. 点击左上角 `+` 按钮;\n3. 搜索「StudyPulse」;\n4. 选择小组件类型:**考试小组件** / **成绩趋势小组件** / **HRV 小组件**;\n5. 选择尺寸(小/中/大),点击「添加小组件」。"
+        },
+        {
+          "id": "wg_04",
+          "icon": "questionmark.app",
+          "question": "小组件不显示数据怎么办?",
+          "answer": "请按以下步骤排查:\n\n1. **数据未就绪** —— 首次启动后请等待 2-3 秒,DataManager 加载完成后会自动同步;\n2. **小组件未授权日历** —— 部分小组件需要日历权限才能显示日期;\n3. **手动刷新** —— 在主应用「设置 → 关于 → Test Notifications」下方有「刷新小组件」按钮;\n4. **App Group 异常** —— 极少数情况下,App Group 配置可能失效,可尝试**重启设备**。"
+        },
+        {
+          "id": "wg_05",
+          "icon": "arrow.triangle.2.circlepath",
+          "question": "小组件数据多久更新一次?",
+          "answer": "- **自动更新**:进入应用前台时(`scenePhase == .active`)立即同步;\n- **WidgetKit Timeline**:iOS 系统按一定频率(通常 5-30 分钟)自动刷新;\n- **手动更新**:在主应用「设置 → 关于」中找到「立即刷新小组件」按钮。"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "数据导出与备份",
+      "icon": "square.and.arrow.up.fill",
+      "items": [
+        {
+          "id": "dt_01",
+          "icon": "square.and.arrow.up",
+          "question": "如何导出数据?",
+          "answer": "1. 「设置 → 数据管理 → 导出 CSV」;\n2. 选择要导出的数据类型:**成绩 / 错题 / 考试 / 综合考试**(可多选);\n3. 点击「导出」,系统生成 CSV 文件并弹出系统分享面板;\n4. 选择目标:AirDrop / 邮件 / iCloud Drive / 微信 / QQ 等任意方式。"
+        },
+        {
+          "id": "dt_02",
+          "icon": "tablecells",
+          "question": "导出的 CSV 文件格式是什么?",
+          "answer": "CSV 文件采用 UTF-8 with BOM 编码,支持 Excel / Numbers / WPS 直接打开,字段包括:\n\n- **成绩**:`date, exam_name, subject, raw_score, score, ranking, importance, full_score, has_image`\n- **错题**:`date, title, subject, source, question, reason, wrong_solution, correct_solution`\n- **考试**:`name, exam_date, exam_end_date, importance, subject, mastery_degree`\n- **综合考试**:`name, exam_date, exam_end_date, importance, subjects, mastery_degree`"
+        },
+        {
+          "id": "dt_03",
+          "icon": "arrow.uturn.backward",
+          "question": "如何从 CSV 还原数据?",
+          "answer": "1. 「设置 → 数据管理 → 还原示例数据」,选择需要还原的 CSV;\n2. 系统自动校验 CSV 格式;\n3. 确认后,**当前对应类型的数据会被覆盖**(建议先导出当前数据作为备份);\n4. 还原完成,应用重新加载。"
+        },
+        {
+          "id": "dt_04",
+          "icon": "icloud.slash",
+          "question": "我能跨设备同步数据吗?",
+          "answer": "**当前版本不提供 iCloud 同步**。如需跨设备同步:\n\n1. 在源设备上「导出 CSV」;\n2. 通过 AirDrop / iCloud Drive / 邮件发送到目标设备;\n3. 在目标设备上「还原 CSV」。\n\n云同步功能计划在未来版本中提供。"
+        },
+        {
+          "id": "dt_05",
+          "icon": "trash.circle",
+          "question": "卸载应用后数据还在吗?",
+          "answer": "**不在**。iOS 卸载应用默认**删除沙盒**内的所有数据。如需保留:\n\n- **导出 CSV 备份**(推荐);\n- 整设备备份(iCloud / iTunes / Finder)可保留应用沙盒,但恢复时**部分数据可能不兼容**。"
+        },
+        {
+          "id": "dt_06",
+          "icon": "doc.text.below.ecg",
+          "question": "如何导出运行日志(用于反馈问题)?",
+          "answer": "「设置 → 数据管理 → 导出日志」:\n\n1. 点击「导出日志」,应用将最近 **5000 条** 运行日志导出为 `.txt` 文件;\n2. 通过分享面板发送给开发者;\n3. 开发者可通过日志分析卡顿、崩溃、性能问题。\n\n日志**仅保存在设备本地**,不向任何服务器上传。"
+        }
+      ]
+    },
+    {
+      "id": "privacy",
+      "title": "隐私与权限",
+      "icon": "lock.shield.fill",
+      "items": [
+        {
+          "id": "pv_01",
+          "icon": "icloud",
+          "question": "我的数据会上传到服务器吗?",
+          "answer": "**不会**。StudyPulse:\n\n- **不上传** 用户的成绩、错题、考试、头像等数据;\n- **不上传** HealthKit 数据;\n- **不集成** 任何广告 SDK、追踪 SDK、社交分享 SDK;\n- **不收集** 用户在自有服务器上的任何信息。\n\n数据**完全保存在设备本地**。详见《用户使用协议》第三条。"
+        },
+        {
+          "id": "pv_02",
+          "icon": "heart.text.square",
+          "question": "HealthKit 数据如何处理?",
+          "answer": "- **仅读取** HRV / 心率 / 呼吸率 / 睡眠 / 锻炼数据;\n- **不写入** HealthKit;\n- 数据**仅用于本地**计算学习准备度;\n- **不用于**广告、营销、数据挖掘、第三方传输。"
+        },
+        {
+          "id": "pv_03",
+          "icon": "key",
+          "question": "应用的权限有哪些?都是必须的吗?",
+          "answer": "权限全部**可选**,您可随时关闭:\n\n- **相机**:拍摄错题照片、头像 — 否\n- **照片库**:从相册选择错题照片、头像 — 否\n- **日历**:同步考试至系统日历 — 否\n- **HealthKit(只读)**:计算学习准备度 — 否\n- **本地通知**:考试提醒 — 否\n- **小组件**:展示考试、趋势、HRV 小组件 — 否"
+        },
+        {
+          "id": "pv_04",
+          "icon": "shield.lefthalf.filled",
+          "question": "我在 iOS 设置中关掉了某项权限,应用会崩溃吗?",
+          "answer": "**不会**。所有权限关闭后,对应功能**自动降级**或隐藏。例如:\n\n- 关闭相机权限 → 「拍照」按钮变灰,「从相册选择」仍然可用;\n- 关闭日历权限 → 「同步至日历」选项隐藏;\n- 关闭 HealthKit 权限 → HRV 卡片显示「未授权」,不强制请求。"
+        }
+      ]
+    },
+    {
+      "id": "appearance",
+      "title": "个性化与外观",
+      "icon": "paintbrush.fill",
+      "items": [
+        {
+          "id": "ap_01",
+          "icon": "globe",
+          "question": "支持哪些语言?",
+          "answer": "StudyPulse 支持 **5 种语言**:\n\n- English\n- 简体中文\n- 繁體中文\n- 日本語\n- 한국어\n\n切换方式:「设置 → 外观与布局 → 语言」。"
+        },
+        {
+          "id": "ap_02",
+          "icon": "moon.stars",
+          "question": "如何切换深色模式?",
+          "answer": "「设置 → 外观与布局 → 主题」,可选:\n\n- **跟随系统**(默认)\n- **浅色**\n- **深色**\n\n小组件的颜色也会跟随主题。"
+        },
+        {
+          "id": "ap_03",
+          "icon": "textformat.size",
+          "question": "字体大小可以调整吗?",
+          "answer": "当前版本**不支持自定义字体大小**(使用 iOS 系统的 Dynamic Type)。如需调整:\n\n- iOS **设置 → 辅助功能 → 显示与文字大小 → 更大字体**;\n- iOS **设置 → 辅助功能 → 显示与文字大小 → 加粗文本**。"
+        },
+        {
+          "id": "ap_04",
+          "icon": "ipad",
+          "question": "iPad 上能像 iPhone 一样用 TabView 吗?",
+          "answer": "默认 iPad 使用 **NavigationSplitView 侧栏**(更适合大屏),iPhone 保留 **TabView 5 标签**。如需 iPad 强制使用 TabView,可在系统设置中开启「缩小显示」降低分辨率。"
+        }
+      ]
+    },
+    {
+      "id": "trouble",
+      "title": "故障排查",
+      "icon": "wrench.and.screwdriver.fill",
+      "items": [
+        {
+          "id": "tb_01",
+          "icon": "hourglass",
+          "question": "应用启动很慢或卡在启动页?",
+          "answer": "1. **首次启动** —— 首次启动需要加载 7 个 JSON 文件(成绩/错题/考试/科目/资料/健康历史等),可能需要 3-5 秒;\n2. **数据量过大** —— 若历史成绩/错题超过 1000 条,加载时间会增加;\n3. **iOS 存储空间不足** —— 检查 iOS **设置 → 通用 → iPhone 存储空间**;\n4. **强制重启** —— 必要时强制重启应用(从多任务栏上滑关闭,再重新打开)。"
+        },
+        {
+          "id": "tb_02",
+          "icon": "tortoise",
+          "question": "应用经常卡顿或掉帧?",
+          "answer": "1. **关闭主页不必要的卡片** —— 「设置 → 外观与布局 → 主页布局」;\n2. **清理旧照片** —— 大量照片会增加内存压力;\n3. **关闭 HRV 图表模式** —— 「设置 → 健康与准备度 → 显示级别」改为「仅建议」;\n4. **导出运行日志** —— 反馈给开发者,日志中的卡顿监测数据可定位问题。\n\n应用内置 **LagMonitor** 卡顿检测器,自动记录主线程连续丢帧事件。"
+        },
+        {
+          "id": "tb_03",
+          "icon": "calendar.badge.exclamationmark",
+          "question": "主页「即将到来的考试」不显示?",
+          "answer": "1. 检查是否在「考试」页添加了**未来日期**的考试;\n2. 过期考试不显示;\n3. 检查「设置 → 外观与布局 → 主页布局」中「即将到来的考试」卡片是否被禁用。"
+        },
+        {
+          "id": "tb_04",
+          "icon": "bell.slash.fill",
+          "question": "通知不弹横幅?",
+          "answer": "1. iOS **设置 → 通知 → StudyPulse**,开启「横幅」「声音」「标记」;\n2. 检查 iOS **专注模式 / 勿扰模式**;\n3. **设置 → 关于 → Test Notifications** 验证通知通道是否正常;\n4. 极端情况下,卸载后重装可重置通知通道。"
+        },
+        {
+          "id": "tb_05",
+          "icon": "text.viewfinder",
+          "question": "OCR 文字识别失败?",
+          "answer": "1. 授权相机或照片库权限;\n2. 拍摄环境:光线充足、字迹清晰、避免反光;\n3. 极端情况下(如纯手写体),可点击识别结果**手动编辑**;\n4. 仍失败时,跳过 OCR 直接**手写录入**。"
+        },
+        {
+          "id": "tb_06",
+          "icon": "calendar",
+          "question": "日历同步失败?",
+          "answer": "1. 授权日历权限:iOS **设置 → 隐私 → 日历 → StudyPulse**;\n2. 检查 iCloud 账户或本地账户的日历是否启用;\n3. 重新添加考试并保存,触发同步;\n4. 极端情况下,删除考试后重新添加。"
+        },
+        {
+          "id": "tb_07",
+          "icon": "rectangle.dashed",
+          "question": "小组件显示「暂无数据」?",
+          "answer": "1. 主应用至少添加一条考试/成绩,小组件才有数据可显示;\n2. iOS 主屏幕小组件缓存可能滞后,长按小组件 → 「刷新小组件」;\n3. 重启 iPhone 强制刷新 WidgetKit 缓存。"
+        },
+        {
+          "id": "tb_08",
+          "icon": "tablecells.badge.ellipsis",
+          "question": "CSV 导入报错?",
+          "answer": "1. 检查文件编码:**UTF-8 with BOM**;\n2. 检查字段名:必须与「字段说明」一致;\n3. 检查日期格式:`YYYY-MM-DD`;\n4. 检查科目名称:必须与系统已配置的科目名称完全一致(区分大小写);\n5. 联系开发者获取模板。"
+        }
+      ]
+    },
+    {
+      "id": "about",
+      "title": "关于开发者与反馈",
+      "icon": "person.crop.circle.fill",
+      "items": [
+        {
+          "id": "ab_01",
+          "icon": "person",
+          "question": "谁开发了 StudyPulse?",
+          "answer": "StudyPulse 由独立开发者 **Gao Chenkai** 设计与开发,使用 SwiftUI + Swift 6.0 构建,源代码以 **CC BY-NC-SA 4.0** 协议开源。"
+        },
+        {
+          "id": "ab_02",
+          "icon": "envelope",
+          "question": "我有建议或发现了 Bug,如何反馈?",
+          "answer": "反馈渠道:\n\n1. **应用内反馈** —— 「设置 → 关于 → 反馈」;\n2. **邮件** —— 通过 App Store 详情页联系开发者;\n3. **App Store 评论** —— 您的评分与评论对项目帮助巨大。\n\n反馈时请附上:\n\n- 问题描述、复现步骤、预期结果;\n- 设备型号、iOS 版本;\n- (可选)「设置 → 数据管理 → 导出日志」导出的运行日志。"
+        },
+        {
+          "id": "ab_03",
+          "icon": "curlybraces",
+          "question": "我可以参与开发吗?",
+          "answer": "当然!项目以 **CC BY-NC-SA 4.0** 开源(详见根目录 `LICENSE`):\n\n- **使用**:您可以自由下载与使用源代码;\n- **修改**:可以根据需要修改;\n- **再分发**:可以分享给他人;\n- **禁止商业使用**:不得用于商业目的;\n- **相同协议**:衍生作品必须以相同协议发布。"
+        },
+        {
+          "id": "ab_04",
+          "icon": "dollarsign.circle",
+          "question": "商业使用需要授权吗?",
+          "answer": "**是的**。CC BY-NC-SA 4.0 协议**禁止商业使用**。如需将 StudyPulse用于:\n\n- 商业应用发布;\n- 商业机构内部分发;\n- 学校/培训机构商业部署;\n- 二次开发并销售;\n\n请通过应用内反馈渠道联系开发者,获取商业授权。"
+        },
+        {
+          "id": "ab_05",
+          "icon": "doc.text",
+          "question": "协议与隐私政策在哪里查看?",
+          "answer": "- **应用内** —— 「设置 → 关于 → User Agreement」;\n- **项目根目录** —— `USER_AGREEMENT.md` 与 `LICENSE`(CC BY-NC-SA 4.0)。"
+        },
+        {
+          "id": "ab_06",
+          "icon": "icloud.and.arrow.up",
+          "question": "未来会加入 iCloud 同步吗?",
+          "answer": "iCloud 同步是计划中的功能,但**实现成本较高**,需要:\n\n- Apple Developer 计划升级;\n- CloudKit 容器配置;\n- 端到端加密与冲突合并;\n- 隐私政策的进一步完善。\n\n请关注应用更新日志与开发者公告。"
+        },
+        {
+          "id": "ab_07",
+          "icon": "map",
+          "question": "未来会支持哪些功能?",
+          "answer": "路线图(以实际版本为准):\n\n- iCloud 同步;\n- 错题智能复习(艾宾浩斯曲线);\n- 学习小组协作;\n- 平板优化(Stage Manager、键盘快捷键);\n- Apple Pencil 笔记(错题手写批注);\n- Siri 快捷指令;\n- macOS Catalyst 版本。"
+        }
+      ]
+    }
+  ]
+}
