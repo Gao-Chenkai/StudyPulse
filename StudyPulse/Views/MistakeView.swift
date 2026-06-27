@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import UIKit
+import SwiftStreamingMarkdown
 
 // MARK: - 一级菜单：科目列表
 struct MistakeView: View {
@@ -580,53 +581,71 @@ struct MistakeSetDetailView: View {
             // Question Section
             if !mistakeSet.originalQuestion.isEmpty {
                 Section(header: Text("Original Question".localized())) {
-                    if #available(iOS 15.0, *) {
-                        Text(mistakeSet.originalQuestion)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(mistakeSet.originalQuestion)
-                    }
-                    
+                    MarkdownView(
+                        text: mistakeSet.originalQuestion.normalisingSingleDollarMath(),
+                        config: .previewConfig
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+
                     if !mistakeSet.questionImages.isEmpty {
                         imageScrollView(images: mistakeSet.questionImages)
                     }
                 }
             }
-            
+
             // Error Reason Section
             if !mistakeSet.errorReason.isEmpty {
                 Section(header: Text("Error Reason".localized())) {
-                    Text(mistakeSet.errorReason)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
+                    MarkdownView(
+                        text: mistakeSet.errorReason.normalisingSingleDollarMath(),
+                        config: .previewConfig
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+
                     if !mistakeSet.reasonImages.isEmpty {
                         imageScrollView(images: mistakeSet.reasonImages)
                     }
                 }
             }
-            
+
             // Wrong Solution Section
             if !mistakeSet.wrongSolution.isEmpty {
-                Section(header: Text("Wrong Solution".localized())) {
-                    Text(mistakeSet.wrongSolution)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .foregroundColor(.red)
-                    
+                Section {
+                    MarkdownView(
+                        text: mistakeSet.wrongSolution.normalisingSingleDollarMath(),
+                        config: .previewConfig
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+
                     if !mistakeSet.wrongSolutionImages.isEmpty {
                         imageScrollView(images: mistakeSet.wrongSolutionImages)
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.red)
+                        Text("Wrong Solution".localized())
+                    }
                 }
             }
-            
+
             // Correct Solution Section
             if !mistakeSet.correctSolution.isEmpty {
-                Section(header: Text("Correct Solution".localized())) {
-                    Text(mistakeSet.correctSolution)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .foregroundColor(.green)
-                    
+                Section {
+                    MarkdownView(
+                        text: mistakeSet.correctSolution.normalisingSingleDollarMath(),
+                        config: .previewConfig
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+
                     if !mistakeSet.correctSolutionImages.isEmpty {
                         imageScrollView(images: mistakeSet.correctSolutionImages)
+                    }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Correct Solution".localized())
                     }
                 }
             }

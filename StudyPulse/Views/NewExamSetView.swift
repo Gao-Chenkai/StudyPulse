@@ -200,11 +200,11 @@ struct NewExamSetView: View {
                 }
             }
             .adaptiveForm()
-            .onChange(of: isComprehensiveExam) { syncSubjectTimeEntries() }
-            .onChange(of: selectedSingleSubject) { syncSubjectTimeEntries() }
-            .onChange(of: selectedMultipleSubjects) { syncSubjectTimeEntries() }
-            .onChange(of: examDate) { syncSubjectTimeEntries() }
-            .onChange(of: examEndDate) { syncSubjectTimeEntries() }
+            .onChange(of: isComprehensiveExam) { _, _ in syncSubjectTimeEntries() }
+            .onChange(of: selectedSingleSubject) { _, _ in syncSubjectTimeEntries() }
+            .onChange(of: selectedMultipleSubjects) { _, _ in syncSubjectTimeEntries() }
+            .onChange(of: examDate) { _, _ in syncSubjectTimeEntries() }
+            .onChange(of: examEndDate) { _, _ in syncSubjectTimeEntries() }
             .navigationTitle("New Exam".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -113,9 +113,11 @@ private extension MistakeDetailEditView {
             }
             .pickerStyle(.segmented)
             
-            TextEditor(text: currentBinding)
-                .frame(minHeight: 160)
-                .font(.body)
+            MarkdownEditorView(
+                text: currentBinding,
+                placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+            )
+            .frame(minHeight: 620)
         }
     }
     

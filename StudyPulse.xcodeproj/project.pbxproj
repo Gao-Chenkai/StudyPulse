@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
-		278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */ = {isa = PBXBuildFile; productRef = 278969412FD313BE00BEC710 /* WSOnBoarding */; };
 		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
 		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
 		278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -20,6 +19,7 @@
 		278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* DESIGN.md */; };
 		278D45FC2FE7BA6A0073EB87 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FB2FE7BA6A0073EB87 /* README.md */; };
 		278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* SPEC.md */; };
+		27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */; };
 		27BF505B2FE6D1E50038966E /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* SPEC.md */; };
 		27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505C2FE6D1F10038966E /* AGENTS.md */; };
 		27BF505F2FE6D1FE0038966E /* CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */; };
@@ -114,6 +114,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */,
 				278969422FD313BE00BEC710 /* WSOnBoarding in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -199,7 +200,6 @@
 			);
 			name = StudyPulse;
 			packageProductDependencies = (
-				278969412FD313BE00BEC710 /* WSOnBoarding */,
 			);
 			productName = StudyPulse;
 			productReference = 2743C83E2F6EAEA000CC1EED /* StudyPulse.app */;
@@ -260,6 +260,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */,
+				27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2743C83F2F6EAEA000CC1EED /* Products */;
@@ -657,16 +658,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		278969402FD313BE00BEC710 /* XCLocalSwiftPackageReference "../Packages/WSOnBoarding-main" */ = {
+		27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../Packages/WSOnBoarding-main";
+			relativePath = "Packages/SwiftStreamingMarkdown-0.2.0";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		278969412FD313BE00BEC710 /* WSOnBoarding */ = {
+		27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = WSOnBoarding;
+			package = 27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */;
+			productName = SwiftStreamingMarkdown;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
