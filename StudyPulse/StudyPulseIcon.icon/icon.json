@@ -1,27 +1,12 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "extended-gray:1.00000,1.00000",
-      "display-p3:0.92092,0.89033,0.88000,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.5,
-        "y" : 1
-      },
-      "stop" : {
-        "x" : 0.5,
-        "y" : 0.3
-      }
-    }
-  },
+  "fill" : "automatic",
   "groups" : [
     {
       "layers" : [
         {
           "blend-mode-specializations" : [
             {
-              "value" : "normal"
+              "value" : "darken"
             },
             {
               "appearance" : "tinted",

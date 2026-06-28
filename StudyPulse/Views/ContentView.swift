@@ -42,9 +42,9 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
     @Environment(\.horizontalSizeClass) private var sizeClass
-   @State private var selectedTab: AppTab = .home
-   @State private var showingAddGradeFromIntent = false
-   @State private var showingNewMistakeFromIntent = false
+    @State private var selectedTab: AppTab = .home
+    @State private var showingAddGradeFromIntent = false
+    @State private var showingNewMistakeFromIntent = false
     @State private var currentIntentAction: IntentAction? = nil
    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
