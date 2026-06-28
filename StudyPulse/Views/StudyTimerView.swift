@@ -7,6 +7,69 @@
 
 import SwiftUI
 import Combine
+import UIKit
+import os
+
+// MARK: - Floating Orb (TimelineView-based)
+
+private struct FloatingOrb: Identifiable {
+    let id = UUID()
+    var xRatio: CGFloat     // 0...1 horizontal position ratio
+    var size: CGFloat
+    var speed: Double        // seconds for one full cycle
+    var phase: Double        // 0...1 starting phase
+    var opacity: Double
+}
+
+// MARK: - Color Theme
+
+private enum ColorTheme: String, CaseIterable, Identifiable {
+    case aurora, sunset, ocean, forest, lavender, neon
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .aurora: return "Aurora".localized()
+        case .sunset: return "Sunset".localized()
+        case .ocean: return "Ocean".localized()
+        case .forest: return "Forest".localized()
+        case .lavender: return "Lavender".localized()
+        case .neon: return "Neon".localized()
+        }
+    }
+
+    var colors: [Color] {
+        switch self {
+        case .aurora:
+            return [Color(red: 0.2, green: 0.8, blue: 0.5), Color(red: 0.1, green: 0.6, blue: 0.9), Color(red: 0.5, green: 0.3, blue: 0.9)]
+        case .sunset:
+            return [Color(red: 1.0, green: 0.4, blue: 0.2), Color(red: 1.0, green: 0.6, blue: 0.1), Color(red: 0.9, green: 0.2, blue: 0.5)]
+        case .ocean:
+            return [Color(red: 0.1, green: 0.5, blue: 0.9), Color(red: 0.0, green: 0.8, blue: 0.8), Color(red: 0.2, green: 0.3, blue: 0.9)]
+        case .forest:
+            return [Color(red: 0.2, green: 0.7, blue: 0.3), Color(red: 0.1, green: 0.5, blue: 0.2), Color(red: 0.6, green: 0.8, blue: 0.2)]
+        case .lavender:
+            return [Color(red: 0.6, green: 0.4, blue: 0.9), Color(red: 0.8, green: 0.3, blue: 0.7), Color(red: 0.4, green: 0.5, blue: 1.0)]
+        case .neon:
+            return [Color(red: 0.0, green: 1.0, blue: 0.5), Color(red: 1.0, green: 0.0, blue: 0.5), Color(red: 0.5, green: 0.0, blue: 1.0)]
+        }
+    }
+
+    var primaryColor: Color { colors[0] }
+    var icon: String {
+        switch self {
+        case .aurora: return "sparkles"
+        case .sunset: return "sun.max.fill"
+        case .ocean: return "water.waves"
+        case .forest: return "leaf.fill"
+        case .lavender: return "flower"
+        case .neon: return "bolt.fill"
+        }
+    }
+}
+
+// MARK: - StudyTimerView
 
 struct StudyTimerView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +79,26 @@ struct StudyTimerView: View {
     @State private var selectedPreset: Int? = nil
     @State private var animatedProgress: Double = 1.0
 
+    // Dynamic animation states
+    @State private var breatheScale: CGFloat = 1.0
+    @State private var glowOpacity: Double = 0.3
+    @State private var ringRotation: Double = 0
+    @State private var orbs: [FloatingOrb] = []
+    @State private var showPausedPulse = false
+    @State private var controlButtonScale: [Bool] = [false, false, false]
+    @State private var immersiveLandscapeMode = false
+
+    // Idle detection
+    @State private var isIdle: Bool = false
+    @State private var idleTimer: Timer?
+    @State private var idleCount: Int = 0
+    private let idleThreshold: TimeInterval = 15.0
+
+    // Color theme
+    @State private var selectedTheme: ColorTheme = .aurora
+    @State private var showThemePicker: Bool = false
+    @State private var flowPhase: Double = 0
+
     private var todaySessions: Int {
         StudySessionStore.todayTotalMinutes()
     }
@@ -24,46 +107,327 @@ struct StudyTimerView: View {
         timer.timerState == .running || timer.timerState == .paused
     }
 
+    private var isRunning: Bool {
+        timer.timerState == .running
+    }
+
+    /// The current theme's primary color, used for rings / orbs / accents.
+    private var themeColor: Color {
+        selectedTheme.primaryColor
+    }
+
+    /// Flowing gradient colors for the progress ring.
+    private var flowColors: [Color] {
+        selectedTheme.colors
+    }
+
+    private var activePrimaryTextColor: Color {
+        immersiveLandscapeMode ? .white : .primary
+    }
+
+    private var activeSecondaryTextColor: Color {
+        immersiveLandscapeMode ? Color.white.opacity(0.72) : .secondary
+    }
+
+    private var activeSurfaceFillColor: Color {
+        immersiveLandscapeMode ? Color.white.opacity(0.08) : Color(.tertiarySystemFill)
+    }
+
+    private var activeSurfaceStrokeColor: Color {
+        immersiveLandscapeMode ? Color.white.opacity(0.14) : Color(.secondarySystemFill)
+    }
+
     var body: some View {
         NavigationStack {
-            ZStack {
-                intensityColor.opacity(0.06)
-                    .ignoresSafeArea()
+            GeometryReader { proxy in
+                ZStack(alignment: .top) {
+                    // Dynamic background
+                    backgroundLayer
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            revealControls()
+                        }
+                        .onHover { hovering in
+                            if hovering {
+                                revealControls()
+                            }
+                        }
 
-                VStack(spacing: 0) {
-                    if isActive {
-                        activeTimerBody
-                    } else {
-                        setupBody
+                    VStack(spacing: 0) {
+                        if isActive {
+                            activeTimerBody(in: proxy.size)
+                        } else {
+                            setupBody
+                        }
+                    }
+
+                    if immersiveLandscapeMode {
+                        immersiveTopBar
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.semibold))
+                if !immersiveLandscapeMode {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .accessibilityLabel("Close".localized())
                     }
-                    .accessibilityLabel("Close".localized())
-                }
-                ToolbarItem(placement: .principal) {
-                    Text("Study Timer".localized())
-                        .font(.headline)
+                    ToolbarItem(placement: .principal) {
+                        Text("Study Timer".localized())
+                            .font(.headline)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        if isActive {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    showThemePicker.toggle()
+                                }
+                                wakeFromIdle()
+                            } label: {
+                                Image(systemName: "paintpalette.fill")
+                                    .font(.subheadline)
+                                    .foregroundColor(themeColor)
+                            }
+                        }
+                    }
                 }
             }
+            .toolbar(immersiveLandscapeMode ? .hidden : .visible, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showThemePicker) {
+                themePickerSheet
+            }
         }
+        .statusBarHidden(immersiveLandscapeMode)
+        .persistentSystemOverlays(immersiveLandscapeMode ? .hidden : .visible)
         .onAppear {
             refreshRecommendation()
+            startAmbientAnimations()
+            generateOrbs()
+            startIdleTimer()
+        }
+        .onDisappear {
+            stopAmbientAnimations()
+            stopIdleTimer()
+            exitImmersiveLandscapeMode()
         }
         .onChange(of: timer.remainingSeconds) { _, newValue in
             guard timer.totalSeconds > 0 else { return }
-            withAnimation(.linear(duration: 0.3)) {
+            withAnimation(.easeInOut(duration: 0.5)) {
                 animatedProgress = Double(newValue) / Double(timer.totalSeconds)
             }
         }
+        .onChange(of: timer.timerState) { _, newState in
+            if newState == .running {
+                startAmbientAnimations()
+            } else {
+                stopAmbientAnimations()
+            }
+        }
+    }
+
+    // MARK: - Immersive Top Bar
+
+    private var immersiveTopBar: some View {
+        HStack(spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(activePrimaryTextColor)
+                    .frame(width: 40, height: 40)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .accessibilityLabel("Close".localized())
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Theme Picker Sheet
+
+    private var themePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Preview
+                ZStack {
+                    LinearGradient(
+                        colors: flowColors.map { $0.opacity(0.15) },
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
+
+                    Circle()
+                        .stroke(
+                            AngularGradient(
+                                colors: flowColors + [flowColors[0]],
+                                center: .center
+                            ),
+                            style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                        )
+                        .frame(width: 120, height: 120)
+                        .shadow(color: themeColor.opacity(0.5), radius: 12)
+                }
+                .frame(height: 200)
+
+                // Theme grid
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        ForEach(ColorTheme.allCases) { theme in
+                            Button {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                    selectedTheme = theme
+                                }
+                            } label: {
+                                VStack(spacing: 10) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: theme.colors,
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 56, height: 56)
+                                            .shadow(color: theme.primaryColor.opacity(0.4), radius: 8)
+
+                                        if selectedTheme == theme {
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 3)
+                                                .frame(width: 56, height: 56)
+                                        }
+                                    }
+
+                                    Text(theme.displayName)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(selectedTheme == theme ? theme.primaryColor.opacity(0.12) : Color(.tertiarySystemFill))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationTitle("Color Theme".localized())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done".localized()) {
+                        showThemePicker = false
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Background Layer
+
+    private var backgroundLayer: some View {
+        ZStack {
+            if immersiveLandscapeMode {
+                Color.black
+
+                GeometryReader { geo in
+                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                        let t = timeline.date.timeIntervalSinceReferenceDate
+                        landscapeFlowLayer(in: geo.size, time: t)
+                    }
+                }
+            } else {
+                // Flowing gradient background
+                TimelineView(.animation(minimumInterval: 1.0/30.0)) { timeline in
+                    let t = timeline.date.timeIntervalSinceReferenceDate
+                    LinearGradient(
+                        colors: [
+                            flowColors[0].opacity(0.08 + 0.02 * sin(t * 0.3)),
+                            Color(.systemBackground),
+                            flowColors[1].opacity(0.04 + 0.02 * cos(t * 0.2))
+                        ],
+                        startPoint: UnitPoint(
+                            x: 0.5 + 0.3 * sin(t * 0.15),
+                            y: 0.5 + 0.3 * cos(t * 0.15)
+                        ),
+                        endPoint: UnitPoint(
+                            x: 0.5 - 0.3 * sin(t * 0.15),
+                            y: 0.5 - 0.3 * cos(t * 0.15)
+                        )
+                    )
+                }
+            }
+
+            // Radial glow behind timer
+            RadialGradient(
+                colors: [themeColor.opacity(glowOpacity), .clear],
+                center: .center,
+                startRadius: 20,
+                endRadius: 280
+            )
+            .blendMode(.plusLighter)
+
+            // Floating orbs with TimelineView
+            if isRunning {
+                GeometryReader { geo in
+                    TimelineView(.animation) { timeline in
+                        let time = timeline.date.timeIntervalSinceReferenceDate
+                        ZStack {
+                            ForEach(orbs) { orb in
+                                let cycle = time.truncatingRemainder(dividingBy: orb.speed) / orb.speed
+                                let progress = (cycle + orb.phase).truncatingRemainder(dividingBy: 1.0)
+                                let y = geo.size.height * (1.0 - progress)
+                                let x = orb.xRatio * geo.size.width + sin(time * 0.5 + orb.phase * 10) * 20
+                                let colorIndex = Int((time * 0.1 + orb.phase * 3).truncatingRemainder(dividingBy: Double(flowColors.count)))
+                                let orbColor = flowColors[colorIndex]
+                                Circle()
+                                    .fill(orbColor.opacity(orb.opacity * (1.0 - progress)))
+                                    .frame(width: orb.size, height: orb.size)
+                                    .position(x: x, y: y)
+                                    .blur(radius: 1.5)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func landscapeFlowLayer(in size: CGSize, time: TimeInterval) -> some View {
+        ZStack {
+            ForEach(Array(flowColors.enumerated()), id: \.offset) { index, color in
+                let phase = Double(index) * 1.7
+                let x = size.width * (0.15 + 0.7 * (0.5 + 0.5 * sin(time * (0.10 + Double(index) * 0.015) + phase)))
+                let y = size.height * (0.18 + 0.64 * (0.5 + 0.5 * cos(time * (0.13 + Double(index) * 0.02) + phase * 0.8)))
+                let width = min(size.width, size.height) * (0.22 + CGFloat(index) * 0.04)
+                let height = width * (1.2 + CGFloat(index) * 0.12)
+
+                Ellipse()
+                    .fill(color.opacity(0.16))
+                    .frame(width: width, height: height)
+                    .blur(radius: 48)
+                    .position(x: x, y: y)
+                    .blendMode(.screen)
+            }
+        }
+        .compositingGroup()
     }
 
     // MARK: - Setup body
@@ -91,111 +455,251 @@ struct StudyTimerView: View {
 
     // MARK: - Active timer body
 
-    private var activeTimerBody: some View {
+    @ViewBuilder
+    private func activeTimerBody(in size: CGSize) -> some View {
+        if immersiveLandscapeMode && size.width > size.height {
+            immersiveLandscapeBody(in: size)
+        } else {
+            standardActiveTimerBody
+        }
+    }
+
+    private var standardActiveTimerBody: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .stroke(Color(.tertiarySystemFill), lineWidth: 12)
-                    .frame(width: 240, height: 240)
-
-                Circle()
-                    .trim(from: 0, to: 1.0 - animatedProgress)
-                    .stroke(
-                        AngularGradient(
-                            colors: [intensityColor, intensityColor.opacity(0.7)],
-                            center: .center,
-                            startAngle: .degrees(-90),
-                            endAngle: .degrees(270)
-                        ),
-                        style: StrokeStyle(lineWidth: 12, lineCap: .round)
-                    )
-                    .frame(width: 240, height: 240)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.3), value: animatedProgress)
-
-                VStack(spacing: 4) {
-                    Text(formatTime(timer.remainingSeconds))
-                        .font(.system(size: 48, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary)
-
-                    Text(timer.currentIntensity?.displayName ?? "")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(intensityColor)
-
-                    if timer.timerState == .paused {
-                        Text("Paused".localized())
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.orange.opacity(0.15)))
-                    }
-                }
-            }
+            timerRingView(outerGlowSize: 310, outerRingSize: 290, trackSize: 240, innerSize: 220, timeFontSize: 52)
 
             Spacer()
 
-            HStack(spacing: 40) {
-                Button {
-                    timer.cancel()
-                } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.red)
-                            .frame(width: 56, height: 56)
-                            .background(Circle().fill(Color.red.opacity(0.12)))
-                        Text("End".localized())
-                            .font(.system(size: 11))
-                            .foregroundColor(.red)
-                    }
-                }
-                .buttonStyle(.plain)
+            // Control buttons (collapses when idle)
+            controlButtons
 
-                Button {
-                    if timer.timerState == .running {
-                        timer.pause()
-                    } else if timer.timerState == .paused {
-                        timer.resume()
-                    }
-                } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: timer.timerState == .paused ? "play.fill" : "pause.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
-                            .frame(width: 72, height: 72)
-                            .background(
-                                Circle().fill(
-                                    timer.timerState == .paused ? Color.green : Color.orange
-                                )
-                            )
-                        Text(timer.timerState == .paused ? "Resume".localized() : "Pause".localized())
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
+            Spacer().frame(height: isIdle ? 20 : 40)
+        }
+    }
 
-                Button {
-                    dismiss()
-                } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: "arrow.down.right.and.arrow.up.left")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .frame(width: 56, height: 56)
-                            .background(Circle().fill(Color(.tertiarySystemFill)))
-                        Text("Minimize".localized())
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
+    private func immersiveLandscapeBody(in size: CGSize) -> some View {
+        let ringWidth = min(size.height * 0.76, size.width * 0.42, 470)
+
+        return ZStack {
+            timerRingView(
+                outerGlowSize: ringWidth,
+                outerRingSize: ringWidth - 16,
+                trackSize: ringWidth - 58,
+                innerSize: ringWidth - 118,
+                timeFontSize: ringWidth * 0.22
+            )
+            .frame(width: ringWidth, height: ringWidth)
+
+            HStack {
+                Spacer()
+
+                controlButtons
+                    .frame(width: 120)
+                    .padding(.trailing, 56)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.horizontal, 32)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            Spacer().frame(height: 40)
+    // MARK: - Control Buttons
+
+    private var controlButtons: some View {
+        Group {
+            if !isIdle {
+                // Full controls
+                let controlsLayout = immersiveLandscapeMode
+                    ? AnyLayout(VStackLayout(spacing: 28))
+                    : AnyLayout(HStackLayout(spacing: 48))
+
+                controlsLayout {
+                    // End button
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            controlButtonScale[0] = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                controlButtonScale[0] = false
+                            }
+                        }
+                        timer.cancel()
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red.opacity(0.1))
+                                    .frame(width: 60, height: 60)
+                                Circle()
+                                    .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                                    .frame(width: 60, height: 60)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.red)
+                            }
+                            .scaleEffect(controlButtonScale[0] ? 0.9 : 1.0)
+
+                            Text("End".localized())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.red.opacity(0.8))
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    // Play/Pause button (primary)
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            controlButtonScale[1] = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                                controlButtonScale[1] = false
+                            }
+                        }
+                        if timer.timerState == .running {
+                            timer.pause()
+                        } else if timer.timerState == .paused {
+                            timer.resume()
+                        }
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                // Outer glow
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                timer.timerState == .paused ? Color.green : themeColor,
+                                                timer.timerState == .paused ? Color.green.opacity(0.7) : themeColor.opacity(0.7)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 76, height: 76)
+                                    .shadow(
+                                        color: (timer.timerState == .paused ? Color.green : themeColor).opacity(0.4),
+                                        radius: 12, x: 0, y: 4
+                                    )
+
+                                // Inner highlight
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.2), .clear],
+                                            startPoint: .top,
+                                            endPoint: .center
+                                        )
+                                    )
+                                    .frame(width: 76, height: 76)
+
+                                Image(systemName: timer.timerState == .paused ? "play.fill" : "pause.fill")
+                                    .font(.system(size: 30, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .scaleEffect(controlButtonScale[1] ? 0.92 : 1.0)
+
+                            Text(timer.timerState == .paused ? "Resume".localized() : "Pause".localized())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(activeSecondaryTextColor)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    // Full-screen button
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            controlButtonScale[2] = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                controlButtonScale[2] = false
+                            }
+                        }
+                        if immersiveLandscapeMode {
+                            exitImmersiveLandscapeMode()
+                        } else {
+                            enterImmersiveLandscapeMode()
+                        }
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(activeSurfaceFillColor)
+                                    .frame(width: 60, height: 60)
+                                Circle()
+                                    .stroke(immersiveLandscapeMode ? activeSurfaceStrokeColor : themeColor.opacity(0.2), lineWidth: 1)
+                                    .frame(width: 60, height: 60)
+                                Image(systemName: immersiveLandscapeMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(themeColor)
+                            }
+                            .scaleEffect(controlButtonScale[2] ? 0.9 : 1.0)
+
+                            Text(immersiveLandscapeMode ? "Exit Full Screen".localized() : "Full Screen".localized())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(activeSecondaryTextColor)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxWidth: immersiveLandscapeMode ? 120 : .infinity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isIdle)
+    }
+
+    // MARK: - Idle Detection
+
+    private func startIdleTimer() {
+        stopIdleTimer()
+        idleCount = 0
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor in
+                idleCount += 1
+                if !isIdle && isRunning && idleCount >= Int(idleThreshold) {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        isIdle = true
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopIdleTimer() {
+        idleTimer?.invalidate()
+        idleTimer = nil
+    }
+
+    private func wakeFromIdle() {
+        guard isIdle else { return }
+        isIdle = false
+        // Reset idle timer
+        stopIdleTimer()
+        startIdleTimer()
+    }
+
+    private func revealControls() {
+        if isIdle {
+            withAnimation(.easeOut(duration: 0.22)) {
+                isIdle = false
+            }
+        }
+        stopIdleTimer()
+        startIdleTimer()
+    }
+
+    private func resetIdleTimer() {
+        if isIdle {
+            wakeFromIdle()
+        } else {
+            stopIdleTimer()
+            startIdleTimer()
         }
     }
 
@@ -217,7 +721,7 @@ struct StudyTimerView: View {
         VStack(spacing: 6) {
             Image(systemName: intensityIcon)
                 .font(.system(size: 36))
-                .foregroundColor(intensityColor)
+                .foregroundColor(themeColor)
 
             Text(intensityTitle)
                 .font(.system(size: 22, weight: .bold))
@@ -247,19 +751,19 @@ struct StudyTimerView: View {
                         if preset.isRecommended {
                             Text("Recommended".localized())
                                 .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(selectedPreset == preset.minutes ? .white.opacity(0.7) : intensityColor)
+                                .foregroundColor(selectedPreset == preset.minutes ? .white.opacity(0.7) : themeColor)
                         }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(selectedPreset == preset.minutes ? intensityColor : Color(.tertiarySystemFill))
+                            .fill(selectedPreset == preset.minutes ? themeColor : Color(.tertiarySystemFill))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                preset.isRecommended && selectedPreset != preset.minutes ? intensityColor : .clear,
+                                preset.isRecommended && selectedPreset != preset.minutes ? themeColor : .clear,
                                 lineWidth: 2
                             )
                     )
@@ -321,7 +825,7 @@ struct StudyTimerView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(intensityColor)
+                    .fill(themeColor)
             )
         }
         .buttonStyle(.plain)
@@ -352,7 +856,221 @@ struct StudyTimerView: View {
         }
     }
 
+    // MARK: - Ambient Animations
+
+    private func generateOrbs() {
+        orbs = (0..<12).map { _ in
+            FloatingOrb(
+                xRatio: CGFloat.random(in: 0.05...0.95),
+                size: CGFloat.random(in: 3...7),
+                speed: Double.random(in: 4.0...8.0),
+                phase: Double.random(in: 0...1),
+                opacity: Double.random(in: 0.2...0.5)
+            )
+        }
+    }
+
+    private func startAmbientAnimations() {
+        // Breathing animation
+        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+            breatheScale = 1.04
+        }
+
+        // Glow pulsing
+        withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+            glowOpacity = 0.45
+        }
+
+        // Ring rotation
+        withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+            ringRotation = 360
+        }
+
+        // Paused pulse
+        withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+            showPausedPulse = true
+        }
+    }
+
+    private func stopAmbientAnimations() {
+        withAnimation(.easeOut(duration: 0.5)) {
+            breatheScale = 1.0
+            glowOpacity = 0.15
+        }
+    }
+
+    private func enterImmersiveLandscapeMode() {
+        guard !immersiveLandscapeMode else { return }
+        immersiveLandscapeMode = true
+        requestOrientation(.landscape)
+        resetIdleTimer()
+    }
+
+    private func exitImmersiveLandscapeMode() {
+        guard immersiveLandscapeMode else { return }
+        immersiveLandscapeMode = false
+        requestOrientation(defaultOrientationMask)
+        resetIdleTimer()
+    }
+
+    private var defaultOrientationMask: UIInterfaceOrientationMask {
+        UIDevice.current.userInterfaceIdiom == .pad ? .all : .allButUpsideDown
+    }
+
+    private func requestOrientation(_ orientations: UIInterfaceOrientationMask) {
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else {
+            return
+        }
+
+        let preferences = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: orientations)
+        windowScene.requestGeometryUpdate(preferences) { error in
+            Log.view.error("StudyTimer orientation update failed: \(error.localizedDescription)")
+        }
+        windowScene.windows
+            .first(where: \.isKeyWindow)?
+            .rootViewController?
+            .setNeedsUpdateOfSupportedInterfaceOrientations()
+    }
+
     // MARK: - Helpers
+
+    private func timerRingView(
+        outerGlowSize: CGFloat,
+        outerRingSize: CGFloat,
+        trackSize: CGFloat,
+        innerSize: CGFloat,
+        timeFontSize: CGFloat
+    ) -> some View {
+        let safeTimeFontSize = immersiveLandscapeMode ? min(timeFontSize, innerSize * 0.32) : timeFontSize
+        let timeTextWidth = immersiveLandscapeMode ? innerSize * 0.74 : innerSize * 0.82
+
+        return ZStack {
+            Circle()
+                .stroke(
+                    AngularGradient(
+                        colors: flowColors.flatMap { [$0.opacity(0.0), $0.opacity(0.4), $0.opacity(0.0)] } + [flowColors[0].opacity(0.0)],
+                        center: .center,
+                        startAngle: .degrees(ringRotation - 60),
+                        endAngle: .degrees(ringRotation + 60)
+                    ),
+                    style: StrokeStyle(lineWidth: immersiveLandscapeMode ? 12 : 24, lineCap: .round)
+                )
+                .frame(width: outerGlowSize, height: outerGlowSize)
+                .blur(radius: 12)
+                .opacity(immersiveLandscapeMode ? (isRunning ? 0.26 : 0.10) : (isRunning ? 0.6 : 0.2))
+
+            if immersiveLandscapeMode {
+                Circle()
+                    .stroke(Color.white.opacity(isRunning ? 0.18 : 0.10), lineWidth: 2)
+                    .frame(width: outerRingSize, height: outerRingSize)
+                    .scaleEffect(breatheScale)
+                    .blur(radius: 0.4)
+            } else {
+                Circle()
+                    .stroke(themeColor.opacity(0.15), lineWidth: 2)
+                    .frame(width: outerRingSize, height: outerRingSize)
+                    .scaleEffect(breatheScale)
+                    .opacity(isRunning ? 0.5 : 0.15)
+            }
+
+            if immersiveLandscapeMode {
+                Circle()
+                    .stroke(Color.white.opacity(0.14), lineWidth: 8)
+                    .frame(width: trackSize, height: trackSize)
+            } else {
+                Circle()
+                    .stroke(Color(.tertiarySystemFill), lineWidth: 10)
+                    .frame(width: trackSize, height: trackSize)
+            }
+
+            Circle()
+                .trim(from: 0, to: 1.0 - animatedProgress)
+                .stroke(
+                    AngularGradient(
+                        colors: flowColors + [flowColors[0]],
+                        center: .center,
+                        startAngle: .degrees(ringRotation - 90),
+                        endAngle: .degrees(ringRotation + 270)
+                    ),
+                    style: StrokeStyle(lineWidth: immersiveLandscapeMode ? 8 : 10, lineCap: .round)
+                )
+                .frame(width: trackSize, height: trackSize)
+                .rotationEffect(.degrees(-90))
+                .shadow(color: themeColor.opacity(0.5), radius: 8, x: 0, y: 0)
+                .animation(.easeInOut(duration: 0.5), value: animatedProgress)
+
+            if immersiveLandscapeMode {
+                nativeGlassCircle(diameter: innerSize, opacity: 0.56)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
+                    )
+            } else {
+                Circle()
+                    .stroke(themeColor.opacity(0.08), lineWidth: 1)
+                    .frame(width: innerSize, height: innerSize)
+            }
+
+            VStack(spacing: 8) {
+                Text(formatTime(timer.remainingSeconds))
+                    .font(.system(size: safeTimeFontSize, weight: .bold, design: .monospaced))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [immersiveLandscapeMode ? .white : .primary, themeColor.opacity(0.8)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.3), value: timer.remainingSeconds)
+                    .minimumScaleFactor(0.55)
+                    .lineLimit(1)
+                    .frame(maxWidth: timeTextWidth)
+
+                Text(timer.currentIntensity?.displayName ?? "")
+                    .font(.system(size: max(15, safeTimeFontSize * 0.28), weight: .medium))
+                    .foregroundColor(themeColor)
+                    .opacity(0.9)
+
+                if timer.timerState == .paused {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(showPausedPulse ? 1.4 : 1.0)
+                            .opacity(showPausedPulse ? 0.5 : 1.0)
+                        Text("Paused".localized())
+                            .font(.system(size: max(13, timeFontSize * 0.22), weight: .semibold))
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.orange.opacity(0.12)))
+                    .overlay(
+                        Capsule().stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                }
+            }
+            .frame(maxWidth: innerSize * 0.82)
+        }
+    }
+
+    @ViewBuilder
+    private func nativeGlassCircle(diameter: CGFloat, opacity: Double = 1.0) -> some View {
+        if #available(iOS 26.0, *) {
+            Color.clear
+                .frame(width: diameter, height: diameter)
+                .glassEffect(.regular, in: Circle())
+                .opacity(opacity)
+        } else {
+            Circle()
+                .fill(.regularMaterial)
+                .frame(width: diameter, height: diameter)
+                .opacity(opacity)
+        }
+    }
 
     private var presetOptions: [(minutes: Int, isRecommended: Bool)] {
         let recommended = timer.recommendedDurationSeconds / 60
@@ -402,16 +1120,6 @@ struct StudyTimerView: View {
         case .steady: return "chart.bar.fill"
         case .light: return "book.closed.fill"
         case .recovery: return "bed.double.fill"
-        }
-    }
-
-    private var intensityColor: Color {
-        switch timer.recommendedIntensity {
-        case .peak: return .green
-        case .deepFocus: return .blue
-        case .steady: return .indigo
-        case .light: return .orange
-        case .recovery: return .red
         }
     }
 

@@ -210,7 +210,7 @@ struct StudyTimerCard: View {
         let recommended = timer.recommendedDurationSeconds
         let all: [Int] = [20 * 60, 25 * 60, 35 * 60, 45 * 60, 50 * 60]
         // Show 3 presets: recommended in the middle, flanked by closest others.
-        var candidates = all.sorted { abs($0 - recommended) < abs($1 - recommended) }
+        let candidates = all.sorted { abs($0 - recommended) < abs($1 - recommended) }
         let top3 = Array(candidates.prefix(3)).sorted()
         return top3.map { ($0, $0 == recommended) }
     }

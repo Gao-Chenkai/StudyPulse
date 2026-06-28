@@ -20,14 +20,14 @@ import os
 final class SRSReviewNotifications {
     static let shared = SRSReviewNotifications()
 
-    private let logger = Logger(subsystem: "app.StudyPulse.notifications", category: "SRS")
+    nonisolated private let logger = Logger(subsystem: "app.StudyPulse.notifications", category: "SRS")
     private init() {}
 
     // MARK: - Public API
 
     /// 重新调度所有错题复习通知
     /// - Parameter mistakes: 当前所有错题
-    func rescheduleAll(mistakes: [MistakeNote]) {
+    nonisolated func rescheduleAll(mistakes: [MistakeNote]) {
         let center = UNUserNotificationCenter.current()
 
         // 1. 先清空所有 SRS_ 前缀的待发通知
@@ -63,14 +63,14 @@ final class SRSReviewNotifications {
 
     /// 取消某张错题的通知（删除错题或关闭 opt-in 时调用）
     /// - Parameter mistakeId: 错题 UUID
-    func cancel(for mistakeId: UUID) {
+    nonisolated func cancel(for mistakeId: UUID) {
         let identifier = "\(Self.identifierPrefix)\(mistakeId.uuidString)"
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
         logger.info("取消错题通知 / Cancelled SRS notification: id=\(mistakeId.uuidString, privacy: .public)")
     }
 
     /// 取消所有 SRS 通知
-    func cancelAll() {
+    nonisolated func cancelAll() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let srsIds = requests
@@ -85,9 +85,9 @@ final class SRSReviewNotifications {
 
     // MARK: - Private
 
-    private static let identifierPrefix = "SRS_"
+    nonisolated private static let identifierPrefix = "SRS_"
 
-    private func schedule(mistake: MistakeNote, at date: Date) {
+    nonisolated private func schedule(mistake: MistakeNote, at date: Date) {
         let content = UNMutableNotificationContent()
         content.title = "Time to Review".localized()
         let subjectTag = mistake.subject.isEmpty ? "" : "[\(mistake.subject.localized())] "

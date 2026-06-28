@@ -783,3 +783,7 @@
 "Rest Today" = "今日は休息を";
 "Recommended: %d min" = "推奨：%d分";
 "Recommended: %d min session" = "推奨：%d分のセッション";
+"Full Screen" = "全画面";
+"Exit Full Screen" = "全画面を終了";
+"Landscape Focus Mode" = "横向き集中モード";
+"Keep the timer visible while reducing distractions." = "タイマーを常に見える状態に保ち、気が散る要素を減らします。";

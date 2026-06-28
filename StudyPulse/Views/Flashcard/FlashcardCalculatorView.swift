@@ -110,7 +110,7 @@ final class CalculatorEngine: ObservableObject {
 
     private func inputOperator(_ op: String) {
         // 连续按操作符：替换上一个
-        if !isTyping, let last = pendingOp {
+        if !isTyping, pendingOp != nil {
             pendingOp = op
             expression = formatExpression(acc: accumulator, op: op, current: nil)
             return

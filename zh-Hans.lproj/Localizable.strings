@@ -783,3 +783,7 @@
 "Rest Today" = "今天以休息为主";
 "Recommended: %d min" = "推荐：%d 分钟";
 "Recommended: %d min session" = "推荐：%d 分钟学习";
+"Full Screen" = "全屏";
+"Exit Full Screen" = "退出全屏";
+"Landscape Focus Mode" = "横屏专注模式";
+"Keep the timer visible while reducing distractions." = "保持计时器始终可见，同时减少干扰。";

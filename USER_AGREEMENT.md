@@ -293,7 +293,7 @@
 
 **8.3 Apple 协议**
 
-- 本应用通过 Apple App Store 分发,**用户与 Apple 之间的协议**(如 Apple Media Services Terms and Conditions)**不构成本协议的一部分**;
+- 本应用尚未通过 Apple App Store 分发,**用户与 Apple 之间的协议**(如 Apple Media Services Terms and Conditions)**不构成本协议的一部分**;
 - 开发者(而非 Apple)负责本应用的全部内容、维护、问题处理与法律责任,除非适用法律另有规定;
 - Apple 不就本应用向用户承担任何责任;
 - 如本应用出现任何问题,您可以联系开发者(见第十五条),也可以通过 App Store 报告问题。

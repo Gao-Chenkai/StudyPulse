@@ -783,3 +783,7 @@
 "Rest Today" = "오늘은 휴식";
 "Recommended: %d min" = "추천: %d분";
 "Recommended: %d min session" = "추천: %d분 세션";
+"Full Screen" = "전체 화면";
+"Exit Full Screen" = "전체 화면 종료";
+"Landscape Focus Mode" = "가로 집중 모드";
+"Keep the timer visible while reducing distractions." = "타이머를 계속 보이게 유지하면서 방해 요소를 줄입니다.";
