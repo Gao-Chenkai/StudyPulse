@@ -14,6 +14,11 @@ struct ExamView: View {
     @State private var selectedExamForDetail: Exam? = nil
     @State private var selectedComprehensiveExam: comprehensiveExam? = nil
     @State private var showingPastExams = false
+    @State private var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
+
+    private var showsCalendar: Bool {
+        viewMode == .calendar
+    }
 
     /// 合并所有类型的考试，按时间排序
     private var allExamsSorted: [Any] {
@@ -85,74 +90,10 @@ struct ExamView: View {
                         description: Text("Tap '+' to add a new exam.".localized())
                     )
                     .background(Color(.systemGroupedBackground))
+                } else if showsCalendar {
+                    calendarContent
                 } else {
-                    List {
-                        if upcomingExams.isEmpty {
-                            Section {
-                                HStack {
-                                    Spacer()
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "calendar.badge.plus")
-                                            .font(.title2)
-                                            .foregroundColor(Color(.secondaryLabel))
-                                        Text("No upcoming exams".localized())
-                                            .font(.subheadline)
-                                            .foregroundColor(Color(.secondaryLabel))
-                                    }
-                                    .padding(.vertical, 20)
-                                    Spacer()
-                                }
-                                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                            }
-                        } else {
-                            ForEach(groupedExams, id: \.0) { sectionTitle, exams in
-                                Section(header: Text(sectionTitle)
-                                    .foregroundColor(Color(.secondaryLabel))
-                                    .font(.subheadline)
-                                    .textCase(.none)
-                                ) {
-                                    ForEach(exams.indices, id: \.self) { index in
-                                        let item = exams[index]
-                                        
-                                        if let exam = item as? Exam {
-                                            ExamRowView(exam: exam)
-                                                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
-                                                    selectedExamForDetail = exam
-                                                }
-                                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                                    Button(role: .destructive) {
-                                                        deleteExam(exam)
-                                                    } label: {
-                                                        Label("Delete", systemImage: "trash")
-                                                    }
-                                                    .tint(Color(.systemRed))
-                                                }
-                                        }
-                                        else if let comprehensive = item as? comprehensiveExam {
-                                            ComprehensiveExamRowView(exam: comprehensive)
-                                                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
-                                                    selectedComprehensiveExam = comprehensive
-                                                }
-                                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                                    Button(role: .destructive) {
-                                                        deleteComprehensiveExam(comprehensive)
-                                                    } label: {
-                                                        Label("Delete", systemImage: "trash")
-                                                    }
-                                                    .tint(Color(.systemRed))
-                                                }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .background(Color(.systemGroupedBackground))
-                    .scrollContentBackground(.hidden)
+                    listContent
                 }
             }
             .navigationTitle("Exams".localized())
@@ -173,6 +114,9 @@ struct ExamView: View {
                             }
                         }
                     }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    viewModeMenu
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingNewExamSet = true }) {
@@ -213,6 +157,106 @@ struct ExamView: View {
                 Text("Comprehensive Exam: ".localized() + exam.name)
                     .background(Color(.systemBackground))
             }
+        }
+    }
+
+    // MARK: - 内容
+
+    @ViewBuilder
+    private var listContent: some View {
+        List {
+            if upcomingExams.isEmpty {
+                Section {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 6) {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.title2)
+                                .foregroundColor(Color(.secondaryLabel))
+                            Text("No upcoming exams".localized())
+                                .font(.subheadline)
+                                .foregroundColor(Color(.secondaryLabel))
+                        }
+                        .padding(.vertical, 20)
+                        Spacer()
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                }
+            } else {
+                ForEach(groupedExams, id: \.0) { sectionTitle, exams in
+                    Section(header: Text(sectionTitle)
+                        .foregroundColor(Color(.secondaryLabel))
+                        .font(.subheadline)
+                        .textCase(.none)
+                    ) {
+                        ForEach(exams.indices, id: \.self) { index in
+                            let item = exams[index]
+
+                            if let exam = item as? Exam {
+                                ExamRowView(exam: exam)
+                                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedExamForDetail = exam
+                                    }
+                                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            deleteExam(exam)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .tint(Color(.systemRed))
+                                    }
+                            }
+                            else if let comprehensive = item as? comprehensiveExam {
+                                ComprehensiveExamRowView(exam: comprehensive)
+                                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedComprehensiveExam = comprehensive
+                                    }
+                                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            deleteComprehensiveExam(comprehensive)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .tint(Color(.systemRed))
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+        .scrollContentBackground(.hidden)
+    }
+
+    @ViewBuilder
+    private var calendarContent: some View {
+        ExamCalendarView(
+            onSelectExam: { exam in selectedExamForDetail = exam },
+            onSelectComprehensive: { exam in selectedComprehensiveExam = exam }
+        )
+    }
+
+    // MARK: - 视图模式切换
+
+    private var viewModeMenu: some View {
+        Menu {
+            Picker("View Mode".localized(), selection: $viewMode) {
+                ForEach(ExamViewMode.allCases) { mode in
+                    Label(mode.displayName, systemImage: mode.icon)
+                        .tag(mode)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Image(systemName: showsCalendar ? "calendar" : "list.bullet")
+        }
+        .onChange(of: viewMode) { _, newValue in
+            newValue.saveToDefaults()
         }
     }
     
@@ -606,4 +650,46 @@ struct ComprehensiveExamRowView: View {
     ExamView()
         .environmentObject(DataManager())
         .preferredColorScheme(.dark)
+}
+
+// MARK: - 视图模式
+
+/// 考试页面视图模式：列表 / 月历
+enum ExamViewMode: String, CaseIterable, Identifiable, Codable {
+    case list
+    case calendar
+
+    var id: String { rawValue }
+
+    /// 显示名称
+    @MainActor var displayName: String {
+        switch self {
+        case .list: return "List".localized()
+        case .calendar: return "Calendar".localized()
+        }
+    }
+
+    /// 工具栏图标
+    var icon: String {
+        switch self {
+        case .list: return "list.bullet"
+        case .calendar: return "calendar"
+        }
+    }
+
+    private static let userDefaultsKey = "examViewMode"
+
+    /// 从 UserDefaults 加载，缺失或非法值时默认 list
+    static func loadFromDefaults() -> ExamViewMode {
+        guard let raw = UserDefaults.standard.string(forKey: userDefaultsKey),
+              let mode = ExamViewMode(rawValue: raw) else {
+            return .list
+        }
+        return mode
+    }
+
+    /// 持久化到 UserDefaults
+    func saveToDefaults() {
+        UserDefaults.standard.set(rawValue, forKey: Self.userDefaultsKey)
+    }
 }

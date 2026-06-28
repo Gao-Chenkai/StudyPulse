@@ -47,6 +47,12 @@
 "Delete" = "Delete";
 "Time Left" = "Time Left";
 "Mastery" = "Mastery";
+"View Mode" = "View Mode";
+"List" = "List";
+"No exams on this day" = "No exams on this day";
+"Previous Month" = "Previous Month";
+"Next Month" = "Next Month";
+"Day %d/%d" = "Day %d/%d";
 
 // HomeView.swift
 "Welcome back!" = "Welcome back!";

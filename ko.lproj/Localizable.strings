@@ -48,6 +48,12 @@
 "Delete" = "삭제";
 "Time Left" = "남은 시간";
 "Mastery" = "숙달도";
+"View Mode" = "보기 모드";
+"List" = "리스트";
+"No exams on this day" = "이 날에는 시험이 없습니다";
+"Previous Month" = "이전 달";
+"Next Month" = "다음 달";
+"Day %d/%d" = "%d/%d일차";
 
 // HomeView.swift
 "Welcome back!" = "다시 오신 것을 환영합니다！";
