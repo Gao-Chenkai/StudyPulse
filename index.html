@@ -163,6 +163,23 @@
             line-height: 1.75;
             position: relative;
         }
+        .hero-tagline {
+            font-size: 1.3rem; font-weight: 700; letter-spacing: 0.08em;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 28px; position: relative;
+        }
+        .lang-en { font-size: 0.88rem; color: var(--text-muted); letter-spacing: 0.02em; }
+        .card-tagline { display: block; font-size: 0.78rem; font-weight: 600; color: var(--accent); margin-top: 2px; letter-spacing: 0.06em; }
+        .card-tagline-en { display: block; font-size: 0.72rem; font-weight: 400; color: var(--text-muted); margin-top: 1px; }
+        .section-subhead { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.03em; margin-top: 4px; }
+        .hero-tagline-en {
+            display: block; font-size: 0.85rem; font-weight: 500;
+            letter-spacing: 0.04em; margin-top: 4px;
+            opacity: 0.7;
+        }
         .hero-detail {
             font-size: 0.95rem;
             color: var(--text-muted);
@@ -447,6 +464,7 @@
             margin-bottom: 12px;
         }
         .sys-chip {
+            display: block;
             padding: 10px 16px;
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -456,6 +474,8 @@
             color: var(--text-secondary);
             text-align: center;
             transition: all 0.2s;
+            text-decoration: none;
+            cursor: pointer;
         }
         .sys-chip:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -659,6 +679,12 @@
             .steps { grid-template-columns: 1fr; }
             .gallery { grid-template-columns: 1fr 1fr; }
         }
+    
+        /* Scroll-driven animations (Apple-style, non-linear) */
+        [data-animate] { opacity: 0; will-change: transform, opacity; }
+        .hero [data-animate] { transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-scrolled { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
     </style>
 </head>
 <body>
@@ -682,11 +708,15 @@
 </nav>
 
 <header class="hero">
-    <span class="hero-badge">iOS 18.6+ &middot; SwiftUI &middot; Swift 6.0</span>
-    <h1>Study smarter.<br>Stay in pulse.</h1>
-    <p class="hero-subtitle">一款面向全球学生的 iOS 学业管理应用，覆盖成绩追踪、错题整理、考试规划与 HRV 健康准备度。</p>
-    <p class="hero-detail">预置 15+ 全球教育体系 &middot; 5 种界面语言 &middot; iPhone / iPad 原生适配 &middot; 小组件支持 &middot; CSV 数据导入导出 &middot; 完全离线，数据仅存于你的设备。</p>
-    <div class="hero-actions">
+    <span class="hero-badge" data-animate="scale-up">iOS 17.6+ &middot; SwiftUI &middot; Live Activity</span>
+    <h1 data-animate="scale-up">Study smarter.<br>Stay in pulse.</h1>
+    <p class="hero-tagline" data-animate="scale-up">学有脉动，知无止境。<span class="hero-tagline-en">Your learning has a pulse.</span></p>
+    <p class="hero-subtitle" data-animate="fade-up">
+            一款面向全球学生的 iOS 学业管理应用。<br>
+            <span class="lang-en">Grade tracking &middot; Mistake notes &middot; Exam planning &middot; Study timer &middot; Spaced repetition &middot; Achievements &middot; Health readiness.</span>
+        </p>
+    <p class="hero-detail" data-animate="fade-up">预置 15+ 全球教育体系 &middot; 5 种界面语言 &middot; iPhone / iPad 原生适配 &middot; 灵动岛 Live Activity &middot; Siri 快捷指令 &middot; 三款主屏小组件 &middot; CSV / PDF 导出 &middot; 完全离线，数据仅存于你的设备。</p>
+    <div class="hero-actions" data-animate="slide-right">
         <a href="#features" class="btn btn-primary">查看完整功能 &darr;</a>
         <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener" class="btn btn-ghost">&#9900; GitHub</a>
     </div>
@@ -704,40 +734,80 @@
 
 <div class="stats-strip">
     <div class="stats-inner">
-        <div class="stat-item">
+        <div class="stat-item" data-animate="expand" data-delay="0">
             <div class="stat-value">15+</div>
-            <div class="stat-label">全球教育体系</div>
-            <div class="stat-detail">从中考到 GRE</div>
+            <div class="stat-label">全球教育体系 <span class="lang-en">Education Systems</span></div>
+            <div class="stat-detail">从中考到 GRE &middot; Covers 15+ curricula</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" data-animate="expand" data-delay="0">
             <div class="stat-value">5</div>
-            <div class="stat-label">界面语言</div>
-            <div class="stat-detail">中英日韩繁</div>
+            <div class="stat-label">界面语言 <span class="lang-en">Languages</span></div>
+            <div class="stat-detail">中英日韩繁 &middot; 5 languages</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" data-animate="expand" data-delay="0">
             <div class="stat-value">3 档</div>
-            <div class="stat-label">设计风格</div>
-            <div class="stat-detail">Minimal / Literature / Tech</div>
+            <div class="stat-label">设计风格 <span class="lang-en">Design Themes</span></div>
+            <div class="stat-detail">Minimal / Literature / Tech &middot; 3 themes</div>
         </div>
-        <div class="stat-item">
-            <div class="stat-value">4 大</div>
-            <div class="stat-label">核心模块</div>
-            <div class="stat-detail">成绩 &middot; 错题 &middot; 考试 &middot; HRV</div>
+        <div class="stat-item" data-animate="expand" data-delay="0">
+            <div class="stat-value">10+</div>
+            <div class="stat-label">功能模块 <span class="lang-en">Modules</span></div>
+            <div class="stat-detail">10+ 模块 &middot; Timer &middot; Flashcards &middot; Achievements &middot; Reports &middot; ...</div>
         </div>
     </div>
 </div>
 
-<section class="section" id="features">
+<section class="section" id="features" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">Core Features</div>
-        <h2>一切学习数据，尽在掌握</h2>
-        <p class="section-desc">StudyPulse 将成绩、错题、考试与健康数据统一管理，让你对自己的学习状态始终保持清晰的全局视角。</p>
+        <div class="section-label" data-animate="fade-up">核心功能 <span class="section-subhead">Core Features</span></div>
+        <h2 data-animate="fade-up">一切学习数据，尽在掌握</h2>
+        <p class="section-desc" data-animate="fade-up">StudyPulse 集成了 10+ 功能模块，覆盖成绩、错题、考试、计时、记忆、成就与健康评估。以下是核心功能概览。</p>
 
-        <!-- Feature 1: Grade Tracking -->
-        <div class="feature-row">
+        <div class="cards-grid">
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#9670;</div>
+                <h3>成绩追踪与可视化 <span class="lang-en">Grade Tracking</span></h3>
+                <span class="card-tagline">分分计较。</span> <span class="card-tagline-en">Every mark matters.</span>
+                <p>多科目录入，自定义满分与排名。交互式趋势图 + "需要关注科目"智能提醒 + 得分率色彩映射。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#9638;</div>
+                <h3>错题本 &amp; OCR <span class="lang-en">Mistake Notebook</span></h3>
+                <span class="card-tagline">错有错着。</span> <span class="card-tagline-en">Mistakes made, lessons saved.</span>
+                <p>四区结构（题目/错误原因/错误解法/正确解法），Vision OCR + 流式 Markdown 实时预览。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#9708;</div>
+                <h3>考试管理与提醒 <span class="lang-en">Exam Planner</span></h3>
+                <span class="card-tagline">从容赴考。</span> <span class="card-tagline-en">Walk in ready.</span>
+                <p>单科与综合考试，关联系统日历。考前 5 级通知，自动关联错题。支持时间段与跨日考试。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#8986;</div>
+                <h3>学习计时器 <span class="lang-en">Study Timer</span></h3>
+                <span class="card-tagline">时尽其用。</span> <span class="card-tagline-en">Every second counts.</span>
+                <p>专注计时 + 灵动岛 Live Activity，横屏沉浸模式，空闲检测，与 HRV 健康数据联动。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#9636;</div>
+                <h3>间隔重复记忆卡 <span class="lang-en">SRS Flashcards</span></h3>
+                <span class="card-tagline">念念不忘。</span> <span class="card-tagline-en">What you repeat, you keep.</span>
+                <p>SM-2 算法闪卡系统，翻转动画 + 四档评分。可视化复习日历，到期自动提醒。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#9733;</div>
+                <h3>成就 &amp; 每日目标 <span class="lang-en">Achievements &amp; Goals</span></h3>
+                <span class="card-tagline">功不唐捐。</span> <span class="card-tagline-en">No effort is wasted.</span>
+                <p>里程碑徽章 + 每日指标 + Siri 快捷指令。学习数据自动转化为激励，支持语音交互。</p>
+            </div>
+        </div>
+
+
+        <div class="feature-row" data-animate="fade-up">
             <div class="feature-text">
                 <span class="feature-tag">成绩模块</span>
                 <h3>成绩追踪与可视化</h3>
+                <span class="card-tagline">分分计较。</span> <span class="card-tagline-en">Every mark matters.</span>
                 <p>支持多科目成绩录入，可自定义满分、原始分、排名（1&ndash;5）和重要程度。每次录入均可附加试卷照片作为凭证。</p>
                 <ul>
                     <li>交互式趋势图 &mdash; 每科平均分、最高/最低分一目了然</li>
@@ -746,140 +816,114 @@
                     <li>支持按科目、时间段筛选和排序</li>
                 </ul>
             </div>
-            <div class="feature-img">
+            <div class="feature-img" data-animate="feature-img">
                 <img src="images/grade-tracking.png" alt="成绩追踪" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="img-placeholder" style="display:none">
-                    <span>&#9670;</span>
-                    <span class="ph-label">images/grade-tracking.png</span>
-                </div>
+                <div class="img-placeholder" style="display:none"><span>&#9670;</span><span>grade-tracking.png</span></div>
             </div>
         </div>
 
-        <!-- Feature 2: Mistake Notebook -->
-        <div class="feature-row reverse">
+        <div class="feature-row reverse" data-animate="fade-up">
             <div class="feature-text">
                 <span class="feature-tag">错题模块</span>
                 <h3>四区结构错题本</h3>
-                <p>独创四区块结构（题目 / 错误原因 / 错误解法 / 正确解法），每个区块可独立添加照片、OCR 识别与 Markdown 预览。</p>
+                <span class="card-tagline">错有错着。</span> <span class="card-tagline-en">Mistakes made, lessons saved.</span>
+                <p>独创四区块结构（题目 / 错误原因 / 错误解法 / 正确解法），每个区块可独立添加照片、OCR 识别与流式 Markdown 实时预览。</p>
                 <ul>
                     <li>Vision OCR 文字识别 &mdash; 支持中文和英文，一键提取</li>
-                    <li>Markdown 实时预览 &mdash; 每文本区独立编辑/预览切换</li>
+                    <li>SwiftStreamingMarkdown 实时渲染 &mdash; 打字即所得</li>
                     <li>关联科目与来源 &mdash; 按考试、练习册分类检索</li>
                     <li>智能复习建议 &mdash; 基于错题时间和科目优先级推荐</li>
                 </ul>
             </div>
-            <div class="feature-img">
+            <div class="feature-img" data-animate="feature-img">
                 <img src="images/mistake-notebook.png" alt="错题本" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="img-placeholder" style="display:none">
-                    <span>&#9638;</span>
-                    <span class="ph-label">images/mistake-notebook.png</span>
-                </div>
+                <div class="img-placeholder" style="display:none"><span>&#9638;</span><span>mistake-notebook.png</span></div>
             </div>
         </div>
 
-        <!-- Feature 3: Exam -->
-        <div class="feature-row">
+        <div class="feature-row" data-animate="fade-up">
             <div class="feature-text">
-                <span class="feature-tag">考试模块</span>
-                <h3>考试日程与智能提醒</h3>
-                <p>支持单科考试与多科综合考试（如模拟高考）。关联系统日历，自动调度本地通知。</p>
+                <span class="feature-tag">计时模块</span>
+                <h3>学习计时器</h3>
+                <span class="card-tagline">时尽其用。</span> <span class="card-tagline-en">Every second counts.</span>
+                <p>专注计时 + 灵动岛 Live Activity + 横屏沉浸模式。支持自动空闲检测，学习结束自动关联 HRV 准备度数据。</p>
                 <ul>
-                    <li>考前多级提醒 &mdash; 30天 / 10天 / 5天 / 3天 / 1天</li>
-                    <li>关联错题 &mdash; 考前自动聚合同科错题，精准复习</li>
-                    <li>日历集成 &mdash; 一键添加至系统日历（EventKit）</li>
-                    <li>"未录入成绩提醒"卡片 &mdash; 考后 3&ndash;7 天自动提示</li>
+                    <li>Live Activity &mdash; 锁屏 / 灵动岛实时显示计时进度</li>
+                    <li>横屏沉浸 &mdash; 全屏计时 + 自定义颜色主题</li>
+                    <li>空闲检测 &mdash; 长时间无操作自动暂停，防止虚报</li>
+                    <li>HRV 联动 &mdash; 学习结束自动记录身体状态</li>
                 </ul>
             </div>
-            <div class="feature-img">
-                <img src="images/exam-schedule.png" alt="考试日程" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="img-placeholder" style="display:none">
-                    <span>&#9708;</span>
-                    <span class="ph-label">images/exam-schedule.png</span>
-                </div>
+            <div class="feature-img" data-animate="feature-img">
+                <img src="images/study-timer.png" alt="学习计时器" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none"><span>&#8986;</span><span>study-timer.png</span></div>
             </div>
         </div>
 
-        <!-- Feature 4: HRV -->
-        <div class="feature-row reverse">
+        <div class="feature-row reverse" data-animate="fade-up">
             <div class="feature-text">
-                <span class="feature-tag">健康模块</span>
-                <h3>HRV 健康准备度</h3>
-                <p>读取 Apple Watch 夜间 HRV（SDNN）数据，使用 14 天个性化基线与 Z-score 评估当日学习状态。</p>
+                <span class="feature-tag">激励模块</span>
+                <h3>成就系统 &amp; 每日目标</h3>
+                <span class="card-tagline">功不唐捐。</span> <span class="card-tagline-en">No effort is wasted.</span>
+                <p>里程碑成就 + 每日学习目标 + Siri 快捷指令。学习数据自动转化为可视化激励，支持语音交互。</p>
                 <ul>
-                    <li>三级展示 &mdash; 简洁建议 / 数据详情 / 趋势图表</li>
-                    <li>Z-score 分类 &mdash; 优秀(z&gt;1.0) / 正常 / 偏低(z&lt;-1.0)</li>
-                    <li>隐私优先 &mdash; 数据仅存本地，不外传</li>
-                    <li>引导式授权 &mdash; 首次使用前完成 HealthKit 授权引导</li>
+                    <li>成就系统 &mdash; 录入成绩、复习卡片、专注计时解锁徽章</li>
+                    <li>每日目标 &mdash; 自定义每日学习指标，进度实时展示</li>
+                    <li>Siri 快捷指令 &mdash; 语音查分 / 查考试 / 记错题 / 问状态</li>
+                    <li>PDF 学习报告 &mdash; 一键生成含图表的综合学习报告</li>
                 </ul>
             </div>
-            <div class="feature-img">
-                <img src="images/hrv-readiness.png" alt="HRV 健康准备度" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="img-placeholder" style="display:none">
-                    <span>&#9825;</span>
-                    <span class="ph-label">images/hrv-readiness.png</span>
-                </div>
+            <div class="feature-img" data-animate="feature-img">
+                <img src="images/achievements.png" alt="成就与每日目标" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none"><span>&#9733;</span><span>achievements.png</span></div>
             </div>
         </div>
 
-        <!-- Overview cards -->
-        <div class="cards-grid" style="margin-top: 40px;">
-            <div class="card">
-                <div class="card-icon cyan">&#9636;</div>
-                <h3>可定制主页</h3>
-                <p>8 种卡片自由启用/禁用、拖动排序。iPad 双栏网格布局，iPhone 单列布局，你的主页你做主。</p>
-            </div>
-            <div class="card">
-                <div class="card-icon indigo">&#9000;</div>
-                <h3>小组件 Widget</h3>
-                <p>WidgetKit 主屏小组件展示即将到来的考试，通过 App Group 容器与主应用实时同步数据。</p>
-            </div>
-            <div class="card">
-                <div class="card-icon cyan">&#8617;</div>
-                <h3>数据导入导出</h3>
-                <p>CSV 格式导入/导出成绩、错题与考试数据。内置开发者工具页，支持批量删除与统计概览。</p>
-            </div>
+        <div style="text-align:center;margin-top:40px;" data-animate="fade-up">
+            <a href="features.html" class="btn btn-primary">&#8201;查看全部功能 &rarr;&#8201;</a>
         </div>
     </div>
+
 </section>
 
-<section class="section section-alt" id="systems">
+<section class="section section-alt" id="systems" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">Global Education</div>
+        <div class="section-label">教育体系 <span class="section-subhead">Global Education</span></div>
         <h2>覆盖全球 15+ 教育体系</h2>
         <p class="section-desc">StudyPulse 预置了常见教育体系下的科目名称与默认满分定义。选择你的体系后，科目列表自动填充，无需手动逐一创建。也支持自定义满分和添加额外科目。</p>
 
         <div class="sys-group">
-            <div class="sys-group-label">中国大陆</div>
+            <div class="sys-group-label">中国大陆 <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;">Mainland China</span></div>
             <div class="sys-grid">
-                <div class="sys-chip">CN 中考</div>
-                <div class="sys-chip">CN 高考</div>
-                <div class="sys-chip">浙江 3+3</div>
-                <div class="sys-chip">上海 3+3</div>
-                <div class="sys-chip">台湾 GSAT</div>
-                <div class="sys-chip">香港 DSE</div>
+                <div class="sys-chip" data-animate="scale-up">CN 中考</div>
+                <div class="sys-chip" data-animate="scale-up">CN 高考</div>
+                <div class="sys-chip" data-animate="scale-up">浙江 3+3</div>
+                <div class="sys-chip" data-animate="scale-up">上海 3+3</div>
+                <div class="sys-chip" data-animate="scale-up">台湾 GSAT</div>
+                <div class="sys-chip" data-animate="scale-up">香港 DSE</div>
             </div>
         </div>
 
         <div class="sys-group">
-            <div class="sys-group-label">国际课程</div>
+            <div class="sys-group-label">国际课程 <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;">International Curricula</span></div>
             <div class="sys-grid">
-                <div class="sys-chip">IGCSE</div>
-                <div class="sys-chip">A-Level</div>
-                <div class="sys-chip">IB DP</div>
-                <div class="sys-chip">新加坡 O-Level</div>
+                <div class="sys-chip" data-animate="scale-up">IGCSE</div>
+                <div class="sys-chip" data-animate="scale-up">A-Level</div>
+                <div class="sys-chip" data-animate="scale-up">IB DP</div>
+                <div class="sys-chip" data-animate="scale-up">新加坡 O-Level</div>
             </div>
         </div>
 
         <div class="sys-group">
-            <div class="sys-group-label">美国 &amp; 标化考试</div>
+            <div class="sys-group-label">美国 &amp; 标化考试 <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;">US &amp; Standardized Tests</span></div>
             <div class="sys-grid">
-                <div class="sys-chip">AP</div>
-                <div class="sys-chip">SAT</div>
-                <div class="sys-chip">ACT</div>
-                <div class="sys-chip">GRE</div>
-                <div class="sys-chip">GMAT</div>
-                <div class="sys-chip">TOEFL</div>
-                <div class="sys-chip">IELTS</div>
+                <div class="sys-chip" data-animate="scale-up">AP</div>
+                <div class="sys-chip" data-animate="scale-up">SAT</div>
+                <div class="sys-chip" data-animate="scale-up">ACT</div>
+                <div class="sys-chip" data-animate="scale-up">GRE</div>
+                <div class="sys-chip" data-animate="scale-up">GMAT</div>
+                <div class="sys-chip" data-animate="scale-up">TOEFL</div>
+                <div class="sys-chip" data-animate="scale-up">IELTS</div>
             </div>
         </div>
 
@@ -893,9 +937,9 @@
     </div>
 </section>
 
-<section class="section" id="gallery">
+<section class="section" id="gallery" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">App Screenshots</div>
+        <div class="section-label">截图展示 <span class="section-subhead">App Screenshots</span></div>
         <h2>截图展示</h2>
         <p class="section-desc">以下为 App 各主要界面的截图预览。将你的截图按下方文件名保存至 <code>images/</code> 目录即可自动显示。</p>
         <div class="gallery">
@@ -937,8 +981,41 @@
                     <span>&#9758;</span>
                     <span>onboarding.png</span>
                 </div>
-                <div class="gallery-caption">WSOnBoarding 新手引导</div>
+                <div class="gallery-caption">OnBoarding 新手引导</div>
             </div>
+            <div class="gallery-item">
+                <img src="images/study-timer.png" alt="学习计时器" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#8986;</span>
+                    <span>study-timer.png</span>
+                </div>
+                <div class="gallery-caption">学习计时器 (Live Activity)</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/flashcards.png" alt="记忆卡片" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9636;</span>
+                    <span>flashcards.png</span>
+                </div>
+                <div class="gallery-caption">SM-2 间隔重复记忆卡</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/achievements.png" alt="成就系统" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#9733;</span>
+                    <span>achievements.png</span>
+                </div>
+                <div class="gallery-caption">成就系统 &amp; 每日目标</div>
+            </div>
+            <div class="gallery-item">
+                <img src="images/study-report.png" alt="学习报告" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="img-placeholder" style="display:none">
+                    <span>&#59136;</span>
+                    <span>study-report.png</span>
+                </div>
+                <div class="gallery-caption">PDF 学习报告</div>
+            </div>
+
             <div class="gallery-item">
                 <img src="images/widget.png" alt="小组件" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                 <div class="img-placeholder" style="display:none">
@@ -951,16 +1028,16 @@
     </div>
 </section>
 
-<section class="section section-alt" id="compare">
+<section class="section section-alt" id="compare" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">Platform</div>
+        <div class="section-label">平台 <span class="section-subhead">Platform</span></div>
         <h2>iPhone 与 iPad 双端原生适配</h2>
         <p class="section-desc">StudyPulse 不是简单的 iPhone 放大版。针对 iPad 做了专项优化，充分利用大屏空间。</p>
         <div class="compare-grid">
             <div class="compare-col">
                 <div class="compare-col-header">
                     <span style="font-size:1.4rem">&#63743;</span>
-                    <h4>iPhone</h4>
+                    <h4>iPhone <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">&middot; 单手操作</span></h4>
                 </div>
                 <div class="compare-col-body">
                     <ul>
@@ -974,7 +1051,7 @@
             <div class="compare-col">
                 <div class="compare-col-header">
                     <span style="font-size:1.4rem">&#63743;</span>
-                    <h4>iPad</h4>
+                    <h4>iPad <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">&middot; 大屏沉浸</span></h4>
                 </div>
                 <div class="compare-col-body">
                     <ul>
@@ -990,39 +1067,39 @@
     </div>
 </section>
 
-<section class="section" id="walkthrough">
+<section class="section" id="walkthrough" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">Getting Started</div>
+        <div class="section-label">快速上手 <span class="section-subhead">Getting Started</span></div>
         <h2>快速上手</h2>
         <p class="section-desc">从下载到开始记录第一条成绩，只需四步。</p>
         <div class="steps">
-            <div class="step">
+            <div class="step" data-animate="slide-left">
                 <div class="step-num">1</div>
-                <h4>选择教育体系</h4>
-                <p>在"设置 &rarr; 学术信息"中选择你的教育阶段与地区，科目列表将自动填充。</p>
+                <h4>选择教育体系 <span class="lang-en">Pick Your System</span></h4>
+                <p>在"设置 &rarr; 学术信息"中选择你的教育阶段与地区，科目列表将自动填充。Choose your education stage and region &mdash; subjects auto-populate.</p>
             </div>
-            <div class="step">
+            <div class="step" data-animate="slide-left">
                 <div class="step-num">2</div>
-                <h4>完善个人资料</h4>
-                <p>填写姓名、学校、年级、目标院校等信息，让 App 更懂你的学习背景。</p>
+                <h4>完善个人资料 <span class="lang-en">Set Up Profile</span></h4>
+                <p>填写姓名、学校、年级、目标院校等信息，让 App 更懂你的学习背景。Tell the app who you are and where you're headed.</p>
             </div>
-            <div class="step">
+            <div class="step" data-animate="slide-left">
                 <div class="step-num">3</div>
-                <h4>录入首条成绩</h4>
-                <p>在首页点击"+"或从快速操作卡片进入，选择科目、填写分数、可附上试卷照片。</p>
+                <h4>录入首条成绩 <span class="lang-en">Log Your First Grade</span></h4>
+                <p>在首页点击"+"或从快速操作卡片进入，选择科目、填写分数、可附上试卷照片。Tap "+" on Home, pick a subject, enter your score.</p>
             </div>
-            <div class="step">
+            <div class="step" data-animate="slide-left">
                 <div class="step-num">4</div>
-                <h4>自定义主页</h4>
-                <p>在"设置 &rarr; 主页布局"中拖拽排序、开关卡片，打造属于你的专属 Dashboard。</p>
+                <h4>探索更多 <span class="lang-en">Explore Further</span></h4>
+                <p>开启学习计时、创建记忆卡片、解锁成就徽章、设置每日目标——打造你的完整学习工作流。Timer, flashcards, achievements &mdash; build your complete workflow.</p>
             </div>
         </div>
     </div>
 </section>
 
-<section class="section section-alt" id="tech">
+<section class="section section-alt" id="tech" data-animate="fade-up">
     <div class="section-inner">
-        <div class="section-label">Tech Stack</div>
+        <div class="section-label">技术栈 <span class="section-subhead">Tech Stack</span></div>
         <h2>为 Apple 平台原生打造</h2>
         <p class="section-desc">基于 Swift 6.0 与 SwiftUI，采用严格并发模型，确保性能与代码质量。</p>
         <ul class="tech-list">
@@ -1033,11 +1110,12 @@
             <li>HealthKit</li>
             <li>EventKit</li>
             <li>WidgetKit</li>
+            <li>ActivityKit</li>
             <li>MVVM Architecture</li>
             <li>Strict Concurrency</li>
             <li>JSON Persistence</li>
             <li>SPM Package Manager</li>
-            <li>MarkdownUI</li>
+            <li>SwiftStreamingMarkdown</li>
         </ul>
 
         <h3 style="font-size:1.1rem;margin-bottom:16px;color:var(--text-primary)">架构概览</h3>
@@ -1074,6 +1152,9 @@
 <span class="hl-arrow">├──</span> HealthKitManager ── HRV / 身体状态
 <span class="hl-arrow">├──</span> CalendarManager / OCRManager / ImageCache
 <span class="hl-arrow">├──</span> DataExportManager (CSV) / ReportRenderer (PDF)
+<span class="hl-arrow">├──</span> StudyTimerManager ── Live Activity + 空闲检测
+<span class="hl-arrow">├──</span> SRSManager ── SM-2 间隔重复
+<span class="hl-arrow">├──</span> AchievementManager / DailyGoalManager
 <span class="hl-arrow">├──</span> WidgetDataSync / TrendWidgetSync / HRVWidgetSync
 <span class="hl-arrow">└──</span> StudyReadinessAlgorithm ── 5档强度 × 5类重点
 
@@ -1116,22 +1197,24 @@
             <h5>法律</h5>
             <ul>
                 <li><a href="terms.html">使用条款</a></li>
-                <li>CC BY-NC-SA 4.0</li>
+                <li><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans" target="_blank" rel="noopener">CC BY-NC SA 4.0</a></li>
             </ul>
         </div>
         <div class="footer-col">
             <h5>联系</h5>
             <ul>
-                <li><a href="mailto:developer@studypulse.app">Email</a></li>
+                <li><a href="mailto:GaoChenkai5525@outlook.com">Email</a></li>
                 <li><a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">GitHub</a></li>
             </ul>
         </div>
     </div>
     <div class="footer-bottom">
-        <span>&copy; 2025 Gao Chenkai (Gao-Chenkai / Ken8891837)</span>
+        <span>学有脉动，知无止境。&ensp;&copy; 2026 Gao Chenkai</span>
         <span>CC BY-NC-SA 4.0</span>
     </div>
 </footer>
+
+<script src="js/animations.js"></script>
 
 </body>
 </html>
