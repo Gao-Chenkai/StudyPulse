@@ -781,3 +781,98 @@
 "Exit Full Screen" = "Exit Full Screen";
 "Landscape Focus Mode" = "Landscape Focus Mode";
 "Keep the timer visible while reducing distractions." = "Keep the timer visible while reducing distractions.";
+
+// MARK: - Streak & Achievements
+
+// Home card
+"streak.card.title" = "%d-day streak";
+"streak.card.longest" = "Longest %d";
+"streak.card.goalsToday" = "%d/%d goals today";
+"streak.card.allGoalsMet" = "All goals met today!";
+"streak.card.noActivity" = "Start your first session today";
+
+// Achievement catalog — onboarding
+"achievement.first_step.title" = "First Step";
+"achievement.first_step.description" = "Record your first learning activity";
+"achievement.goal_setter.title" = "Goal Setter";
+"achievement.goal_setter.description" = "Customize your daily goals";
+
+// Achievement catalog — streak
+"achievement.streak_3.title" = "3-Day Spark";
+"achievement.streak_3.description" = "Maintain a 3-day streak";
+"achievement.streak_7.title" = "7-Day Flame";
+"achievement.streak_7.description" = "Maintain a 7-day streak";
+"achievement.streak_14.title" = "Fortnight Fire";
+"achievement.streak_14.description" = "Maintain a 14-day streak";
+"achievement.streak_30.title" = "Monthly Momentum";
+"achievement.streak_30.description" = "Maintain a 30-day streak";
+"achievement.streak_100.title" = "Century Streak";
+"achievement.streak_100.description" = "Maintain a 100-day streak";
+"achievement.streak_365.title" = "Year of Growth";
+"achievement.streak_365.description" = "Maintain a 365-day streak";
+
+// Achievement catalog — volume: reviews
+"achievement.reviews_10.title" = "10 Reviews";
+"achievement.reviews_10.description" = "Review 10 mistakes";
+"achievement.reviews_50.title" = "50 Reviews";
+"achievement.reviews_50.description" = "Review 50 mistakes";
+"achievement.reviews_200.title" = "200 Reviews";
+"achievement.reviews_200.description" = "Review 200 mistakes";
+"achievement.reviews_1000.title" = "Review Master";
+"achievement.reviews_1000.description" = "Review 1,000 mistakes";
+
+// Achievement catalog — volume: grades
+"achievement.grades_10.title" = "10 Grades";
+"achievement.grades_10.description" = "Record 10 grades";
+"achievement.grades_50.title" = "50 Grades";
+"achievement.grades_50.description" = "Record 50 grades";
+"achievement.grades_200.title" = "Grade Tracker";
+"achievement.grades_200.description" = "Record 200 grades";
+
+// Achievement catalog — volume: focus
+"achievement.focus_100.title" = "First Focus";
+"achievement.focus_100.description" = "Accumulate 100 focus minutes";
+"achievement.focus_600.title" = "Deep Worker";
+"achievement.focus_600.description" = "Accumulate 600 focus minutes";
+"achievement.focus_3000.title" = "Focus Champion";
+"achievement.focus_3000.description" = "Accumulate 3,000 focus minutes";
+
+// Achievement catalog — mastery
+"achievement.active_30.title" = "Monthly Active";
+"achievement.active_30.description" = "Be active for 30 total days";
+"achievement.active_180.title" = "Semester Warrior";
+"achievement.active_180.description" = "Be active for 180 total days";
+
+// Achievements view
+"Current Streak" = "Current Streak";
+"Longest Streak" = "Longest Streak";
+"Total Active Days" = "Total Active Days";
+"Getting Started" = "Getting Started";
+"Streak" = "Streak";
+"Volume" = "Volume";
+"Mastery" = "Mastery";
+"Special" = "Special";
+
+// Daily goals config
+"Daily Goals" = "Daily Goals";
+"Mistake Reviews" = "Mistake Reviews";
+"Grades Recorded" = "Grades Recorded";
+"Focus Minutes" = "Focus Minutes";
+"Daily Reminder" = "Daily Reminder";
+"Reminder Time" = "Reminder Time";
+"Save Goals" = "Save Goals";
+"Set your daily minimums. Reach any one goal to keep your streak alive." = "Set your daily minimums. Reach any one goal to keep your streak alive.";
+"We’ll check at this time whether you’ve completed any daily goal. If not, a gentle nudge will remind you." = "We’ll check at this time whether you’ve completed any daily goal. If not, a gentle nudge will remind you.";
+"cards" = "cards";
+"entries" = "entries";
+"min" = "min";
+
+// Daily goal notification
+"Daily Goals Reminder" = "Daily Goals Reminder";
+"Don’t break your streak — finish one of today’s goals." = "Don’t break your streak — finish one of today’s goals.";
+
+// Toast
+"toast.unlocked" = "Achievement Unlocked! 🎉";
+
+// Settings
+"Achievements" = "Achievements";

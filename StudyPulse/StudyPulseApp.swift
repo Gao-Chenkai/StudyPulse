@@ -98,6 +98,9 @@ struct StudyPulseApp: App {
                     // 主数据加载就绪后再去问 HealthKit，避免启动期 I/O 竞争
                     // Ask HealthKit only after the main data is ready to avoid I/O contention at launch
                     await hrvManager.bootstrap()
+                    await MainActor.run {
+                        AchievementManager.shared.bootstrap()
+                    }
                     Log.app.info("HealthKit bootstrap 完成 / HealthKit bootstrap complete")
                     Log.record(.info, category: "App", message: "HealthKit bootstrap 完成 / HealthKit bootstrap complete")
                 }
@@ -123,6 +126,8 @@ struct StudyPulseApp: App {
                         timerManager.cleanupStaleActivities()
                         SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
                         Task { await hrvManager.refreshBodyStatus() }
+                        AchievementManager.shared.handleDayRolloverIfNeeded()
+                        DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)
                     }
                 }
         }

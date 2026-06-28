@@ -51,7 +51,7 @@ StudyPulse 帮助学生管理学习过程中的核心数据：
 - StudyPulseWidget/：WidgetKit 小组件源（ExamWidget、ExamWidgetData、ExamWidgetEntry、ExamWidgetProvider、ExamWidgetViews、StudyPulseWidgetBundle）。
 - en.lproj/、zh-Hans.lproj/、zh-Hant.lproj/、ja.lproj/、ko.lproj/：各语言 Localizable.strings。
 - scripts/build.sh：构建辅助脚本。
-- README.md、AGENTS.md、CODE_WIKI.md、CODE_WIKI_CN.md：文档。
+- README.md、AGENTS.md、docs/CODE_WIKI.md、docs/CODE_WIKI_CN.md：文档。
 - LICENSE：CC BY-NC-SA 4.0。
 
 ---

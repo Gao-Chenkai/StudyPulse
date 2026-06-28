@@ -57,6 +57,9 @@ struct ContentView: View {
             }
         }
         .tint(.cyan)
+        .overlay(alignment: .top) {
+            AchievementUnlockToast()
+        }
         .focusable()
         .onKeyPress(.tab) {
             selectedTab = nextTab()

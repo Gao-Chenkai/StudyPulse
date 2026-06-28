@@ -226,6 +226,25 @@ struct ProfileSettingsView: View {
                     }
                 }
 
+
+                NavigationLink(destination: AchievementsView()) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "rosette")
+                            .foregroundColor(.orange)
+                        Text("Achievements".localized())
+                            .foregroundColor(.primary)
+                    }
+                }
+
+                NavigationLink(destination: DailyGoalsConfigView()) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "target")
+                            .foregroundColor(.purple)
+                        Text("Daily Goals".localized())
+                            .foregroundColor(.primary)
+                    }
+                }
+
                 NavigationLink(destination: EditSubjectsView()) {
                     HStack(spacing: 14) {
                         Image(systemName: "book.closed")

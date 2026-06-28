@@ -14,6 +14,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
     case flashcardReview = "flashcardReview"
+    case streakProgress = "streakProgress"
     case quickActions = "quickActions"
     case studySuggestions = "studySuggestions"
     case trendChart = "trendChart"
@@ -29,6 +30,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
         case .flashcardReview: return "Flashcard Review".localized()
+        case .streakProgress: return "Streak Progress".localized()
         case .quickActions: return "Quick Actions".localized()
         case .studySuggestions: return "Study Suggestions".localized()
         case .trendChart: return "Trend Chart".localized()
@@ -47,6 +49,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .flashcardReview: return "rectangle.stack.fill"
         case .quickActions: return "bolt.fill"
         case .studySuggestions: return "lightbulb.fill"
+        case .streakProgress: return "flame.circle.fill"
         case .trendChart: return "chart.line.uptrend.xyaxis"
         case .upcomingExams: return "calendar.badge.exclamationmark"
         case .dailyQuote: return "quote.bubble.fill"
@@ -78,6 +81,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .flashcardReview, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),
         HomeCardItem(type: .studyTimer, enabled: true),
+        HomeCardItem(type: .streakProgress, enabled: true),
         HomeCardItem(type: .studySuggestions, enabled: true),
         HomeCardItem(type: .trendChart, enabled: true),
         HomeCardItem(type: .upcomingExams, enabled: true),

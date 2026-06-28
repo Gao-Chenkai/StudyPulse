@@ -787,3 +787,98 @@
 "Exit Full Screen" = "전체 화면 종료";
 "Landscape Focus Mode" = "가로 집중 모드";
 "Keep the timer visible while reducing distractions." = "타이머를 계속 보이게 유지하면서 방해 요소를 줄입니다.";
+
+// MARK: - 스트릭 & 성취 시스템
+
+// 홈 카드
+"streak.card.title" = "%d일 연속";
+"streak.card.longest" = "최장 %d";
+"streak.card.goalsToday" = "오늘 %d/%d 목표";
+"streak.card.allGoalsMet" = "오늘 목표 모두 달성!";
+"streak.card.noActivity" = "첫 학습을 시작하세요";
+
+// 성취 카탈로그 — 입문
+"achievement.first_step.title" = "첫걸음";
+"achievement.first_step.description" = "첫 학습 활동 기록하기";
+"achievement.goal_setter.title" = "목표 설정자";
+"achievement.goal_setter.description" = "매일 목표 사용자 지정하기";
+
+// 성취 카탈로그 — 스트릭
+"achievement.streak_3.title" = "3일의 불꽃";
+"achievement.streak_3.description" = "3일 스트릭 유지하기";
+"achievement.streak_7.title" = "7일의 불길";
+"achievement.streak_7.description" = "7일 스트릭 유지하기";
+"achievement.streak_14.title" = "2주의 화염";
+"achievement.streak_14.description" = "14일 스트릭 유지하기";
+"achievement.streak_30.title" = "월간 모멘텀";
+"achievement.streak_30.description" = "30일 스트릭 유지하기";
+"achievement.streak_100.title" = "100일의 여정";
+"achievement.streak_100.description" = "100일 스트릭 유지하기";
+"achievement.streak_365.title" = "성장의 1년";
+"achievement.streak_365.description" = "365일 스트릭 유지하기";
+
+// 성취 카탈로그 — 양：복습
+"achievement.reviews_10.title" = "10회 복습";
+"achievement.reviews_10.description" = "10문제 복습하기";
+"achievement.reviews_50.title" = "50회 복습";
+"achievement.reviews_50.description" = "50문제 복습하기";
+"achievement.reviews_200.title" = "200회 복습";
+"achievement.reviews_200.description" = "200문제 복습하기";
+"achievement.reviews_1000.title" = "복습 마스터";
+"achievement.reviews_1000.description" = "1,000문제 복습하기";
+
+// 성취 카탈로그 — 양：성적
+"achievement.grades_10.title" = "10회 기록";
+"achievement.grades_10.description" = "10개 성적 기록하기";
+"achievement.grades_50.title" = "50회 기록";
+"achievement.grades_50.description" = "50개 성적 기록하기";
+"achievement.grades_200.title" = "성적 트래커";
+"achievement.grades_200.description" = "200개 성적 기록하기";
+
+// 성취 카탈로그 — 양：집중
+"achievement.focus_100.title" = "첫 집중";
+"achievement.focus_100.description" = "100분 집중 누적하기";
+"achievement.focus_600.title" = "딥 워커";
+"achievement.focus_600.description" = "600분 집중 누적하기";
+"achievement.focus_3000.title" = "집중 챔피언";
+"achievement.focus_3000.description" = "3,000분 집중 누적하기";
+
+// 성취 카탈로그 — 숙달
+"achievement.active_30.title" = "월간 활성";
+"achievement.active_30.description" = "누적 30일 활성";
+"achievement.active_180.title" = "학기 전사";
+"achievement.active_180.description" = "누적 180일 활성";
+
+// 성취 페이지
+"Current Streak" = "현재 스트릭";
+"Longest Streak" = "최장 스트릭";
+"Total Active Days" = "총 활성 일수";
+"Getting Started" = "시작하기";
+"Streak" = "스트릭";
+"Volume" = "양";
+"Mastery" = "숙달";
+"Special" = "특별";
+
+// 매일 목표 설정
+"Daily Goals" = "매일 목표";
+"Mistake Reviews" = "오답 복습";
+"Grades Recorded" = "성적 기록";
+"Focus Minutes" = "집중 시간";
+"Daily Reminder" = "매일 알림";
+"Reminder Time" = "알림 시간";
+"Save Goals" = "목표 저장";
+"Set your daily minimums. Reach any one goal to keep your streak alive." = "매일 최소 목표를 설정하세요. 하나라도 달성하면 스트릭이 유지됩니다.";
+"We’ll check at this time whether you’ve completed any daily goal. If not, a gentle nudge will remind you." = "이 시간에 목표 달성을 확인합니다. 미달성 시 부드러운 알림을 보내드립니다.";
+"cards" = "장";
+"entries" = "건";
+"min" = "분";
+
+// 매일 목표 알림
+"Daily Goals Reminder" = "매일 목표 알림";
+"Don’t break your streak — finish one of today’s goals." = "스트릭을 끊지 마세요 — 오늘 목표 하나를 달성하세요.";
+
+// 토스트
+"toast.unlocked" = "성취 달성! 🎉";
+
+// 설정
+"Achievements" = "성취";

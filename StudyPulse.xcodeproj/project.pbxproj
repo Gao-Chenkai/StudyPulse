@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2709FD172FEFB8F900FAB5CE /* FAQ.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709FD152FEFB8D000FAB5CE /* FAQ.json */; };
+		2709FD172FEFB8F900FAB5CE /* docs/FAQ.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709FD152FEFB8D000FAB5CE /* docs/FAQ.json */; };
 		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
 		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
 		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
 		278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		278D45EF2FE7B9950073EB87 /* AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */; };
+		278D45EF2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45EE2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md */; };
 		278D45F22FE7BA3E0073EB87 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F12FE7BA3E0073EB87 /* AGENTS.md */; };
-		278D45F42FE7BA500073EB87 /* CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F32FE7BA500073EB87 /* CODE_WIKI.md */; };
-		278D45F62FE7BA560073EB87 /* CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */; };
-		278D45F82FE7BA5C0073EB87 /* AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */; };
-		278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* DESIGN.md */; };
+		278D45F42FE7BA500073EB87 /* docs/CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F32FE7BA500073EB87 /* docs/CODE_WIKI.md */; };
+		278D45F62FE7BA560073EB87 /* docs/CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F52FE7BA560073EB87 /* docs/CODE_WIKI_CN.md */; };
+		278D45F82FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F72FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md */; };
+		278D45FA2FE7BA650073EB87 /* docs/DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* docs/DESIGN.md */; };
 		278D45FC2FE7BA6A0073EB87 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FB2FE7BA6A0073EB87 /* README.md */; };
-		278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* SPEC.md */; };
-		27A00001FEFB900000FAB5C0 /* CONTRIBUTING.json in Resources */ = {isa = PBXBuildFile; fileRef = 27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */; };
+		278D45FE2FE7BA750073EB87 /* docs/SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* docs/SPEC.md */; };
+		27A00001FEFB900000FAB5C0 /* docs/CONTRIBUTING.json in Resources */ = {isa = PBXBuildFile; fileRef = 27A00002FEFB900100FAB5C0 /* docs/CONTRIBUTING.json */; };
 		27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */; };
-		27BF505B2FE6D1E50038966E /* SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* SPEC.md */; };
+		27BF505B2FE6D1E50038966E /* docs/SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* docs/SPEC.md */; };
 		27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505C2FE6D1F10038966E /* AGENTS.md */; };
-		27BF505F2FE6D1FE0038966E /* CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */; };
-		27BF50612FE6D2070038966E /* CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50602FE6D2070038966E /* CODE_WIKI.md */; };
-		27BF50632FE6D2160038966E /* DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50622FE6D2160038966E /* DESIGN.md */; };
+		27BF505F2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505E2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md */; };
+		27BF50612FE6D2070038966E /* docs/CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */; };
+		27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50622FE6D2160038966E /* docs/DESIGN.md */; };
 		27BF50652FE6D2200038966E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50642FE6D2200038966E /* README.md */; };
 		27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */; };
 /* End PBXBuildFile section */
@@ -56,29 +56,29 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2709FD152FEFB8D000FAB5CE /* FAQ.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = FAQ.json; sourceTree = "<group>"; };
+		2709FD152FEFB8D000FAB5CE /* docs/FAQ.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = docs/FAQ.json; sourceTree = "<group>"; };
 		2743C83E2F6EAEA000CC1EED /* StudyPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudyPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		276CC94F2FE6CEE7009F126C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		276CC9512FE6CEF3009F126C /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		276CC9512FE6CEF3009F126C /* docs/SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/SPEC.md; sourceTree = "<group>"; };
 		278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StudyPulseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		278CBE132FE778660035AA84 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		278CBE152FE778660035AA84 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		278CBE332FE778EE0035AA84 /* StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
-		278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AlgorithmIntroduction.md; sourceTree = "<group>"; };
-		278D45F02FE7BA260073EB87 /* StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
+		278CBE332FE778EE0035AA84 /* StudyPulseWidget/StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidget/StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
+		278D45EE2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/AlgorithmIntroduction.md; sourceTree = "<group>"; };
+		278D45F02FE7BA260073EB87 /* StudyPulseWidget/StudyPulseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StudyPulseWidget/StudyPulseWidgetExtension.entitlements; sourceTree = "<group>"; };
 		278D45F12FE7BA3E0073EB87 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
-		278D45F32FE7BA500073EB87 /* CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI.md; sourceTree = "<group>"; };
-		278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI_CN.md; sourceTree = "<group>"; };
-		278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AlgorithmIntroduction.md; sourceTree = "<group>"; };
-		278D45F92FE7BA650073EB87 /* DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DESIGN.md; sourceTree = "<group>"; };
+		278D45F32FE7BA500073EB87 /* docs/CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/CODE_WIKI.md; sourceTree = "<group>"; };
+		278D45F52FE7BA560073EB87 /* docs/CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/CODE_WIKI_CN.md; sourceTree = "<group>"; };
+		278D45F72FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/AlgorithmIntroduction.md; sourceTree = "<group>"; };
+		278D45F92FE7BA650073EB87 /* docs/DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/DESIGN.md; sourceTree = "<group>"; };
 		278D45FB2FE7BA6A0073EB87 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		278D45FD2FE7BA750073EB87 /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
-		27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = CONTRIBUTING.json; sourceTree = "<group>"; };
-		27BF505A2FE6D1E50038966E /* SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SPEC.md; sourceTree = "<group>"; };
+		278D45FD2FE7BA750073EB87 /* docs/SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/SPEC.md; sourceTree = "<group>"; };
+		27A00002FEFB900100FAB5C0 /* docs/CONTRIBUTING.json */ = {isa = PBXFileReference; lastKnownFileType = public.json; path = docs/CONTRIBUTING.json; sourceTree = "<group>"; };
+		27BF505A2FE6D1E50038966E /* docs/SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/SPEC.md; sourceTree = "<group>"; };
 		27BF505C2FE6D1F10038966E /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
-		27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI_CN.md; sourceTree = "<group>"; };
-		27BF50602FE6D2070038966E /* CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_WIKI.md; sourceTree = "<group>"; };
-		27BF50622FE6D2160038966E /* DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DESIGN.md; sourceTree = "<group>"; };
+		27BF505E2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/CODE_WIKI_CN.md; sourceTree = "<group>"; };
+		27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/CODE_WIKI.md; sourceTree = "<group>"; };
+		27BF50622FE6D2160038966E /* docs/DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/DESIGN.md; sourceTree = "<group>"; };
 		27BF50642FE6D2200038966E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		27E4AFAC2F824DA300D2D7C9 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		27E4AFAF2F824DB400D2D7C9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -137,7 +137,7 @@
 		270900382FEFBF4F00FAB5CE /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				27A00002FEFB900100FAB5C0 /* CONTRIBUTING.json */,
+				27A00002FEFB900100FAB5C0 /* docs/CONTRIBUTING.json */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -145,18 +145,18 @@
 		2743C8352F6EAEA000CC1EED = {
 			isa = PBXGroup;
 			children = (
-				278CBE332FE778EE0035AA84 /* StudyPulseWidgetExtension.entitlements */,
+				278CBE332FE778EE0035AA84 /* StudyPulseWidget/StudyPulseWidgetExtension.entitlements */,
 				27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */,
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
 				278CBE172FE778660035AA84 /* StudyPulseWidget */,
 				278CBE122FE778660035AA84 /* Frameworks */,
-				278D45FD2FE7BA750073EB87 /* SPEC.md */,
-				2709FD152FEFB8D000FAB5CE /* FAQ.json */,
+				278D45FD2FE7BA750073EB87 /* docs/SPEC.md */,
+				2709FD152FEFB8D000FAB5CE /* docs/FAQ.json */,
 				278D45FB2FE7BA6A0073EB87 /* README.md */,
-				278D45F92FE7BA650073EB87 /* DESIGN.md */,
-				278D45F72FE7BA5C0073EB87 /* AlgorithmIntroduction.md */,
-				278D45F52FE7BA560073EB87 /* CODE_WIKI_CN.md */,
-				278D45F32FE7BA500073EB87 /* CODE_WIKI.md */,
+				278D45F92FE7BA650073EB87 /* docs/DESIGN.md */,
+				278D45F72FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md */,
+				278D45F52FE7BA560073EB87 /* docs/CODE_WIKI_CN.md */,
+				278D45F32FE7BA500073EB87 /* docs/CODE_WIKI.md */,
 				278D45F12FE7BA3E0073EB87 /* AGENTS.md */,
 				2743C83F2F6EAEA000CC1EED /* Products */,
 				270900382FEFBF4F00FAB5CE /* Recovered References */,
@@ -167,16 +167,16 @@
 			isa = PBXGroup;
 			children = (
 				2743C83E2F6EAEA000CC1EED /* StudyPulse.app */,
-				276CC9512FE6CEF3009F126C /* SPEC.md */,
+				276CC9512FE6CEF3009F126C /* docs/SPEC.md */,
 				276CC94F2FE6CEE7009F126C /* README.md */,
-				27BF505A2FE6D1E50038966E /* SPEC.md */,
+				27BF505A2FE6D1E50038966E /* docs/SPEC.md */,
 				278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */,
 				27BF50642FE6D2200038966E /* README.md */,
-				278D45EE2FE7B9950073EB87 /* AlgorithmIntroduction.md */,
+				278D45EE2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md */,
 				27BF505C2FE6D1F10038966E /* AGENTS.md */,
-				27BF505E2FE6D1FE0038966E /* CODE_WIKI_CN.md */,
-				27BF50622FE6D2160038966E /* DESIGN.md */,
-				27BF50602FE6D2070038966E /* CODE_WIKI.md */,
+				27BF505E2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md */,
+				27BF50622FE6D2160038966E /* docs/DESIGN.md */,
+				27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -184,7 +184,7 @@
 		278CBE122FE778660035AA84 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				278D45F02FE7BA260073EB87 /* StudyPulseWidgetExtension.entitlements */,
+				278D45F02FE7BA260073EB87 /* StudyPulseWidget/StudyPulseWidgetExtension.entitlements */,
 				278CBE132FE778660035AA84 /* WidgetKit.framework */,
 				278CBE152FE778660035AA84 /* SwiftUI.framework */,
 			);
@@ -290,22 +290,22 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				27BF50612FE6D2070038966E /* CODE_WIKI.md in Resources */,
+				27BF50612FE6D2070038966E /* docs/CODE_WIKI.md in Resources */,
 				27BF50652FE6D2200038966E /* README.md in Resources */,
-				278D45F62FE7BA560073EB87 /* CODE_WIKI_CN.md in Resources */,
-				27BF505B2FE6D1E50038966E /* SPEC.md in Resources */,
+				278D45F62FE7BA560073EB87 /* docs/CODE_WIKI_CN.md in Resources */,
+				27BF505B2FE6D1E50038966E /* docs/SPEC.md in Resources */,
 				278D45FC2FE7BA6A0073EB87 /* README.md in Resources */,
-				2709FD172FEFB8F900FAB5CE /* FAQ.json in Resources */,
-				27A00001FEFB900000FAB5C0 /* CONTRIBUTING.json in Resources */,
-				278D45F82FE7BA5C0073EB87 /* AlgorithmIntroduction.md in Resources */,
-				278D45F42FE7BA500073EB87 /* CODE_WIKI.md in Resources */,
-				27BF50632FE6D2160038966E /* DESIGN.md in Resources */,
-				278D45FA2FE7BA650073EB87 /* DESIGN.md in Resources */,
+				2709FD172FEFB8F900FAB5CE /* docs/FAQ.json in Resources */,
+				27A00001FEFB900000FAB5C0 /* docs/CONTRIBUTING.json in Resources */,
+				278D45F82FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md in Resources */,
+				278D45F42FE7BA500073EB87 /* docs/CODE_WIKI.md in Resources */,
+				27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */,
+				278D45FA2FE7BA650073EB87 /* docs/DESIGN.md in Resources */,
 				27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */,
-				278D45FE2FE7BA750073EB87 /* SPEC.md in Resources */,
+				278D45FE2FE7BA750073EB87 /* docs/SPEC.md in Resources */,
 				27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */,
-				27BF505F2FE6D1FE0038966E /* CODE_WIKI_CN.md in Resources */,
-				278D45EF2FE7B9950073EB87 /* AlgorithmIntroduction.md in Resources */,
+				27BF505F2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md in Resources */,
+				278D45EF2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md in Resources */,
 				276CC9502FE6CEE7009F126C /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -586,7 +586,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = StudyPulseWidgetExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StudyPulseWidget/StudyPulseWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -617,7 +617,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = StudyPulseWidgetExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StudyPulseWidget/StudyPulseWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;

@@ -787,3 +787,98 @@
 "Exit Full Screen" = "退出全屏";
 "Landscape Focus Mode" = "横屏专注模式";
 "Keep the timer visible while reducing distractions." = "保持计时器始终可见，同时减少干扰。";
+
+// MARK: - 连续打卡 & 成就系统
+
+// 主页卡片
+"streak.card.title" = "已连续 %d 天";
+"streak.card.longest" = "历史最长 %d";
+"streak.card.goalsToday" = "今日 %d/%d 目标";
+"streak.card.allGoalsMet" = "今日目标全部达成！";
+"streak.card.noActivity" = "开始你的第一节学习吧";
+
+// 成就目录 — 入门
+"achievement.first_step.title" = "第一步";
+"achievement.first_step.description" = "记录你的第一次学习活动";
+"achievement.goal_setter.title" = "目标制定者";
+"achievement.goal_setter.description" = "自定义你的每日目标";
+
+// 成就目录 — 连续打卡
+"achievement.streak_3.title" = "三日之星";
+"achievement.streak_3.description" = "保持 3 天连续打卡";
+"achievement.streak_7.title" = "七日之火";
+"achievement.streak_7.description" = "保持 7 天连续打卡";
+"achievement.streak_14.title" = "半月之力";
+"achievement.streak_14.description" = "保持 14 天连续打卡";
+"achievement.streak_30.title" = "月度动量";
+"achievement.streak_30.description" = "保持 30 天连续打卡";
+"achievement.streak_100.title" = "百日征途";
+"achievement.streak_100.description" = "保持 100 天连续打卡";
+"achievement.streak_365.title" = "一年成长";
+"achievement.streak_365.description" = "保持 365 天连续打卡";
+
+// 成就目录 — 积累：复习
+"achievement.reviews_10.title" = "10 次复习";
+"achievement.reviews_10.description" = "复习 10 道错题";
+"achievement.reviews_50.title" = "50 次复习";
+"achievement.reviews_50.description" = "复习 50 道错题";
+"achievement.reviews_200.title" = "200 次复习";
+"achievement.reviews_200.description" = "复习 200 道错题";
+"achievement.reviews_1000.title" = "复习大师";
+"achievement.reviews_1000.description" = "复习 1,000 道错题";
+
+// 成就目录 — 积累：成绩
+"achievement.grades_10.title" = "10 次记录";
+"achievement.grades_10.description" = "记录 10 个成绩";
+"achievement.grades_50.title" = "50 次记录";
+"achievement.grades_50.description" = "记录 50 个成绩";
+"achievement.grades_200.title" = "成绩追踪者";
+"achievement.grades_200.description" = "记录 200 个成绩";
+
+// 成就目录 — 积累：专注
+"achievement.focus_100.title" = "初次专注";
+"achievement.focus_100.description" = "累计 100 分钟专注";
+"achievement.focus_600.title" = "深度工作者";
+"achievement.focus_600.description" = "累计 600 分钟专注";
+"achievement.focus_3000.title" = "专注冠军";
+"achievement.focus_3000.description" = "累计 3,000 分钟专注";
+
+// 成就目录 — 精通
+"achievement.active_30.title" = "月度活跃";
+"achievement.active_30.description" = "累计 30 天活跃";
+"achievement.active_180.title" = "学期战士";
+"achievement.active_180.description" = "累计 180 天活跃";
+
+// 成就页
+"Current Streak" = "当前连续";
+"Longest Streak" = "最长连续";
+"Total Active Days" = "累计活跃天数";
+"Getting Started" = "入门";
+"Streak" = "连续打卡";
+"Volume" = "积累";
+"Mastery" = "精通";
+"Special" = "特殊";
+
+// 每日目标配置
+"Daily Goals" = "每日目标";
+"Mistake Reviews" = "错题复习";
+"Grades Recorded" = "成绩记录";
+"Focus Minutes" = "专注分钟";
+"Daily Reminder" = "每日提醒";
+"Reminder Time" = "提醒时间";
+"Save Goals" = "保存目标";
+"Set your daily minimums. Reach any one goal to keep your streak alive." = "设定每日最低目标。达成任一目标即可保持连续打卡。";
+"We’ll check at this time whether you’ve completed any daily goal. If not, a gentle nudge will remind you." = "我们会在此时间检查你是否已完成任一目标。如未完成，会发送温和提醒。";
+"cards" = "张";
+"entries" = "条";
+"min" = "分钟";
+
+// 每日目标通知
+"Daily Goals Reminder" = "每日目标提醒";
+"Don’t break your streak — finish one of today’s goals." = "别让你的连续打卡断掉——完成今天的一个目标吧。";
+
+// Toast
+"toast.unlocked" = "成就解锁！🎉";
+
+// 设置
+"Achievements" = "成就";

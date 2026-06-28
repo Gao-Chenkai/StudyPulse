@@ -65,7 +65,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - Log.swift：LogLevel、LogEntry、LogStore（线程安全 NSLock，5000 条上限，超出丢最早条目）；提供 Log.app / Log.widget / Log.notification / Log.ui 等 subsystem category，以及 Log.record(_:category:message:) 同时写 os.Logger 与 LogStore。
     - LogDocument.swift：FileDocument 包装内存日志，供 .fileExporter 导出。
     - OCRManager.swift：Vision 文本识别。
-    - StudyReadinessAlgorithm.swift：多维学习准备度算法，HRV + 睡眠 + 心率 + 呼吸 + 锻炼打分合成 5 档强度 × 5 类重点建议；详细说明见 AlgorithmIntroduction.md。
+    - StudyReadinessAlgorithm.swift：多维学习准备度算法，HRV + 睡眠 + 心率 + 呼吸 + 锻炼打分合成 5 档强度 × 5 类重点建议；详细说明见 docs/AlgorithmIntroduction.md。
     - StringsLocalized.swift：字符串本地化扩展 .localized()。
     - SubjectInfo.swift：展示名称与颜色、满分回退。
   - Views/：SwiftUI 视图。
@@ -108,7 +108,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
   - en.lproj / zh-Hans.lproj / zh-Hant.lproj / ja.lproj / ko.lproj：小组件本地化字符串。
 - TestData/：示例 CSV、restore_sample_data.py 还原脚本与生成数据。
 - en.lproj、zh-Hans.lproj、zh-Hant.lproj、ja.lproj、ko.lproj：主应用各语言本地化字符串。
-- AGENTS.md / CODE_WIKI.md / CODE_WIKI_CN.md / README.md / AlgorithmIntroduction.md / SPEC.md / DESIGN.md / LICENSE：文档与许可（AlgorithmIntroduction.md 专门解释 StudyReadinessAlgorithm 的输入 / 评分 / 决策）。
+- AGENTS.md / docs/CODE_WIKI.md / docs/CODE_WIKI_CN.md / README.md / docs/AlgorithmIntroduction.md / docs/SPEC.md / docs/DESIGN.md / LICENSE：文档与许可（docs/AlgorithmIntroduction.md 专门解释 StudyReadinessAlgorithm 的输入 / 评分 / 决策）。
 - scripts/build.sh：构建辅助脚本。
 
 ---
@@ -128,7 +128,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
 业务 / 服务层目录：
 - DataManager（@MainActor ObservableObject）集中保存并对外暴露 grades / subjects / mistakeSets / examSets / comprehensiveExamSets / profile；提供 asyncInit()、save*()、load*Async() 与 saveGradeImage() / loadGradeImage() / deleteGradeImage()、saveAvatar() / loadAvatar() / deleteAvatar()，以及 fullScore(for:)、displayName(for:)、applySmartSubjectRecommendation(stage:regionCode:)。
 - AppEnvironmentManager（@MainActor ObservableObject 单例）持有 AppPreferences，并提供 effectiveColorScheme、setLanguage、setColorScheme 等计算属性与方法。
-- HealthKitManager（@MainActor ObservableObject 单例）持有 HRVReadiness（Z-score、分类、建议）、dailyHRVHistory、lastSampleCount、hrvDetailLevel、BodyStatus（心率 / 呼吸率 / 睡眠 / 锻炼）、PersonalBaselines 30 天个人基线、bodyStatusAuthorized、isReady；负责 enable() / disable() / refreshReadiness() / refreshBodyStatus() / bootstrap()。StudyReadinessAlgorithm 在 HRV 之外把多维身体信号（深睡 + REM、锻炼、心率、呼吸）归一化打分，合成 5 档强度 × 5 类重点建议，详见 AlgorithmIntroduction.md。
+- HealthKitManager（@MainActor ObservableObject 单例）持有 HRVReadiness（Z-score、分类、建议）、dailyHRVHistory、lastSampleCount、hrvDetailLevel、BodyStatus（心率 / 呼吸率 / 睡眠 / 锻炼）、PersonalBaselines 30 天个人基线、bodyStatusAuthorized、isReady；负责 enable() / disable() / refreshReadiness() / refreshBodyStatus() / bootstrap()。StudyReadinessAlgorithm 在 HRV 之外把多维身体信号（深睡 + REM、锻炼、心率、呼吸）归一化打分，合成 5 档强度 × 5 类重点建议，详见 docs/AlgorithmIntroduction.md。
 - CalendarManager：EventKit 单例，负责添加考试到系统日历；addExamToCalendar 接受可选 startTime/endTime（nil 时回退为全天事件）。
 - OCRManager：Vision 文本识别（recognitionLanguages = ["zh-Hans", "en"]）。
 - ImageCache：nonisolated class，单例 NSCache 50 项、300px 缩略图。
@@ -264,7 +264,7 @@ PersonalBaselines 30 天个人基线：
 - 由 HealthHistoryStore 维护，过去 30 天 DailyHealthSnapshot 滚动窗口，存于 ~/Documents/health_history.json（NSLock 线程安全）。
 - StudyReadinessAlgorithm 优先用个人 30 天均值 / 标准差对每个信号打分，至少 7 天样本时启用；样本不足时回退到 AgeReference 年龄段参考范围。
 - 每个信号最终归一化到 0~1，HRV 作为硬覆盖，其余信号合成 5 档学习强度 × 5 类学习重点（最多 25 种组合），未覆盖的组合回退到「steady / balanced」。
-- 完整输入 / 评分 / 决策细节见 AlgorithmIntroduction.md。
+- 完整输入 / 评分 / 决策细节见 docs/AlgorithmIntroduction.md。
 
 对外状态：hrvEnabled、hrvOnboardingCompleted、isAuthorized、isReady、readiness、dailyHRVHistory、lastSampleCount、hrvDetailLevel、bodyStatus、personalBaselines、bodyStatusAuthorized。
 
@@ -443,7 +443,7 @@ xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse -configuration Debug
 - App Group 标识符 group.com.chenkai.gao.studypulse 需在 Apple Developer 门户创建并分别启用主应用与 StudyPulseWidgetExtension 的 App Group 能力。
 - 目前没有 iCloud 同步 —— 所有数据仅本地存储在设备沙盒。
 - NewMistakeSheet.swift / Views/Sheets/ 目录已移除 —— 新的流程使用 NewMistakeSetView。
-- StudyReadinessAlgorithm 的「5 强度 × 5 重点」理论上 25 种组合，但实际可达组合是 HRV 硬覆盖 + 评分规则的子集；未覆盖组合统一回退到 steady / balanced。如需新增组合请同步更新 AlgorithmIntroduction.md。
+- StudyReadinessAlgorithm 的「5 强度 × 5 重点」理论上 25 种组合，但实际可达组合是 HRV 硬覆盖 + 评分规则的子集；未覆盖组合统一回退到 steady / balanced。如需新增组合请同步更新 docs/AlgorithmIntroduction.md。
 
 ---
 
@@ -457,7 +457,7 @@ AI 代理在本仓库工作时遵循以下规则：
 - 持久化图像作为文件而非 JSON 内联：使用 DataManager.saveGradeImage / saveAvatar。
 - 优先使用 iPadLayout 辅助而不是在视图里内联写 size class 分支。
 - 不要手工修改 StudyPulse.xcodeproj/project.pbxproj —— 让 Xcode 管理。新增 Swift 文件后在 Xcode 中 Add Files to StudyPulse... / 拖入项目即可。
-- 涉及新功能 / 新增配置时同步检查 AlgorithmIntroduction.md / SPEC.md / DESIGN.md / README.md 是否需要更新；修改 StudyReadinessAlgorithm 评分规则必须同步更新 AlgorithmIntroduction.md。
+- 涉及新功能 / 新增配置时同步检查 docs/AlgorithmIntroduction.md / docs/SPEC.md / docs/DESIGN.md / README.md 是否需要更新；修改 StudyReadinessAlgorithm 评分规则必须同步更新 docs/AlgorithmIntroduction.md。
 - 写入 widget 前确认 dataManager.isReady == true，避免在主数据加载完成前写入空数据。
 
 ---
@@ -467,7 +467,7 @@ AI 代理在本仓库工作时遵循以下规则：
 近期变更（给 Agent 参考）：
 - 移除 WSOnBoarding 依赖，OnBoarding 改为原生 iOS 26 风格：新增 Views/OnBoarding/OnboardingConfig.swift（数据模型）+ OnboardingView.swift（TabView 分页 + 渐变背景 + 玻璃质感卡片，iOS 26+ 使用 `glassEffect`、老版本回退到 `.regularMaterial`），VersionedWelcomeModifier 改用 OnboardingView，project.pbxproj 移除 WSOnBoarding 包引用与 Link 阶段配置。
 - 接入 StudyPulseWidgetExtension 目标 + 三个小组件（ExamWidget / TrendWidget / HRVWidget）及其 *WidgetData.swift / *WidgetSyncManager.swift，每个 widget 完整本地化 en/zh-Hans/zh-Hant/ja/ko。
-- 新增 HealthKit 扩展：BodyStatus（心率 / 呼吸率 / 深睡+REM / 锻炼）、HealthHistory（DailyHealthSnapshot）、HealthHistoryStore（30 天滚动持久化 ~/Documents/health_history.json）、StudyReadinessAlgorithm（5 强度 × 5 重点）；详见 AlgorithmIntroduction.md。
+- 新增 HealthKit 扩展：BodyStatus（心率 / 呼吸率 / 深睡+REM / 锻炼）、HealthHistory（DailyHealthSnapshot）、HealthHistoryStore（30 天滚动持久化 ~/Documents/health_history.json）、StudyReadinessAlgorithm（5 强度 × 5 重点）；详见 docs/AlgorithmIntroduction.md。
 - 新增 Log.swift（LogLevel / LogEntry / LogStore，5000 条上限，NSLock 线程安全）+ LogDocument（FileDocument）+ DataManagementSettingsView 的 Export Log 按钮，统一 os.Logger + 内存双写日志。
 - 新增 LagMonitor.swift（CADisplayLink 主线程卡顿检测器），连续丢帧写入 LogStore。
 - HomeView 引入分帧渲染（phased rendering），拆分首帧 long task；AvatarView / WelcomeHeaderView / SettingsView 头像加载改为异步 Task。
@@ -478,7 +478,7 @@ AI 代理在本仓库工作时遵循以下规则：
 - 新增视图：AboutView、CopyrightView、ProfileEditView、SectionHeader；新增 Sections/AboutSettingsView / AppearanceSettingsView / DataManagementSettingsView / HealthSettingsView / ProfileSettingsView / QASettingsView / SettingsCategory。
 - Exam / comprehensiveExam 新增 examEndDate?（多日考试）与 timeSlot（ExamTimeSlot?，用于 CalendarManager 同步系统日历）。
 - ExamPrepareNotifications 调整默认提醒窗口；Localizable.strings 在 5 种语言下统一增量更新。
-- AGENTS.md / CODE_WIKI.md / CODE_WIKI_CN.md / README.md / SPEC.md / DESIGN.md 随新功能更新；新增 AlgorithmIntroduction.md 专门解释 StudyReadinessAlgorithm。
+- AGENTS.md / docs/CODE_WIKI.md / docs/CODE_WIKI_CN.md / README.md / docs/SPEC.md / docs/DESIGN.md 随新功能更新；新增 docs/AlgorithmIntroduction.md 专门解释 StudyReadinessAlgorithm。
 
 更早变更：
 - iPad 适配（TARGETED_DEVICE_FAMILY = "1,2"）通过 iPadLayout.swift 辅助组件（adaptiveMaxWidth / AdaptiveHStack / AdaptiveGridColumns / adaptiveCardPadding）。

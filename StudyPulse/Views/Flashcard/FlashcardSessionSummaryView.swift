@@ -79,6 +79,9 @@ struct FlashcardSessionSummaryView: View {
             .padding(.bottom, 24)
         }
         .frame(maxWidth: 500)
+        .onAppear {
+            AchievementManager.shared.recordMistakeReviewed(count: stats.reviewed)
+        }
     }
 }
 
