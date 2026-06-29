@@ -4,230 +4,203 @@
 //
 //  Created by Chenkai Gao on 2026/6/7.
 //
+//  CSV 导入/导出：
+//  - 导出成绩 / 错题 / 考试（含综合考试）到 RFC 4180 兼容的 CSV
+//  - 解析时统一走支持引号转义的 parseCSVRows，能处理字段内含逗号 / 引号 / 换行
+//  - 考试 type 列：single / comprehensive（同时兼容旧的中文"单科" / "综合"）
+//
 
 import Foundation
 import os
 
-///  CSV 
+/// CSV 导入导出
 @MainActor
 enum DataExportManager {
-    
-    ///  CSV
+
+    // MARK: - Headers
+
+    /// 成绩 CSV 表头
+    static let gradesHeader = [
+        "ID", "Subject", "Score", "FullScore", "ScoreRate",
+        "RawScore", "Ranking", "Importance", "ExamName", "Date"
+    ]
+
+    /// 错题 CSV 表头
+    static let mistakesHeader = [
+        "ID", "Title", "Subject", "OriginalQuestion", "Source",
+        "Date", "ErrorReason", "WrongSolution", "CorrectSolution"
+    ]
+
+    /// 考试 CSV 表头
+    static let examsHeader = [
+        "ID", "Name", "Subject", "Date", "ExamEndDate", "Importance", "Mastery", "Type"
+    ]
+
+    // MARK: - Export
+
+    /// 导出成绩到 CSV
     static func exportGradesToCSV(grades: [Grade], subjects: [Subject]) -> String {
-        var csv = "ID,,,,,,,,,\n"
-        
+        var csv = joinRow(gradesHeader)
+
         for grade in grades {
             let subjectFullScore = subjects.first(where: { $0.name == grade.subject })?.fullScore ?? 100
             let fullScore = grade.fullScore ?? subjectFullScore
             let scoreRate = grade.scoreRate(subjectFullScore: subjectFullScore)
-            
-            let id = grade.id.uuidString
-            let subject = escapeCSV(grade.subject)
-            let score = String(format: "%.1f", grade.score)
-            let fs = String(format: "%.1f", fullScore)
-            let rate = String(format: "%.1f%%", scoreRate * 100)
-            let rawScore = grade.rawScore.map { String(format: "%.1f", $0) } ?? ""
-            let ranking = grade.ranking.map { String($0) } ?? ""
-            let importance = String(grade.importance)
-            let examName = escapeCSV(grade.examName)
-            let date = formatDate(grade.date)
-            
-            csv += "\(id),\(subject),\(score),\(fs),\(rate),\(rawScore),\(ranking),\(importance),\(examName),\(date)\n"
+
+            let row: [String] = [
+                grade.id.uuidString,
+                grade.subject,
+                String(format: "%.1f", grade.score),
+                String(format: "%.1f", fullScore),
+                String(format: "%.1f%%", scoreRate * 100),
+                grade.rawScore.map { String(format: "%.1f", $0) } ?? "",
+                grade.ranking.map { String($0) } ?? "",
+                String(grade.importance),
+                grade.examName,
+                formatDate(grade.date)
+            ]
+            csv += joinRow(row)
         }
-        
+
         return csv
     }
-    
-    ///  CSV
+
+    /// 导出错题到 CSV
     static func exportMistakesToCSV(mistakes: [MistakeNote]) -> String {
-        var csv = "ID,,,,,,,,\n"
-        
+        var csv = joinRow(mistakesHeader)
+
         for mistake in mistakes {
-            let id = mistake.id.uuidString
-            let title = escapeCSV(mistake.title)
-            let subject = escapeCSV(mistake.subject)
-            let question = escapeCSV(mistake.originalQuestion)
-            let source = escapeCSV(mistake.source)
-            let date = formatDate(mistake.date)
-            let reason = escapeCSV(mistake.errorReason)
-            let wrongSol = escapeCSV(mistake.wrongSolution)
-            let correctSol = escapeCSV(mistake.correctSolution)
-            
-            csv += "\(id),\(title),\(subject),\(question),\(source),\(date),\(reason),\(wrongSol),\(correctSol)\n"
+            let row: [String] = [
+                mistake.id.uuidString,
+                mistake.title,
+                mistake.subject,
+                mistake.originalQuestion,
+                mistake.source,
+                formatDate(mistake.date),
+                mistake.errorReason,
+                mistake.wrongSolution,
+                mistake.correctSolution
+            ]
+            csv += joinRow(row)
         }
-        
+
         return csv
     }
-    
-    ///  CSV
+
+    /// 导出考试（单科 + 综合）到 CSV
+    /// Type 列：single / comprehensive
     static func exportExamsToCSV(exams: [Exam], comprehensiveExams: [comprehensiveExam]) -> String {
-        var csv = "ID,,,,,,\n"
-        
-        // 
+        var csv = joinRow(examsHeader)
+
         for exam in exams {
-            let id = exam.id.uuidString
-            let name = escapeCSV(exam.name)
-            let subject = escapeCSV(exam.subject)
-            let date = formatDate(exam.examDate)
-            let importance = String(exam.importance)
-            let mastery = String(exam.masteryDegree)
-            let type = ""
-            
-            csv += "\(id),\(name),\(subject),\(date),\(importance),\(mastery),\(type)\n"
+            let row: [String] = [
+                exam.id.uuidString,
+                exam.name,
+                exam.subject,
+                formatDate(exam.examDate),
+                exam.examEndDate.map(formatDate) ?? "",
+                String(exam.importance),
+                String(exam.masteryDegree),
+                "single"
+            ]
+            csv += joinRow(row)
         }
-        
-        // 
+
         for exam in comprehensiveExams {
-            let id = exam.id.uuidString
-            let name = escapeCSV(exam.name)
-            let subject = escapeCSV(exam.subject.joined(separator: ";"))
-            let date = formatDate(exam.examDate)
-            let importance = String(exam.importance)
-            let mastery = String(exam.masteryDegree)
-            let type = ""
-            
-            csv += "\(id),\(name),\(subject),\(date),\(importance),\(mastery),\(type)\n"
+            let row: [String] = [
+                exam.id.uuidString,
+                exam.name,
+                exam.subject.joined(separator: ";"),
+                formatDate(exam.examDate),
+                exam.examEndDate.map(formatDate) ?? "",
+                String(exam.importance),
+                String(exam.masteryDegree),
+                "comprehensive"
+            ]
+            csv += joinRow(row)
         }
-        
+
         return csv
     }
-    
-    // MARK: - CSV 
-    
-    ///  CSV 
+
+    // MARK: - Import
+
+    /// 从 CSV 解析成绩
     static func parseGrades(from csvString: String, subjects: [Subject]) -> [Grade] {
-        var grades: [Grade] = []
-        
-        // 
         let rows = parseCSVRows(csvString)
-        
-        // 
         guard rows.count > 1 else { return [] }
-        
+
+        var grades: [Grade] = []
         for row in rows.dropFirst() {
-            // 
-            if let grade = parseGradeLine(from: row, subjects: subjects) {
+            if let grade = parseGradeRow(row, subjects: subjects) {
                 grades.append(grade)
             }
         }
-        
         return grades
     }
-    
-    ///  CSV / Parse mistakes from a CSV string
+
+    /// 从 CSV 解析错题
     static func parseMistakes(from csvString: String) -> [MistakeNote] {
-        var mistakes: [MistakeNote] = []
-
-        //  BOM / Strip UTF-8 BOM
-        var cleanedString = csvString
-        if csvString.hasPrefix("\u{FEFF}") {
-            cleanedString = String(csvString.dropFirst())
-        }
-
-        //  / Parse rows
-        let rows = parseCSVRows(cleanedString)
-
+        let rows = parseCSVRows(csvString)
         Log.export.info("开始解析错题 CSV / Parsing mistakes CSV: rowCount=\(rows.count, privacy: .public)")
-        if rows.count > 0 {
-            Log.export.debug("CSV 表头 / CSV header: \(rows[0], privacy: .public)")
-        }
-
-        //  / Need header + at least one data row
         guard rows.count > 1 else {
             Log.export.warning("CSV 缺少数据行 / CSV has no data rows")
             return []
         }
 
-        for (index, row) in rows.dropFirst().enumerated() {
-            Log.export.debug("解析第 \(index + 1, privacy: .public) 行 / Parsing row \(index + 1, privacy: .public): fields=\(row.count, privacy: .public)")
-            if let mistake = parseMistakeLine(from: row) {
+        var mistakes: [MistakeNote] = []
+        for row in rows.dropFirst() {
+            if let mistake = parseMistakeRow(row) {
                 mistakes.append(mistake)
                 Log.export.debug("解析成功 / Parsed mistake: title=\(mistake.title, privacy: .public)")
             } else {
-                Log.export.error("解析失败：字段数量异常 / Parse failed: unexpected field count=\(row.count, privacy: .public), expected 9")
+                Log.export.error("解析失败：字段数量异常 / Parse failed: unexpected field count=\(row.count, privacy: .public), expected \(mistakesHeader.count)")
             }
         }
-
         Log.export.info("错题 CSV 解析完成 / Finished parsing mistakes: success=\(mistakes.count, privacy: .public)")
         return mistakes
     }
-    
-    ///  CSV 
+
+    /// 从 CSV 解析考试（单科 + 综合），根据 Type 列区分
     static func parseExams(from csvString: String) -> (single: [Exam], comprehensive: [comprehensiveExam]) {
+        let rows = parseCSVRows(csvString)
+        guard rows.count > 1 else { return ([], []) }
+
         var singleExams: [Exam] = []
         var comprehensiveExams: [comprehensiveExam] = []
-        
-        // 
-        let rows = parseCSVRows(csvString)
-        
-        // 
-        guard rows.count > 1 else { return ([], []) }
-        
+
         for row in rows.dropFirst() {
-            let (_, data) = parseExamLine(from: row)
-            if let single = data as? Exam {
-                singleExams.append(single)
-            } else if let comprehensive = data as? comprehensiveExam {
-                comprehensiveExams.append(comprehensive)
-            }
-        }
-        
-        return (singleExams, comprehensiveExams)
-    }
-    
-    ///  CSV
-    private static func parseCSVRows(_ csvString: String) -> [[String]] {
-        var rows: [[String]] = []
-        var cleanedString = csvString
-        
-        //  BOM 
-        if cleanedString.hasPrefix("\u{FEFF}") {
-            cleanedString = String(cleanedString.dropFirst())
-        }
-        
-        //  \r\n  \r  \n
-        let normalized = cleanedString
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-        
-        // 
-        let lines = normalized.components(separatedBy: "\n")
-        
-        for line in lines {
-            // 
-            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmedLine.isEmpty {
+            switch parseExamRow(row) {
+            case .single(let exam):
+                singleExams.append(exam)
+            case .comprehensive(let exam):
+                comprehensiveExams.append(exam)
+            case .invalid:
                 continue
             }
-            
-            // CSV
-            let fields = trimmedLine.components(separatedBy: ",").map {
-                $0.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            
-            if !fields.isEmpty {
-                rows.append(fields)
-            }
         }
-        
-        return rows
+
+        return (singleExams, comprehensiveExams)
     }
-    
-    ///  CSV
-    private static func parseGradeLine(from fields: [String], subjects: [Subject]) -> Grade? {
-        guard fields.count >= 10 else { return nil }
-        
-        // 
+
+    // MARK: - Row Parsers (private)
+
+    private static func parseGradeRow(_ fields: [String], subjects: [Subject]) -> Grade? {
+        // 兼容旧版本（无 ScoreRate 列时也能解析）
+        // 旧版列数 = 10（ID, Subject, Score, FullScore, ScoreRate, RawScore, Ranking, Importance, ExamName, Date）
+        // 新版同旧版，列定义未变
+        guard fields.count >= gradesHeader.count else { return nil }
+
         let subjectName = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
         guard let score = Double(fields[2].trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
         let fullScore = Double(fields[3].trimmingCharacters(in: .whitespacesAndNewlines))
+        // fields[4] is ScoreRate — derived, not parsed
         let rawScore = Double(fields[5].trimmingCharacters(in: .whitespacesAndNewlines))
         let ranking = Int(fields[6].trimmingCharacters(in: .whitespacesAndNewlines))
-        let importance = Int(fields[7].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+        let importance = Int(fields[7].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 3
         let examName = fields[8].trimmingCharacters(in: .whitespacesAndNewlines)
         let date = parseDate(fields[9].trimmingCharacters(in: .whitespacesAndNewlines))
-        
-        //  Grade 
+
         return Grade(
             subject: subjectName,
             score: score,
@@ -241,12 +214,10 @@ enum DataExportManager {
             fullScore: fullScore
         )
     }
-    
-    ///  CSV
-    private static func parseMistakeLine(from fields: [String]) -> MistakeNote? {
-        guard fields.count >= 9 else { return nil }
-        
-        // 
+
+    private static func parseMistakeRow(_ fields: [String]) -> MistakeNote? {
+        guard fields.count >= mistakesHeader.count else { return nil }
+
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
         let subject = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
         let originalQuestion = fields[3].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -255,8 +226,7 @@ enum DataExportManager {
         let errorReason = fields[6].trimmingCharacters(in: .whitespacesAndNewlines)
         let wrongSolution = fields[7].trimmingCharacters(in: .whitespacesAndNewlines)
         let correctSolution = fields[8].trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        //  MistakeNote 
+
         return MistakeNote(
             title: title,
             subject: subject,
@@ -268,136 +238,201 @@ enum DataExportManager {
             correctSolution: correctSolution
         )
     }
-    
-    ///  CSV
-    private static func parseExamLine(from fields: [String]) -> (type: String, data: Any?) {
-        guard fields.count >= 7 else { return ("", nil) }
-        
-        // 
+
+    private enum ParsedExam {
+        case single(Exam)
+        case comprehensive(comprehensiveExam)
+        case invalid
+    }
+
+    private static func parseExamRow(_ fields: [String]) -> ParsedExam {
+        // 新版 8 列：ID, Name, Subject, Date, ExamEndDate, Importance, Mastery, Type
+        // 旧版 7 列：ID, Name, Subject, Date, Importance, Mastery, Type
+        guard fields.count >= 7 else { return .invalid }
+
         let name = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
         let subjectStr = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
         let date = parseDate(fields[3].trimmingCharacters(in: .whitespacesAndNewlines))
-        let importance = Int(fields[4].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
-        let mastery = Int(fields[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-        let type = fields[6].trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if type == "" {
-            // 
-            let exam = Exam(
+
+        // 8 列格式带 examEndDate
+        let examEndDate: Date?
+        let importance: Int
+        let mastery: Int
+        let typeRaw: String
+        if fields.count >= 8 {
+            examEndDate = fields[4].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : parseDate(fields[4].trimmingCharacters(in: .whitespacesAndNewlines))
+            importance = Int(fields[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+            mastery = Int(fields[6].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+            typeRaw = fields[7].trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            // 兼容 7 列旧格式
+            examEndDate = nil
+            importance = Int(fields[4].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+            mastery = Int(fields[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+            typeRaw = fields[6].trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        switch normalizeExamType(typeRaw) {
+        case .single:
+            return .single(Exam(
                 name: name,
                 date: date,
                 importance: importance,
                 subject: subjectStr,
                 examName: name,
-                masteryDegree: mastery
-            )
-            return ("single", exam)
-        } else if type == "" {
-            // 
+                masteryDegree: mastery,
+                examEndDate: examEndDate
+            ))
+        case .comprehensive:
             let subjects = subjectStr.components(separatedBy: ";")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
-            
-            let exam = comprehensiveExam(
+            return .comprehensive(comprehensiveExam(
                 name: name,
                 date: date,
                 importance: importance,
                 subject: subjects,
                 examName: name,
-                masteryDegree: mastery
-            )
-            return ("comprehensive", exam)
+                masteryDegree: mastery,
+                examEndDate: examEndDate
+            ))
+        case .unknown:
+            return .invalid
         }
-        
-        return ("", nil)
     }
-    
-    // MARK:  - 
-    ///  CSV
-    private static func parseGradeLine(_ line: String, subjects: [Subject]) -> Grade? {
-        let fields = parseCSVLine(line)
-        return parseGradeLine(from: fields, subjects: subjects)
+
+    private enum ExamKind { case single, comprehensive, unknown }
+
+    /// 兼容英文（single / comprehensive）和中文（单科 / 综合）
+    private static func normalizeExamType(_ raw: String) -> ExamKind {
+        let lower = raw.lowercased()
+        if lower == "single" || lower == "单科" { return .single }
+        if lower == "comprehensive" || lower == "综合" { return .comprehensive }
+        return .unknown
     }
-    
-    ///  CSV
-    private static func parseMistakeLine(_ line: String) -> MistakeNote? {
-        let fields = parseCSVLine(line)
-        return parseMistakeLine(from: fields)
-    }
-    
-    ///  CSV
-    private static func parseExamLine(_ line: String) -> (type: String, data: Any?) {
-        let fields = parseCSVLine(line)
-        return parseExamLine(from: fields)
-    }
-    
-    ///  CSV 
-    private static func parseCSVLine(_ line: String) -> [String] {
-        var result: [String] = []
+
+    // MARK: - CSV Low-Level
+
+    /// 解析整个 CSV 字符串为行（每行是字段数组）。
+    /// 支持引号转义（"" 表示字面量 "），可处理字段内含 , " 换行。
+    private static func parseCSVRows(_ csvString: String) -> [[String]] {
+        var cleaned = csvString
+        if cleaned.hasPrefix("\u{FEFF}") {
+            cleaned = String(cleaned.dropFirst())
+        }
+
+        // 统一换行符
+        cleaned = cleaned
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        var rows: [[String]] = []
+        var currentRow: [String] = []
         var currentField = ""
         var inQuotes = false
-        var i = line.startIndex
-        
-        while i < line.endIndex {
-            let char = line[i]
-            
-            if char == "\"" {
-                if inQuotes && i < line.index(before: line.endIndex) && line[line.index(after: i)] == "\"" {
-                    // 
-                    currentField.append("\"")
-                    i = line.index(after: i)
+
+        let chars = Array(cleaned)
+        var i = 0
+        let n = chars.count
+
+        while i < n {
+            let c = chars[i]
+            if inQuotes {
+                if c == "\"" {
+                    if i + 1 < n && chars[i + 1] == "\"" {
+                        // "" -> 字面量 "
+                        currentField.append("\"")
+                        i += 2
+                        continue
+                    } else {
+                        inQuotes = false
+                        i += 1
+                        continue
+                    }
                 } else {
-                    // 
-                    inQuotes.toggle()
+                    currentField.append(c)
+                    i += 1
+                    continue
                 }
-            } else if char == "," && !inQuotes {
-                // 
-                result.append(currentField)
-                currentField = ""
             } else {
-                currentField.append(char)
+                if c == "\"" {
+                    inQuotes = true
+                    i += 1
+                    continue
+                } else if c == "," {
+                    currentRow.append(currentField)
+                    currentField = ""
+                    i += 1
+                    continue
+                } else if c == "\n" {
+                    currentRow.append(currentField)
+                    if !(currentRow.count == 1 && currentRow[0].isEmpty) {
+                        rows.append(currentRow)
+                    }
+                    currentRow = []
+                    currentField = ""
+                    i += 1
+                    continue
+                } else {
+                    currentField.append(c)
+                    i += 1
+                    continue
+                }
             }
-            
-            i = line.index(after: i)
         }
-        
-        // 
-        result.append(currentField)
-        return result
+
+        // 收尾
+        if !currentField.isEmpty || !currentRow.isEmpty {
+            currentRow.append(currentField)
+            if !(currentRow.count == 1 && currentRow[0].isEmpty) {
+                rows.append(currentRow)
+            }
+        }
+
+        return rows
     }
-    
-    /// 
-    private static func parseDate(_ dateString: String) -> Date {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        if let date = formatter.date(from: dateString) {
-            return date
-        }
-        
-        // 
-        formatter.dateFormat = "yyyy-MM-dd"
-        if let date = formatter.date(from: dateString) {
-            return date
-        }
-        
-        // 
-        return Date()
+
+    /// 把一行字段拼成 CSV 行（自动加引号转义）
+    private static func joinRow(_ fields: [String]) -> String {
+        return fields.map(escapeCSV).joined(separator: ",") + "\n"
     }
-    
-    // MARK: - Helper
-    
-    ///  CSV 
+
+    /// RFC 4180 转义：包含 , " 换行的字段用 " 包起来，内部 " 变 ""
     private static func escapeCSV(_ string: String) -> String {
-        if string.contains(",") || string.contains("\"") || string.contains("\n") {
-            return "\"\(string.replacingOccurrences(of: "\"", with: "\"\""))\""
+        if string.contains(",") || string.contains("\"") || string.contains("\n") || string.contains("\r") {
+            return "\"" + string.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
         return string
     }
-    
-    /// 
+
     private static func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter.string(from: date)
+    }
+
+    private static func parseDate(_ string: String) -> Date {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return Date() }
+
+        let formats = [
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm",
+            "yyyy-MM-dd",
+            "yyyy/MM/dd HH:mm:ss",
+            "yyyy/MM/dd"
+        ]
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        for fmt in formats {
+            formatter.dateFormat = fmt
+            if let date = formatter.date(from: trimmed) {
+                return date
+            }
+        }
+        return Date()
     }
 }

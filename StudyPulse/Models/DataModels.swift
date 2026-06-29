@@ -229,7 +229,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 	/// 考试具体时间（用于日历同步，nil 时表示全天事件）
 	var timeSlot: ExamTimeSlot?
     
-    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil) {
+    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil) {
         self.name = name
         self.examDate = date
         self.importance = importance
@@ -237,6 +237,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
         self.examName = examName
         self.masteryDegree = masteryDegree
 		self.timeSlot = timeSlot
+        self.examEndDate = examEndDate
     }
 }
 

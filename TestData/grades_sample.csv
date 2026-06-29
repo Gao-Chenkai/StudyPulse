@@ -1,4 +1,4 @@
-ID,科目,分数,满分,分数率,原始分数,排名,重要性,考试名称,日期
+ID,Subject,Score,FullScore,ScoreRate,RawScore,Ranking,Importance,ExamName,Date
 99c70864-9f4f-4d9e-ba4c-3c3f4817594e,Geography,75.9,100,75.9,58.5,60,2,寒假作业检查,2026-01-08 20:17:59
 7ee02841-b6e2-43bb-b4e8-ed654fa71ec7,English,106.9,120,89.1,71.2,18,2,Pre-Mock Exam,2025-02-09 20:17:59
 61da5be1-6a82-4135-aae7-4536859012ef,Chemistry,122.6,150,81.8,100.7,2,1,月考,2024-07-22 20:17:59

@@ -166,6 +166,7 @@ def write_exams(csv_path: Path, docs: Path):
         reader = csv.reader(f)
         next(reader)  # header
         for row in reader:
+            # 兼容 8 列新格式 + 7 列旧格式
             if len(row) < 7:
                 continue
             exam_id = make_uuid(row[0])
@@ -173,10 +174,16 @@ def write_exams(csv_path: Path, docs: Path):
             subject_str = row[2]
             date_str = row[3]
             date_iso = parse_date(date_str)
-            importance = int(row[4]) if row[4] else 3
-            mastery = int(row[5]) if row[5] else 0
-            kind = row[6]
-            if kind == "单科":
+            # 8 列格式带 examEndDate (row[4])，需要跳过
+            if len(row) >= 8:
+                importance = int(row[5]) if row[5] else 3
+                mastery = int(row[6]) if row[6] else 0
+                kind = row[7]
+            else:
+                importance = int(row[4]) if row[4] else 3
+                mastery = int(row[5]) if row[5] else 0
+                kind = row[6]
+            if kind == "单科" or kind == "single":
                 singles.append({
                     "id": exam_id,
                     "name": name,
