@@ -12,14 +12,14 @@ import Foundation
 import os
 
 enum HealthHistoryStore {
-    static let fileName = "health_history.json"
+    nonisolated static let fileName = "health_history.json"
     /// Keep the file small; 60 days is more than enough for a stable
     /// 30-day baseline with room to spare.
-    static let retentionDays = 60
+    nonisolated static let retentionDays = 60
 
     // MARK: - File I/O
 
-    static func fileURL() throws -> URL {
+    nonisolated static func fileURL() throws -> URL {
         let dir = try FileManager.default.url(
             for: .documentDirectory,
             in: .userDomainMask,
@@ -29,7 +29,7 @@ enum HealthHistoryStore {
         return dir.appendingPathComponent(fileName)
     }
 
-    static func load() -> [DailyHealthSnapshot] {
+    nonisolated static func load() -> [DailyHealthSnapshot] {
         guard let url = try? fileURL(),
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
@@ -47,7 +47,7 @@ enum HealthHistoryStore {
         }
     }
 
-    static func save(_ snapshots: [DailyHealthSnapshot]) {
+    nonisolated static func save(_ snapshots: [DailyHealthSnapshot]) {
         guard let url = try? fileURL() else {
             Log.healthHistory.error("健康历史保存失败：无法解析文件 URL / Health history save failed: cannot resolve file URL")
             return
@@ -70,7 +70,7 @@ enum HealthHistoryStore {
     /// partial updates don't clobber earlier readings) and return the
     /// post-write history.
     @discardableResult
-    static func upsert(snapshot: DailyHealthSnapshot) -> [DailyHealthSnapshot] {
+    nonisolated static func upsert(snapshot: DailyHealthSnapshot) -> [DailyHealthSnapshot] {
         let existing = load()
         let cal = Calendar.current
         let day = cal.startOfDay(for: snapshot.date)
@@ -105,7 +105,7 @@ enum HealthHistoryStore {
         return updated
     }
 
-    static func trimToRetention(_ snapshots: [DailyHealthSnapshot]) -> [DailyHealthSnapshot] {
+    nonisolated static func trimToRetention(_ snapshots: [DailyHealthSnapshot]) -> [DailyHealthSnapshot] {
         let cutoff = Calendar.current.date(
             byAdding: .day, value: -retentionDays, to: Date()
         ) ?? Date()

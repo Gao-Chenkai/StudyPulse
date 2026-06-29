@@ -20,23 +20,32 @@ struct HRVStatusCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
 
-                if hrvManager.hrvDetailLevel != .suggestionOnly {
-                    let radar = BodyRadarValues.compute(
-                        hrv: hrvManager.readiness,
-                        body: hrvManager.bodyStatus,
-                        baselines: hrvManager.personalBaselines,
-                        age: dataManager.profile.age
-                    )
-                    BodyRadarChart(values: radar)
-                        .frame(height: 220)
-                        .padding(.vertical, 4)
-                }
+                if hrvManager.isHealthBootstrapping {
+                    // 后台仍在跑 14 天 HRV 查询 + PersonalBaselines 重算
+                    // 时显示 Loading 占位，避免首屏卡住。
+                    // Show a Loading placeholder while the background
+                    // task is still pulling 14 days of HRV + recomputing
+                    // PersonalBaselines, so the home view doesn't stall.
+                    loadingPlaceholder
+                } else {
+                    if hrvManager.hrvDetailLevel != .suggestionOnly {
+                        let radar = BodyRadarValues.compute(
+                            hrv: hrvManager.readiness,
+                            body: hrvManager.bodyStatus,
+                            baselines: hrvManager.personalBaselines,
+                            age: dataManager.profile.age
+                        )
+                        BodyRadarChart(values: radar)
+                            .frame(height: 220)
+                            .padding(.vertical, 4)
+                    }
 
-                if hrvManager.hrvDetailLevel == .chartAndData {
-                    axisValuesRow
-                }
+                    if hrvManager.hrvDetailLevel == .chartAndData {
+                        axisValuesRow
+                    }
 
-                suggestionRow
+                    suggestionRow
+                }
             }
             .padding(16)
             .background(
@@ -56,6 +65,24 @@ struct HRVStatusCard: View {
                 }
             }
         }
+    }
+
+    /// 后台 bootstrap 期间的占位视图。显示一个柔和的灰色卡，避免
+    /// 在 14 天 HRV 查询完成前渲染出残缺的雷达图/建议。
+    /// Placeholder shown while the background bootstrap is still
+    /// running. Keeps the layout stable (no half-rendered radar) and
+    /// signals that data is on the way.
+    private var loadingPlaceholder: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .scaleEffect(0.8)
+            Text("Loading...".localized())
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Header
@@ -224,7 +251,7 @@ struct HRVStatusCard: View {
         case .excellent: return .green
         case .normal: return .blue
         case .low: return .orange
-        case .insufficient, .noAuthorization, .queryFailed: return .secondary
+        case .loading, .insufficient, .noAuthorization, .queryFailed: return .secondary
         }
     }
 
@@ -242,6 +269,7 @@ struct HRVStatusCard: View {
         case .excellent: return "Excellent".localized()
         case .normal: return "Normal".localized()
         case .low: return "Low".localized()
+        case .loading: return "Loading...".localized()
         case .insufficient: return "Collecting".localized()
         case .noAuthorization: return "-"
         case .queryFailed: return "Error".localized()

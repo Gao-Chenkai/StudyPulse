@@ -100,7 +100,7 @@ struct PersonalBaselines: Equatable {
     /// Compute personal baselines from a list of daily snapshots.
     /// Only non-nil values contribute to each signal's mean and
     /// standard deviation.
-    static func compute(from snapshots: [DailyHealthSnapshot]) -> PersonalBaselines {
+    nonisolated static func compute(from snapshots: [DailyHealthSnapshot]) -> PersonalBaselines {
         func stats<T: BinaryFloatingPoint>(_ values: [T]) -> PersonalBaselineStats? {
             let doubles = values.map { Double($0) }
             guard !doubles.isEmpty else { return nil }
@@ -256,7 +256,7 @@ enum StudyReadinessAlgorithm {
     /// Number of personal-baseline samples required before we trust it
     /// more than the age-adjusted reference. Anything below this falls
     /// back to the age-adjusted comparison.
-    static let minPersonalSamples = 7
+    nonisolated static let minPersonalSamples = 7
 
     /// Compute the recommendation from HRV + body status. Returns `nil`
     /// when no signal is usable (e.g. monitoring disabled or both data
@@ -431,7 +431,7 @@ enum StudyReadinessAlgorithm {
     ///   [-2, +2]; map [-2, +2] → [0, 1].
     /// - Age path: piecewise linear against the `low`/`mid`/`high`
     ///   endpoints, peaking at `mid`.
-    static func calibrated(
+    nonisolated static func calibrated(
         value: Double?,
         baseline: PersonalBaselineStats?,
         range: AgeReference.Range

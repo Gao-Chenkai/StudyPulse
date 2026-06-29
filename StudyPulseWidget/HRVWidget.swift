@@ -105,6 +105,7 @@ private func badgeLabel(_ category: String) -> String {
     case "excellent": return String(localized: "Excellent")
     case "normal": return String(localized: "Normal")
     case "low": return String(localized: "Low")
+    case "loading": return String(localized: "Loading...")
     case "insufficient": return String(localized: "Collecting")
     default: return "-"
     }

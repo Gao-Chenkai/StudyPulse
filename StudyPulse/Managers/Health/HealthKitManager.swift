@@ -23,6 +23,7 @@ struct HRVReadiness {
     let suggestion: String
 
     enum Category: String {
+        case loading = "loading"          // 启动期 bootstrap 占位 / placeholder during bootstrap
         case excellent = "excellent"
         case normal = "normal"
         case low = "low"
@@ -147,6 +148,24 @@ final class HealthKitManager: ObservableObject {
     /// types (heart rate, respiratory rate, sleep).
     @Published var bodyStatusAuthorized: Bool = false
 
+    /// 启动期 bootstrap 阶段标志。true 表示后台仍在跑 14 天 HRV 查询 +
+    /// PersonalBaselines 重算，UI 应显示 Loading 占位。
+    /// Bootstrap phase flag. While `true`, the background task is still
+    /// running the 14-day HRV query and PersonalBaselines recompute,
+    /// so the UI should show a Loading placeholder.
+    @Published var isHealthBootstrapping: Bool = false
+
+    /// HRV 增量查询水位：上一次成功执行的 `refreshReadiness` 截止时间。
+    /// 下一次 `refreshReadiness` 只查询 `[lastHRVQueryEndDate, now]`
+    /// 区间的新样本，避免每次都拉全量 14 天。
+    /// Incremental HRV query watermark: the end date of the last
+    /// successful `refreshReadiness`. Subsequent calls only fetch
+    /// samples in `[lastHRVQueryEndDate, now]`, avoiding a full
+    /// 14-day pull on every refresh.
+    @Published var lastHRVQueryEndDate: Date? {
+        didSet { UserDefaults.standard.set(lastHRVQueryEndDate, forKey: "hrv_last_query_end_date") }
+    }
+
 
     var isHealthKitAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
     @Published var isAuthorized: Bool = false
@@ -180,27 +199,89 @@ final class HealthKitManager: ObservableObject {
         self.hrvEnabled = UserDefaults.standard.bool(forKey: "hrv_enabled")
         self.hrvOnboardingCompleted = UserDefaults.standard.bool(forKey: "hrv_onboarding_completed")
         self.hrvDetailLevel = HRVDetailLevel(rawValue: UserDefaults.standard.string(forKey: "hrv_detail_level") ?? "") ?? .dataAndSuggestion
+        // 恢复上次的 HRV 增量查询水位
+        // Restore the last HRV query watermark for incremental queries
+        self.lastHRVQueryEndDate = UserDefaults.standard.object(forKey: "hrv_last_query_end_date") as? Date
         // Load any previously saved 30-day history so the algorithm
         // starts with a personal baseline as soon as the app opens.
         let history = HealthHistoryStore.load()
         self.personalBaselines = PersonalBaselines.compute(from: history)
-        Log.healthKit.info("HealthKitManager 初始化 / HealthKitManager init; enabled=\(self.hrvEnabled, privacy: .public) onboarded=\(self.hrvOnboardingCompleted, privacy: .public) historyCount=\(history.count, privacy: .public)")
+        Log.healthKit.info("HealthKitManager 初始化 / HealthKitManager init; enabled=\(self.hrvEnabled, privacy: .public) onboarded=\(self.hrvOnboardingCompleted, privacy: .public) historyCount=\(history.count, privacy: .public) watermark=\(self.lastHRVQueryEndDate?.description ?? "nil", privacy: .public)")
         // 注意：不在 init 里立刻发起 HealthKit 查询；
         // 由 App 在主数据加载完成后再调用 bootstrap()，避免和 DataManager 启动 I/O 竞争。
     }
 
     /// 启动时调用：在主数据加载就绪后再去请求 HealthKit 授权与刷新数据。
+    /// 分两段执行：
+    ///  1) **缓存 + 占位**：检查授权；若 HRV 未启用/未完成引导直接返回；
+    ///     否则把 `isHealthBootstrapping` 置 true、把 readiness 切到
+    ///     `.loading` 占位，让 UI 立即显示 Loading 并返回，不阻塞主线程。
+    ///  2) **后台补全**：派生一个独立 Task 跑 `runBootstrapBackground()`，
+    ///     完成 14 天 HRV 查询 + 30 天基线重算，结束时把
+    ///     `isHealthBootstrapping` 置 false 并显式 `objectWillChange.send()`
+    ///     触发一次刷新。
     /// Called on launch: only after the main data is ready, request HK auth and refresh data.
+    /// Two-phase bootstrap:
+    ///  1) Cache + placeholder: check auth; if HRV isn't enabled/onboarded
+    ///     return immediately. Otherwise set `isHealthBootstrapping = true`
+    ///     and switch readiness to the `.loading` category so the UI
+    ///     shows a Loading placeholder without blocking the main thread.
+    ///  2) Background completion: spawn a detached task that runs
+    ///     `runBootstrapBackground()` (14-day HRV query + 30-day
+    ///     PersonalBaselines recompute), then flips the bootstrap flag
+    ///     off and explicitly calls `objectWillChange.send()` for a
+    ///     single UI refresh.
     func bootstrap() async {
-        Log.healthKit.info("HealthKit bootstrap 开始 / HealthKit bootstrap start")
+        Log.healthKit.info("HealthKit bootstrap 开始 / start (two-phase)")
         await checkAuthorizationStatus()
-        Log.healthKit.info("HealthKit 授权状态 / HealthKit authorization: isAuthorized=\(self.isAuthorized, privacy: .public) bodyStatusAuthorized=\(self.bodyStatusAuthorized, privacy: .public)")
-        if hrvEnabled && hrvOnboardingCompleted {
-            await refreshReadiness()
-            await refreshBodyStatus()
-        } else {
+        Log.healthKit.info("HealthKit 授权状态 / auth: isAuthorized=\(self.isAuthorized, privacy: .public) bodyStatusAuthorized=\(self.bodyStatusAuthorized, privacy: .public)")
+        guard hrvEnabled, hrvOnboardingCompleted else {
             Log.healthKit.debug("HRV 未启用或未完成引导，跳过刷新 / HRV not enabled or onboarding incomplete, skipping refresh")
+            return
         }
+
+        // ----- Phase 1: 缓存 + 占位 / cache + placeholder -----
+        // 立即把状态切到 loading，避免首屏卡住显示 "insufficient"。
+        // Flip the state to loading immediately so the home view
+        // doesn't sit on a stale "insufficient" placeholder.
+        isHealthBootstrapping = true
+        if readiness.category != .loading {
+            readiness = HRVReadiness(
+                zScore: nil,
+                todayHRV: nil,
+                baselineMean: nil,
+                baselineSampleCount: 0,
+                category: .loading,
+                suggestion: "Loading...".localized()
+            )
+        }
+        HRVWidgetSyncManager.syncHRV(from: self)
+        Log.healthKit.info("HealthKit bootstrap phase1 完成，进入后台补全 / phase1 done, dispatching background")
+
+        // ----- Phase 2: 后台补全 / background completion -----
+        // 用 Task 派生后台工作；@MainActor 类的实例方法仍由主 Actor 调度，
+        // 内部 `await` 的 HK 查询是异步挂起的，不会阻塞主线程。
+        // Spawn a Task for the background work. The HK queries inside
+        // are async-suspending and run off the main thread; only the
+        // final @Published assignments briefly hop back to main.
+        Task { [weak self] in
+            await self?.runBootstrapBackground()
+        }
+    }
+
+    /// Bootstrap 第二阶段：跑 HRV 增量查询 + body status 刷新 +
+    /// PersonalBaselines 后台重算，结束后翻 `isHealthBootstrapping`
+    /// 标志位并显式 `objectWillChange.send()` 触发单次 UI 刷新。
+    /// Bootstrap phase 2: incremental HRV query, body status refresh,
+    /// PersonalBaselines recompute. Flips the bootstrap flag off and
+    /// sends a single `objectWillChange` for one UI refresh.
+    private func runBootstrapBackground() async {
+        Log.healthKit.info("HealthKit bootstrap phase2 开始 / phase2 start")
+        await refreshReadiness()
+        await refreshBodyStatus()
+        isHealthBootstrapping = false
+        objectWillChange.send()
+        Log.healthKit.info("HealthKit bootstrap phase2 完成 / phase2 done; category=\(self.readiness.category.rawValue, privacy: .public) isUsable=\(self.bodyStatus.isUsable, privacy: .public)")
     }
 
     func requestAuthorization() async -> Bool {
@@ -260,16 +341,16 @@ final class HealthKitManager: ObservableObject {
         hrvEnabled = false
     }
 
-    /// Fetch HRV (SDNN) samples from the past `days` calendar days.
-    /// Returns empty array when no samples match; never returns nil.
-    private func fetchHRVSamples(days: Int = 14) async -> [HKQuantitySample] {
-        Log.healthKit.debug("开始获取最近 \(days, privacy: .public) 天 HRV 样本 / Fetching HRV samples for last \(days, privacy: .public) days")
+    /// Fetch HRV (SDNN) samples in `[start, end)`. Returns empty array
+    /// when no samples match; never returns nil. Used by
+    /// `refreshReadiness` for both the initial 14-day pull and the
+    /// incremental `[lastQueryEndDate, now)` delta.
+    private func fetchHRVSamples(start: Date, end: Date) async -> [HKQuantitySample] {
+        Log.healthKit.debug("获取 HRV 样本 / Fetching HRV samples: start=\(start, privacy: .public) end=\(end, privacy: .public)")
         guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
             Log.healthKit.warning("HRV 类型不可用 / HRV type unavailable")
             return []
         }
-        let end = Date()
-        guard let start = Calendar.current.date(byAdding: .day, value: -days, to: end) else { return [] }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         return await withCheckedContinuation { c in
@@ -439,8 +520,22 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Refresh the body status snapshot. Safe to call repeatedly.
-    /// Also records today's snapshot to the 30-day history (used to
-    /// calibrate the algorithm) and recomputes personal baselines.
+    ///
+    /// 流程：
+    ///  1) 并行跑 5 路 HK 查询（async let，全部异步挂起、不阻塞主线程）。
+    ///  2) 拿到结果后立即把 `bodyStatus` 设上 — 唤醒 UI。
+    ///  3) `recordTodaySnapshotAsync` 把今日 snapshot 写入
+    ///     `~/Documents/health_history.json` 并在后台线程上重算
+    ///     `PersonalBaselines`（CPU 密集），完事再回主 Actor 写
+    ///     `personalBaselines` @Published 触发单次刷新。
+    ///
+    /// Flow:
+    ///  1) Fire 5 parallel HK queries (async let — non-blocking).
+    ///  2) Publish `bodyStatus` immediately so the UI wakes up.
+    ///  3) `recordTodaySnapshotAsync` writes today's snapshot to
+    ///     health_history.json and recomputes `PersonalBaselines` on
+    ///     a background queue (CPU-bound), then assigns the @Published
+    ///     on the main actor to trigger a single UI refresh.
     func refreshBodyStatus() async {
         guard hrvEnabled, isAuthorized else {
             bodyStatus = BodyStatus(
@@ -463,7 +558,7 @@ final class HealthKitManager: ObservableObject {
         async let exercise = fetchTodayExerciseMinutes()
         let (rhr, lhr, rr, sl, ex) = await (restingHR, latestHR, respRate, sleep, exercise)
         let hasAny = rhr != nil || lhr != nil || rr != nil || sl != nil || ex != nil
-        bodyStatus = BodyStatus(
+        let newBodyStatus = BodyStatus(
             restingHeartRate: rhr,
             latestHeartRate: lhr,
             respiratoryRate: rr,
@@ -474,16 +569,50 @@ final class HealthKitManager: ObservableObject {
             exerciseMinutesToday: ex,
             isUsable: hasAny
         )
-        Log.healthKit.info("refreshBodyStatus 完成 / refreshBodyStatus done; hr=\(lhr?.description ?? "-", privacy: .public) rhr=\(rhr?.description ?? "-", privacy: .public) rr=\(rr?.description ?? "-", privacy: .public) sleep=\(sl?.hours.description ?? "-", privacy: .public)h deep=\(sl?.deepHours.description ?? "-", privacy: .public)h rem=\(sl?.remHours.description ?? "-", privacy: .public)h exercise=\(ex?.description ?? "-", privacy: .public)min isUsable=\(hasAny, privacy: .public)")
+        bodyStatus = newBodyStatus
+        Log.healthKit.info("refreshBodyStatus 完成 / done; hr=\(lhr?.description ?? "-", privacy: .public) rhr=\(rhr?.description ?? "-", privacy: .public) rr=\(rr?.description ?? "-", privacy: .public) sleep=\(sl?.hours.description ?? "-", privacy: .public)h deep=\(sl?.deepHours.description ?? "-", privacy: .public)h rem=\(sl?.remHours.description ?? "-", privacy: .public)h exercise=\(ex?.description ?? "-", privacy: .public)min isUsable=\(hasAny, privacy: .public)")
 
         // Record today's snapshot to the 30-day history. We use the
         // first sample of the day for HRV (via `fetchHRVSamples`
         // history); here we just record what we have so far and
         // `fetchHRVForHistory` back-fills today's HRV specifically.
+        // The file I/O + baselines compute are offloaded to a
+        // background queue to keep the main thread responsive.
         let todayHRV = await fetchTodayHRV()
-       recordTodaySnapshot(todayHRV: todayHRV)
+        recordTodaySnapshotAsync(bodyStatus: newBodyStatus, todayHRV: todayHRV)
         writeIntentHealthCache()
    }
+
+    /// Snapshot recording + 30-day baseline recompute, run on a
+    /// background queue. Writes the merged history file and assigns
+    /// the resulting `personalBaselines` back on the main actor so
+    /// SwiftUI gets a single `objectWillChange` pulse.
+    private func recordTodaySnapshotAsync(bodyStatus bs: BodyStatus, todayHRV: Double?) {
+        guard bs.isUsable || todayHRV != nil else { return }
+        let snapshot = DailyHealthSnapshot(
+            date: Date(),
+            hrv: todayHRV,
+            restingHeartRate: bs.restingHeartRate,
+            respiratoryRate: bs.respiratoryRate,
+            sleepHours: bs.lastNightSleepHours,
+            deepSleepHours: bs.deepSleepHours,
+            remSleepHours: bs.remSleepHours,
+            exerciseMinutes: bs.exerciseMinutesToday
+        )
+        Task.detached(priority: .utility) { [weak self] in
+            // 文件 I/O + PersonalBaselines.compute 都在后台线程跑，
+            // PersonalBaselines.compute 是纯函数，非 actor 隔离。
+            // File I/O + baseline recompute run on a background thread;
+            // `PersonalBaselines.compute` is a pure function, not
+            // actor-isolated, so it's safe to call off the main actor.
+            let history = HealthHistoryStore.upsert(snapshot: snapshot)
+            let newBaselines = PersonalBaselines.compute(from: history)
+            await MainActor.run {
+                self?.personalBaselines = newBaselines
+                Log.healthKit.info("PersonalBaselines 后台重算完成 / background recompute done; samples=\(history.count, privacy: .public)")
+            }
+        }
+    }
 
     /// Fetch today's first HRV sample for the daily history snapshot.
     private func fetchTodayHRV() async -> Double? {
@@ -504,58 +633,79 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Persist today's snapshot and recompute the 30-day baselines
-    /// that the algorithm reads from. No-op if every field is nil
-    /// (i.e. we couldn't read any signal today).
-    private func recordTodaySnapshot(todayHRV: Double?) {
-        let bs = bodyStatus
-        guard bs.isUsable || todayHRV != nil else { return }
-        let snapshot = DailyHealthSnapshot(
-            date: Date(),
-            hrv: todayHRV,
-            restingHeartRate: bs.restingHeartRate,
-            respiratoryRate: bs.respiratoryRate,
-            sleepHours: bs.lastNightSleepHours,
-            deepSleepHours: bs.deepSleepHours,
-            remSleepHours: bs.remSleepHours,
-            exerciseMinutes: bs.exerciseMinutesToday
-        )
-        let history = HealthHistoryStore.upsert(snapshot: snapshot)
-        personalBaselines = PersonalBaselines.compute(from: history)
-    }
-
+    /// Refresh the HRV readiness state.
+    ///
+    /// 增量策略：缓存 `lastHRVQueryEndDate`，下次只拉
+    /// `[lastHRVQueryEndDate, now)` 的新样本并与现有 `dailyHRVHistory`
+    /// 合并，避免每次 refreshReadiness 都查全量 14 天。
+    /// 首次调用（无水位）退回到 14 天全量查询。
+    ///
+    /// Incremental strategy: cache `lastHRVQueryEndDate` and only pull
+    /// `[lastHRVQueryEndDate, now)` new samples on each call, merging
+    /// them into `dailyHRVHistory`. The very first call (no watermark
+    /// yet) falls back to the full 14-day pull.
     func refreshReadiness() async {
-        Log.healthKit.info("refreshReadiness 开始 / refreshReadiness start")
+        Log.healthKit.info("refreshReadiness 开始 / start")
         guard hrvEnabled, isAuthorized else {
             readiness = HRVReadiness(zScore: nil, todayHRV: nil, baselineMean: nil,
                 baselineSampleCount: 0, category: .noAuthorization,
                 suggestion: "Enable HealthKit access in Settings.".localized())
-            Log.healthKit.warning("refreshReadiness 跳过：未启用或未授权 / refreshReadiness skipped: not enabled or not authorized")
+            Log.healthKit.warning("refreshReadiness 跳过：未启用或未授权 / skipped: not enabled or not authorized")
             HRVWidgetSyncManager.syncHRV(from: self)
             return
         }
-        let samples = await fetchHRVSamples(days: 14)
-        lastSampleCount = samples.count
+        let end = Date()
+        // 增量窗口：未命中水位时回退到 14 天全量；命中时只取水位到现在的 delta。
+        // Incremental window: no watermark → 14-day full pull; otherwise
+        // only fetch the [watermark, now) delta.
+        let watermark = lastHRVQueryEndDate
+        let start: Date
+        if let w = watermark, w < end {
+            // 略微往回覆盖 1 天，应对 HK 写入时间戳的轻微回填。
+            // Nudge the start back 1 day to absorb any late-arriving
+            // samples whose startDate is just before the previous query end.
+            let lookback = Calendar.current.date(byAdding: .day, value: -1, to: w) ?? w
+            start = max(lookback, Calendar.current.date(byAdding: .day, value: -14, to: end) ?? end)
+            Log.healthKit.info("refreshReadiness 增量查询 / incremental: from=\(start, privacy: .public) to=\(end, privacy: .public)")
+        } else {
+            start = Calendar.current.date(byAdding: .day, value: -14, to: end) ?? end
+            Log.healthKit.info("refreshReadiness 首次查询（14 天全量）/ first run (14d full): from=\(start, privacy: .public) to=\(end, privacy: .public)")
+        }
 
-        guard !samples.isEmpty else {
+        let newSamples = await fetchHRVSamples(start: start, end: end)
+        lastSampleCount = newSamples.count
+        lastHRVQueryEndDate = end
+
+        // 合并到 dailyHRVHistory：去重（同日只保留第一个样本）+ 按日期降序。
+        // Merge into `dailyHRVHistory`: dedup (one entry per day, the
+        // first sample) and sort by date descending.
+        let existingDays = Set(dailyHRVHistory.map { Calendar.current.startOfDay(for: $0.date) })
+        let newDaily = extractDailyHRV(from: newSamples)
+            .filter { !existingDays.contains(Calendar.current.startOfDay(for: $0.date)) }
+        if !newDaily.isEmpty {
+            dailyHRVHistory = (dailyHRVHistory + newDaily).sorted { $0.date > $1.date }
+            Log.healthKit.info("refreshReadiness 合并新增 / merged new daily entries: added=\(newDaily.count, privacy: .public) total=\(self.dailyHRVHistory.count, privacy: .public)")
+        } else if !dailyHRVHistory.isEmpty {
+            Log.healthKit.debug("refreshReadiness 无新样本，复用历史 / no new samples, reusing history: days=\(self.dailyHRVHistory.count, privacy: .public)")
+        }
+
+        let daily = dailyHRVHistory
+        guard !daily.isEmpty else {
             readiness = HRVReadiness(zScore: nil, todayHRV: nil, baselineMean: nil,
                 baselineSampleCount: 0, category: .queryFailed,
                 suggestion: "No HRV data found in Health. Wear your Apple Watch overnight for a few nights.".localized())
-            Log.healthKit.warning("refreshReadiness 未找到 HRV 样本 / refreshReadiness: 0 samples found")
+            Log.healthKit.warning("refreshReadiness 未找到 HRV 样本 / 0 samples found")
             HRVWidgetSyncManager.syncHRV(from: self)
             return
         }
-
-        let daily = extractDailyHRV(from: samples)
-        dailyHRVHistory = daily
-        Log.healthKit.info("refreshReadiness 解析完成 / refreshReadiness: rawSamples=\(samples.count, privacy: .public) distinctDays=\(daily.count, privacy: .public)")
+        Log.healthKit.info("refreshReadiness 解析完成 / parsed: rawNewSamples=\(newSamples.count, privacy: .public) distinctDays=\(daily.count, privacy: .public)")
 
         guard daily.count >= 7 else {
             readiness = HRVReadiness(zScore: nil, todayHRV: daily.first?.value,
                 baselineMean: nil, baselineSampleCount: daily.count,
                 category: .insufficient,
                 suggestion: String(format: "%d days of HRV data. Wear your Apple Watch to sleep for at least 7 nights to establish a baseline.".localized(), daily.count))
-            Log.healthKit.info("refreshReadiness 数据不足 / refreshReadiness: insufficient data days=\(daily.count, privacy: .public)")
+            Log.healthKit.info("refreshReadiness 数据不足 / insufficient data: days=\(daily.count, privacy: .public)")
             HRVWidgetSyncManager.syncHRV(from: self)
             return
         }
@@ -585,8 +735,8 @@ final class HealthKitManager: ObservableObject {
         }
         readiness = HRVReadiness(zScore: z, todayHRV: today, baselineMean: mean,
             baselineSampleCount: daily.count, category: category, suggestion: suggestion)
-       Log.healthKit.info("refreshReadiness 完成 / refreshReadiness done; category=\(category.rawValue, privacy: .public) z=\(z ?? 0, privacy: .public) today=\(today ?? 0, privacy: .public) baseline=\(mean, privacy: .public) stdDev=\(stdDev, privacy: .public) days=\(daily.count, privacy: .public)")
-       HRVWidgetSyncManager.syncHRV(from: self)
+        Log.healthKit.info("refreshReadiness 完成 / done; category=\(category.rawValue, privacy: .public) z=\(z ?? 0, privacy: .public) today=\(today ?? 0, privacy: .public) baseline=\(mean, privacy: .public) stdDev=\(stdDev, privacy: .public) days=\(daily.count, privacy: .public)")
+        HRVWidgetSyncManager.syncHRV(from: self)
         writeIntentHealthCache()
    }
 
