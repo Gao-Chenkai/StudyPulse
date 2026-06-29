@@ -27,7 +27,8 @@ nonisolated struct Subject: Identifiable, Codable, Hashable {
     ///   - displayName: 显示名称，默认与 name 相同
     ///   - enabled: 是否启用，默认 true
     ///   - fullScore: 满分，默认 100
-    init(name: String, displayName: String? = nil, enabled: Bool = true, fullScore: Double = 100) {
+    init(id: UUID = UUID(), name: String, displayName: String? = nil, enabled: Bool = true, fullScore: Double = 100) {
+        self.id = id
         self.name = name
         self.displayName = displayName ?? name
         self.enabled = enabled
@@ -71,9 +72,10 @@ nonisolated struct Grade: Identifiable, Codable {
     }
     
     /// 创建成绩记录
-    init(subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
+    init(id: UUID = UUID(), subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
          importance: Int = 3, image: Data? = nil, imageFileName: String? = nil,
          date: Date = Date(), examName: String = "", fullScore: Double? = nil) {
+        self.id = id
         self.subject = subject
         self.score = score
         self.rawScore = rawScore
@@ -128,11 +130,12 @@ nonisolated struct MistakeNote: Identifiable, Codable {
     /// Spaced repetition state; nil means not enrolled in the review queue.
     var reviewState: ReviewState?
 
-    init(title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
+    init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
          questionImages: [Data] = [], reasonImages: [Data] = [],
          wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = [],
          reviewState: ReviewState? = nil) {
+        self.id = id
         self.title = title
         self.subject = subject
         self.originalQuestion = originalQuestion
@@ -229,7 +232,8 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 	/// 考试具体时间（用于日历同步，nil 时表示全天事件）
 	var timeSlot: ExamTimeSlot?
     
-    init(name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil) {
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil) {
+        self.id = id
         self.name = name
         self.examDate = date
         self.importance = importance
@@ -262,10 +266,10 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
 	/// 各科目具体时间（用于日历同步，nil 时表示全天事件）
 	var subjectTimeSlots: [String: ExamTimeSlot]?
     
-    init(name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int, examEndDate: Date? = nil, subjectTimeSlots: [String: ExamTimeSlot]? = nil) {
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int, examEndDate: Date? = nil, subjectTimeSlots: [String: ExamTimeSlot]? = nil) {
+        self.id = id
         self.name = name
         self.examDate = date
-        self.examEndDate = examEndDate
         self.importance = importance
         self.subject = subject
         self.examName = examName

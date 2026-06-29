@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import UserNotifications
 import WidgetKit
 import os
@@ -88,10 +89,11 @@ struct StudyPulseApp: App {
                 .preferredColorScheme(envManager.effectiveColorScheme)
                 .versionedWelcomeView()
                 .task {
-                    // 后台并行加载所有 JSON，避免阻塞主线程
-                    // Load all JSON files in parallel to avoid blocking the main thread
-                    Log.app.info("开始异步加载数据 / Starting async data load")
-                    Log.record(.info, category: "App", message: "开始异步加载数据 / Starting async data load")
+                    // 初始化 SwiftData 容器 + 迁移旧 JSON（DataManager 内部处理）
+                    // Init SwiftData container + migrate legacy JSON (handled inside DataManager)
+                    if let container = DataManager.sharedModelContainer {
+                        DataManager.shared.setModelContainer(container)
+                    }
                     await dataManager.asyncInit()
                     Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady, privacy: .public)")
                     Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady)")
@@ -131,5 +133,8 @@ struct StudyPulseApp: App {
                     }
                 }
         }
+        // 注入 SwiftData 容器，DataManager 会通过 mainContext 共享
+        // Inject the SwiftData container; DataManager shares the same mainContext
+        .modelContainer(DataManager.sharedModelContainer ?? ModelContainerFactory.makeContainer())
     }
 }
