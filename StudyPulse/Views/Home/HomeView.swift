@@ -74,7 +74,9 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20) {
+                // 外层用 LazyVStack 避免屏外卡片参与布局
+                // Use LazyVStack at the outer level so off-screen cards skip layout
+                LazyVStack(spacing: 20) {
                     // 顶部欢迎区域（全宽）
                     WelcomeHeaderView(selectedTab: $selectedTab)
 
@@ -176,7 +178,7 @@ struct HomeView: View {
     private var dynamicCards: some View {
         let layout = HomeLayoutPreference.load()
         let enabledTypes = layout.enabledTypes
-        
+
         if isRegularWidth {
             LazyVGrid(
                 columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
@@ -187,8 +189,12 @@ struct HomeView: View {
                 }
             }
         } else {
-            ForEach(enabledTypes, id: \.self) { type in
-                cardView(for: type)
+            // iPhone：LazyVStack 包装 ForEach 让屏外卡片跳过布局
+            // iPhone: wrap ForEach in LazyVStack so off-screen cards skip layout
+            LazyVStack(spacing: 16) {
+                ForEach(enabledTypes, id: \.self) { type in
+                    cardView(for: type)
+                }
             }
         }
     }
@@ -891,6 +897,7 @@ struct UpcomingExamsSection: View {
             VStack(spacing: 12) {
                 ForEach(upcomingExams.prefix(3)) { exam in
                     CompactExamCard(exam: exam)
+                        .equatable()
                 }
             }
         }
@@ -908,10 +915,16 @@ struct UpcomingExamsSection: View {
 }
 
 // MARK: - 紧凑考试卡片
-struct CompactExamCard: View {
+struct CompactExamCard: View, Equatable {
     let exam: Exam
     @State private var animateIn = false
-    
+
+    /// 只按 exam.id 比较，避免在 DataManager 变化时重建无关卡片
+    /// Only compare by exam.id so unrelated DataManager changes don't rebuild this card.
+    static func == (lhs: CompactExamCard, rhs: CompactExamCard) -> Bool {
+        lhs.exam.id == rhs.exam.id
+    }
+
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         return max(0, components.day ?? 0)
