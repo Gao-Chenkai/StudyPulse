@@ -709,14 +709,14 @@
 </nav>
 
 <header class="hero">
-    <span class="hero-badge" data-animate="scale-up">iOS 17.6+ &middot; SwiftUI &middot; Live Activity</span>
+    <span class="hero-badge" data-animate="scale-up">iOS 18.6+ &middot; Swift 6.0 &middot; SwiftUI &middot; ActivityKit</span>
     <h1 data-animate="scale-up">Study smarter.<br>Stay in pulse.</h1>
     <p class="hero-tagline" data-animate="scale-up">学有脉动，知无止境。<span class="hero-tagline-en">Your learning has a pulse.</span></p>
     <p class="hero-subtitle" data-animate="fade-up">
-            一款面向全球学生的 iOS 学业管理应用。<br>
-            <span class="lang-en">Grade tracking &middot; Mistake notes &middot; Exam planning &middot; Study timer &middot; Spaced repetition &middot; Achievements &middot; Health readiness.</span>
+            一款面向全球学生的 iOS 学业管理应用 &mdash; 集成 HealthKit 多维身体信号。<br>
+            <span class="lang-en">Grade tracking &middot; Mistake notes &middot; Exam planning &middot; Study timer &middot; Spaced repetition &middot; Achievements &middot; HRV readiness &middot; Body status.</span>
         </p>
-    <p class="hero-detail" data-animate="fade-up">预置 15+ 全球教育体系 &middot; 5 种界面语言 &middot; iPhone / iPad 原生适配 &middot; 灵动岛 Live Activity &middot; Siri 快捷指令 &middot; 三款主屏小组件 &middot; CSV / PDF 导出 &middot; 完全离线，数据仅存于你的设备。</p>
+    <p class="hero-detail" data-animate="fade-up">预置 15+ 全球教育体系 &middot; 5 种界面语言 &middot; iPhone / iPad 原生适配 &middot; 灵动岛 Live Activity &middot; Siri 快捷指令 &middot; 三款主屏小组件 &middot; CSV 导入导出 &middot; 14 天 HRV 个性化基线 &middot; 完全离线，数据仅存于你的设备。</p>
     <div class="hero-actions" data-animate="slide-right">
         <a href="#features" class="btn btn-primary">查看完整功能 &darr;</a>
         <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener" class="btn btn-ghost">&#9900; GitHub</a>
@@ -738,22 +738,22 @@
         <div class="stat-item" data-animate="expand" data-delay="0">
             <div class="stat-value">15+</div>
             <div class="stat-label">全球教育体系 <span class="lang-en">Education Systems</span></div>
-            <div class="stat-detail">从中考到 GRE &middot; Covers 15+ curricula</div>
+            <div class="stat-detail">中考 / 高考 / IGCSE / IB / AP ... &middot; Covers 15+ curricula</div>
         </div>
         <div class="stat-item" data-animate="expand" data-delay="0">
             <div class="stat-value">5</div>
             <div class="stat-label">界面语言 <span class="lang-en">Languages</span></div>
-            <div class="stat-detail">中英日韩繁 &middot; 5 languages</div>
+            <div class="stat-detail">中英日韩繁 &middot; 主应用 + 小组件各 5 份</div>
         </div>
         <div class="stat-item" data-animate="expand" data-delay="0">
-            <div class="stat-value">3 档</div>
-            <div class="stat-label">设计风格 <span class="lang-en">Design Themes</span></div>
-            <div class="stat-detail">Minimal / Literature / Tech &middot; 3 themes</div>
+            <div class="stat-value">5×5</div>
+            <div class="stat-label">学习建议矩阵 <span class="lang-en">Readiness Matrix</span></div>
+            <div class="stat-detail">5 档强度 &times; 5 类重点 &middot; 30 天个人基线</div>
         </div>
         <div class="stat-item" data-animate="expand" data-delay="0">
-            <div class="stat-value">10+</div>
-            <div class="stat-label">功能模块 <span class="lang-en">Modules</span></div>
-            <div class="stat-detail">10+ 模块 &middot; Timer &middot; Flashcards &middot; Achievements &middot; Reports &middot; ...</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">主屏小组件 <span class="lang-en">Home Widgets</span></div>
+            <div class="stat-detail">ExamWidget S/M/L &middot; TrendWidget &middot; HRVWidget</div>
         </div>
     </div>
 </div>
@@ -762,44 +762,80 @@
     <div class="section-inner">
         <div class="section-label" data-animate="fade-up">核心功能 <span class="section-subhead">Core Features</span></div>
         <h2 data-animate="fade-up">一切学习数据，尽在掌握</h2>
-        <p class="section-desc" data-animate="fade-up">StudyPulse 集成了 10+ 功能模块，覆盖成绩、错题、考试、计时、记忆、成就与健康评估。以下是核心功能概览。</p>
+        <p class="section-desc" data-animate="fade-up">StudyPulse 围绕成绩、错题、考试、计时、记忆、激励与 HealthKit 多维身体信号构建，所有业务模型存于本地 JSON，配置与小组件数据通过 App Group 同步。</p>
 
         <div class="cards-grid">
             <div class="card" data-animate="scale-up">
                 <div class="card-icon cyan">&#9670;</div>
                 <h3>成绩追踪与可视化 <span class="lang-en">Grade Tracking</span></h3>
                 <span class="card-tagline">分分计较。</span> <span class="card-tagline-en">Every mark matters.</span>
-                <p>多科目录入，自定义满分与排名。交互式趋势图 + "需要关注科目"智能提醒 + 得分率色彩映射。</p>
+                <p>多科目成绩录入，自定义满分、原始分、排名（1&ndash;5）与重要程度，可附加试卷照片。交互式趋势图 + "需要关注的科目"智能提醒 + 得分率色彩映射。</p>
             </div>
             <div class="card" data-animate="scale-up">
                 <div class="card-icon indigo">&#9638;</div>
                 <h3>错题本 &amp; OCR <span class="lang-en">Mistake Notebook</span></h3>
                 <span class="card-tagline">错有错着。</span> <span class="card-tagline-en">Mistakes made, lessons saved.</span>
-                <p>四区结构（题目/错误原因/错误解法/正确解法），Vision OCR + 流式 Markdown 实时预览。</p>
+                <p>四区结构（题目 / 错误原因 / 错误解法 / 正确解法），每区块独立添加照片。Vision OCR 文字识别 + swift-markdown-ui 实时渲染。</p>
             </div>
             <div class="card" data-animate="scale-up">
                 <div class="card-icon cyan">&#9708;</div>
-                <h3>考试管理与提醒 <span class="lang-en">Exam Planner</span></h3>
+                <h3>考试管理 <span class="lang-en">Exam Planner</span></h3>
                 <span class="card-tagline">从容赴考。</span> <span class="card-tagline-en">Walk in ready.</span>
-                <p>单科与综合考试，关联系统日历。考前 5 级通知，自动关联错题。支持时间段与跨日考试。</p>
+                <p>单科 + 综合考试日程，支持多日考试 (examEndDate) 与具体时间段 (ExamTimeSlot)，关联系统日历 / 本地提醒 / 错题。</p>
             </div>
             <div class="card" data-animate="scale-up">
                 <div class="card-icon indigo">&#8986;</div>
                 <h3>学习计时器 <span class="lang-en">Study Timer</span></h3>
                 <span class="card-tagline">时尽其用。</span> <span class="card-tagline-en">Every second counts.</span>
-                <p>专注计时 + 灵动岛 Live Activity，横屏沉浸模式，空闲检测，与 HRV 健康数据联动。</p>
+                <p>专注计时 + 灵动岛 Live Activity + 横屏沉浸模式；自动空闲检测防止虚报；学习结束自动关联 HRV / 身体信号数据。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#9829;</div>
+                <h3>HRV 健康准备度 <span class="lang-en">HRV Readiness</span></h3>
+                <span class="card-tagline">心有灵犀。</span> <span class="card-tagline-en">Tune in to your body.</span>
+                <p>基于 Apple Watch HRV (SDNN) 数据，14 天个人基线 + Z-score 评估当日学习状态，提供简洁 / 数据 / 图表三级展示。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#9737;</div>
+                <h3>多维身体信号 <span class="lang-en">Body Status</span></h3>
+                <span class="card-tagline">量身而学。</span> <span class="card-tagline-en">Learn at your own rhythm.</span>
+                <p>HealthKit 心率 / 呼吸率 / 深睡+REM / Apple 锻炼时长 + 30 天个人基线，合成 5 档强度 &times; 5 类重点的个性化建议。</p>
             </div>
             <div class="card" data-animate="scale-up">
                 <div class="card-icon cyan">&#9636;</div>
                 <h3>间隔重复记忆卡 <span class="lang-en">SRS Flashcards</span></h3>
                 <span class="card-tagline">念念不忘。</span> <span class="card-tagline-en">What you repeat, you keep.</span>
-                <p>SM-2 算法闪卡系统，翻转动画 + 四档评分。可视化复习日历，到期自动提醒。</p>
+                <p>SM-2 算法闪卡系统，四档评分 (Again / Hard / Good / Easy)，可视化复习日历，到期自动提醒。</p>
             </div>
             <div class="card" data-animate="scale-up">
                 <div class="card-icon indigo">&#9733;</div>
                 <h3>成就 &amp; 每日目标 <span class="lang-en">Achievements &amp; Goals</span></h3>
                 <span class="card-tagline">功不唐捐。</span> <span class="card-tagline-en">No effort is wasted.</span>
-                <p>里程碑徽章 + 每日指标 + Siri 快捷指令。学习数据自动转化为激励，支持语音交互。</p>
+                <p>里程碑徽章 + 每日指标 + Siri 快捷指令 (AddGrade / CheckReadiness ...)。学习数据自动转化为可视化激励。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#9783;</div>
+                <h3>小组件 &amp; 主屏 <span class="lang-en">Widgets &amp; Home</span></h3>
+                <span class="card-tagline">一目了然。</span> <span class="card-tagline-en">At a glance.</span>
+                <p>三款主屏小组件：ExamWidget (S/M/L) / TrendWidget (趋势折线) / HRVWidget。通过 App Group 与主应用同步。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#9788;</div>
+                <h3>CSV 导入 / 导出 <span class="lang-en">CSV Import / Export</span></h3>
+                <span class="card-tagline">数据自有。</span> <span class="card-tagline-en">Your data, your rules.</span>
+                <p>CSV 一键导入导出，开发者工具页提供批量删除 / 统计 / Export Log；PDF 综合学习报告一键生成。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon cyan">&#10024;</div>
+                <h3>启动引导 <span class="lang-en">OnBoarding</span></h3>
+                <span class="card-tagline">全新开始。</span> <span class="card-tagline-en">A fresh start.</span>
+                <p>版本感知的欢迎页：首次启动展示欢迎页，版本号变化展示新功能介绍页。iOS 26 原生风格 (TabView + 渐变 + 玻璃质感)。</p>
+            </div>
+            <div class="card" data-animate="scale-up">
+                <div class="card-icon indigo">&#9707;</div>
+                <h3>可定制主页 <span class="lang-en">Custom Home</span></h3>
+                <span class="card-tagline">为你而设。</span> <span class="card-tagline-en">Tailor your dashboard.</span>
+                <p>8 张主页卡片可启用 / 禁用 / 拖动排序。iPad 两栏网格，iPhone 单列 + 分帧渲染 (phased rendering)。</p>
             </div>
         </div>
 
@@ -908,10 +944,10 @@
         <div class="sys-group">
             <div class="sys-group-label">国际课程 <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;">International Curricula</span></div>
             <div class="sys-grid">
-                <div class="sys-chip" data-animate="scale-up">IGCSE</div>
-                <div class="sys-chip" data-animate="scale-up">A-Level</div>
+                <div class="sys-chip" data-animate="scale-up">UK IGCSE</div>
+                <div class="sys-chip" data-animate="scale-up">UK A-Level</div>
                 <div class="sys-chip" data-animate="scale-up">IB DP</div>
-                <div class="sys-chip" data-animate="scale-up">新加坡 O-Level</div>
+                <div class="sys-chip" data-animate="scale-up">SG O-Level</div>
             </div>
         </div>
 
@@ -1033,7 +1069,7 @@
     <div class="section-inner">
         <div class="section-label">平台 <span class="section-subhead">Platform</span></div>
         <h2>iPhone 与 iPad 双端原生适配</h2>
-        <p class="section-desc">StudyPulse 不是简单的 iPhone 放大版。针对 iPad 做了专项优化，充分利用大屏空间。</p>
+        <p class="section-desc">StudyPulse 不是简单的 iPhone 放大版。针对 iPad 做了专项优化，使用 <code>iPadLayout</code> 下的 <code>AdaptiveHStack</code> / <code>AdaptiveGridColumns</code> / <code>adaptiveMaxWidth</code> / <code>adaptiveCardPadding</code> 等辅助组件，在大屏上充分利用空间。</p>
         <div class="compare-grid">
             <div class="compare-col">
                 <div class="compare-col-header">
@@ -1044,8 +1080,9 @@
                     <ul>
                         <li>5 标签 TabView 底部导航</li>
                         <li>全宽单列布局，适合单手操作</li>
-                        <li>Sheet 弹窗录入成绩/错题/考试</li>
+                        <li>Sheet 弹窗录入成绩 / 错题 / 考试</li>
                         <li>硬件键盘 Tab 切换 / 数字跳转</li>
+                        <li>HomeView 分帧渲染 (phased rendering)</li>
                     </ul>
                 </div>
             </div>
@@ -1072,27 +1109,32 @@
     <div class="section-inner">
         <div class="section-label">快速上手 <span class="section-subhead">Getting Started</span></div>
         <h2>快速上手</h2>
-        <p class="section-desc">从下载到开始记录第一条成绩，只需四步。</p>
+        <p class="section-desc">从下载到开启完整学习工作流，只需五步。</p>
         <div class="steps">
             <div class="step" data-animate="slide-left">
                 <div class="step-num">1</div>
                 <h4>选择教育体系 <span class="lang-en">Pick Your System</span></h4>
-                <p>在"设置 &rarr; 学术信息"中选择你的教育阶段与地区，科目列表将自动填充。Choose your education stage and region &mdash; subjects auto-populate.</p>
+                <p>在"设置 &rarr; 学术信息"中选择你的教育阶段与地区，科目列表将自动填充；也可一键"智能推荐"。Choose your education stage &mdash; subjects auto-populate.</p>
             </div>
             <div class="step" data-animate="slide-left">
                 <div class="step-num">2</div>
                 <h4>完善个人资料 <span class="lang-en">Set Up Profile</span></h4>
-                <p>填写姓名、学校、年级、目标院校等信息，让 App 更懂你的学习背景。Tell the app who you are and where you're headed.</p>
+                <p>填写姓名 / 学校 / 年级 / 目标院校，让 App 更懂你的学习背景。Tell the app who you are and where you're headed.</p>
             </div>
             <div class="step" data-animate="slide-left">
                 <div class="step-num">3</div>
+                <h4>授权 HealthKit <span class="lang-en">Connect HealthKit</span></h4>
+                <p>可选开启 Apple 健康数据：HRV / 心率 / 呼吸率 / 睡眠 / Apple 锻炼时长 &mdash; 启用 HRV 准备度与多维身体信号建议。Optional but recommended.</p>
+            </div>
+            <div class="step" data-animate="slide-left">
+                <div class="step-num">4</div>
                 <h4>录入首条成绩 <span class="lang-en">Log Your First Grade</span></h4>
                 <p>在首页点击"+"或从快速操作卡片进入，选择科目、填写分数、可附上试卷照片。Tap "+" on Home, pick a subject, enter your score.</p>
             </div>
             <div class="step" data-animate="slide-left">
-                <div class="step-num">4</div>
+                <div class="step-num">5</div>
                 <h4>探索更多 <span class="lang-en">Explore Further</span></h4>
-                <p>开启学习计时、创建记忆卡片、解锁成就徽章、设置每日目标——打造你的完整学习工作流。Timer, flashcards, achievements &mdash; build your complete workflow.</p>
+                <p>学习计时 / 错题本 / 闪卡 / 成就徽章 / 每日目标 / Siri 快捷指令 / 小组件 &mdash; 打造你的完整学习工作流。Build your complete workflow.</p>
             </div>
         </div>
     </div>
@@ -1102,75 +1144,131 @@
     <div class="section-inner">
         <div class="section-label">技术栈 <span class="section-subhead">Tech Stack</span></div>
         <h2>为 Apple 平台原生打造</h2>
-        <p class="section-desc">基于 Swift 6.0 与 SwiftUI，采用严格并发模型，确保性能与代码质量。</p>
+        <p class="section-desc">iOS 18.6+ &middot; Swift 6.0 &middot; SwiftUI &middot; MVVM &middot; Swift 6 Strict Concurrency (<code>SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor</code>)。所有业务模型为 <code>Codable + Sendable</code> value type，本地持久化。</p>
         <ul class="tech-list">
             <li>Swift 6.0</li>
             <li>SwiftUI</li>
             <li>Swift Charts</li>
             <li>Vision (OCR)</li>
-            <li>HealthKit</li>
-            <li>EventKit</li>
-            <li>WidgetKit</li>
-            <li>ActivityKit</li>
+            <li>HealthKit (HRV + BodyStatus)</li>
+            <li>EventKit (Calendar)</li>
+            <li>UserNotifications</li>
+            <li>PhotosUI</li>
+            <li>UniformTypeIdentifiers</li>
+            <li>WidgetKit / ActivityKit</li>
             <li>MVVM Architecture</li>
             <li>Strict Concurrency</li>
-            <li>JSON Persistence</li>
-            <li>SPM Package Manager</li>
-            <li>SwiftStreamingMarkdown</li>
+            <li>JSON + 文件持久化</li>
+            <li>App Group 同步</li>
+            <li>SPM: swift-markdown-ui</li>
+            <li>SPM: NetworkImage 6.0.1</li>
+            <li>cmark-gfm</li>
         </ul>
 
         <h3 style="font-size:1.1rem;margin-bottom:16px;color:var(--text-primary)">架构概览</h3>
         <div class="arch-diagram">
-            <pre>StudyPulseApp (<span class="hl-box">@main</span>)
+            <pre><span class="hl-box">StudyPulseApp</span> (@main)
 <span class="hl-arrow">|</span>
-<span class="hl-arrow">├──</span> LagMonitor ─────────────────────────────&gt; LogStore
+<span class="hl-arrow">├──</span> LagMonitor (CADisplayLink 主线程卡顿检测) ──────&gt; LogStore
 <span class="hl-arrow">├──</span> NotificationCoordinator (UNUserNotificationCenter delegate)
 <span class="hl-arrow">|</span>
-<span class="hl-arrow">├──</span> <span class="hl-box">DataManager.asyncInit()</span>
-<span class="hl-arrow">|   └──</span> DataFileIO (<span class="hl-box">nonisolated</span> enum, ~/Documents/)
-<span class="hl-arrow">|       ├──</span> profile / grades / subjects / mistakes / exams
-<span class="hl-arrow">|       ├──</span> comprehensiveExams / health_history / srs_decks
-<span class="hl-arrow">|       └──</span> images/ (grade/mistake/avatar jpg)
+<span class="hl-arrow">├──</span> <span class="hl-box">DataManager.asyncInit()</span> (.task 后台加载 JSON)
+<span class="hl-arrow">|   ├──</span> DataFileIO (<span class="hl-box">nonisolated</span> enum, ~/Documents/)
+<span class="hl-arrow">|   |   ├──</span> profile / grades / subjects / mistakes / exams
+<span class="hl-arrow">|   |   ├──</span> comprehensiveExams / health_history / srs_decks
+<span class="hl-arrow">|   |   └──</span> images/ (grade/mistake/avatar jpg)
+<span class="hl-arrow">|   └──</span> isReady == true 触发后续初始化
 <span class="hl-arrow">|</span>
 <span class="hl-arrow">├──</span> <span class="hl-box">HealthKitManager.bootstrap()</span>
-<span class="hl-arrow">|   ├──</span> HKHealthStore (HRV SDNN, 心率, 呼吸率, 睡眠, 锻炼)
-<span class="hl-arrow">|   ├──</span> HealthHistoryStore → health_history.json (30天滚动, NSLock)
-<span class="hl-arrow">|   └──</span> StudyReadinessAlgorithm
-<span class="hl-arrow">|       ├──</span> PersonalBaselines (30天个人基线, ≥7天启用)
-<span class="hl-arrow">|       └──</span> AgeReference (年龄段参考, 样本不足时回退)
+<span class="hl-arrow">|   ├──</span> HKHealthStore (HRV SDNN / 心率 / 呼吸率 / 深睡+REM / Apple 锻炼)
+<span class="hl-arrow">|   ├──</span> HealthHistoryStore ──&gt; health_history.json (30天滚动, NSLock)
+<span class="hl-arrow">|   ├──</span> StudyReadinessAlgorithm (14天基线 + Z-score)
+<span class="hl-arrow">|   ├──</span> PersonalBaselines (30天个人基线, ≥7天启用)
+<span class="hl-arrow">|   └──</span> AgeReference (年龄段参考, 样本不足时回退)
 <span class="hl-arrow">|</span>
-<span class="hl-arrow">└──</span> scenePhase.active: sync all widgets
+<span class="hl-arrow">└──</span> scenePhase == .active: 同步所有 widget 数据
 
 <span class="hl-box">Models</span> ── Codable + Sendable value types
 <span class="hl-arrow">├──</span> Subject / Grade / MistakeNote / Exam / comprehensiveExam
 <span class="hl-arrow">├──</span> UserProfile / AppPreferences / HomeLayoutPreference
-<span class="hl-arrow">├──</span> DailyHealthSnapshot / Flashcard / FlashcardDeck
-<span class="hl-arrow">└──</span> StudyReport / SubjectSummary / HealthCorrelation...
+<span class="hl-arrow">├──</span> DailyHealthSnapshot (HRV / 心率 / 呼吸 / 深睡+REM / 锻炼)
+<span class="hl-arrow">└──</span> Flashcard / FlashcardDeck / StudyReport / SubjectSummary
 
 <span class="hl-box">Managers</span> ── @MainActor ObservableObject / nonisolated
 <span class="hl-arrow">├──</span> DataManager ── 中央枢纽, <span class="hl-box">@EnvironmentObject</span>
 <span class="hl-arrow">├──</span> AppEnvironmentManager ── 语言 / 主题
-<span class="hl-arrow">├──</span> HealthKitManager ── HRV / 身体状态
-<span class="hl-arrow">├──</span> CalendarManager / OCRManager / ImageCache
+<span class="hl-arrow">├──</span> HealthKitManager ── HRV 准备度 + BodyStatus
+<span class="hl-arrow">├──</span> StudyReadinessAlgorithm ── 5档强度 × 5类重点
+<span class="hl-arrow">├──</span> CalendarManager / OCRManager / ImageCache (NSCache 50/300px)
 <span class="hl-arrow">├──</span> DataExportManager (CSV) / ReportRenderer (PDF)
 <span class="hl-arrow">├──</span> StudyTimerManager ── Live Activity + 空闲检测
 <span class="hl-arrow">├──</span> SRSManager ── SM-2 间隔重复
 <span class="hl-arrow">├──</span> AchievementManager / DailyGoalManager
 <span class="hl-arrow">├──</span> WidgetDataSync / TrendWidgetSync / HRVWidgetSync
-<span class="hl-arrow">└──</span> StudyReadinessAlgorithm ── 5档强度 × 5类重点
+<span class="hl-arrow">├──</span> Log / LogStore (5000条) / Export Log
+<span class="hl-arrow">└──</span> EducationConfig ── 15+ 体系静态配置
 
 <span class="hl-box">Views</span> ── SwiftUI
 <span class="hl-arrow">├──</span> [iPhone] TabView: Home / Trends / Mistakes / Exams / Settings
-<span class="hl-arrow">├──</span> [iPad] NavigationSplitView + 侧栏
-<span class="hl-arrow">├──</span> HomeView ── 8 可定制卡片 (HRV / 提醒 / 快捷 / 建议 / 图表 / 考试 / 名言 / 成绩)
-<span class="hl-arrow">├──</span> FlashcardStudyView ── SM-2 间隔重复
+<span class="hl-arrow">├──</span> [iPad] NavigationSplitView + 侧栏 + 两栏 LazyVGrid
+<span class="hl-arrow">├──</span> HomeView ── 8 可定制卡片 + phased rendering
+<span class="hl-arrow">├──</span> FlashcardStudyView (SM-2) / OnBoarding (iOS 26 风格)
+<span class="hl-arrow">├──</span> Settings 6 子页 (Profile/Appearance/Health/Data/About/QA)
 <span class="hl-arrow">├──</span> Intents ── Siri Shortcuts (AddGrade / CheckReadiness / ...)
-<span class="hl-arrow">└──</span> Widgets: ExamWidget / TrendWidget / HRVWidget
+<span class="hl-arrow">└──</span> iPadLayout: AdaptiveHStack / GridColumns / CardPadding
+
+<span class="hl-box">Widgets</span> ── WidgetKit + App Group
+<span class="hl-arrow">├──</span> ExamWidget (S/M/L 三种尺寸)
+<span class="hl-arrow">├──</span> TrendWidget (Swift Charts 趋势折线)
+<span class="hl-arrow">└──</span> HRVWidget (HRV 准备度)
 
 <span class="hl-box">Persistence</span>
 <span class="hl-arrow">├──</span> ~/Documents/ ── 8 个 JSON + images/ 目录
-<span class="hl-arrow">├──</span> UserDefaults ── AppPreferences, HomeLayout, HRV flags
+<span class="hl-arrow">├──</span> UserDefaults ── AppPreferences / HomeLayout / HRV flags
 <span class="hl-arrow">└──</span> App Group ── group.com.chenkai.gao.studypulse</pre>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="build" data-animate="fade-up">
+    <div class="section-inner">
+        <div class="section-label">构建 &amp; 隐私 <span class="section-subhead">Build &amp; Privacy</span></div>
+        <h2>构建与运行 &middot; 隐私与权限</h2>
+        <p class="section-desc">基于 Swift 6.0 &middot; iOS 18.6+ &middot; MVVM。Info.plist 与 entitlements 已声明所需权限；应用不向 HealthKit 写入任何数据。</p>
+
+        <div class="compare-grid">
+            <div class="compare-col">
+                <div class="compare-col-header">
+                    <span style="font-size:1.4rem">&#9874;</span>
+                    <h4>构建与运行 <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">Build &amp; Run</span></h4>
+                </div>
+                <div class="compare-col-body">
+                    <ul>
+                        <li>macOS 15.0+ &middot; Xcode 26.x (推荐 26.3+)</li>
+                        <li>iOS 部署目标 18.6+ &middot; Swift 6.0</li>
+                        <li>在 Xcode 打开 <code>StudyPulse.xcodeproj</code> &mdash; Resolve Package Versions &mdash; Cmd+R</li>
+                        <li>命令行：<code>./scripts/build.sh</code> &middot; <code>build.sh release</code> &middot; <code>build.sh clean</code></li>
+                        <li>Scheme：<code>StudyPulse</code> / <code>MarkdownUI</code> / <code>StudyPulseWidgetExtension</code></li>
+                        <li>配置：<code>Debug</code> / <code>Release</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="compare-col">
+                <div class="compare-col-header">
+                    <span style="font-size:1.4rem">&#128274;</span>
+                    <h4>隐私权限 <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">Privacy Keys</span></h4>
+                </div>
+                <div class="compare-col-body">
+                    <ul>
+                        <li><code>NSCameraUsageDescription</code> &mdash; 拍摄错题照片</li>
+                        <li><code>NSPhotoLibraryUsageDescription</code> &mdash; 从照片库选择照片</li>
+                        <li><code>NSCalendarsUsageDescription</code> &mdash; 添加考试到系统日历</li>
+                        <li><code>NSHealthShareUsageDescription</code> &mdash; HRV / 心率 / 呼吸 / 睡眠 / 锻炼</li>
+                        <li>entitlement: <code>com.apple.developer.healthkit</code></li>
+                        <li>App Group: <code>group.com.chenkai.gao.studypulse</code></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -1195,8 +1293,9 @@
         <div class="footer-col">
             <h5>技术</h5>
             <ul>
-                <li><a href="#tech">技术栈</a></li>
+                <li><a href="#tech">技术栈 &amp; 架构</a></li>
                 <li><a href="#walkthrough">快速上手</a></li>
+                <li><a href="#build">构建 &amp; 隐私</a></li>
                 <li><a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">源代码</a></li>
             </ul>
         </div>
@@ -1216,7 +1315,7 @@
         </div>
     </div>
     <div class="footer-bottom">
-        <span>学有脉动，知无止境。&ensp;&copy; 2026 Gao Chenkai</span>
+        <span>学有脉动，知无止境。&ensp;&copy; 2026 Gao Chenkai &middot; iOS 18.6+ &middot; Swift 6.0</span>
         <span>CC BY-NC-SA 4.0</span>
     </div>
 </footer>
