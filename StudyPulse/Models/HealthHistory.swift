@@ -13,7 +13,7 @@ import Foundation
 
 /// Aggregate body-signal data for a single calendar day. Any field
 /// may be `nil` when no HealthKit sample was found for that day.
-struct DailyHealthSnapshot: Codable, Equatable, Identifiable {
+nonisolated struct DailyHealthSnapshot: Codable, Equatable, Identifiable {
     /// Start-of-day, local time. Used as both the persistence key and
     /// the `Identifiable` id.
     let date: Date

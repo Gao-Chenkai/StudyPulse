@@ -433,6 +433,7 @@ struct ReportContentView: View {
         case .excellent: return "Excellent".localized()
         case .normal: return "Normal".localized()
         case .low: return "Low".localized()
+        case .loading: return "Loading...".localized()
         case .insufficient: return "Collecting".localized()
         case .noAuthorization: return "-"
         case .queryFailed: return "Error".localized()
@@ -444,7 +445,7 @@ struct ReportContentView: View {
         case .excellent: return .green
         case .normal: return .blue
         case .low: return .orange
-        case .insufficient, .noAuthorization, .queryFailed: return .secondary
+        case .loading, .insufficient, .noAuthorization, .queryFailed: return .secondary
         }
     }
 }
