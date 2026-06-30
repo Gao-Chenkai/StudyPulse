@@ -60,6 +60,13 @@ struct ContentView: View {
         .overlay(alignment: .top) {
             AchievementUnlockToast()
         }
+        // 首次启动 welcome 流程结束后，把用户填写的基础资料写入 DataManager
+        .versionedWelcomeView { draft, selectedSubjects in
+            dataManager.commitOnboardingProfile(
+                draft: draft,
+                selectedSubjectNames: selectedSubjects
+            )
+        }
         .focusable()
         .onKeyPress(.tab) {
             selectedTab = nextTab()

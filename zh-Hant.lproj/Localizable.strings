@@ -888,3 +888,33 @@
 
 // 設定
 "Achievements" = "成就";
+
+// Onboarding 填寫步驟（OnboardingProfileFormView / OnboardingView）
+"Tell us about you" = "介紹一下自己";
+"How old are you?" = "你今年幾歲？";
+"Where do you study?" = "你在哪裡就讀？";
+"Pick your education system" = "選擇教育體系";
+"Choose your subjects" = "選擇你的科目";
+"Set your goals" = "設定你的目標";
+"We'll use this name across the app." = "我們會在 App 各處顯示這個名稱。";
+"Helps personalize your study suggestions." = "幫助我們提供更貼近你的學習建議。";
+"Optional — but it powers reminders and trends." = "選填 —— 填寫後可解鎖提醒與趨勢分析。";
+"We'll pre-fill subjects and grading scales for you." = "我們會為你預填對應的科目與滿分。";
+"Tap a subject to enable or disable it." = "點擊科目即可啟用或停用。";
+"Optional — you can update this anytime later." = "選填 —— 你隨時可在設定中修改。";
+"e.g. Alex" = "例如：小明";
+"e.g. Chen Kai" = "例如：陳凱";
+"Leave blank if you prefer to stay anonymous." = "如想保持匿名，可留空。";
+"e.g. Tsinghua High School" = "例如：清華附中";
+"e.g. 3" = "例如：3";
+"e.g. Peking University" = "例如：北京大學";
+"e.g. 680" = "例如：680";
+"Start Using StudyPulse" = "開始使用 StudyPulse";
+"Skip for now" = "暫時跳過";
+"Subject list reset for the new system" = "已按新體系重置選科清單";
+"You can update these goals anytime in Settings." = "你可以隨時在設定中更新這些目標。";
+"%d selected" = "已選 %d 項";
+"No subjects available for this region." = "該地區目前沒有可選科目。";
+"International HS" = "國際高中";
+"Year" = "年";
+"Next" = "下一步";

@@ -87,7 +87,6 @@ struct StudyPulseApp: App {
                 .environmentObject(hrvManager)
                 .environmentObject(timerManager)
                 .preferredColorScheme(envManager.effectiveColorScheme)
-                .versionedWelcomeView()
                 .task {
                     // 初始化 SwiftData 容器 + 迁移旧 JSON（DataManager 内部处理）
                     // Init SwiftData container + migrate legacy JSON (handled inside DataManager)

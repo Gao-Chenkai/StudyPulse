@@ -6,6 +6,11 @@
 //  原生 iOS 26 风格的引导页：渐变背景 + 玻璃质感卡片 + 大圆角，
 //  使用 TabView 分页，每页聚焦一个特性。
 //
+//  扩展：
+//  - 首次启动 welcome 流程可在介绍页之后追加 6 页「基础信息填写」步骤，
+//    全部完成后才回调 onFinish，进入主页面。
+//  - 草稿数据持久化到 UserDefaults，强杀后可恢复。
+//
 
 import SwiftUI
 
@@ -14,12 +19,35 @@ struct OnboardingView: View {
     let config: OnboardingConfig
     /// 用户点击「继续 / 完成」或「跳过」时回调
     let onFinish: () -> Void
+    /// 当用户完成 profile 流程时调用（在 onFinish 之前）。
+    /// 仅在 config.profileFlow != nil 时会触发。
+    /// 即使用户走「跳过 / 直接完成」也会触发，参数就是当前草稿状态。
+    var onProfileComplete: ((OnboardingProfileDraft, [String]) -> Void)? = nil
 
     @State private var currentPage = 0
+    @State private var flowState: OnboardingFlowState = OnboardingFlowState()
+    @State private var showSubjectResetToast = false
+    @State private var toastWorkItem: DispatchWorkItem?
 
-    /// 总页数 = 1（Hero）+ features.count
-    private var totalPages: Int { 1 + config.features.count }
+    /// 介绍阶段总页数 = 1（Hero）+ features.count
+    private var introPageCount: Int { 1 + config.features.count }
+    /// profile 阶段总页数（nil 表示没有 profile 流程）
+    private var profilePageCount: Int { config.profileFlow == nil ? 0 : OnboardingProfileStep.allCases.count }
+    /// 总页数
+    private var totalPages: Int { introPageCount + profilePageCount }
+    /// 是否为最后一页
     private var isLastPage: Bool { currentPage >= totalPages - 1 }
+    /// 当前是否在 profile 阶段
+    private var isProfilePhase: Bool {
+        guard config.profileFlow != nil else { return false }
+        return currentPage >= introPageCount
+    }
+    /// 当前 profile 步骤（仅在 profile 阶段有效）
+    private var currentProfileStep: OnboardingProfileStep? {
+        guard isProfilePhase, let _ = config.profileFlow else { return nil }
+        let idx = currentPage - introPageCount
+        return OnboardingProfileStep(rawValue: idx)
+    }
 
     var body: some View {
         ZStack {
@@ -37,14 +65,51 @@ struct OnboardingView: View {
                         featurePage(feature, index: index)
                             .tag(index + 1)
                     }
+                    if let _ = config.profileFlow {
+                        ForEach(OnboardingProfileStep.allCases) { step in
+                            profilePage(step)
+                                .tag(step.stepIndex(base: introPageCount))
+                        }
+                    }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.25), value: currentPage)
+                .onChange(of: currentPage) { _, newPage in
+                    // 切换页时落盘草稿
+                    if config.profileFlow != nil {
+                        var snapshot = flowState
+                        snapshot.currentStep = newPage
+                        OnboardingFlowStateStore.save(snapshot)
+                    }
+                }
 
                 bottomBar
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
             }
+
+            if showSubjectResetToast {
+                subjectResetToast
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .onAppear { restoreDraftIfNeeded() }
+    }
+
+    // MARK: - Draft restore
+
+    private func restoreDraftIfNeeded() {
+        guard config.profileFlow != nil else { return }
+        if let saved = OnboardingFlowStateStore.load() {
+            flowState = saved
+            // 仅当 currentStep 在有效范围内才恢复，否则回退到当前页（避免越界）
+            if saved.currentStep >= 0 && saved.currentStep < totalPages {
+                currentPage = saved.currentStep
+            }
+        } else {
+            flowState = OnboardingFlowState()
+            // 首次进入：让用户从介绍页开始
+            currentPage = 0
         }
     }
 
@@ -86,22 +151,36 @@ struct OnboardingView: View {
         HStack {
             pageIndicator
             Spacer()
-            if !isLastPage {
-                Button("Skip".localized(), action: onFinish)
+            if !isLastPage && !isProfilePhase {
+                Button("Skip".localized(), action: handleSkip)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
+            } else if isProfilePhase, let step = currentProfileStep, !step.isRequired {
+                // profile 阶段的可选步骤提供「稍后填写」入口
+                Button(config.profileFlow?.skipGoalsText ?? "Skip".localized()) {
+                    finishOnboarding()
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
             }
         }
         .frame(height: 32)
     }
 
     private var pageIndicator: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<totalPages, id: \.self) { i in
-                Capsule()
-                    .fill(i == currentPage ? config.primaryColor : Color.secondary.opacity(0.3))
-                    .frame(width: i == currentPage ? 22 : 6, height: 6)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                ForEach(0..<totalPages, id: \.self) { i in
+                    Capsule()
+                        .fill(i == currentPage ? config.primaryColor : Color.secondary.opacity(0.3))
+                        .frame(width: i == currentPage ? 22 : 6, height: 6)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
+                }
+            }
+            if isProfilePhase, let header = config.profileFlow?.sectionHeader {
+                Text(header)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -254,51 +333,164 @@ struct OnboardingView: View {
         .background(glassSurface(cornerRadius: 16))
     }
 
+    // MARK: - Profile page
+
+    @ViewBuilder
+    private func profilePage(_ step: OnboardingProfileStep) -> some View {
+        OnboardingProfileFormView(
+            step: step,
+            draft: $flowState.draft,
+            selectedSubjectNames: $flowState.selectedSubjectNames,
+            context: makeProfileContext(),
+            onSubjectListChanged: { handleSubjectsReset() }
+        )
+    }
+
+    private func makeProfileContext() -> OnboardingProfileContext {
+        let stage = EducationStage(rawValue: flowState.draft.educationStage) ?? .highSchool
+        let region = EducationConfig.region(named: flowState.draft.regionCode, stage: stage)
+            ?? EducationConfig.defaultRegion(for: stage)
+        let subjects = region.subjects
+        return OnboardingProfileContext(
+            educationStage: stage,
+            regionCode: flowState.draft.regionCode,
+            region: region,
+            availableSubjects: subjects,
+            currentYear: Calendar.current.component(.year, from: Date())
+        )
+    }
+
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        Button(action: handlePrimaryTap) {
-            HStack(spacing: 8) {
-                Text(primaryButtonTitle)
-                    .font(.headline)
-                if !isLastPage {
-                    Image(systemName: "arrow.right")
-                        .font(.subheadline.weight(.bold))
+        VStack(spacing: 8) {
+            Button(action: handlePrimaryTap) {
+                HStack(spacing: 8) {
+                    Text(primaryButtonTitle)
+                        .font(.headline)
+                    if !isLastPage {
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.bold))
+                    }
                 }
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                config.primaryColor,
-                                config.primaryColor.opacity(0.85)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    config.primaryColor,
+                                    config.primaryColor.opacity(0.85)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .shadow(color: config.primaryColor.opacity(0.35), radius: 14, y: 8)
-            )
+                        .shadow(color: config.primaryColor.opacity(0.35), radius: 14, y: 8)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(!isPrimaryEnabled)
+            .opacity(isPrimaryEnabled ? 1.0 : 0.45)
+
+            if isProfilePhase, let step = currentProfileStep, !step.isRequired {
+                Text("You can update these goals anytime in Settings.".localized())
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .buttonStyle(.plain)
     }
 
     private var primaryButtonTitle: String {
-        isLastPage ? config.continueButtonText : "Next".localized()
+        if isLastPage {
+            return config.profileFlow?.finishButtonText ?? config.continueButtonText
+        }
+        return "Next".localized()
+    }
+
+    /// 「下一步」按钮是否可用：填写阶段必须通过校验
+    private var isPrimaryEnabled: Bool {
+        guard isProfilePhase, let step = currentProfileStep else {
+            return true
+        }
+        return validate(step: step)
+    }
+
+    private func validate(step: OnboardingProfileStep) -> Bool {
+        let d = flowState.draft
+        switch step {
+        case .identity:
+            return !d.username.trimmingCharacters(in: .whitespaces).isEmpty
+        case .ageGender:
+            return d.age >= 6 && d.age <= 99
+        case .school:
+            return !d.schoolName.trimmingCharacters(in: .whitespaces).isEmpty
+                && !d.grade.trimmingCharacters(in: .whitespaces).isEmpty
+        case .education:
+            // 阶段和地区总是有默认值的
+            return EducationStage(rawValue: d.educationStage) != nil
+        case .subjects:
+            return !flowState.selectedSubjectNames.isEmpty
+        case .goals:
+            return true // 可选
+        }
     }
 
     private func handlePrimaryTap() {
         if isLastPage {
-            onFinish()
+            finishOnboarding()
         } else {
             withAnimation(.easeInOut(duration: 0.25)) {
                 currentPage += 1
             }
         }
+    }
+
+    private func handleSkip() {
+        finishOnboarding()
+    }
+
+    private func finishOnboarding() {
+        // 提交时把草稿同步给父级
+        let snapshot = flowState
+        // 通知父级：profile 流程完成（即使 profileFlow == nil 也是 no-op）
+        if config.profileFlow != nil {
+            onProfileComplete?(snapshot.draft, snapshot.selectedSubjectNames)
+        }
+        // 清理：流程已结束，下次不再恢复
+        OnboardingFlowStateStore.clear()
+        onFinish()
+    }
+
+    // MARK: - Subject reset toast
+
+    private func handleSubjectsReset() {
+        toastWorkItem?.cancel()
+        showSubjectResetToast = true
+        let work = DispatchWorkItem {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showSubjectResetToast = false
+            }
+        }
+        toastWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: work)
+    }
+
+    private var subjectResetToast: some View {
+        Text("Subject list reset for the new system".localized())
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(.black.opacity(0.75))
+            )
+            .padding(.top, 80)
+            .frame(maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: - Glass surface helper

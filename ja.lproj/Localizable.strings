@@ -888,3 +888,33 @@
 
 // 設定
 "Achievements" = "実績";
+
+// Onboarding 入力ステップ（OnboardingProfileFormView / OnboardingView）
+"Tell us about you" = "自己紹介";
+"How old are you?" = "何歳ですか？";
+"Where do you study?" = "どこに通っていますか？";
+"Pick your education system" = "教育システムを選択";
+"Choose your subjects" = "科目を選択";
+"Set your goals" = "目標を設定";
+"We'll use this name across the app." = "この名前をアプリ内で表示します。";
+"Helps personalize your study suggestions." = "よりパーソナライズされた学習提案に役立ちます。";
+"Optional — but it powers reminders and trends." = "任意 — 記入するとリマインダーと分析が有効になります。";
+"We'll pre-fill subjects and grading scales for you." = "対応する科目と満点を自動で入力します。";
+"Tap a subject to enable or disable it." = "科目をタップして有効／無効を切り替えられます。";
+"Optional — you can update this anytime later." = "任意 — 後からいつでも設定で変更できます。";
+"e.g. Alex" = "例：Alex";
+"e.g. Chen Kai" = "例：陈凯";
+"Leave blank if you prefer to stay anonymous." = "匿名で使いたい場合は空欄でも OK。";
+"e.g. Tsinghua High School" = "例：清華大学附属高校";
+"e.g. 3" = "例：3";
+"e.g. Peking University" = "例：北京大学";
+"e.g. 680" = "例：680";
+"Start Using StudyPulse" = "StudyPulse を始める";
+"Skip for now" = "今はスキップ";
+"Subject list reset for the new system" = "新しいシステムに合わせて科目をリセットしました";
+"You can update these goals anytime in Settings." = "これらの目標は設定からいつでも変更できます。";
+"%d selected" = "%d 件選択中";
+"No subjects available for this region." = "この地域で選択できる科目がありません。";
+"International HS" = "国際高校";
+"Year" = "年";
+"Next" = "次へ";

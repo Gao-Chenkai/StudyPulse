@@ -433,6 +433,64 @@ final class DataManager: ObservableObject {
         persistProfile()
     }
 
+    /// 首次启动 OnBoarding 完成时一次性提交用户资料 + 选科。
+    /// - Parameters:
+    ///   - draft: 草稿（与 UserProfile 字段一一对应，但所有字段都可选）
+    ///   - selectedSubjectNames: 用户在填写阶段勾选的科目名（与 SubjectConfig.name 对应）
+    /// 调用方应保证 DataManager.isReady == true 或自行处理失败。
+    /// 如果 dataManager.profile 已有真实姓名 / 头像，则不会覆盖（保留原值以兼容回退场景）。
+    func commitOnboardingProfile(draft: OnboardingProfileDraft, selectedSubjectNames: [String]) {
+        let stage = EducationStage(rawValue: draft.educationStage) ?? .highSchool
+        let region = EducationConfig.region(named: draft.regionCode, stage: stage)
+            ?? EducationConfig.defaultRegion(for: stage)
+
+        // 同步基础字段
+        profile.username = draft.username
+        profile.realName = draft.realName
+        profile.age = max(draft.age, 0)
+        profile.gender = draft.gender
+        profile.educationStage = draft.educationStage
+        profile.educationLevel = draft.educationStage
+        profile.educationSystem = region.displayName
+        profile.regionCode = draft.regionCode
+        profile.region = region.displayName
+        profile.schoolName = draft.schoolName
+        profile.grade = draft.grade
+        profile.className = draft.className
+        profile.studentId = draft.studentId
+        profile.enrollmentYear = draft.enrollmentYear
+        profile.examYear = draft.examYear
+        profile.targetSchool = draft.targetSchool
+        profile.targetScore = draft.targetScore
+
+        // 同步选科：把选中的 name 列表映射为 Subject 列表
+        let configByName = Dictionary(uniqueKeysWithValues: (region.subjects).map { ($0.name, $0) })
+        let newSubjects: [Subject] = selectedSubjectNames.compactMap { name in
+            if let cfg = configByName[name] {
+                return Subject(
+                    name: cfg.name,
+                    displayName: cfg.displayName,
+                    enabled: true,
+                    fullScore: cfg.fullScore
+                )
+            }
+            // 兜底：选中的 name 在当前 region 不存在（理论上不应发生）
+            return Subject(name: name, displayName: name, enabled: true, fullScore: 100)
+        }
+        if !newSubjects.isEmpty {
+            subjects = newSubjects
+            saveSubjects()
+        } else {
+            // 草稿没勾选任何科目，回退到 region 推荐
+            applySmartSubjectRecommendation(stage: stage, regionCode: region.name)
+        }
+
+        // 写入 SwiftData
+        saveProfile()
+        Log.data.info("Onboarding 资料提交完成 / Onboarding profile committed: username=\(draft.username, privacy: .public) subjects=\(selectedSubjectNames.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "Onboarding 资料提交完成 / Onboarding profile committed: username=\(draft.username) subjects=\(selectedSubjectNames.count)")
+    }
+
     func loadProfile() {
         // 由 asyncInit 统一加载；这里保留仅为向后兼容
         // No-op: asyncInit handles all loads. Kept for back-compat.
