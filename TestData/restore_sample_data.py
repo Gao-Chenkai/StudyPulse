@@ -210,6 +210,63 @@ def write_exams(csv_path: Path, docs: Path):
     print(f"  ✓ comprehensiveExams.json ({len(comprehensives)} comprehensive exams)")
 
 
+def write_tasks(csv_path: Path, docs: Path):
+    """Write tasks (homework + reading material) as ~/Documents/tasks.json.
+
+    与 Swift 端 TaskItem 的 Codable JSON 完全对齐：
+      id, title, type, dueDate, reminderDate, subject,
+      importance, notes, isCompleted, reminderEventId, reminderCalendarId, createdAt
+
+    Date 字段统一用 Double seconds-since-2001-01-01 (Swift JSONDecoder .deferredToDate 默认值)。
+    """
+    if not csv_path.exists():
+        return
+    out = []
+    with csv_path.open(encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        next(reader)  # header
+        for row in reader:
+            # 10 列：ID, Title, Type, Subject, DueDate, ReminderTime,
+            #        Importance, Notes, IsCompleted, CreatedAt
+            if len(row) < 10:
+                continue
+            task_id = make_uuid(row[0])
+            title = row[1]
+            type_raw = row[2].strip().lower()
+            if type_raw in ("homework", "作业"):
+                type_value = "homework"
+            elif type_raw in ("reading", "阅读"):
+                type_value = "reading"
+            else:
+                # 未识别类型 -> 跳过
+                continue
+            subject = row[3]
+            due_iso = parse_date(row[4])
+            reminder_iso = parse_date(row[5])
+            importance = int(row[6]) if row[6] else 3
+            notes = row[7] if len(row) > 7 else ""
+            is_completed_raw = (row[8] if len(row) > 8 else "").strip().lower()
+            is_completed = is_completed_raw in ("true", "1", "yes", "是")
+            created_iso = parse_date(row[9])
+
+            out.append({
+                "id": task_id,
+                "title": title,
+                "type": type_value,
+                "dueDate": swift_date(due_iso),
+                "reminderDate": swift_date(reminder_iso),
+                "subject": subject,
+                "importance": importance,
+                "notes": notes,
+                "isCompleted": is_completed,
+                "reminderEventId": None,
+                "reminderCalendarId": None,
+                "createdAt": swift_date(created_iso),
+            })
+    (docs / "tasks.json").write_text(json.dumps(out, ensure_ascii=False, indent=2))
+    print(f"  ✓ tasks.json ({len(out)} tasks: homework + reading)")
+
+
 def write_profile(docs: Path):
     profile = {
         "username": "Student",
@@ -252,6 +309,7 @@ def main():
     write_grades(test_data / "grades_sample.csv", docs)
     write_mistakes(test_data / "mistakes_sample.csv", docs)
     write_exams(test_data / "exams_sample.csv", docs)
+    write_tasks(test_data / "tasks_sample.csv", docs)
     print("Done.")
 
 

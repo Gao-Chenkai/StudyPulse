@@ -419,6 +419,98 @@ final class ComprehensiveExamRecord {
     }
 }
 
+// MARK: - TaskItem (作业 / 阅读材料)
+
+@Model
+final class TaskItemRecord {
+    @Attribute(.unique) var id: UUID
+    /// 任务标题
+    var title: String
+    /// TaskType 拍平为 rawValue
+    var typeRaw: String
+    /// 截止日期
+    var dueDate: Date
+    /// 提醒时间
+    var reminderDate: Date
+    /// 关联科目
+    var subject: String
+    /// 重要程度 1-5
+    var importance: Int
+    /// 备注
+    var notes: String
+    /// 是否已完成
+    var isCompleted: Bool
+    /// 关联 EKReminder 标识
+    var reminderEventId: String?
+    /// 关联 EKReminder 所在 calendar
+    var reminderCalendarId: String?
+    /// 创建时间
+    var createdAt: Date
+
+    init(
+        id: UUID,
+        title: String,
+        typeRaw: String,
+        dueDate: Date,
+        reminderDate: Date,
+        subject: String,
+        importance: Int,
+        notes: String,
+        isCompleted: Bool,
+        reminderEventId: String?,
+        reminderCalendarId: String?,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.title = title
+        self.typeRaw = typeRaw
+        self.dueDate = dueDate
+        self.reminderDate = reminderDate
+        self.subject = subject
+        self.importance = importance
+        self.notes = notes
+        self.isCompleted = isCompleted
+        self.reminderEventId = reminderEventId
+        self.reminderCalendarId = reminderCalendarId
+        self.createdAt = createdAt
+    }
+
+    convenience init(from task: TaskItem) {
+        self.init(
+            id: task.id,
+            title: task.title,
+            typeRaw: task.type.rawValue,
+            dueDate: task.dueDate,
+            reminderDate: task.reminderDate,
+            subject: task.subject,
+            importance: task.importance,
+            notes: task.notes,
+            isCompleted: task.isCompleted,
+            reminderEventId: task.reminderEventId,
+            reminderCalendarId: task.reminderCalendarId,
+            createdAt: task.createdAt
+        )
+    }
+
+    func toSnapshot() -> TaskItem {
+        let type = TaskType(rawValue: typeRaw) ?? .homework
+        return TaskItem(
+            id: id,
+            title: title,
+            type: type,
+            dueDate: dueDate,
+            reminderDate: reminderDate,
+            subject: subject,
+            importance: importance,
+            notes: notes,
+            isCompleted: isCompleted,
+            reminderEventId: reminderEventId,
+            reminderCalendarId: reminderCalendarId,
+            createdAt: createdAt
+        )
+    }
+}
+
 // MARK: - UserProfile (单例)
 
 @Model

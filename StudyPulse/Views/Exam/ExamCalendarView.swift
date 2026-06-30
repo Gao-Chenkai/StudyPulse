@@ -3,11 +3,15 @@
 //  StudyPulse
 //
 //  考试月历视图：按日期标点，多日考试跨日高亮。
+//  v1.x: 同时展示考试、作业、阅读材料三类条目。
 //
 
 import SwiftUI
 
-/// 考试月历视图
+/// 考试 / 任务月历视图
+///
+/// 视觉上与原 ExamCalendarView 完全一致；现在 `CalendarItem.kind` 把考试 / 综合考试 / 作业 / 阅读
+/// 统一在同一个月历内展示。每个 dot / 每行 row 用不同颜色区分类型。
 struct ExamCalendarView: View {
     @EnvironmentObject var dataManager: DataManager
 
@@ -28,54 +32,112 @@ struct ExamCalendarView: View {
     var onSelectExam: ((Exam) -> Void)?
     /// 点击综合考试行的回调
     var onSelectComprehensive: ((comprehensiveExam) -> Void)?
+    /// 点击作业 / 阅读材料行的回调
+    var onSelectTask: ((TaskItem) -> Void)?
 
-    private var allExams: [CalendarExam] {
-        var items: [CalendarExam] = []
-        for exam in dataManager.examSets {
-            items.append(CalendarExam(
-                id: exam.id,
-                name: exam.name,
-                subject: exam.subject,
-                importance: exam.importance,
-                start: Calendar.current.startOfDay(for: exam.examDate),
-                end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
-                isComprehensive: false,
-                exam: exam,
-                comprehensiveExam: nil
-            ))
+    /// 类型过滤（默认全部；考试 / 作业 / 阅读可单独筛选）
+    var typeFilter: CalendarItemKindFilter = .all
+
+    /// 当天及之后需要展示的「待办」条目（统一格式）
+    private var allItems: [CalendarItem] {
+        var items: [CalendarItem] = []
+
+        if typeFilter == .all || typeFilter == .exam {
+            for exam in dataManager.examSets {
+                items.append(CalendarItem(
+                    id: exam.id,
+                    kind: .exam,
+                    title: exam.name,
+                    subject: exam.subject,
+                    importance: exam.importance,
+                    isCompleted: false,
+                    start: Calendar.current.startOfDay(for: exam.examDate),
+                    end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
+                    isMultiDay: false,
+                    exam: exam,
+                    comprehensiveExam: nil,
+                    taskItem: nil
+                ))
+            }
+            for exam in dataManager.comprehensiveExamSets {
+                let subjectText = exam.subject.joined(separator: ", ")
+                items.append(CalendarItem(
+                    id: exam.id,
+                    kind: .comprehensiveExam,
+                    title: exam.name,
+                    subject: subjectText,
+                    importance: exam.importance,
+                    isCompleted: false,
+                    start: Calendar.current.startOfDay(for: exam.examDate),
+                    end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
+                    isMultiDay: false,
+                    exam: nil,
+                    comprehensiveExam: exam,
+                    taskItem: nil
+                ))
+            }
         }
-        for exam in dataManager.comprehensiveExamSets {
-            let subjectText = exam.subject.joined(separator: ", ")
-            items.append(CalendarExam(
-                id: exam.id,
-                name: exam.name,
-                subject: subjectText,
-                importance: exam.importance,
-                start: Calendar.current.startOfDay(for: exam.examDate),
-                end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
-                isComprehensive: true,
-                exam: nil,
-                comprehensiveExam: exam
-            ))
+
+        if typeFilter == .all || typeFilter == .homework {
+            for task in dataManager.taskItems where task.type == .homework && !task.isCompleted {
+                items.append(CalendarItem(
+                    id: task.id,
+                    kind: .homework,
+                    title: task.title,
+                    subject: task.subject,
+                    importance: task.importance,
+                    isCompleted: task.isCompleted,
+                    start: Calendar.current.startOfDay(for: task.dueDate),
+                    end: Calendar.current.startOfDay(for: task.dueDate),
+                    isMultiDay: false,
+                    exam: nil,
+                    comprehensiveExam: nil,
+                    taskItem: task
+                ))
+            }
         }
+
+        if typeFilter == .all || typeFilter == .reading {
+            for task in dataManager.taskItems where task.type == .reading && !task.isCompleted {
+                items.append(CalendarItem(
+                    id: task.id,
+                    kind: .reading,
+                    title: task.title,
+                    subject: task.subject,
+                    importance: task.importance,
+                    isCompleted: task.isCompleted,
+                    start: Calendar.current.startOfDay(for: task.dueDate),
+                    end: Calendar.current.startOfDay(for: task.dueDate),
+                    isMultiDay: false,
+                    exam: nil,
+                    comprehensiveExam: nil,
+                    taskItem: task
+                ))
+            }
+        }
+
         return items
     }
 
-    /// 当天（selectedDate）所在的考试
-    private var examsOnSelectedDate: [CalendarExam] {
+    /// 当天（selectedDate）所在的条目
+    private var itemsOnSelectedDate: [CalendarItem] {
         let day = Calendar.current.startOfDay(for: selectedDate)
-        return allExams
+        return allItems
             .filter { $0.contains(day: day) }
-            .sorted { $0.start < $1.start }
+            .sorted { lhs, rhs in
+                // 重要度降序，再按开始时间升序
+                if lhs.importance != rhs.importance { return lhs.importance > rhs.importance }
+                return lhs.start < rhs.start
+            }
     }
 
-    private var monthExams: [CalendarExam] {
+    private var monthItems: [CalendarItem] {
         guard let monthInterval = Calendar.current.dateInterval(of: .month, for: displayedMonth) else {
             return []
         }
         let monthStart = Calendar.current.startOfDay(for: monthInterval.start)
         let monthEnd = Calendar.current.startOfDay(for: monthInterval.end)
-        return allExams
+        return allItems
             .filter { $0.end >= monthStart && $0.start < monthEnd }
             .sorted { $0.start < $1.start }
     }
@@ -89,7 +151,7 @@ struct ExamCalendarView: View {
 
             VStack(spacing: 0) {
                 glassHeaderLayer
-                Spacer(minLength: 200)
+                Spacer(minLength: 100)
                 glassBottomPanel
             }
         }
@@ -142,14 +204,14 @@ struct ExamCalendarView: View {
                 let inMonth = Calendar.current.isDate(date, equalTo: month, toGranularity: .month)
                 let isSelected = Calendar.current.isDate(day, inSameDayAs: selectedDate)
                 let isToday = Calendar.current.isDate(day, inSameDayAs: today)
-                let dayExams = allExams.filter { $0.contains(day: day) }
+                let dayItems = allItems.filter { $0.contains(day: day) }
 
                 DayCell(
                     date: day,
                     inMonth: inMonth,
                     isSelected: isSelected,
                     isToday: isToday,
-                    exams: dayExams
+                    items: dayItems
                 )
                 .frame(height: 52)
                 .contentShape(Rectangle())
@@ -321,8 +383,8 @@ struct ExamCalendarView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(Color(.label))
                 Spacer()
-                if !examsOnSelectedDate.isEmpty {
-                    Text("\(examsOnSelectedDate.count) " + "exams".localized())
+                if !itemsOnSelectedDate.isEmpty {
+                    Text("\(itemsOnSelectedDate.count) " + "items".localized())
                         .font(.caption2.weight(.medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -333,14 +395,14 @@ struct ExamCalendarView: View {
                 }
             }
 
-            if examsOnSelectedDate.isEmpty {
+            if itemsOnSelectedDate.isEmpty {
                 HStack {
                     Spacer()
                     VStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.title3)
                             .foregroundColor(Color(.tertiaryLabel))
-                        Text("No exams on this day".localized())
+                        Text("No items on this day".localized())
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                     }
@@ -350,14 +412,16 @@ struct ExamCalendarView: View {
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 8) {
-                        ForEach(examsOnSelectedDate) { exam in
-                            CalendarExamRow(exam: exam, referenceDate: selectedDate)
+                        ForEach(itemsOnSelectedDate) { item in
+                            CalendarItemRow(item: item, referenceDate: selectedDate)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    if let underlying = exam.exam {
+                                    if let underlying = item.exam {
                                         onSelectExam?(underlying)
-                                    } else if let underlying = exam.comprehensiveExam {
+                                    } else if let underlying = item.comprehensiveExam {
                                         onSelectComprehensive?(underlying)
+                                    } else if let underlying = item.taskItem {
+                                        onSelectTask?(underlying)
                                     }
                                 }
                         }
@@ -408,7 +472,7 @@ private struct DayCell: View {
     let inMonth: Bool
     let isSelected: Bool
     let isToday: Bool
-    let exams: [CalendarExam]
+    let items: [CalendarItem]
 
     var body: some View {
         VStack(spacing: 3) {
@@ -472,35 +536,37 @@ private struct DayCell: View {
     }
 
     private var singleDayDotCount: Int {
-        let allSorted = sortedExamsForDisplay
+        let allSorted = sortedItemsForDisplay
         if allSorted.isEmpty { return 0 }
         return min(3, allSorted.count)
     }
 
-    private var sortedExamsForDisplay: [CalendarExam] {
-        exams.sorted { lhs, rhs in
-            if lhs.isComprehensive != rhs.isComprehensive {
-                return lhs.isComprehensive && !rhs.isComprehensive
+    private var sortedItemsForDisplay: [CalendarItem] {
+        items.sorted { lhs, rhs in
+            // 优先级：综合考试 > 单科考试 > 作业 > 阅读
+            if lhs.kind.sortPriority != rhs.kind.sortPriority {
+                return lhs.kind.sortPriority < rhs.kind.sortPriority
             }
             return lhs.importance > rhs.importance
         }
     }
 
     private func dotColor(at index: Int) -> Color {
-        let sorted = sortedExamsForDisplay
+        let sorted = sortedItemsForDisplay
         guard index < sorted.count else { return .clear }
-        return sorted[index].isComprehensive ? Color(.systemPurple) : Color(.systemBlue)
+        return sorted[index].accentColor
     }
 
     private var multiDaySpanInfo: (color: Color, isStart: Bool, isEnd: Bool)? {
-        for exam in exams where !exam.isSingleDay {
-            let isStart = Calendar.current.isDate(date, inSameDayAs: exam.start)
-            let isEnd = Calendar.current.isDate(date, inSameDayAs: exam.end)
+        // 仅当天的考试（且非单日）才会跨日展示
+        for item in items where item.isMultiDay {
+            let isStart = Calendar.current.isDate(date, inSameDayAs: item.start)
+            let isEnd = Calendar.current.isDate(date, inSameDayAs: item.end)
             if isStart || isEnd {
-                return (exam.isComprehensive ? Color(.systemPurple) : Color(.systemBlue), isStart, isEnd)
+                return (item.accentColor, isStart, isEnd)
             }
-            if exam.start < date && date < exam.end {
-                return (exam.isComprehensive ? Color(.systemPurple) : Color(.systemBlue), false, false)
+            if item.start < date && date < item.end {
+                return (item.accentColor, false, false)
             }
         }
         return nil
@@ -516,34 +582,37 @@ private struct DayCell: View {
 
 // MARK: - 选中日行
 
-private struct CalendarExamRow: View {
-    let exam: CalendarExam
+private struct CalendarItemRow: View {
+    let item: CalendarItem
     let referenceDate: Date
 
     var body: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 3)
-                .fill(accentColor)
+                .fill(item.accentColor)
                 .frame(width: 4, height: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(exam.name)
+                    Image(systemName: item.kind.systemImage)
+                        .font(.caption2)
+                        .foregroundColor(item.accentColor)
+                    Text(item.title)
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(Color(.label))
                         .lineLimit(1)
-                    if !exam.isSingleDay {
+                    if !item.isSingleDay {
                         Text(multiDayLabel)
                             .font(.caption2.weight(.medium))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                Capsule().fill(accentColor.opacity(0.15))
+                                Capsule().fill(item.accentColor.opacity(0.15))
                             )
-                            .foregroundColor(accentColor)
+                            .foregroundColor(item.accentColor)
                     }
                 }
-                Text(exam.subject)
+                Text(item.subject)
                     .font(.caption)
                     .foregroundColor(Color(.secondaryLabel))
                     .lineLimit(1)
@@ -552,13 +621,13 @@ private struct CalendarExamRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                ForEach(0..<exam.importance, id: \.self) { _ in
+                ForEach(0..<item.importance, id: \.self) { _ in
                     Image(systemName: "star.fill")
                         .font(.system(size: 6))
                         .foregroundColor(.yellow)
                 }
-                if exam.importance < 5 {
-                    ForEach(0..<(5 - exam.importance), id: \.self) { _ in
+                if item.importance < 5 {
+                    ForEach(0..<(5 - item.importance), id: \.self) { _ in
                         Image(systemName: "star")
                             .font(.system(size: 6))
                             .foregroundColor(Color(.tertiaryLabel))
@@ -578,15 +647,11 @@ private struct CalendarExamRow: View {
         }
     }
 
-    private var accentColor: Color {
-        exam.isComprehensive ? Color(.systemPurple) : Color(.systemBlue)
-    }
-
     private var multiDayLabel: String {
-        if exam.isSingleDay { return "" }
+        if item.isSingleDay { return "" }
         let calendar = Calendar.current
-        let totalDays = (calendar.dateComponents([.day], from: exam.start, to: exam.end).day ?? 0) + 1
-        let dayIndex = (calendar.dateComponents([.day], from: exam.start, to: referenceDate).day ?? 0) + 1
+        let totalDays = (calendar.dateComponents([.day], from: item.start, to: item.end).day ?? 0) + 1
+        let dayIndex = (calendar.dateComponents([.day], from: item.start, to: referenceDate).day ?? 0) + 1
         let clamped = min(max(dayIndex, 1), totalDays)
         let template = "Day %d/%d".localized()
         return String(format: template, clamped, totalDays)
@@ -595,19 +660,30 @@ private struct CalendarExamRow: View {
 
 // MARK: - 数据模型
 
-struct CalendarExam: Identifiable, Hashable {
+/// 视图层统一的「日历条目」，把考试 / 作业 / 阅读都装进同一个 view model
+struct CalendarItem: Identifiable, Hashable {
     let id: UUID
-    let name: String
+    let kind: CalendarItemKind
+    let title: String
     let subject: String
     let importance: Int
+    let isCompleted: Bool
     let start: Date
     let end: Date
-    let isComprehensive: Bool
+    /// 显式标记是否多日（只有考试会用；任务强制 false 节省判断）
+    let isMultiDay: Bool
     let exam: Exam?
     let comprehensiveExam: comprehensiveExam?
+    let taskItem: TaskItem?
 
     var isSingleDay: Bool {
         Calendar.current.isDate(start, inSameDayAs: end)
+    }
+
+    /// 不同类型用不同颜色：考试蓝、综合考紫、作业绿、阅读靛
+    /// Different colors per kind: exam blue / comp purple / homework green / reading indigo
+    var accentColor: Color {
+        kind.accentColor
     }
 
     func contains(day: Date) -> Bool {
@@ -615,13 +691,57 @@ struct CalendarExam: Identifiable, Hashable {
         return target >= start && target <= end
     }
 
-    static func == (lhs: CalendarExam, rhs: CalendarExam) -> Bool {
+    static func == (lhs: CalendarItem, rhs: CalendarItem) -> Bool {
         lhs.id == rhs.id
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+}
+
+/// 日历条目类型：与 TodoEntryKind 类似但只用于日历视图层
+enum CalendarItemKind: Hashable, Sendable {
+    case exam
+    case comprehensiveExam
+    case homework
+    case reading
+
+    var accentColor: Color {
+        switch self {
+        case .exam: return Color(.systemBlue)
+        case .comprehensiveExam: return Color(.systemPurple)
+        case .homework: return Color(.systemGreen)
+        case .reading: return Color(.systemIndigo)
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .exam: return "calendar"
+        case .comprehensiveExam: return "square.stack.3d.up.fill"
+        case .homework: return "pencil.and.list.clipboard"
+        case .reading: return "book.fill"
+        }
+    }
+
+    /// 排序优先级（数值越小越靠前）
+    var sortPriority: Int {
+        switch self {
+        case .comprehensiveExam: return 0
+        case .exam: return 1
+        case .homework: return 2
+        case .reading: return 3
+        }
+    }
+}
+
+/// 月历视图的类型过滤器（与 TodoTypeFilter 平行）
+enum CalendarItemKindFilter: Hashable {
+    case all
+    case exam
+    case homework
+    case reading
 }
 
 // MARK: - Calendar 扩展
@@ -672,6 +792,7 @@ private enum PreviewSupport {
         let manager = DataManager()
         manager.examSets = sampleExams
         manager.comprehensiveExamSets = sampleComprehensiveExams
+        manager.taskItems = sampleTasks
         return manager
     }
 
@@ -766,6 +887,59 @@ private enum PreviewSupport {
                 subject: ["History", "Politics", "Geography"],
                 examName: "Final",
                 masteryDegree: 40
+            )
+        ]
+    }
+
+    private static var sampleTasks: [TaskItem] {
+        let calendar = Calendar.current
+        let now = Date()
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
+
+        func date(day: Int) -> Date {
+            var components = DateComponents()
+            components.year = year
+            components.month = month
+            components.day = day
+            components.hour = 18
+            return calendar.date(from: components) ?? now
+        }
+
+        return [
+            TaskItem(
+                title: "Ch.3 Exercises 1-20",
+                type: .homework,
+                dueDate: date(day: 6),
+                reminderDate: date(day: 5),
+                subject: "Mathematics",
+                importance: 3,
+                notes: "All problems from sections 3.1 - 3.3"
+            ),
+            TaskItem(
+                title: "Read Physics Ch.5",
+                type: .reading,
+                dueDate: date(day: 9),
+                reminderDate: date(day: 8),
+                subject: "Physics",
+                importance: 2,
+                notes: "Read sections 5.1 - 5.4 and take notes"
+            ),
+            TaskItem(
+                title: "Lab Report Draft",
+                type: .homework,
+                dueDate: date(day: 14),
+                reminderDate: date(day: 13),
+                subject: "Chemistry",
+                importance: 4
+            ),
+            TaskItem(
+                title: "History Reading List",
+                type: .reading,
+                dueDate: date(day: 24),
+                reminderDate: date(day: 23),
+                subject: "History",
+                importance: 2
             )
         ]
     }

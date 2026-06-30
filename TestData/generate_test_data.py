@@ -384,6 +384,160 @@ def generate_exams(single_count=50, comp_count=10):
     
     return single_data, comp_data
 
+# MARK: - Tasks (作业 / 阅读材料)
+
+homework_titles = [
+    "数学第三章练习 1-20 题",
+    "英语完形填空练习",
+    "物理课后习题 5.1-5.4",
+    "化学实验报告",
+    "历史时间线整理",
+    "地理等高线地形图作业",
+    "政治主观题练习",
+    "生物遗传图谱绘制",
+    "语文古诗默写",
+    "英语作文 200 词",
+    "立体几何三视图作业",
+    "三角函数图像题 10 道",
+    "数列求和练习",
+    "阅读理解练习 A 篇",
+    "电磁感应综合题",
+    "化学平衡图像题",
+    "历史材料分析题",
+    "政治经济学计算题",
+    "生物实验设计作业",
+    "英语语法填空 30 题",
+    "数学向量综合练习",
+    "物理电路分析题",
+    "化学有机推断题",
+    "语文现代文阅读",
+    "历史论述题 800 字",
+]
+
+reading_titles = [
+    "《数学分析》第五章",
+    "《Principles of Physics》第 3 章",
+    "《Chemistry: The Central Science》Ch.7",
+    "《全球通史》第三编",
+    "《经济学原理》第 1-3 章",
+    "《Biology》第 14 章 生态系统",
+    "《Chinese Literature》选读 1",
+    "《Sapiens》Chapters 1-3",
+    "《心理学与生活》第 6 章",
+    "《Modern World History》Ch.5",
+    "《线性代数》前两章",
+    "《数据结构》排序算法",
+    "《有机化学》第 8 章",
+    "《English Literature》Poetry",
+    "《计算机网络》协议层",
+    "《生物化学》蛋白质部分",
+    "《近代中国史》第 4 章",
+    "《Politics Today》Ch.2",
+    "《Geography》板块构造",
+    "《Philosophy: The Quest for Truth》",
+    "《算法导论》Ch.1-3",
+    "《微生物学》导论",
+    "《中国哲学简史》第一篇",
+    "《Visual Arts》现代主义",
+    "《Music Theory》第 1 单元",
+]
+
+task_notes_samples = [
+    "需要完成全部小题，附详细解题过程",
+    "重点关注第 5-8 题，难度较高",
+    "完成习题并整理错题",
+    "结合课堂笔记整理答题思路",
+    "画图标注关键步骤",
+    "写一段 200 字以内的总结",
+    "与上一章内容做对比",
+    "注意区分易混淆的概念",
+    "对每道题写出关键公式",
+    "可以参考教材例题的解法",
+    "需要提交电子版",
+    "可与同学讨论但需独立完成",
+    "完成后对照答案订正",
+    "整理易错点并写反思",
+    "限时 90 分钟完成",
+]
+
+# 任务类型比例：homework 60% / reading 40%
+TASK_TYPE_WEIGHTS = [("homework", 0.6), ("reading", 0.4)]
+
+def pick_task_type():
+    """随机选择任务类型：homework / reading"""
+    r = random.random()
+    cumulative = 0.0
+    for type_name, weight in TASK_TYPE_WEIGHTS:
+        cumulative += weight
+        if r <= cumulative:
+            return type_name
+    return "homework"
+
+def generate_tasks(homework_count=40, reading_count=30):
+    """生成任务（作业 + 阅读材料）测试数据。
+
+    列定义（与 Swift 端 DataExportManager.tasksHeader 对齐）：
+    ID, Title, Type, Subject, DueDate, ReminderTime, Importance, Notes, IsCompleted, CreatedAt
+    """
+    rows = []
+    subjects = list(subject_names.keys())[:10]
+
+    # 作业
+    for _ in range(homework_count):
+        subject_key = random.choice(subjects)
+        title = random.choice(homework_titles)
+        importance = random.randint(1, 5)
+        due_date = random_date_future(days_ahead=60)
+        # 提醒时间在截止前 0~3 天内
+        offset_hours = random.randint(2, 72)
+        reminder_date = due_date - timedelta(hours=offset_hours)
+        # 已完成概率 25%
+        is_completed = random.random() < 0.25
+        created_at = random_date_past(days_back=30)
+        notes = random.choice(task_notes_samples)
+
+        rows.append([
+            str(uuid.uuid4()),
+            title,
+            "homework",
+            subject_key,
+            format_date(due_date),
+            format_date(reminder_date),
+            str(importance),
+            notes,
+            "true" if is_completed else "false",
+            format_date(created_at),
+        ])
+
+    # 阅读
+    for _ in range(reading_count):
+        subject_key = random.choice(subjects)
+        title = random.choice(reading_titles)
+        importance = random.randint(1, 5)
+        due_date = random_date_future(days_ahead=60)
+        offset_hours = random.randint(2, 72)
+        reminder_date = due_date - timedelta(hours=offset_hours)
+        is_completed = random.random() < 0.20
+        created_at = random_date_past(days_back=30)
+        notes = random.choice(task_notes_samples)
+
+        rows.append([
+            str(uuid.uuid4()),
+            title,
+            "reading",
+            subject_key,
+            format_date(due_date),
+            format_date(reminder_date),
+            str(importance),
+            notes,
+            "true" if is_completed else "false",
+            format_date(created_at),
+        ])
+
+    # 排序：先作业后阅读，然后按 dueDate 升序
+    rows.sort(key=lambda r: (r[2], r[4]))
+    return rows
+
 def main():
     print("=" * 60)
     print("📚 StudyPulse 测试数据生成器")
@@ -395,6 +549,7 @@ def main():
     grades_data = generate_grades(200)
     mistakes_data = generate_mistakes(100)
     single_exams_data, comp_exams_data = generate_exams(50, 10)
+    tasks_data = generate_tasks(homework_count=40, reading_count=30)
     
     # 保存 CSV
     print("💾 正在保存文件...")
@@ -446,6 +601,18 @@ def main():
         ])
         writer.writerows(all_exams_data)
     print("  ✅ 合并考试数据已保存: exams_sample.csv (60条)")
+
+    # 任务（作业 + 阅读材料）
+    # 与 Swift 端 DataExportManager.tasksHeader 完全对齐
+    # ID, Title, Type, Subject, DueDate, ReminderTime, Importance, Notes, IsCompleted, CreatedAt
+    with open("tasks_sample.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "ID", "Title", "Type", "Subject", "DueDate", "ReminderTime",
+            "Importance", "Notes", "IsCompleted", "CreatedAt"
+        ])
+        writer.writerows(tasks_data)
+    print(f"  ✅ 任务数据已保存: tasks_sample.csv ({len(tasks_data)}条，作业/阅读混合)")
     
     print("\n🎉 所有测试数据生成完成！")
     print("\n📊 数据统计：")
@@ -453,8 +620,10 @@ def main():
     print("  - 错题：100条")
     print("  - 单科考试：50条")
     print("  - 综合考试：10条")
-    print("  - 总计：360条")
+    print(f"  - 任务（作业 + 阅读）：{len(tasks_data)}条")
+    print(f"  - 总计：{200 + 100 + 50 + 10 + len(tasks_data)}条")
     print("\n💡 提示：使用 Excel 或导入功能可导入这些数据到 StudyPulse！")
+    print("   - 任务 CSV 包含混合的 homework / reading 条目，可一次性导入到「待办」页。")
 
 if __name__ == "__main__":
     main()

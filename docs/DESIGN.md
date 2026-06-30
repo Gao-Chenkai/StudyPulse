@@ -142,7 +142,7 @@ iPhone is always full-bleed. iPad always applies `adaptiveMaxWidth(_:)` and
   - `AppTab.home` → `house.fill`
   - `AppTab.trends` → `chart.bar.fill`
   - `AppTab.mistake` → `exclamationmark.triangle.fill`
-  - `AppTab.exam` → `list.bullet.clipboard`
+  - `AppTab.todo` → `checklist` (renamed from `AppTab.exam` / `list.bullet.clipboard`; the page now unifies exams, homework, and reading)
   - `AppTab.settings` → `gearshape.fill`
   - `HomeCardType.hrvStatus` → `heart.text.square`
   - `HomeCardType.unregisteredExamsReminder` → `exclamationmark.bubble.fill`

@@ -1,6 +1,0 @@
-ID,Title,Subject,OriginalQuestion,Source,Date,ErrorReason,WrongSolution,CorrectSolution
-edge-0001-0000-0000-0000-000000000001,逗号与引号测试,Mathematics,"题目里, 既有逗号又有 ""双引号""",来自: 考试 1,2026-01-01 00:00:00,"错误原因里, 含逗号","错误解法, ""含引号""","正确解法, "含引号""
-edge-0002-0000-0000-0000-000000000002,换行测试,Physics,Line1
-Line2,来源2,2026-01-02 00:00:00,Reason,Wrong,Correct
-edge-0003-0000-0000-0000-000000000003,英文逗号,English,Test, with, commas,2026-01-03 00:00:00,Reason,Wrong,Correct
-edge-0004-0000-0000-0000-000000000004,"半英文标题, 测试",Chinese,题目4,来源4,2026-01-04 00:00:00,Reason,Wrong,Correct

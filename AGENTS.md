@@ -42,7 +42,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
   - StudyPulseWidgetExtension.entitlements：小组件目标 entitlements（App Groups + WidgetKit）。
   - Assets.xcassets：AccentColor、AppIcon、StudyPulseIcon（含 SVG 源图）。
   - Models/：数据模型定义。
-    - DataModels.swift：Subject、Grade、MistakeNote、Exam、comprehensiveExam、UserProfile、ExamTimeSlot（考试时间段），以及教育系统相关枚举与结构（EducationStage、EducationCategory、SubjectConfig、EducationRegion）。
+    - DataModels.swift：Subject、Grade、MistakeNote、Exam、comprehensiveExam、UserProfile、ExamTimeSlot（考试时间段）、TaskItem（作业 / 阅读材料任务项）、TaskType、TodoEntry、TodoEntryKind，以及教育系统相关枚举与结构（EducationStage、EducationCategory、SubjectConfig、EducationRegion）。
     - AppPreferences.swift：应用偏好（语言与色彩方案）。
     - HomeLayoutPreference.swift：主页卡片顺序与启用标记（按名称顺序存储，持久化到 UserDefaults）。
     - HealthHistory.swift：DailyHealthSnapshot 单日身体信号聚合（HRV、静息心率、呼吸频率、总睡眠 / 深睡 / REM、Apple 锻炼时长），由 HealthHistoryStore 持久化为个人 30 天基线。
@@ -50,7 +50,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - DataManager.swift：@MainActor ObservableObject，中央状态管理器。管理 grades、subjects、mistakeSets、examSets、comprehensiveExamSets、profile、isReady 等 @Published 属性，提供 asyncInit() 与各 save/loadAsync/load 方法。
     - AppEnvironmentManager.swift：全局语言与主题管理。
     - AppStyle.swift：应用设计系统骨架。
-    - CalendarManager.swift：EventKit 集成，支持 startTime/endTime（nil 时回退为全天事件）。
+    - CalendarManager.swift：EventKit 集成。考试写入系统日历（EKEvent，支持具体时间段 startTime/endTime 或全天）；作业 / 阅读材料写入系统提醒事项（EKReminder，dueDateComponents 来自截止日期，EKAlarm 来自提醒时间）。
     - CSVDocument.swift：FileDocument 包装 CSV 导出文件。
     - DataExportManager.swift：CSV 导出（@MainActor enum）。
     - EducationConfig.swift：全球教育体系静态配置（nonisolated enum）。
@@ -73,7 +73,12 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - HomeView.swift：主页仪表盘（欢迎头、统计卡、动态卡片、每日金句、图表、即将到来的考试、近期成绩）。主页加载采用分帧渲染，将卡片拆分到多个 RunLoop 帧中绘制，避免主线程长任务卡顿。
     - TrendsView.swift：趋势分析（每科目趋势与需要关注的科目）。
     - MistakeView.swift：错题列表（建议复习、搜索、卡片布局）。
-    - ExamView.swift：考试列表（单科与综合考试）。
+    - Views/Exam/ExamView.swift：原考试列表视图（保留，TodoView 是其统一替代）。
+    - Views/Todo/TodoView.swift：「待办」主页面，统一展示日常作业、阅读材料与考试日程，含类型筛选、时间分组、列表 / 日历切换、过期任务 sheet。
+    - Views/Todo/TodoRowView.swift：待办行卡片，支持类型标签、完成态、左滑删除 / 完成。
+    - Views/Todo/NewTaskView.swift：新建作业 / 阅读材料表单，含绑定到系统 Reminders 开关。
+    - Views/Todo/TaskDetailView.swift：作业 / 阅读材料详情，展示全部字段、提供菜单（编辑 / 标记完成 / 删除）与未同步时的「添加到系统 Reminders」按钮。
+    - Views/Todo/TaskDetailEditView.swift：任务编辑页，自动处理 Reminder 的 update / 重建 / 解绑。
     - SettingsView.swift：设置根视图，按 SettingsCategory 拆为 5 段式导航（Profile / Appearance / Health / Data / About / FAQ，详见 §5）。
     - PreferencesView.swift：语言与外观。
     - HomeLayoutSettingsView.swift：主页卡片重新排序与开关。
@@ -191,11 +196,13 @@ MistakeView：
 - 新建错题进入 MistakeDetailEditView。
 - 已有错题进入 MistakeDetailEditView（编辑模式）。
 
-ExamView：
-- 点击 + 按钮进入 NewExamSetView。
-- 点击考试进入 ExamDetailView。
-- ExamDetailView 中编辑按钮进入 ExamDetailEditView。
-- ExamDetailView 可跳转关联的 MistakeDetailEditView。
+TodoView（「待办」页，替代原 ExamView）：
+- 顶部分类型筛选 chip（All / Exams / Homework / Reading）与「Show Completed」开关。
+- 列表模式按时间分组（Within 1 Week / Within 1 Month / Later），左上角 Past Items 按钮打开过期任务 sheet。
+- 日历模式仅对考试可见（复用 ExamCalendarView）。
+- 右上角 + 按钮带菜单：新建考试 / 作业 / 阅读，分别进入 NewExamSetView / NewTaskView。
+- 点击行进入详情：考试 → ExamDetailView；作业 / 阅读 → TaskDetailView。
+- 详情菜单：编辑 / 切换完成态 / 删除；编辑进入 TaskDetailEditView，自动处理 Reminder 同步。
 
 SettingsView：
 新版采用 5 段式 NavigationLink 导航 + 6 个聚焦子页，SettingsCategory 枚举标识每一段（appearance / health / data / about / faq）：

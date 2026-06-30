@@ -95,11 +95,21 @@
 			);
 			target = 278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */;
 		};
+		2790B7B72FF38536000A057B /* Exceptions for "StudyPulse" folder in "StudyPulse" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2743C83D2F6EAEA000CC1EED /* StudyPulse */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2743C8402F6EAEA000CC1EED /* StudyPulse */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2790B7B72FF38536000A057B /* Exceptions for "StudyPulse" folder in "StudyPulse" target */,
+			);
 			path = StudyPulse;
 			sourceTree = "<group>";
 		};
@@ -501,12 +511,15 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StudyPulse/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Add homework / reading tasks to the system Reminders app";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "Add homework / reading tasks to the system Reminders app";
 				INFOPLIST_KEY_NSSiriUsageDescription = "StudyPulse uses Siri to let you log scores, check exams, and get study suggestions using your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -547,12 +560,15 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StudyPulse/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "StudyPulse 需要将考试添加到您的日历中";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StudyPulse 需要使用相机拍摄错题照片";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "StudyPulse reads Heart Rate Variability (HRV), heart rate, respiratory rate and sleep from Apple Health to tailor study suggestions. Your data stays on device and is never uploaded or shared.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "StudyPulse does not write any data to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StudyPulse 需要访问相册以选择错题照片";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Add homework / reading tasks to the system Reminders app";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "Add homework / reading tasks to the system Reminders app";
 				INFOPLIST_KEY_NSSiriUsageDescription = "StudyPulse uses Siri to let you log scores, check exams, and get study suggestions using your voice.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

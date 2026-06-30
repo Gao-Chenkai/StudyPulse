@@ -126,6 +126,9 @@ struct StudyPulseApp: App {
                         // 同步 SRS 复习通知（错题已 opt-in 但尚未到期的）
                         timerManager.cleanupStaleActivities()
                         SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+                        // 从系统 Reminders 拉取任务完成态（幂等，重复调用安全）
+                        // Pull task completion flags from the system Reminders app (idempotent)
+                        dataManager.refreshTaskCompletionStatesFromReminders()
                         Task { await hrvManager.refreshBodyStatus() }
                         AchievementManager.shared.handleDayRolloverIfNeeded()
                         DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)

@@ -13,7 +13,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
     case home = 0
     case trends = 1
     case mistake = 2
-    case exam = 3
+    case todo = 3
     case settings = 4
 
     var id: Int { rawValue }
@@ -23,7 +23,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
         case .home: return "Home".localized()
         case .trends: return "Trends".localized()
         case .mistake: return "Mistakes".localized()
-        case .exam: return "Exams".localized()
+        case .todo: return "Todo".localized()
         case .settings: return "Settings".localized()
         }
     }
@@ -33,7 +33,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
         case .home: return "house.fill"
         case .trends: return "chart.bar.fill"
         case .mistake: return "exclamationmark.triangle.fill"
-        case .exam: return "list.bullet.clipboard"
+        case .todo: return "checklist"
         case .settings: return "gearshape.fill"
         }
     }
@@ -187,8 +187,8 @@ struct iPadSidebarLayout: View {
             TrendsView()
         case .mistake:
             MistakeView()
-        case .exam:
-            ExamView()
+        case .todo:
+            TodoView()
         case .settings:
             SettingsView()
         }
@@ -224,9 +224,9 @@ struct iPhoneTabLayout: View {
                 .tabItem { Label(AppTab.mistake.title, systemImage: AppTab.mistake.icon) }
                 .tag(AppTab.mistake)
 
-            ExamView()
-                .tabItem { Label(AppTab.exam.title, systemImage: AppTab.exam.icon) }
-                .tag(AppTab.exam)
+            TodoView()
+                .tabItem { Label(AppTab.todo.title, systemImage: AppTab.todo.icon) }
+                .tag(AppTab.todo)
 
             SettingsView()
                 .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.icon) }

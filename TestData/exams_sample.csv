@@ -1,61 +1,61 @@
-ID,Name,Subject,Date,ExamEndDate,Importance,Mastery,Type
-9d981d49-319e-4213-bb06-217f2b7a1359,期末复习,Chinese,2026-07-15 20:17:59,,1,60,single
-5ec26e60-4166-42a7-9c36-42f3e081e752,期末考试,Politics,2026-10-25 20:17:59,,5,59,single
-801aa3bb-d0c5-45df-94ae-59d20f9104d0,Practice Test,History,2026-07-19 20:17:59,,4,100,single
-5529b6ba-ef67-4553-9a46-5e2097b365f2,Mid-Term Test,Music,2026-09-29 20:17:59,,5,17,single
-643ac25e-f730-4013-abcf-5904fa392a14,月考,Physics,2026-06-28 20:17:59,,3,12,single
-3f315c6f-18a1-4aa1-990f-80dc7948a8aa,Mock Exam,Music,2026-09-02 20:17:59,,1,32,single
-546b94c4-fc14-4d32-91f1-eabbcbdcf284,期末考试,Chemistry,2026-08-16 20:17:59,,1,2,single
-60e5c029-b124-4993-989e-176f6ecdd75f,模拟考试,Music,2026-08-31 20:17:59,,2,26,single
-c3dd08ec-b171-48c9-adf3-d00e7c710df2,单元测验,Politics,2026-07-15 20:17:59,,5,23,single
-89a1ceb4-8e91-4ecc-a6fb-b7256fe7ce3a,Mock Exam 2,English,2026-11-09 20:17:59,,5,78,single
-afde0759-8e66-4e80-8929-990d1851adb7,期末复习,Music,2026-06-09 20:17:59,,1,75,single
-22c4fb74-b581-4148-bee3-5f8c8528cc75,摸底考试,Geography,2026-11-23 20:17:59,,3,11,single
-9395ac97-8deb-4555-9489-fcffed6f4168,期中考试,Mathematics,2026-09-28 20:17:59,,1,85,single
-f17dd2ab-aa9f-4299-91d0-0df07025a143,Final Review,Biology,2026-09-30 20:17:59,,3,49,single
-c24e0b08-64ab-493b-960b-0761d1af1b83,Quarterly Exam,Chinese,2026-09-15 20:17:59,,5,67,single
-5948daeb-7349-45af-8a6c-e1e7a8302279,Final Revision Quiz,Physics,2026-08-02 20:17:59,,2,17,single
-e4960d7d-215e-4d6e-ab83-5e09c7d4a353,摸底考试,Biology,2026-09-30 20:17:59,,4,60,single
-9e814d64-76ef-4a46-af9f-316423eee0ce,期末复习,Music,2026-10-01 20:17:59,,2,38,single
-66a7bbc5-1029-4718-8b2f-bc1d849e0456,Final Review,Mathematics,2026-09-10 20:17:59,,1,78,single
-47148244-b32b-4d01-aca4-34f7d4a4ecc0,Quiz 1,Biology,2026-08-11 20:17:59,,5,0,single
-85499e71-5051-4c2e-9b15-0cf9856eee17,摸底考试,Chemistry,2026-08-10 20:17:59,,4,5,single
-1b0fc050-2f78-47bc-ac22-e2a62fc95097,适应性考试,Politics,2026-09-07 20:17:59,,4,18,single
-b6dca237-6744-4a22-8d43-7a5dc5d30dfc,Practice Test,Chemistry,2026-06-17 20:17:59,,3,80,single
-2294ba0a-85af-40b1-8c86-f00e9e8ee8cd,模拟考试,Biology,2026-11-16 20:17:59,,1,92,single
-17bd1996-4982-42cb-9d6d-4df157ad4802,Final Review,Geography,2026-11-08 20:17:59,,1,92,single
-9e1c08b8-c3b2-4511-8e8b-da6fdc4a8695,适应性考试,Physics,2026-11-25 20:17:59,,4,69,single
-7b05c511-3750-4d57-a49c-a342b5711efb,Mock Exam,Music,2026-08-30 20:17:59,,2,92,single
-350b1bcc-dc85-4f99-ba2c-85a837fff469,适应性考试,Mathematics,2026-08-05 20:17:59,,2,31,single
-a722e525-76cb-42e2-9e25-b14acf8aa265,月考,Chinese,2026-07-04 20:17:59,,5,22,single
-d69f7ff5-9434-4c00-975f-fc7b978c779e,期末复习,Biology,2026-12-04 20:17:59,,2,88,single
-fc0f7466-38c6-46d8-a3d5-28b81d35d27c,Mid-Term Test,Physics,2026-09-21 20:17:59,,4,25,single
-523251e0-cc27-468f-918f-6e733e69e082,期中考试,Geography,2026-06-15 20:17:59,,3,69,single
-816e6aac-33ee-4803-b97e-17891a80cd7c,摸底考试,Chemistry,2026-08-26 20:17:59,,3,92,single
-ffc376e9-aefd-42a2-96c3-8ff81ddbe886,Quiz 1,Mathematics,2026-07-03 20:17:59,,3,23,single
-87351d3d-7898-49e0-b4ac-6bffff1255fe,单元测验,Chinese,2026-10-20 20:17:59,,5,49,single
-6cf6c968-91e1-4e7e-ab64-9a39a2b049b2,Final Review,English,2026-10-31 20:17:59,,5,100,single
-1abed686-6fa8-4134-aef5-a860c3a83291,Final Revision Quiz,Geography,2026-08-11 20:17:59,,2,92,single
-3a71b6fe-1bd7-41b0-b597-be29d55755a7,寒假作业检查,Mathematics,2026-10-15 20:17:59,,5,26,single
-7ca49aaa-50bc-4847-a8e6-6816b3f0c682,单元测验,Physics,2026-09-18 20:17:59,,4,31,single
-a51606b2-685a-47c3-9bb1-0e9f523cf0b9,Final Revision Quiz,Chemistry,2026-10-20 20:17:59,,4,29,single
-75cfc0ee-24e7-4de4-bffb-eac87078a111,Weekly Test,Geography,2026-08-09 20:17:59,,5,90,single
-50124d77-939f-4262-b08d-dc24b7e31884,Mock Exam,Politics,2026-06-28 20:17:59,,5,87,single
-74f409d7-62c5-4494-a31f-fa183a20ec87,诊断性考试,Physics,2026-10-11 20:17:59,,1,6,single
-180726e9-339d-4ab1-adf7-c93997c611a2,期末考试,Geography,2026-09-13 20:17:59,,3,0,single
-f2230246-eca4-4657-96db-670960d2693b,Final Revision Quiz,Music,2026-10-05 20:17:59,,2,4,single
-dbc49753-fd0d-47c2-a86f-4a92f38bce0c,End-of-Year Exam,Politics,2026-09-30 20:17:59,,1,45,single
-802b1303-dd63-42bf-9d8f-10b66d1d65dc,适应性考试,History,2026-09-28 20:17:59,,2,49,single
-46644dc0-df03-4f2c-9b19-3f9a0f53ee16,End-of-Year Exam,Chinese,2026-06-08 20:17:59,,4,21,single
-2acec9ff-b411-4193-8f0a-e04f6ee0230a,Mock Exam,Chemistry,2026-06-15 20:17:59,,2,97,single
-dac87231-26a5-4e15-9afd-588e63a48e39,Mock Exam 2,Biology,2026-08-05 20:17:59,,5,13,single
-209ee297-e240-4545-a163-a3ac1822a089,期末考试,Politics;English;Physics;Biology;Chemistry,2027-03-19 20:17:59,,5,73,comprehensive
-419d2d79-08fd-4c14-a011-193389bcc3a9,模拟考试,English;Music;Physics;Biology;Geography;History,2026-07-24 20:17:59,,4,26,comprehensive
-f96f1705-b6c4-48ed-b799-e8ba5fc3bb64,Mid-Year Exam,Chemistry;Biology;English;Physics;Politics,2027-03-14 20:17:59,,3,74,comprehensive
-be663828-2f62-47e5-a8fc-f9e241c59a52,模拟考试,Mathematics;History;Politics;Chemistry;Physics;Biology,2027-05-28 20:17:59,,5,41,comprehensive
-c664cd67-05aa-4871-90c0-f29d759210ea,高三模考,Physics;Mathematics;Politics;History;Chemistry,2027-03-30 20:17:59,,4,66,comprehensive
-b9378f26-55a6-4c21-acf7-c42ba6fb1cbb,高三模考,Politics;Mathematics;English;Geography;Chinese,2026-10-06 20:17:59,,3,69,comprehensive
-4e4bf171-70bc-45f2-ab59-25632553ccfb,中考模拟,Biology;Politics;History;Physics;Geography;Music,2026-08-22 20:17:59,,4,72,comprehensive
-d795d7de-92a8-4bad-b1d6-5d067f0d5b2f,Mock Exam,Chemistry;Politics;English;History;Mathematics,2027-05-10 20:17:59,,3,55,comprehensive
-29eecdeb-690f-408c-86f0-1963487c163e,Mid-Year Exam,History;Music;Physics;Politics;Chemistry;Biology,2027-01-23 20:17:59,,5,42,comprehensive
-454f91bd-32ea-417f-a503-8bc90cf819d2,Final Exam,Chemistry;Biology;Chinese,2027-02-28 20:17:59,,5,72,comprehensive
+ID,名称,科目,日期,重要性,掌握程度,类型
+a097d443-db7d-4106-a782-07b46fd246e6,期末考试,Chemistry,2026-08-11 13:30:07,5,31,单科
+00bf9e84-232c-4dbb-b310-b824d3c3f34a,模拟考试,English,2026-10-08 13:30:07,4,67,单科
+01c22454-edbc-4ceb-a086-f4408fc3412e,适应性考试,Chinese,2026-07-12 13:30:07,4,18,单科
+33f28c65-7c92-4cef-8718-b75c07ac2aeb,期末考试,Politics,2026-12-14 13:30:07,3,42,单科
+539d32f2-bbf7-4688-ab9b-2e35da7e4fef,期末复习,Mathematics,2026-09-08 13:30:07,4,21,单科
+e3b588a4-23e6-4777-8cf6-032a7d753bc9,诊断性考试,Geography,2026-07-11 13:30:07,2,90,单科
+eec5dfeb-517c-416e-a6e9-2ed4515cd0cd,暑假作业检查,Geography,2026-10-10 13:30:07,3,77,单科
+537c83ee-91fb-40a1-a9a6-7f760a04ed86,Quiz 1,Mathematics,2026-07-25 13:30:07,2,90,单科
+67ad8312-0be8-4a5e-bbc8-a74e8af8637d,模拟考试,History,2026-07-01 13:30:07,5,46,单科
+5c646bde-a709-4d45-ad0c-92a2f40051cb,Final Revision Quiz,Politics,2026-11-28 13:30:07,4,67,单科
+1643f8c8-25b9-4c32-8b98-8f8e314b5add,寒假作业检查,Chemistry,2026-09-21 13:30:07,3,95,单科
+1fd19a57-8cb4-452d-925d-8c8e3266cbf7,Practice Test,Biology,2026-10-27 13:30:07,3,29,单科
+f60b5ffb-b3cb-42a9-b023-c373b1cc50e3,单元测验,Chinese,2026-08-02 13:30:07,4,5,单科
+d61bb151-6b98-4653-bced-09909bfa8cb8,Final Review,Chinese,2026-12-18 13:30:07,1,45,单科
+cf3589b1-386b-4975-9b8a-e6886824cea0,Mid-Term Test,Chinese,2026-10-26 13:30:07,5,96,单科
+337228fe-a7f8-4d67-acf0-847f70a002b1,诊断性考试,Geography,2026-09-18 13:30:07,1,92,单科
+53d10528-35ac-4ed3-8c35-1368afe8d821,Practice Test,Physics,2026-11-11 13:30:07,5,42,单科
+d059c820-73dd-47ae-a242-a8d626ecadcf,适应性考试,English,2026-11-14 13:30:07,5,37,单科
+2295d201-94da-497f-bb4b-b9c6f2c4d2fc,Quarterly Exam,Biology,2026-12-25 13:30:07,4,59,单科
+df5bffa1-747b-41dd-a0e4-85227147c97d,期末复习,English,2026-12-27 13:30:07,2,25,单科
+7482ba08-a25d-46ca-bd42-7bac69a6c36d,Mid-Term Test,History,2026-11-09 13:30:07,2,89,单科
+dc97416e-ff57-4125-ba0f-f21508fb712b,适应性考试,History,2026-11-24 13:30:07,3,88,单科
+56694bff-50db-427b-bff1-1e2a98262693,Final Review,Biology,2026-08-20 13:30:07,3,9,单科
+42f289f9-55a5-4a53-ab70-5bf87f54ce09,Weekly Test,Biology,2026-09-30 13:30:07,3,57,单科
+03c71f8e-c822-4ffd-99ca-800ee9804804,Practice Test,Mathematics,2026-07-17 13:30:07,2,91,单科
+cc41db04-1b34-4dc5-aa06-4c1ec88b6132,Quarterly Exam,Physics,2026-10-21 13:30:07,1,61,单科
+a36ac6da-439c-48fd-829e-33529664c047,End-of-Year Exam,Music,2026-07-27 13:30:07,4,51,单科
+575d4b19-40f0-481d-9ce7-f1b764bd1a71,Practice Test,Chinese,2026-07-19 13:30:07,3,1,单科
+13c6de69-081e-4be1-a564-4c479ae3b9fe,Mid-Term Test,English,2026-08-20 13:30:07,5,46,单科
+7f506d59-d950-4358-9226-acb9806cb8fe,Mock Exam,English,2026-08-24 13:30:07,1,30,单科
+b591f09e-45e2-4242-a728-a76e3175702b,摸底考试,English,2026-11-20 13:30:07,1,78,单科
+99a5af62-162c-4964-a605-57e9907ea62e,期末复习,History,2026-10-14 13:30:07,1,17,单科
+e9c65778-fc9c-41fd-b538-092426eeb643,Mock Exam,Chinese,2026-09-10 13:30:07,2,3,单科
+d3a604f9-60b6-4daa-ba61-681f1cca8044,期末考试,Geography,2026-08-10 13:30:07,4,81,单科
+ec19c41e-4e80-43c9-8dca-70fbe52f04ce,Final Review,Physics,2026-09-27 13:30:07,3,41,单科
+4259ac50-8b1c-4e3c-969a-be0e96f0cb64,月考,Mathematics,2026-09-16 13:30:07,4,65,单科
+2faca665-8d74-4ba6-b73d-c7499453a10a,Practice Test,Mathematics,2026-07-01 13:30:07,2,37,单科
+82802543-59a2-446d-9349-0946acc6ef11,Quiz 1,Music,2026-08-20 13:30:07,1,31,单科
+7df97e45-b464-4b0a-93dc-aad686c47acc,Final Revision Quiz,Biology,2026-11-03 13:30:07,5,29,单科
+1aefad8e-3419-4127-addb-f24acf38d790,期末复习,Music,2026-07-27 13:30:07,3,75,单科
+8026364b-2412-4d18-a3e4-efe90adb328c,Final Revision Quiz,Mathematics,2026-07-10 13:30:07,5,73,单科
+ae76142d-0872-4af7-bc93-754d619df942,Practice Test,Mathematics,2026-07-08 13:30:07,2,81,单科
+44e835dc-fb81-4f44-bb2e-336674f5b846,Quiz 1,Mathematics,2026-09-09 13:30:07,3,62,单科
+159434d2-8e6f-4ccd-90d1-01724d1852d6,期中考试,Chinese,2026-07-25 13:30:07,1,18,单科
+64111044-4de4-4680-b8f0-c00a7bd5f211,期末考试,English,2026-09-22 13:30:07,2,48,单科
+3c9433f9-00cc-4c81-8d24-cab46f92edd1,Mock Exam 2,English,2026-12-19 13:30:07,3,68,单科
+7413ba2e-0099-436e-9566-cc29c0cdcfca,期中考试,Politics,2026-08-27 13:30:07,3,85,单科
+b4f7c60c-1dc4-4645-93c2-2ef9208a5961,Mock Exam,History,2026-09-21 13:30:07,1,28,单科
+66e38eac-0d8c-4e37-8b29-c9d85ebc1943,Quarterly Exam,Geography,2026-11-16 13:30:07,1,61,单科
+9b91ae0d-7311-4e74-bb0e-8a4fe6ff2f3c,期末考试,Physics,2026-07-01 13:30:07,1,46,单科
+f04253f0-ad2e-4e8f-aa04-3b4ef4a5d190,Mid-Year Exam,Geography;Politics;Physics,2027-04-11 13:30:07,5,74,综合
+e633d1f3-07e5-4079-8156-eaafcaacb359,Mock Exam,Music;Chinese;Mathematics;Biology;Politics,2027-03-09 13:30:07,4,24,综合
+6a3b2a35-e177-49c7-82f9-652182c5f7f0,Final Exam,History;Politics;Chinese;Physics;English,2027-02-27 13:30:07,3,74,综合
+a6b3b201-35ec-4895-862c-a12f74fd086b,期末考试,English;Biology;Geography;History;Physics,2027-06-06 13:30:07,5,27,综合
+9d7d66b0-dc44-42d0-8cd9-a3fa16dfb6c7,高三模考,Chinese;Mathematics;Geography;Chemistry;Biology;Politics,2026-10-05 13:30:07,3,42,综合
+5e58ca8a-1888-4a41-94fa-c4effcfb418a,中考模拟,Mathematics;Music;Biology;Chemistry,2027-04-25 13:30:07,5,61,综合
+0df38de8-a063-46fd-a06e-01c74c5dca95,中考模拟,Chemistry;Geography;English,2026-10-30 13:30:07,5,40,综合
+84980243-3ceb-4715-9288-94aa010c825a,Mid-Year Exam,Mathematics;Politics;Music,2027-05-31 13:30:07,4,29,综合
+593f83be-f89c-49d1-acf3-fab895f52f0e,期中考试,Music;English;Chemistry;History;Geography;Politics,2026-09-22 13:30:07,5,28,综合
+a2c83759-c6e6-4009-b9cb-fe26f8100bb1,期中考试,Geography;Biology;Politics;Chemistry;Music;Physics,2027-02-19 13:30:07,3,69,综合
