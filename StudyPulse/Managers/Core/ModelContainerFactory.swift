@@ -27,6 +27,7 @@ enum ModelContainerFactory {
         MistakeNoteRecord.self,
         ExamRecord.self,
         ComprehensiveExamRecord.self,
+        TaskItemRecord.self,
         UserProfileRecord.self,
     ]
 
@@ -95,7 +96,7 @@ enum ModelContainerFactory {
     /// Migrate legacy ~/Documents/*.json to SwiftData.
     ///
     /// 策略：
-    /// - 读取每个 JSON 文件（profile / grades / mistakes / exams / comprehensiveExams / subjects）
+    /// - 读取每个 JSON 文件（profile / grades / mistakes / exams / comprehensiveExams / tasks / subjects）
     /// - 全部插入到给定 ModelContext
     /// - 标记迁移完成（写 UserDefaults）
     /// - 旧 JSON 文件保留在原位（不删），避免误操作导致数据丢失
@@ -152,6 +153,14 @@ enum ModelContainerFactory {
                 context.insert(ComprehensiveExamRecord(from: e))
             }
             counts.append(("comprehensiveExams", comps.count))
+        }
+
+        // tasks (homework / reading material)
+        if let tasks: [TaskItem] = DataFileIO.load(url: docs.appendingPathComponent("tasks.json")) {
+            for t in tasks {
+                context.insert(TaskItemRecord(from: t))
+            }
+            counts.append(("tasks", tasks.count))
         }
 
         // profile (单例)

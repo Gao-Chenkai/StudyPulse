@@ -209,6 +209,118 @@ nonisolated struct ExamTimeSlot: Codable, Hashable, Sendable {
     var endTime: Date
 }
 
+// MARK: - Task Models (作业 / 阅读材料)
+
+/// 任务类型：日常作业 / 阅读材料
+/// Task type: daily homework or reading material
+nonisolated enum TaskType: String, Codable, CaseIterable, Hashable, Sendable, Identifiable {
+    /// 日常作业 / Daily homework
+    case homework
+    /// 阅读材料 / Reading material
+    case reading
+
+    var id: String { rawValue }
+}
+
+/// 统一待办条目（视图层把考试 / 作业 / 阅读统一渲染为同一张列表）
+/// Unified todo entry used by the view layer to render exams / homework / reading in one list.
+nonisolated enum TodoEntryKind: String, Codable, Hashable, Sendable {
+    /// 单科目考试 / Single-subject exam
+    case exam
+    /// 综合考试 / Comprehensive exam
+    case comprehensiveExam
+    /// 日常作业 / Daily homework
+    case homework
+    /// 阅读材料 / Reading material
+    case reading
+}
+
+/// 待办列表统一渲染的条目结构
+/// A unified row item used by the Todo page.
+nonisolated struct TodoEntry: Identifiable, Hashable, Sendable {
+    let id: UUID
+    let kind: TodoEntryKind
+    let title: String
+    let subject: String
+    /// 截止 / 起始时间（按 kind 不同：考试 = 考试开始；作业 / 阅读 = 截止日期）
+    let date: Date
+    /// 结束时间（仅多日考试使用，其它 kind 为 nil）
+    let endDate: Date?
+    let importance: Int
+    let isCompleted: Bool
+    /// 关联的源数据（仅一个非空）
+    let exam: Exam?
+    let comprehensiveExam: comprehensiveExam?
+    let taskItem: TaskItem?
+}
+
+/// 作业 / 阅读材料任务项
+/// Homework or reading material task item.
+nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    /// 任务标题
+    /// Task title
+    var title: String
+    /// 任务类型（homework / reading）
+    /// Task type (homework / reading)
+    var type: TaskType
+    /// 截止日期
+    /// Due date
+    var dueDate: Date
+    /// 提醒时间（通常早于 dueDate，驱动 EKReminder alarm）
+    /// Reminder time (usually earlier than dueDate, drives EKReminder alarm)
+    var reminderDate: Date
+    /// 关联科目名称（可空）
+    /// Related subject name (optional)
+    var subject: String
+    /// 重要程度（1-5 星）
+    /// Importance (1-5 stars)
+    var importance: Int
+    /// 备注
+    /// Notes
+    var notes: String
+    /// 是否已完成
+    /// Whether the task is completed
+    var isCompleted: Bool
+    /// 关联到系统 Reminders 后的 calendarItemIdentifier
+    /// Linked EKReminder calendarItemIdentifier after syncing to Reminders
+    var reminderEventId: String?
+    /// 关联到系统 Reminders 使用的 calendar identifier（用于更新）
+    /// Linked EKReminder calendar identifier (for updating)
+    var reminderCalendarId: String?
+    /// 创建时间
+    /// Created at
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        type: TaskType,
+        dueDate: Date,
+        reminderDate: Date,
+        subject: String = "",
+        importance: Int = 3,
+        notes: String = "",
+        isCompleted: Bool = false,
+        reminderEventId: String? = nil,
+        reminderCalendarId: String? = nil,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.title = title
+        self.type = type
+        self.dueDate = dueDate
+        self.reminderDate = reminderDate
+        self.subject = subject
+        self.importance = min(max(importance, 1), 5)
+        self.notes = notes
+        self.isCompleted = isCompleted
+        self.reminderEventId = reminderEventId
+        self.reminderCalendarId = reminderCalendarId
+        self.createdAt = createdAt
+    }
+}
+
 // MARK: - Exam Models (考试)
 
 /// 单科目考试

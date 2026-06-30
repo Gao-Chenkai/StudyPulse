@@ -34,7 +34,7 @@ struct DataManagementSettingsView: View {
     @State private var showingTestAlert = false
 
     enum ImportType {
-        case grades, mistakes, exams
+        case grades, mistakes, exams, tasks
     }
 
   var body: some View {
@@ -56,6 +56,9 @@ struct DataManagementSettingsView: View {
                         }
                         Button { exportExams() } label: {
                             Label("Exams".localized(), systemImage: "calendar.circle")
+                        }
+                        Button { exportTasks() } label: {
+                            Label("Tasks".localized(), systemImage: "checklist")
                         }
                     } label: {
                         Label("Export Data".localized(), systemImage: "tray.and.arrow.up")
@@ -79,6 +82,9 @@ struct DataManagementSettingsView: View {
                         }
                         Button { importType = .exams; isImporting = true } label: {
                             Label("Exams".localized(), systemImage: "calendar.circle")
+                        }
+                        Button { importType = .tasks; isImporting = true } label: {
+                            Label("Tasks".localized(), systemImage: "checklist")
                         }
                     } label: {
                         Label("Import Data".localized(), systemImage: "tray.and.arrow.down")
@@ -149,6 +155,7 @@ struct DataManagementSettingsView: View {
                     case .grades: importGrades(from: fileURL)
                     case .mistakes: importMistakes(from: fileURL)
                     case .exams: importExams(from: fileURL)
+                    case .tasks: importTasks(from: fileURL)
                     }
                 }
             case .failure(let error):
@@ -222,6 +229,18 @@ struct DataManagementSettingsView: View {
         let fileName = "StudyPulse_Exams_\(dateFormatter.string(from: Date())).csv"
         let totalCount = dataManager.examSets.count + dataManager.comprehensiveExamSets.count
         exportSuccessMessage = "\(totalCount) "
+        exportDocument = CSVDocument(content: csv, fileName: fileName)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isExporting = true
+        }
+    }
+
+    private func exportTasks() {
+        let csv = DataExportManager.exportTasksToCSV(tasks: dataManager.taskItems)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let fileName = "StudyPulse_Tasks_\(dateFormatter.string(from: Date())).csv"
+        exportSuccessMessage = "\(dataManager.taskItems.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExporting = true
@@ -320,6 +339,35 @@ struct DataManagementSettingsView: View {
         dataManager.addExams(single: single, comprehensive: comprehensive)
         let total = single.count + comprehensive.count
         importSuccessMessage = " \(total) "
+        showingImportSuccess = true
+    }
+
+    private func importTasks(from fileURL: URL) {
+        var csvString: String?
+        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .windowsCP1252, .isoLatin1]
+        for encoding in encodings {
+            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
+                csvString = str
+                break
+            }
+        }
+        guard let content = csvString else {
+            importErrorMessage = ""
+            showingImportError = true
+            return
+        }
+        var cleanedContent = content
+        if content.hasPrefix("\u{FEFF}") {
+            cleanedContent = String(content.dropFirst())
+        }
+        let tasks = DataExportManager.parseTasks(from: cleanedContent)
+        if tasks.isEmpty {
+            importErrorMessage = ""
+            showingImportError = true
+            return
+        }
+        dataManager.addTasks(tasks)
+        importSuccessMessage = " \(tasks.count) "
         showingImportSuccess = true
     }
 

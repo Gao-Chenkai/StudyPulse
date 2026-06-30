@@ -85,6 +85,8 @@ final class DataManager: ObservableObject {
     @Published var profile: UserProfile = UserProfile()
    /// 多科目综合考试列表
    @Published var comprehensiveExamSets: [comprehensiveExam] = []
+    /// 作业 / 阅读材料任务列表（与考试日程统一展示在「待办」页）
+    @Published var taskItems: [TaskItem] = []
 
     /// Set by open-app App Intents to trigger pre-filled sheets in ContentView.
     @Published var pendingIntentAction: IntentAction? = nil
@@ -170,8 +172,8 @@ final class DataManager: ObservableObject {
 
         isReady = true
 
-        Log.data.info("asyncInit 完成 / asyncInit done; grades=\(self.grades.count, privacy: .public) mistakes=\(self.mistakeSets.count, privacy: .public) exams=\(self.examSets.count, privacy: .public) compExams=\(self.comprehensiveExamSets.count, privacy: .public) subjects=\(self.subjects.count, privacy: .public)")
-        Log.record(.info, category: "Data", message: "asyncInit 完成 / asyncInit done; grades=\(self.grades.count) mistakes=\(self.mistakeSets.count) exams=\(self.examSets.count) compExams=\(self.comprehensiveExamSets.count) subjects=\(self.subjects.count)")
+        Log.data.info("asyncInit 完成 / asyncInit done; grades=\(self.grades.count, privacy: .public) mistakes=\(self.mistakeSets.count, privacy: .public) exams=\(self.examSets.count, privacy: .public) compExams=\(self.comprehensiveExamSets.count, privacy: .public) tasks=\(self.taskItems.count, privacy: .public) subjects=\(self.subjects.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "asyncInit 完成 / asyncInit done; grades=\(self.grades.count) mistakes=\(self.mistakeSets.count) exams=\(self.examSets.count) compExams=\(self.comprehensiveExamSets.count) tasks=\(self.taskItems.count) subjects=\(self.subjects.count)")
 
         // 启动时同步 SRS 复习通知
         SRSReviewNotifications.shared.rescheduleAll(mistakes: self.mistakeSets)
@@ -214,6 +216,12 @@ final class DataManager: ObservableObject {
                 FetchDescriptor<ComprehensiveExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
             )
             self.comprehensiveExamSets = compEntities.map { $0.toSnapshot() }
+
+            // TaskItems (homework / reading material)
+            let taskEntities = try context.fetch(
+                FetchDescriptor<TaskItemRecord>(sortBy: [SortDescriptor(\.dueDate, order: .forward)])
+            )
+            self.taskItems = taskEntities.map { $0.toSnapshot() }
 
             // Profile (singleton)
             let profiles = try context.fetch(FetchDescriptor<UserProfileRecord>())
@@ -848,4 +856,281 @@ final class DataManager: ObservableObject {
         )
     }
 
+    // MARK: - Task Items (作业 / 阅读材料)
+
+    /// 新增任务（作业 / 阅读材料）
+    /// Add a new task item (homework or reading material).
+    /// - Parameters:
+    ///   - task: 任务快照
+    ///   - syncToReminders: 是否同步到系统 Reminders（如果关闭，由调用方自己处理 EKReminder 同步）
+    ///   - reminderOverride: 传入同步后的 (calendarItemId, calendarId)，写回 task.reminderEventId/reminderCalendarId
+    /// 调用方在 syncToReminders == true 时应自行调用 CalendarManager 并把结果回填。
+    func addTask(
+        _ task: TaskItem,
+        syncToReminders: Bool,
+        reminderResult: (calendarItemId: String, calendarId: String)? = nil
+    ) {
+        var stored = task
+        if syncToReminders, let result = reminderResult {
+            stored.reminderEventId = result.calendarItemId
+            stored.reminderCalendarId = result.calendarId
+        } else if !syncToReminders {
+            stored.reminderEventId = nil
+            stored.reminderCalendarId = nil
+        }
+
+        if let context = modelContext {
+            context.insert(TaskItemRecord(from: stored))
+            try? context.save()
+        }
+        taskItems.append(stored)
+        // 任务列表按 dueDate 升序保持
+        taskItems.sort { $0.dueDate < $1.dueDate }
+        Log.data.info("新增任务 / Added task: title=\(stored.title, privacy: .public) type=\(stored.type.rawValue, privacy: .public) dueDate=\(stored.dueDate, privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增任务 / Added task: title=\(stored.title) type=\(stored.type.rawValue) dueDate=\(stored.dueDate)")
+    }
+
+    /// 批量新增任务（用于 CSV 导入等场景）
+    /// Batch add tasks (for CSV import etc.)
+    func addTasks(_ newTasks: [TaskItem]) {
+        guard !newTasks.isEmpty else { return }
+        if let context = modelContext {
+            for t in newTasks {
+                context.insert(TaskItemRecord(from: t))
+            }
+            try? context.save()
+        }
+        taskItems.append(contentsOf: newTasks)
+        taskItems.sort { $0.dueDate < $1.dueDate }
+        Log.data.info("批量新增任务 / Batch added tasks: count=\(newTasks.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增任务 / Batch added tasks: count=\(newTasks.count)")
+    }
+
+    /// 更新已有任务
+    /// Update an existing task.
+    /// - Parameters:
+    ///   - updated: 新任务快照
+    ///   - reminderUpdateResult: 同步到系统 Reminders 后的结果（nil 表示未同步 / 失败）
+    func updateTask(
+        _ updated: TaskItem,
+        reminderResult: (calendarItemId: String, calendarId: String)? = nil
+    ) {
+        var stored = updated
+        if let result = reminderResult {
+            stored.reminderEventId = result.calendarItemId
+            stored.reminderCalendarId = result.calendarId
+        }
+
+        if let index = taskItems.firstIndex(where: { $0.id == stored.id }) {
+            taskItems[index] = stored
+            taskItems.sort { $0.dueDate < $1.dueDate }
+        }
+        updateTaskEntity(stored)
+        Log.data.info("更新任务 / Updated task: title=\(stored.title, privacy: .public) id=\(stored.id.uuidString, privacy: .public)")
+        Log.record(.info, category: "Data", message: "更新任务 / Updated task: title=\(stored.title) id=\(stored.id.uuidString)")
+    }
+
+    /// 删除任务（同步从系统 Reminders 移除已绑定的提醒项）
+    /// Delete a task and remove its linked Reminder, if any.
+    func deleteTask(_ task: TaskItem) {
+        let reminderId = task.reminderEventId
+        removeTaskEntity(id: task.id)
+        if let index = taskItems.firstIndex(where: { $0.id == task.id }) {
+            taskItems.remove(at: index)
+        }
+        if let reminderId = reminderId {
+            Task {
+                do {
+                    _ = try await CalendarManager.shared.removeTaskFromReminders(calendarItemId: reminderId)
+                } catch {
+                    Log.data.warning("删除系统 Reminder 失败 / Failed to remove system Reminder: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+        Log.data.info("删除任务 / Deleted task: title=\(task.title, privacy: .public) id=\(task.id.uuidString, privacy: .public)")
+        Log.record(.info, category: "Data", message: "删除任务 / Deleted task: title=\(task.title) id=\(task.id.uuidString)")
+    }
+
+    /// 切换任务完成态
+    /// Toggle the task's completion flag and mirror it in system Reminders (if linked).
+    func setTaskCompletion(_ taskId: UUID, isCompleted: Bool) {
+        guard let index = taskItems.firstIndex(where: { $0.id == taskId }) else {
+            Log.data.warning("未找到要切换完成态的任务 / Task not found: id=\(taskId.uuidString, privacy: .public)")
+            return
+        }
+        var updated = taskItems[index]
+        updated.isCompleted = isCompleted
+        taskItems[index] = updated
+        updateTaskEntity(updated)
+
+        // 同步到系统 Reminders（如果绑定过）
+        if let reminderId = updated.reminderEventId {
+            Task {
+                do {
+                    _ = try await CalendarManager.shared.setTaskCompletionInReminders(
+                        calendarItemId: reminderId,
+                        isCompleted: isCompleted
+                    )
+                } catch {
+                    Log.data.warning("同步系统 Reminder 完成态失败 / Failed to sync reminder completion: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+        Log.data.info("切换任务完成态 / Toggled task completion: id=\(taskId.uuidString, privacy: .public) completed=\(isCompleted, privacy: .public)")
+    }
+
+    /// 从系统 Reminders 拉取所有已绑定任务的当前完成态,并把差异写回本地。
+    /// Pulls the current completion flags for all linked tasks from the system Reminders app
+    /// and writes any changes back to the local store. If a Reminder has been deleted
+    /// externally, the local reminderEventId / reminderCalendarId is cleared.
+    ///
+    /// - 幂等,可安全在启动时与页面 onAppear 时调用。
+    /// - Idempotent; safe to call on launch and on view appear.
+    func refreshTaskCompletionStatesFromReminders() {
+        // 仅处理有 reminderEventId 的任务
+        let tasksToRefresh = taskItems.filter { $0.reminderEventId != nil }
+        guard !tasksToRefresh.isEmpty else { return }
+
+        Task {
+            var changed = 0
+            var cleared = 0
+            for task in tasksToRefresh {
+                guard let reminderId = task.reminderEventId else { continue }
+                do {
+                    if let isCompleted = try await CalendarManager.shared.getTaskCompletionFromReminders(calendarItemId: reminderId) {
+                        // Reminder 仍存在,检查完成态是否与本地一致
+                        if task.isCompleted != isCompleted {
+                            await MainActor.run {
+                                if let idx = self.taskItems.firstIndex(where: { $0.id == task.id }) {
+                                    self.taskItems[idx].isCompleted = isCompleted
+                                    self.updateTaskEntity(self.taskItems[idx])
+                                }
+                            }
+                            changed += 1
+                        }
+                    } else {
+                        // Reminder 已被外部删除,清掉本地 reminderEventId / reminderCalendarId
+                        await MainActor.run {
+                            if let idx = self.taskItems.firstIndex(where: { $0.id == task.id }) {
+                                self.taskItems[idx].reminderEventId = nil
+                                self.taskItems[idx].reminderCalendarId = nil
+                                self.updateTaskEntity(self.taskItems[idx])
+                            }
+                        }
+                        cleared += 1
+                    }
+                } catch {
+                    Log.data.warning("读取 Reminder 完成态失败 / Failed to read reminder completion: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+            if changed > 0 || cleared > 0 {
+                Log.data.info("从 Reminders 同步完成态 / Synced completion from Reminders: changed=\(changed, privacy: .public) cleared=\(cleared, privacy: .public)")
+                Log.record(.info, category: "Data", message: "从 Reminders 同步完成态: changed=\(changed) cleared=\(cleared)")
+            }
+        }
+    }
+
+    /// 保存任务（兼容旧 API；当前每次 add/update/delete 已即时落盘，此处为 no-op + 强制 save）
+    func saveTaskItems() {
+        try? modelContext?.save()
+    }
+
+    /// 构造统一的 TodoEntry 列表（考试 + 作业 + 阅读），按时间升序
+    /// Build a unified `TodoEntry` list (exams + homework + reading) sorted ascending by date.
+    /// - Parameter includeCompleted: 是否包含已完成的任务（默认 false：已完成的作业/阅读不进入主列表）
+    func todoEntries(includeCompleted: Bool = false) -> [TodoEntry] {
+        var entries: [TodoEntry] = []
+
+        for exam in examSets {
+            entries.append(TodoEntry(
+                id: exam.id,
+                kind: .exam,
+                title: exam.name,
+                subject: exam.subject,
+                date: exam.examDate,
+                endDate: exam.examEndDate,
+                importance: exam.importance,
+                isCompleted: false,
+                exam: exam,
+                comprehensiveExam: nil,
+                taskItem: nil
+            ))
+        }
+        for exam in comprehensiveExamSets {
+            let subjectText = exam.subject.joined(separator: ", ")
+            entries.append(TodoEntry(
+                id: exam.id,
+                kind: .comprehensiveExam,
+                title: exam.name,
+                subject: subjectText,
+                date: exam.examDate,
+                endDate: exam.examEndDate,
+                importance: exam.importance,
+                isCompleted: false,
+                exam: nil,
+                comprehensiveExam: exam,
+                taskItem: nil
+            ))
+        }
+        for task in taskItems where (includeCompleted || !task.isCompleted) {
+            let kind: TodoEntryKind = task.type == .homework ? .homework : .reading
+            entries.append(TodoEntry(
+                id: task.id,
+                kind: kind,
+                title: task.title,
+                subject: task.subject,
+                date: task.dueDate,
+                endDate: nil,
+                importance: task.importance,
+                isCompleted: task.isCompleted,
+                exam: nil,
+                comprehensiveExam: nil,
+                taskItem: task
+            ))
+        }
+        return entries.sorted { $0.date < $1.date }
+    }
+
+    /// 删除指定 id 的 TaskItemRecord
+    private func removeTaskEntity(id: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("删除 TaskItemRecord 失败 / Failed to delete TaskItemRecord: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 更新指定 id 的 TaskItemRecord（找到则更新，未找到则插入）
+    private func updateTaskEntity(_ task: TaskItem) {
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == task.id })
+            ).first {
+                entity.title = task.title
+                entity.typeRaw = task.type.rawValue
+                entity.dueDate = task.dueDate
+                entity.reminderDate = task.reminderDate
+                entity.subject = task.subject
+                entity.importance = task.importance
+                entity.notes = task.notes
+                entity.isCompleted = task.isCompleted
+                entity.reminderEventId = task.reminderEventId
+                entity.reminderCalendarId = task.reminderCalendarId
+                entity.createdAt = task.createdAt
+                try context.save()
+            } else {
+                context.insert(TaskItemRecord(from: task))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("更新 TaskItemRecord 失败 / Failed to update TaskItemRecord: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 }

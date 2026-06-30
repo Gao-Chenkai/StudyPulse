@@ -5,9 +5,10 @@
 //  Created by Chenkai Gao on 2026/6/7.
 //
 //  CSV 导入/导出：
-//  - 导出成绩 / 错题 / 考试（含综合考试）到 RFC 4180 兼容的 CSV
+//  - 导出成绩 / 错题 / 考试（含综合考试）/ 任务（作业 + 阅读材料）到 RFC 4180 兼容的 CSV
 //  - 解析时统一走支持引号转义的 parseCSVRows，能处理字段内含逗号 / 引号 / 换行
 //  - 考试 type 列：single / comprehensive（同时兼容旧的中文"单科" / "综合"）
+//  - 任务 type 列：homework / reading（同时兼容中文"作业" / "阅读"）
 //
 
 import Foundation
@@ -34,6 +35,13 @@ enum DataExportManager {
     /// 考试 CSV 表头
     static let examsHeader = [
         "ID", "Name", "Subject", "Date", "ExamEndDate", "Importance", "Mastery", "Type"
+    ]
+
+    /// 任务（作业 / 阅读材料）CSV 表头
+    /// Task (homework / reading material) CSV header
+    static let tasksHeader = [
+        "ID", "Title", "Type", "Subject", "DueDate", "ReminderTime",
+        "Importance", "Notes", "IsCompleted", "CreatedAt"
     ]
 
     // MARK: - Export
@@ -123,6 +131,33 @@ enum DataExportManager {
         return csv
     }
 
+    /// 导出任务（作业 + 阅读材料）到 CSV
+    /// Type 列：homework / reading
+    /// Export tasks (homework + reading) to CSV.
+    /// - Parameter tasks: 任务列表（不再按类型拆分；同一文件内通过 Type 列区分）
+    ///   The list of tasks. Single / reading are mixed; the `Type` column tells them apart.
+    static func exportTasksToCSV(tasks: [TaskItem]) -> String {
+        var csv = joinRow(tasksHeader)
+
+        for task in tasks {
+            let row: [String] = [
+                task.id.uuidString,
+                task.title,
+                task.type.rawValue,
+                task.subject,
+                formatDate(task.dueDate),
+                formatDate(task.reminderDate),
+                String(task.importance),
+                task.notes,
+                task.isCompleted ? "true" : "false",
+                formatDate(task.createdAt)
+            ]
+            csv += joinRow(row)
+        }
+
+        return csv
+    }
+
     // MARK: - Import
 
     /// 从 CSV 解析成绩
@@ -181,6 +216,23 @@ enum DataExportManager {
         }
 
         return (singleExams, comprehensiveExams)
+    }
+
+    /// 从 CSV 解析任务（作业 + 阅读材料），根据 Type 列区分
+    /// Parse tasks (homework + reading) from a CSV.
+    /// - Returns: 解析得到的所有任务（成功解析的，失败行会被跳过）
+    ///   All tasks that parsed successfully. Bad rows are silently skipped.
+    static func parseTasks(from csvString: String) -> [TaskItem] {
+        let rows = parseCSVRows(csvString)
+        guard rows.count > 1 else { return [] }
+
+        var tasks: [TaskItem] = []
+        for row in rows.dropFirst() {
+            if let task = parseTaskRow(row) {
+                tasks.append(task)
+            }
+        }
+        return tasks
     }
 
     // MARK: - Row Parsers (private)
@@ -311,6 +363,53 @@ enum DataExportManager {
         if lower == "single" || lower == "单科" { return .single }
         if lower == "comprehensive" || lower == "综合" { return .comprehensive }
         return .unknown
+    }
+
+    /// 解析一条任务行（兼容 homework / reading 两种类型）
+    /// Parse a single task row. Accepts both English (homework / reading) and Chinese (作业 / 阅读) type values.
+    private static func parseTaskRow(_ fields: [String]) -> TaskItem? {
+        guard fields.count >= tasksHeader.count else { return nil }
+
+        // 0=ID, 1=Title, 2=Type, 3=Subject, 4=DueDate, 5=ReminderTime,
+        // 6=Importance, 7=Notes, 8=IsCompleted, 9=CreatedAt
+        let idString = fields[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let id = UUID(uuidString: idString) ?? UUID()
+        let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
+        let typeRaw = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
+        let subject = fields[3].trimmingCharacters(in: .whitespacesAndNewlines)
+        let dueDate = parseDate(fields[4].trimmingCharacters(in: .whitespacesAndNewlines))
+        let reminderDate = parseDate(fields[5].trimmingCharacters(in: .whitespacesAndNewlines))
+        let importance = Int(fields[6].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 3
+        let notes = fields[7].trimmingCharacters(in: .whitespacesAndNewlines)
+        let isCompletedRaw = fields[8].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let isCompleted = (isCompletedRaw == "true" || isCompletedRaw == "1" || isCompletedRaw == "yes" || isCompletedRaw == "是")
+        let createdAt = parseDate(fields[9].trimmingCharacters(in: .whitespacesAndNewlines))
+
+        guard let type = normalizeTaskType(typeRaw) else { return nil }
+
+        return TaskItem(
+            id: id,
+            title: title,
+            type: type,
+            dueDate: dueDate,
+            reminderDate: reminderDate,
+            subject: subject,
+            importance: importance,
+            notes: notes,
+            isCompleted: isCompleted,
+            reminderEventId: nil,
+            reminderCalendarId: nil,
+            createdAt: createdAt
+        )
+    }
+
+    /// 兼容英文（homework / reading）和中文（作业 / 阅读），直接返回模型层的 `TaskType`。
+    /// Accept English (homework / reading) and Chinese (作业 / 阅读). Returns the model-layer `TaskType`.
+    private static func normalizeTaskType(_ raw: String) -> TaskType? {
+        let lower = raw.lowercased()
+        if lower == "homework" || lower == "作业" { return .homework }
+        if lower == "reading" || lower == "阅读" { return .reading }
+        return nil
     }
 
     // MARK: - CSV Low-Level

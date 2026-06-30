@@ -68,6 +68,36 @@ students, or non-students. Tone is calm, technical, neutral.
 - "Unregistered-exam reminder" card on Home for exams from 3–7 days
   ago with no matching grade.
 
+### 3.3a Todo / Task tracker (v1.x)
+- Two new task types in addition to exams: **Homework** (日常作业)
+  and **Reading Material** (阅读材料), each with:
+  - Title, type, related subject, importance (1–5), notes.
+  - **Due date** (截止日期) and **reminder time** (提醒时间), set
+    independently by the user.
+  - Completion toggle (`isCompleted`), surfaced via strikethrough and
+    a half-opacity card.
+- Unified **Todo** page (replaces the former "Exams" tab) with:
+  - All three types rendered as `TodoEntry` rows with a coloured type
+    tag (Exam / Compre. / Homework / Reading).
+  - Filter chips (All / Exams / Homework / Reading) and a "Show
+    Completed" toggle.
+  - Time-based grouping (Within 1 Week / Within 1 Month / Later) and a
+    "Past Items" sheet.
+  - List mode and Calendar mode (calendar mode is exam-only).
+- Reminders / Calendar split:
+  - **Exams** continue to sync to the system Calendar via
+    `EKEventStore` (existing `CalendarManager.addExamToCalendar`).
+  - **Homework / Reading** sync to the system Reminders app via
+    `EKReminder`, with `dueDateComponents` driven by the task's due
+    date and an `EKAlarm(absoluteDate:)` driven by the reminder time.
+- Reminder edit behaviour:
+  - Toggling the completion flag mirrors to the linked Reminder.
+  - Editing a synced task calls `updateTaskInReminders`; if the
+    Reminder has been deleted externally, a new one is created.
+  - Deleting a task removes its linked Reminder.
+  - The user may opt out of Reminders sync per task; opt-out deletes
+    any existing linked Reminder.
+
 ### 3.4 Trends
 - Per-subject line chart of score rate over time.
 - "Subjects Needing Attention" alerts:
@@ -234,6 +264,13 @@ MistakeNote { id, title, subject, originalQuestion, source, date,
 Exam   { id, name, examDate, importance (1..5), subject, examName, masteryDegree (0..100) }
 comprehensiveExam { id, name, examDate, importance (1..5), subject: [String],
                     examName, masteryDegree (0..100) }
+TaskItem { id, title, type: TaskType, dueDate, reminderDate, subject,
+           importance (1..5), notes, isCompleted,
+           reminderEventId?, reminderCalendarId?, createdAt }
+TaskType { homework | reading }
+TodoEntry { id, kind: TodoEntryKind, title, subject, date, endDate?,
+            importance, isCompleted, exam?, comprehensiveExam?, taskItem? }
+TodoEntryKind { exam | comprehensiveExam | homework | reading }
 UserProfile { username, realName, age, gender, schoolName, grade, className,
               studentId, enrollmentYear, examYear,
               educationStage, regionCode, theme, avatarFileName,
@@ -268,12 +305,15 @@ Persistence:
 | `NSCameraUsageDescription`       | "Take photos of mistakes"          |
 | `NSPhotoLibraryUsageDescription` | "Select photos from photo library" |
 | `NSCalendarsUsageDescription`    | "Add exams to calendar"            |
+| `NSRemindersFullAccessUsageDescription` (iOS 17+) / `NSRemindersUsageDescription` (legacy) | "Add homework / reading tasks to the system Reminders app" |
 | `NSHealthShareUsageDescription`  | "Read HRV data from Health"        |
 | `com.apple.developer.healthkit`  | true (entitlement)                 |
 
 The app never writes to Health; it only reads. The app never writes to
 the calendar's *other* calendars, only the one chosen by the user via
-the EventKit picker.
+the EventKit picker. Homework and reading tasks write only to the
+Reminders list chosen by EventKit (`defaultCalendarForNewReminders()`)
+and never to other lists.
 
 ---
 
