@@ -882,3 +882,33 @@
 
 // Settings
 "Achievements" = "Achievements";
+
+// Onboarding profile steps (OnboardingProfileFormView / OnboardingView)
+"Tell us about you" = "Tell us about you";
+"How old are you?" = "How old are you?";
+"Where do you study?" = "Where do you study?";
+"Pick your education system" = "Pick your education system";
+"Choose your subjects" = "Choose your subjects";
+"Set your goals" = "Set your goals";
+"We'll use this name across the app." = "We'll use this name across the app.";
+"Helps personalize your study suggestions." = "Helps personalize your study suggestions.";
+"Optional — but it powers reminders and trends." = "Optional — but it powers reminders and trends.";
+"We'll pre-fill subjects and grading scales for you." = "We'll pre-fill subjects and grading scales for you.";
+"Tap a subject to enable or disable it." = "Tap a subject to enable or disable it.";
+"Optional — you can update this anytime later." = "Optional — you can update this anytime later.";
+"e.g. Alex" = "e.g. Alex";
+"e.g. Chen Kai" = "e.g. Chen Kai";
+"Leave blank if you prefer to stay anonymous." = "Leave blank if you prefer to stay anonymous.";
+"e.g. Tsinghua High School" = "e.g. Tsinghua High School";
+"e.g. 3" = "e.g. 3";
+"e.g. Peking University" = "e.g. Peking University";
+"e.g. 680" = "e.g. 680";
+"Start Using StudyPulse" = "Start Using StudyPulse";
+"Skip for now" = "Skip for now";
+"Subject list reset for the new system" = "Subject list reset for the new system";
+"You can update these goals anytime in Settings." = "You can update these goals anytime in Settings.";
+"%d selected" = "%d selected";
+"No subjects available for this region." = "No subjects available for this region.";
+"International HS" = "International HS";
+"Year" = "Year";
+"Next" = "Next";

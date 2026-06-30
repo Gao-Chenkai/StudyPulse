@@ -4,8 +4,8 @@
 //
 //  Created by Chenkai Gao on 2026/6/21.
 //  替换原 WSOnBoarding 自带的 `.wsWelcomeView()`：
-//  - 首次启动 → 欢迎页
-//  - 版本更新 → 新功能介绍页
+//  - 首次启动 → 欢迎页（含产品介绍 + 基础信息填写）
+//  - 版本更新 → 新功能介绍页（仅产品介绍，不要求填资料）
 //  使用原生 iOS 26 风格的 OnboardingView。
 //
 //  每次发布新版本时记得更新 OnboardingConfig.whatsNew 里的 features。
@@ -30,6 +30,10 @@ struct VersionedWelcomeModifier: ViewModifier {
     @State private var showWelcome = false
     @State private var showWhatsNew = false
 
+    /// 首次启动 welcome 流程结束（用户完成基础信息填写）时回调，
+    /// 父级负责把数据写入 DataManager。
+    var onProfileCommit: ((OnboardingProfileDraft, [String]) -> Void)?
+
     func body(content: Content) -> some View {
         content
             .task { checkAndShow() }
@@ -37,9 +41,15 @@ struct VersionedWelcomeModifier: ViewModifier {
                 isPresented: $showWelcome,
                 onDismiss: markVersionSeen
             ) {
-                OnboardingView(config: .welcome) {
-                    showWelcome = false
-                }
+                OnboardingView(
+                    config: .welcome,
+                    onFinish: {
+                        showWelcome = false
+                    },
+                    onProfileComplete: { draft, subjects in
+                        onProfileCommit?(draft, subjects)
+                    }
+                )
                 .interactiveDismissDisabled()
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
@@ -49,9 +59,12 @@ struct VersionedWelcomeModifier: ViewModifier {
                 isPresented: $showWhatsNew,
                 onDismiss: markVersionSeen
             ) {
-                OnboardingView(config: .whatsNew) {
-                    showWhatsNew = false
-                }
+                OnboardingView(
+                    config: .whatsNew,
+                    onFinish: {
+                        showWhatsNew = false
+                    }
+                )
                 .presentationDetents([.large])
                 .presentationBackground(.clear)
                 .presentationDragIndicator(.hidden)
@@ -91,5 +104,13 @@ extension View {
     /// 版本感知的欢迎 / 新功能介绍页面。
     func versionedWelcomeView() -> some View {
         modifier(VersionedWelcomeModifier())
+    }
+
+    /// 版本感知的欢迎 / 新功能介绍页面，支持自定义首次启动的 profile 提交回调。
+    /// - Parameter onProfileCommit: 用户在首次启动完成基础信息填写时回调，父级负责把数据写入 DataManager。
+    func versionedWelcomeView(
+        onProfileCommit: @escaping (OnboardingProfileDraft, [String]) -> Void
+    ) -> some View {
+        modifier(VersionedWelcomeModifier(onProfileCommit: onProfileCommit))
     }
 }

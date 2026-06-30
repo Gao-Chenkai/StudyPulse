@@ -43,6 +43,23 @@ struct OnboardingConfig {
     let continueButtonText: String
     let disclaimerText: String?
     let pageType: PageType
+
+    /// 首次启动时附带的「基础信息填写」流程；
+    /// nil = 当前 OnBoarding 不包含填写步骤（whatsNew / 旧的纯介绍 welcome）。
+    /// 非 nil = 介绍结束后追加 6 页基础信息填写（OnboardingProfileStep）。
+    let profileFlow: ProfileFlowConfig?
+}
+
+extension OnboardingConfig {
+    /// 首次启动时附带的「基础信息填写」流程配置。
+    struct ProfileFlowConfig {
+        /// 填写阶段的「最后一步」按钮文案
+        let finishButtonText: String
+        /// 填写阶段的副标题（出现在每页标题正下方）
+        let sectionHeader: String
+        /// 填写阶段第 6 步（目标）的「稍后填写」按钮文案
+        let skipGoalsText: String
+    }
 }
 
 extension OnboardingConfig {
@@ -81,7 +98,13 @@ extension OnboardingConfig {
             primaryColor: .blue,
             continueButtonText: "Continue".localized(),
             disclaimerText: "All your data stays on device — StudyPulse never uploads grades, mistakes, or health data to external servers.".localized(),
-            pageType: .welcome
+            pageType: .welcome,
+            // 首次启动 welcome 流程附带 6 页基础信息填写
+            profileFlow: OnboardingConfig.ProfileFlowConfig(
+                finishButtonText: "Start Using StudyPulse".localized(),
+                sectionHeader: "Basic Info".localized(),
+                skipGoalsText: "Skip for now".localized()
+            )
         )
     }
 
@@ -125,7 +148,9 @@ extension OnboardingConfig {
             primaryColor: .blue,
             continueButtonText: "Continue".localized(),
             disclaimerText: nil,
-            pageType: .whatsNew
+            pageType: .whatsNew,
+            // 新功能介绍页不带基础信息填写
+            profileFlow: nil
         )
     }
 }
