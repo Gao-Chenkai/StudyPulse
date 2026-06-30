@@ -118,11 +118,14 @@ struct SubjectScoreCard: View {
                     }
                     Spacer()
                     // 
+                    // 只展示最近 3 个月的成绩
+                    let cutoffDate = Calendar.current.date(byAdding: .month, value: -3, to: Date()) ?? Date()
+                    let recentHistory = history.filter { $0.date >= cutoffDate }
                     miniChartView(
                         series: [
                             Series(
                                 name: subject,
-                                dataPoints: history.map {
+                                dataPoints: recentHistory.map {
                                     ChartDataPoint(
                                         date: $0.date,
                                         score: $0.score,
