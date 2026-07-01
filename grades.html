@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StudyPulse 成绩追踪 — 多科目成绩录入、可视化趋势分析、原始分与排名，支持自定义满分与异常波动检测。">
+  <title>成绩追踪 - StudyPulse</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2330D158'/%3E%3Cstop offset='100%25' stop-color='%230071E3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath fill='white' d='M32 50s-22-13-22-30c0-7 5-12 12-12 4 0 7 2 10 6 3-4 6-6 10-6 7 0 12 5 12 12 0 17-22 30-22 30z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+  <nav class="nav" aria-label="主导航">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo" data-nav="home">StudyPulse</a>
+      <div class="nav-links">
+        <a href="features.html" class="nav-link" data-nav="features">功能</a>
+        <a href="grades.html" class="nav-link" data-nav="grades">成绩</a>
+        <a href="health.html" class="nav-link" data-nav="health">健康</a>
+        <a href="mistakes.html" class="nav-link" data-nav="mistakes">错题本</a>
+        <a href="exams.html" class="nav-link" data-nav="exams">考试</a>
+        <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener" class="nav-cta">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.74.54 1.48v2.2c0 .22.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+        <button class="theme-toggle" data-theme-toggle aria-label="切换主题">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+      </div>
+      <button class="nav-hamburger" aria-label="打开菜单"><span></span></button>
+    </div>
+  </nav>
+
+  <div class="nav-drawer" aria-label="移动菜单">
+    <a href="features.html" data-drawer-nav="features">功能</a>
+    <a href="grades.html" data-drawer-nav="grades">成绩</a>
+    <a href="health.html" data-drawer-nav="health">健康</a>
+    <a href="mistakes.html" data-drawer-nav="mistakes">错题本</a>
+    <a href="exams.html" data-drawer-nav="exams">考试</a>
+    <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener" class="nav-cta">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.74.54 1.48v2.2c0 .22.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+
+  <main>
+    <!-- Hero — Dark -->
+    <section class="hero-2col hero-dark" style="padding:96px 0;">
+      <div class="container">
+        <div class="hero-text">
+          <span class="caption hero-caption reveal">成绩追踪</span>
+          <h1 class="reveal reveal-delay-1">每一分进步，清晰可见</h1>
+          <p class="hero-desc reveal reveal-delay-2">多科目成绩录入，支持自定义满分、原始分与排名。交互式图表帮你查看趋势、平均分和异常波动。</p>
+          <a href="health.html" class="btn-ghost reveal reveal-delay-3" style="color:#2997FF;">
+            了解健康准备度
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <div class="hero-media reveal reveal-delay-2">
+          <div class="stack-images">
+            <img src="assets/images/grade-trend.png" alt="化学成绩趋势" class="device-img" style="box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <img src="assets/images/grade-overview.png" alt="多科目概览" class="device-img" style="box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Highlights -->
+    <section class="section bg-soft">
+      <div class="container">
+        <div class="highlight-row">
+          <div class="highlight-item reveal">
+            <div class="highlight-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <h3>自定义满分</h3>
+            <p>支持全球不同教育体系的满分定义。</p>
+          </div>
+          <div class="highlight-item reveal reveal-delay-1">
+            <div class="highlight-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-6"/></svg>
+            </div>
+            <h3>趋势分析</h3>
+            <p>交互式折线图查看成绩走势。</p>
+          </div>
+          <div class="highlight-item reveal reveal-delay-2">
+            <div class="highlight-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <h3>智能提醒</h3>
+            <p>"需要关注的科目"自动标记。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <div class="footer-row">
+          <div class="footer-meta">
+            <p class="footer-tagline">Study smarter. Stay in pulse.</p>
+            <p>StudyPulse 是一款支持全球教育体系的 iOS 学业管理应用。</p>
+            <p>CC BY-NC-SA 4.0 License.</p>
+          </div>
+          <div class="footer-links">
+            <a href="https://github.com/Gao-Chenkai/StudyPulse" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/Gao-Chenkai/StudyPulse/issues" target="_blank" rel="noopener">反馈</a>
+            <a href="https://github.com/Gao-Chenkai/StudyPulse/blob/main/PRIVACY.md" target="_blank" rel="noopener">隐私政策</a>
+            <a href="mailto:DevChenkai@outlook.com">联系</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
