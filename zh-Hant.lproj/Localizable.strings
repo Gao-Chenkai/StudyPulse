@@ -983,4 +983,37 @@
 "Calendar view is only available for exams." = "日曆檢視僅適用於考試。";
 "No upcoming items" = "尚無待辦";
 "Mark Completed" = "標記完成";
+
+// Mistake PDF export
+"Export PDF" = "匯出 PDF";
+"Mistake Notebook" = "錯題集";
+"Cover" = "封面";
+"Page %d / %d" = "第 %d / %d 頁";
+"By Subject" = "依科目";
+"By Subjects" = "依科目";
+"By Date Range" = "依時間範圍";
+"By Mistakes" = "依錯題";
+"Table of Contents" = "目錄";
+"Summary" = "概覽";
+"Selection Mode" = "選擇模式";
+"Include Images" = "包含圖片";
+"Images embedded in each section will be included. Larger PDF size." = "會包含每個段落裡的圖片，PDF 體積會更大。";
+"Only text content will be exported. Smaller PDF size." = "只匯出文字內容，PDF 體積更小。";
+"%d mistakes will be exported" = "將匯出 %d 道錯題";
+"Generating PDF" = "正在產生 PDF";
+"Generating PDF..." = "正在產生 PDF…";
+"PDF Generated" = "PDF 已產生";
+"Generation Failed" = "產生失敗";
+"PDF generation returned no data." = "PDF 產生未回傳資料。";
+"No subjects available" = "暫無可選科目";
+"No mistakes available" = "暫無可選錯題";
+"Clear" = "清空";
+"No mistakes match the current selection." = "目前選擇下沒有可匯出的錯題。";
+"Export Failed" = "匯出失敗";
+"Untitled" = "未命名";
+"Options" = "選項";
+"Mode" = "模式";
+"Subjects" = "科目";
+"Select All" = "全選";
+"Generate PDF" = "產生 PDF";
 "Mark Pending" = "標記未完成";

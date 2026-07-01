@@ -983,4 +983,37 @@
 "Calendar view is only available for exams." = "カレンダー表示は試験でのみ利用できます。";
 "No upcoming items" = "予定はありません";
 "Mark Completed" = "完了にする";
+
+// Mistake PDF export
+"Export PDF" = "PDF エクスポート";
+"Mistake Notebook" = "間違いノート";
+"Cover" = "表紙";
+"Page %d / %d" = "%d / %d ページ";
+"By Subject" = "科目別";
+"By Subjects" = "科目別";
+"By Date Range" = "期間指定";
+"By Mistakes" = "問題別";
+"Table of Contents" = "目次";
+"Summary" = "概要";
+"Selection Mode" = "選択モード";
+"Include Images" = "画像を含む";
+"Images embedded in each section will be included. Larger PDF size." = "各セクションに含まれる画像も埋め込みます。PDF のサイズが大きくなります。";
+"Only text content will be exported. Smaller PDF size." = "テキストのみをエクスポートします。PDF のサイズが小さくなります。";
+"%d mistakes will be exported" = "%d 件の間違いをエクスポートします";
+"Generating PDF" = "PDF を生成中";
+"Generating PDF..." = "PDF を生成しています…";
+"PDF Generated" = "PDF 生成完了";
+"Generation Failed" = "生成に失敗しました";
+"PDF generation returned no data." = "PDF の生成でデータが返されませんでした。";
+"No subjects available" = "利用可能な科目がありません";
+"No mistakes available" = "利用可能な間違いがありません";
+"Clear" = "クリア";
+"No mistakes match the current selection." = "現在の選択に該当する間違いがありません。";
+"Export Failed" = "エクスポートに失敗しました";
+"Untitled" = "無題";
+"Options" = "オプション";
+"Mode" = "モード";
+"Subjects" = "科目";
+"Select All" = "すべて選択";
+"Generate PDF" = "PDF を生成";
 "Mark Pending" = "未完了に戻す";
