@@ -58,6 +58,19 @@ students, or non-students. Tone is calm, technical, neutral.
 - "Suggested for Review" surfaced on the Mistakes tab based on age +
   subject priority.
 - Pinch-to-zoom image viewer.
+- **PDF export** (v1.x): a `square.and.arrow.up` button on the
+  Mistakes toolbar opens an export sheet with three selection modes
+  (subjects / date range / individual mistakes), an "Include Images"
+  toggle (on by default), and a live preview of the mistake count.
+  Generation runs on `MainActor` via **Core Text + NSAttributedString**
+  drawn into a `UIGraphicsPDFRenderer` context, producing an A4
+  (595×842 pt) PDF with a cover page, a table of contents, and one or
+  more pages per mistake (`CTFramesetter` auto-paginates text;
+  overflow is rendered on the next page; long sections span
+  multiple pages automatically). Text is embedded as **vector PDF
+  fonts** so it remains selectable / copyable / searchable in any
+  PDF reader. The output is exposed via `FileDocument` and the
+  standard share sheet (`.fileExporter`).
 
 ### 3.3 Exam scheduling
 - Single-subject exam (`Exam`) and multi-subject comprehensive exam

@@ -9,6 +9,7 @@ import SwiftUI
 import Combine
 import UIKit
 import SwiftStreamingMarkdown
+import UniformTypeIdentifiers
 
 // MARK: - 一级菜单：科目列表
 struct MistakeView: View {
@@ -16,6 +17,13 @@ struct MistakeView: View {
     @State private var showingNewMistakeSet = false
     @State private var showingFlashcards = false
     @State private var searchText = ""
+
+    // PDF 导出状态
+    @State private var showingPDFExportSheet = false
+    @State private var pendingPDFSnapshot: MistakePDFSnapshot?
+    @State private var isExportingPDF = false
+    @State private var pdfDocument: MistakePDFDocument?
+    @State private var pdfErrorMessage: String?
 
     // 按科目分组错题
     var subjectGroups: [String: [MistakeNote]] {
@@ -140,8 +148,18 @@ struct MistakeView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingNewMistakeSet = true }) {
-                        Image(systemName: "plus")
+                    HStack(spacing: 12) {
+                        if !dataManager.mistakeSets.isEmpty {
+                            Button {
+                                showingPDFExportSheet = true
+                            } label: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            .accessibilityLabel("Export PDF".localized())
+                        }
+                        Button(action: { showingNewMistakeSet = true }) {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
@@ -149,6 +167,50 @@ struct MistakeView: View {
                 NewMistakeSetView()
                     .environmentObject(dataManager)
                     .adaptiveSheet()
+            }
+            .sheet(isPresented: $showingPDFExportSheet) {
+                MistakePDFExportSheet { options in
+                    handlePDFExport(options: options)
+                }
+                .environmentObject(dataManager)
+                .adaptiveSheet()
+            }
+            .sheet(item: $pendingPDFSnapshot) { snapshot in
+                MistakePDFGenerationView(
+                    snapshot: snapshot,
+                    onCompleted: { data in
+                        presentPDFExportSheet(data: data)
+                    },
+                    onError: { message in
+                        pdfErrorMessage = message
+                    }
+                )
+                .environmentObject(dataManager)
+                .interactiveDismissDisabled(true)
+            }
+            .alert("Export Failed".localized(), isPresented: Binding(
+                get: { pdfErrorMessage != nil },
+                set: { if !$0 { pdfErrorMessage = nil } }
+            )) {
+                Button("OK".localized()) { pdfErrorMessage = nil }
+            } message: {
+                Text(pdfErrorMessage ?? "")
+            }
+            .fileExporter(
+                isPresented: $isExportingPDF,
+                document: pdfDocument,
+                contentType: .pdf,
+                defaultFilename: pdfDocument?.fileName
+            ) { result in
+                switch result {
+                case .success(let url):
+                    Log.record(.info, category: "Export", message: "错题 PDF 分享成功 / Mistake PDF shared: url=\(url.path)")
+                case .failure(let error):
+                    Log.record(.error, category: "Export", message: "错题 PDF 分享失败 / Mistake PDF share failed: \(error.localizedDescription)")
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    pdfDocument = nil
+                }
             }
             .fullScreenCover(isPresented: $showingFlashcards) {
                 NavigationStack {
@@ -168,6 +230,32 @@ struct MistakeView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+        }
+    }
+
+    // MARK: - PDF Export flow
+
+    /// 选项 sheet 回调：构建快照并弹出进度 sheet。
+    private func handlePDFExport(options: MistakeExportOptions) {
+        guard let snapshot = MistakePDFSnapshot.make(
+            from: dataManager,
+            selection: options.selection,
+            includeImages: options.includeImages
+        ) else {
+            pdfErrorMessage = "No mistakes match the current selection.".localized()
+            return
+        }
+        pendingPDFSnapshot = snapshot
+    }
+
+    /// 进度 sheet 回调：弹 fileExporter 分享 PDF。
+    private func presentPDFExportSheet(data: Data) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let fileName = "StudyPulse_Mistakes_\(formatter.string(from: Date())).pdf"
+        pdfDocument = MistakePDFDocument(data: data, fileName: fileName)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isExportingPDF = true
         }
     }
 }

@@ -983,4 +983,37 @@
 "Calendar view is only available for exams." = "日历视图仅对考试可用。";
 "No upcoming items" = "暂无待办";
 "Mark Completed" = "标记完成";
+
+// Mistake PDF export
+"Export PDF" = "导出 PDF";
+"Mistake Notebook" = "错题集";
+"Cover" = "封面";
+"Page %d / %d" = "第 %d / %d 页";
+"By Subject" = "按科目";
+"By Subjects" = "按科目";
+"By Date Range" = "按时间范围";
+"By Mistakes" = "按错题";
+"Table of Contents" = "目录";
+"Summary" = "概览";
+"Selection Mode" = "选择模式";
+"Include Images" = "包含图片";
+"Images embedded in each section will be included. Larger PDF size." = "会包含每个段落里的图片，PDF 体积会更大。";
+"Only text content will be exported. Smaller PDF size." = "只导出文字内容，PDF 体积更小。";
+"%d mistakes will be exported" = "将导出 %d 道错题";
+"Generating PDF" = "正在生成 PDF";
+"Generating PDF..." = "正在生成 PDF…";
+"PDF Generated" = "PDF 已生成";
+"Generation Failed" = "生成失败";
+"PDF generation returned no data." = "PDF 生成未返回数据。";
+"No subjects available" = "暂无可选科目";
+"No mistakes available" = "暂无可选错题";
+"Clear" = "清空";
+"No mistakes match the current selection." = "当前选择下没有可导出的错题。";
+"Export Failed" = "导出失败";
+"Untitled" = "未命名";
+"Options" = "选项";
+"Mode" = "模式";
+"Subjects" = "科目";
+"Select All" = "全选";
+"Generate PDF" = "生成 PDF";
 "Mark Pending" = "标记未完成";

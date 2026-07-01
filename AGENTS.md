@@ -46,6 +46,7 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - AppPreferences.swift：应用偏好（语言与色彩方案）。
     - HomeLayoutPreference.swift：主页卡片顺序与启用标记（按名称顺序存储，持久化到 UserDefaults）。
     - HealthHistory.swift：DailyHealthSnapshot 单日身体信号聚合（HRV、静息心率、呼吸频率、总睡眠 / 深睡 / REM、Apple 锻炼时长），由 HealthHistoryStore 持久化为个人 30 天基线。
+    - MistakePDFSnapshot.swift：错题 PDF 导出快照（不可变 value type，包含 selection / includeImages / 拷贝后的 mistakes）。
   - Managers/：业务逻辑层。
     - DataManager.swift：@MainActor ObservableObject，中央状态管理器。管理 grades、subjects、mistakeSets、examSets、comprehensiveExamSets、profile、isReady 等 @Published 属性，提供 asyncInit() 与各 save/loadAsync/load 方法。
     - AppEnvironmentManager.swift：全局语言与主题管理。
@@ -60,6 +61,8 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - WidgetDataSyncManager.swift：考试小组件 App Group 同步。
     - HealthHistoryStore.swift：DailyHealthSnapshot 的 30 天滚动持久化（~/Documents/health_history.json），NSLock 线程安全。
     - HealthKitManager.swift：HRV（SDNN）准备度、14 天基线、日级历史、BodyStatus（心率 / 呼吸率 / 睡眠 / 锻炼）、PersonalBaselines 30 天个人基线。
+    - PDF/MistakePDFRenderer.swift：错题 PDF 渲染器（@MainActor enum）；**Core Text + NSAttributedString** 渲染多页 A4（595×842 pt）PDF，文字以矢量 PDF 字体嵌入（可选 / 复制 / 搜索），图片用 `UIImage.draw(in:)` 嵌入，CTFramesetter 自动分页。
+    - PDF/MistakePDFDocument.swift：FileDocument 包装，`.pdf` UTType，供 .fileExporter 使用。
     - ImageCache.swift：nonisolated class，NSCache + 缩略图，单例 50 条缓存。
     - LagMonitor.swift：主线程卡顿检测器，CADisplayLink 监测帧间隔（连续丢帧超阈值写入 LogStore）。
     - Log.swift：LogLevel、LogEntry、LogStore（线程安全 NSLock，5000 条上限，超出丢最早条目）；提供 Log.app / Log.widget / Log.notification / Log.ui 等 subsystem category，以及 Log.record(_:category:message:) 同时写 os.Logger 与 LogStore。
@@ -72,7 +75,10 @@ OCR：Vision 框架 VNRecognizeTextRequest。
     - ContentView.swift：根视图，iPhone 使用 TabView（5 个标签），iPad 使用自定义 NavigationSplitView 侧栏。
     - HomeView.swift：主页仪表盘（欢迎头、统计卡、动态卡片、每日金句、图表、即将到来的考试、近期成绩）。主页加载采用分帧渲染，将卡片拆分到多个 RunLoop 帧中绘制，避免主线程长任务卡顿。
     - TrendsView.swift：趋势分析（每科目趋势与需要关注的科目）。
-    - MistakeView.swift：错题列表（建议复习、搜索、卡片布局）。
+    - MistakeView.swift：错题列表（建议复习、搜索、卡片布局；toolbar 含 PDF 导出按钮）。
+    - PDF/MistakePDFExportSheet.swift：错题 PDF 选项 sheet（模式 picker + 科目多选 / 时间多选 / 错题多选 + 图片开关）。
+    - PDF/MistakePDFGenerationView.swift：错题 PDF 生成进度 sheet。
+    （封面 / 目录 / 单题内容直接由 Core Text NSAttributedString 在 [MistakePDFRenderer](file:///Users/chenkaigao/Documents/Program/Swift/StudyPulse/StudyPulse/Managers/PDF/MistakePDFRenderer.swift) 构造，不再使用 SwiftUI 视图作为输入。）
     - Views/Exam/ExamView.swift：原考试列表视图（保留，TodoView 是其统一替代）。
     - Views/Todo/TodoView.swift：「待办」主页面，统一展示日常作业、阅读材料与考试日程，含类型筛选、时间分组、列表 / 日历切换、过期任务 sheet。
     - Views/Todo/TodoRowView.swift：待办行卡片，支持类型标签、完成态、左滑删除 / 完成。
@@ -488,6 +494,7 @@ AI 代理在本仓库工作时遵循以下规则：
 - AGENTS.md / docs/CODE_WIKI.md / docs/CODE_WIKI_CN.md / README.md / docs/SPEC.md / docs/DESIGN.md 随新功能更新；新增 docs/AlgorithmIntroduction.md 专门解释 StudyReadinessAlgorithm。
 
 更早变更：
+- 错题本导出 PDF：MistakeView toolbar 新增 `square.and.arrow.up` 按钮 → `MistakePDFExportSheet` 选项（按科目 / 时间范围 / 手动勾选错题三选一 + 图片开关）；`MistakePDFRenderer` 用 **Core Text + NSAttributedString** 渲染多页 A4（595×842 pt）PDF（文字以矢量字体嵌入，可选 / 复制 / 搜索；`CTFramesetter` 自动分页），`MistakePDFDocument`（FileDocument，`.pdf`）走 `.fileExporter`。新增 Models/MistakePDFSnapshot.swift、Managers/PDF/{MistakePDFRenderer, MistakePDFDocument}.swift、Views/Mistake/PDF/{MistakePDFExportSheet, MistakePDFGenerationView}.swift；5 份 Localizable.strings 同步新增 ~30 个 key。
 - iPad 适配（TARGETED_DEVICE_FAMILY = "1,2"）通过 iPadLayout.swift 辅助组件（adaptiveMaxWidth / AdaptiveHStack / AdaptiveGridColumns / adaptiveCardPadding）。
 - 视图层全面重构与设计系统骨架。
 - 多语言：en / zh-Hans / zh-Hant / ja / ko。

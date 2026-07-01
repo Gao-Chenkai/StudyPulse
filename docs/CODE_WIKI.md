@@ -342,6 +342,8 @@ StudyPulse/
 | Subject | DataModels.swift | struct | UUID | Yes | Yes | User subject list, with customizable fullScore |
 | Grade | DataModels.swift | struct | UUID | Yes | Yes | Single grade record (with imageFileName for persisted image) |
 | MistakeNote | DataModels.swift | struct | UUID | Yes | Yes | Mistake note (4 sections, each with image file names) |
+| MistakePDFSnapshot | Models/MistakePDFSnapshot.swift | struct | generatedAt | n/a | Yes | Immutable snapshot used by the Mistake PDF renderer |
+| MistakePDFSelection | Models/MistakePDFSnapshot.swift | enum | n/a | n/a | Yes | `bySubjects` / `byDateRange` / `byIDs` filter mode |
 | Exam | DataModels.swift | struct | UUID | Yes | Yes | Single-subject exam |
 | comprehensiveExam | DataModels.swift | struct | UUID | Yes | Yes | Multi-subject exam |
 | UserProfile | DataModels.swift | struct | n/a | Yes | Yes | User profile (username, school, target school/score, avatarFileName, selectedSubjects, enrollment/exam years, regionCode, educationStage) |
@@ -506,6 +508,8 @@ enum HomeCardType: String, CaseIterable, Codable {
 | SubjectInfo | SubjectInfo.swift | class | SubjectConfig / Subject | Display names + color + max-score fallback |
 | WidgetDataSyncManager | WidgetDataSyncManager.swift | class singleton | App Group container, WidgetCenter | Sync exam data to widget |
 | DataExportManager | DataExportManager.swift | @MainActor enum | CSVDocument, FileDocument | CSV export for grades / mistakes / exams |
+| MistakePDFRenderer | Managers/PDF/MistakePDFRenderer.swift | @MainActor enum | Core Text + NSAttributedString, UIGraphicsPDFRenderer | Multi-page A4 (595×842 pt) PDF; selectable / searchable text via CTFramesetter auto-paging; images drawn via UIImage.draw(in:) |
+| MistakePDFDocument | Managers/PDF/MistakePDFDocument.swift | FileDocument | .pdf UTType | .fileExporter wrapper around the rendered PDF Data |
 
 ### 5.2 DataManager Flow
 
@@ -617,7 +621,9 @@ ContentView
 | ContentView | ContentView.swift | Root container | iPhone TabView (5 tabs) / iPad NavigationSplitView (sidebar list) |
 | HomeView | HomeView.swift | Dashboard | Welcome header, stat cards, dynamic cards from HomeLayoutPreference, two-column LazyVGrid on iPad |
 | TrendsView | TrendsView.swift | Trend analysis | Per-subject score cards, needs-attention alerts, `.adaptiveMaxWidth(900)` on iPad |
-| MistakeView | MistakeView.swift | Mistake list | Suggested review section, search, card layout, `.adaptiveMaxWidth(900)` |
+| MistakeView | MistakeView.swift | Mistake list | Suggested review section, search, card layout, `.adaptiveMaxWidth(900)`, **PDF export toolbar button** |
+| MistakePDFExportSheet | Views/Mistake/PDF/MistakePDFExportSheet.swift | Mistake PDF options | Subjects/date-range/individual-mistake picker, include-images toggle, live count |
+| MistakePDFGenerationView | Views/Mistake/PDF/MistakePDFGenerationView.swift | Mistake PDF progress | ProgressView with current step, error state |
 | ExamView | ExamView.swift | Exam list | Calendar integration, days-remaining countdown, `.adaptiveMaxWidth(800)` |
 | ExamDetailView | ExamDetailView.swift | Exam detail | Related mistakes, mastery degree, notes |
 | NewExamSetView | NewExamSetView.swift | Exam editor | Create / edit exam, calendar & reminder toggles |

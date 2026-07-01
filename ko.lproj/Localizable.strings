@@ -983,4 +983,37 @@
 "Calendar view is only available for exams." = "달력 보기는 시험에서만 사용할 수 있습니다.";
 "No upcoming items" = "예정된 항목이 없습니다";
 "Mark Completed" = "완료로 표시";
+
+// Mistake PDF export
+"Export PDF" = "PDF 내보내기";
+"Mistake Notebook" = "오답 노트";
+"Cover" = "표지";
+"Page %d / %d" = "%d / %d 페이지";
+"By Subject" = "과목별";
+"By Subjects" = "과목별";
+"By Date Range" = "기간 지정";
+"By Mistakes" = "문제별";
+"Table of Contents" = "목차";
+"Summary" = "개요";
+"Selection Mode" = "선택 모드";
+"Include Images" = "이미지 포함";
+"Images embedded in each section will be included. Larger PDF size." = "각 섹션의 이미지도 포함됩니다. PDF 크기가 커집니다.";
+"Only text content will be exported. Smaller PDF size." = "텍스트만 내보냅니다. PDF 크기가 작아집니다.";
+"%d mistakes will be exported" = "오답 %d개가 내보내기 됩니다";
+"Generating PDF" = "PDF 생성 중";
+"Generating PDF..." = "PDF를 생성하는 중…";
+"PDF Generated" = "PDF 생성 완료";
+"Generation Failed" = "생성 실패";
+"PDF generation returned no data." = "PDF 생성에서 데이터가 반환되지 않았습니다.";
+"No subjects available" = "사용 가능한 과목이 없습니다";
+"No mistakes available" = "사용 가능한 오답이 없습니다";
+"Clear" = "지우기";
+"No mistakes match the current selection." = "현재 선택에 해당하는 오답이 없습니다.";
+"Export Failed" = "내보내기 실패";
+"Untitled" = "제목 없음";
+"Options" = "옵션";
+"Mode" = "모드";
+"Subjects" = "과목";
+"Select All" = "모두 선택";
+"Generate PDF" = "PDF 생성";
 "Mark Pending" = "미완료로 표시";

@@ -977,4 +977,37 @@
 "Calendar view is only available for exams." = "Calendar view is only available for exams.";
 "No upcoming items" = "No upcoming items";
 "Mark Completed" = "Mark Completed";
+
+// Mistake PDF export
+"Export PDF" = "Export PDF";
+"Mistake Notebook" = "Mistake Notebook";
+"Cover" = "Cover";
+"Page %d / %d" = "Page %d / %d";
+"By Subject" = "By Subject";
+"By Subjects" = "By Subjects";
+"By Date Range" = "By Date Range";
+"By Mistakes" = "By Mistakes";
+"Table of Contents" = "Table of Contents";
+"Summary" = "Summary";
+"Selection Mode" = "Selection Mode";
+"Include Images" = "Include Images";
+"Images embedded in each section will be included. Larger PDF size." = "Images embedded in each section will be included. Larger PDF size.";
+"Only text content will be exported. Smaller PDF size." = "Only text content will be exported. Smaller PDF size.";
+"%d mistakes will be exported" = "%d mistakes will be exported";
+"Generating PDF" = "Generating PDF";
+"Generating PDF..." = "Generating PDF...";
+"PDF Generated" = "PDF Generated";
+"Generation Failed" = "Generation Failed";
+"PDF generation returned no data." = "PDF generation returned no data.";
+"No subjects available" = "No subjects available";
+"No mistakes available" = "No mistakes available";
+"Clear" = "Clear";
+"No mistakes match the current selection." = "No mistakes match the current selection.";
+"Export Failed" = "Export Failed";
+"Untitled" = "Untitled";
+"Options" = "Options";
+"Mode" = "Mode";
+"Subjects" = "Subjects";
+"Select All" = "Select All";
+"Generate PDF" = "Generate PDF";
 "Mark Pending" = "Mark Pending";
