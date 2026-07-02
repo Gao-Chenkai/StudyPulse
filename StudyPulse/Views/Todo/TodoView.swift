@@ -115,46 +115,59 @@ struct TodoView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                filterChips
-
-                Group {
-                    if allEntries.isEmpty && pastEntries.isEmpty {
+            Group {
+                if allEntries.isEmpty && pastEntries.isEmpty {
+                    VStack(spacing: 0) {
+                        filterChips
                         ContentUnavailableView {
                             Label("No Items".localized(), systemImage: "checklist")
                         } description: {
                             Text("Tap '+' to add a homework, reading material, or exam.".localized())
                         } actions: {
-                        Menu {
-                            Button {
-                                showingNewExam = true
+                            Menu {
+                                Button {
+                                    showingNewExam = true
+                                } label: {
+                                    Label("New Exam".localized(), systemImage: "calendar.badge.plus")
+                                }
+                                Button {
+                                    showingNewTask = .homework
+                                } label: {
+                                    Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
+                                }
+                                Button {
+                                    showingNewTask = .reading
+                                } label: {
+                                    Label("New Reading".localized(), systemImage: "book.fill")
+                                }
                             } label: {
-                                Label("New Exam".localized(), systemImage: "calendar.badge.plus")
+                                Label("Add First Item".localized(), systemImage: "plus.circle.fill")
                             }
-                            Button {
-                                showingNewTask = .homework
-                            } label: {
-                                Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
-                            }
-                            Button {
-                                showingNewTask = .reading
-                            } label: {
-                                Label("New Reading".localized(), systemImage: "book.fill")
-                            }
-                        } label: {
-                            Label("Add First Item".localized(), systemImage: "plus.circle.fill")
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
                     }
                     .background(Color(.systemGroupedBackground))
                 } else if viewMode == .calendar {
-                    calendarContent
+                    // 月历本身是 ZStack + .clipShape，没有顶层 ScrollView，
+                    // iOS 会因为找不到可滚动视图而完全跳过 .large 标题的渲染。
+                    // 用 ScrollView 套一层提供滚动内容，标题就能正常跟随显示/折叠。
+                    VStack(spacing: 0) {
+                        filterChips
+                        ScrollView {
+                            calendarContent
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
                 } else {
                     listContent
                 }
             }
-            }
             .navigationTitle("Todo".localized())
+            // 标准 NavigationView 标题行为：
+            // - 列表在顶时显示大标题
+            // - 列表上滑后 iOS 自动把大标题折叠为居中 inline 小字体
+            // 胶囊现在是 List 的一行（filterChipsListRow），不会干扰 iOS 对主滚动内容的检测。
+            .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemGroupedBackground))
             .frame(maxWidth: .infinity)
             .toolbar {
@@ -265,6 +278,11 @@ struct TodoView: View {
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
         let selected = typeFilter == filter
+        // iOS 26 风格筛选胶囊：
+        // - 选中：accent 同色边框 + 较低不透明度的同色填充，文字保持 primary
+        // - 未选中：regularMaterial 半透明 + 几乎不可见的轻阴影
+        // - 文字颜色在两种状态下都不变（不随选中切换颜色）
+        let accent = chipAccent(for: filter)
         Button {
             withAnimation(.easeInOut(duration: 0.15)) {
                 typeFilter = filter
@@ -275,29 +293,37 @@ struct TodoView: View {
                     .font(.caption2)
                 Text(filter.label)
                     .font(.caption)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
             .background(
                 Capsule()
-                    .fill(selected ? chipColor(for: filter).opacity(0.18) : Color(.tertiarySystemBackground))
+                    .fill(selected ? AnyShapeStyle(accent.opacity(0.18)) : AnyShapeStyle(.regularMaterial))
             )
             .overlay(
                 Capsule()
-                    .stroke(selected ? chipColor(for: filter) : Color.clear, lineWidth: 1)
+                    .stroke(selected ? accent : Color.clear, lineWidth: selected ? 1.5 : 0)
             )
-            .foregroundColor(selected ? chipColor(for: filter) : Color(.secondaryLabel))
+            .shadow(
+                color: Color.black.opacity(selected ? 0.18 : 0.08),
+                radius: selected ? 8 : 4,
+                x: 0,
+                y: selected ? 2 : 1
+            )
+            .foregroundColor(Color.primary)
         }
         .buttonStyle(.plain)
     }
 
-    private func chipColor(for filter: TodoTypeFilter) -> Color {
+    /// 每个筛选项对应的活泼 accent 色
+    /// 全部 → 蓝；考试 → 紫；作业 → 绿；阅读 → 青
+    private func chipAccent(for filter: TodoTypeFilter) -> Color {
         switch filter {
-        case .all: return Color(.systemBlue)
-        case .exam: return Color(.systemPurple)
-        case .homework: return Color(.systemGreen)
-        case .reading: return Color(.systemIndigo)
+        case .all:       return Color(red: 0.10, green: 0.50, blue: 1.00)   // 亮蓝
+        case .exam:      return Color(red: 0.65, green: 0.30, blue: 0.95)   // 亮紫
+        case .homework:  return Color(red: 0.15, green: 0.78, blue: 0.40)   // 亮绿
+        case .reading:   return Color(red: 0.10, green: 0.70, blue: 0.95)   // 亮青
         }
     }
 
@@ -306,6 +332,9 @@ struct TodoView: View {
     @ViewBuilder
     private var listContent: some View {
         List {
+            // 胶囊作为列表的第一行，跟随列表一起滚动消失/出现
+            filterChipsListRow
+
             if upcomingEntries.isEmpty {
                 Section {
                     HStack {
@@ -366,6 +395,25 @@ struct TodoView: View {
         }
         .background(Color(.systemGroupedBackground))
         .scrollContentBackground(.hidden)
+    }
+
+    /// 列表模式下作为「第一行」呈现的筛选胶囊行
+    /// - 跟随列表一起滚，而不是固定在顶部
+    /// - 横向 ScrollView 由 List 自动让出竖向手势，仅保留横向滚动
+    @ViewBuilder
+    private var filterChipsListRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(TodoTypeFilter.allCases, id: \.self) { filter in
+                    chip(for: filter)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color(.systemGroupedBackground))
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - 日历内容

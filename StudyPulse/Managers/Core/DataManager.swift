@@ -856,6 +856,152 @@ final class DataManager: ObservableObject {
         )
     }
 
+    // MARK: - 一键清空数据（设置页「清除所有数据」使用）
+
+    /// 用户在设置页选择要清空的数据类别
+    enum BulkClearCategory: String, CaseIterable, Identifiable {
+        case grades
+        case mistakes
+        case todos
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .grades: return "Grades".localized()
+            case .mistakes: return "Mistakes".localized()
+            case .todos: return "Todos".localized()
+            }
+        }
+        var systemImage: String {
+            switch self {
+            case .grades: return "number.circle"
+            case .mistakes: return "pencil.circle"
+            case .todos: return "checklist"
+            }
+        }
+    }
+
+    /// 一次性清空选中的所有类别数据（不可恢复）。
+    /// Clear all selected categories of data at once. Cannot be undone.
+    /// - Parameter categories: 选中的数据类别,空集合表示什么都不做
+    /// - Returns: 实际被清空的类别以及各类的条数,用于 UI 反馈
+    @discardableResult
+    func bulkClearData(categories: Set<BulkClearCategory>) -> [(category: BulkClearCategory, count: Int)] {
+        var result: [(BulkClearCategory, Int)] = []
+        for cat in categories {
+            let count: Int
+            switch cat {
+            case .grades:
+                count = clearAllGrades()
+            case .mistakes:
+                count = clearAllMistakes()
+            case .todos:
+                count = clearAllTodos()
+            }
+            result.append((cat, count))
+        }
+        return result
+    }
+
+    /// 清空所有成绩（包括关联的图片文件）
+    @discardableResult
+    private func clearAllGrades() -> Int {
+        guard let context = modelContext else { return 0 }
+        let count = grades.count
+        // 先把图片文件删了
+        let imagesDir = getDocumentsDirectory().appendingPathComponent("images")
+        for g in grades {
+            if let name = g.imageFileName {
+                let fileURL = imagesDir.appendingPathComponent(name)
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+        }
+        // SwiftData: 删全部
+        do {
+            let entities = try context.fetch(FetchDescriptor<GradeRecord>())
+            for entity in entities {
+                context.delete(entity)
+            }
+            try context.save()
+        } catch {
+            Log.data.error("一键清空 grades 失败 / Bulk clear grades failed: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+        grades.removeAll()
+        Log.data.warning("一键清空 grades / Bulk cleared grades: count=\(count, privacy: .public)")
+        Log.record(.warning, category: "Data", message: "一键清空 grades / Bulk cleared grades: count=\(count)")
+        syncGradesToWidget()
+        return count
+    }
+
+    /// 清空所有错题（包括 SRS 复习通知）
+    @discardableResult
+    private func clearAllMistakes() -> Int {
+        guard let context = modelContext else { return 0 }
+        let count = mistakeSets.count
+        // 先取消所有 SRS 复习通知
+        for m in mistakeSets {
+            SRSReviewNotifications.shared.cancel(for: m.id)
+        }
+        // SwiftData: 删全部
+        do {
+            let entities = try context.fetch(FetchDescriptor<MistakeNoteRecord>())
+            for entity in entities {
+                context.delete(entity)
+            }
+            try context.save()
+        } catch {
+            Log.data.error("一键清空 mistakes 失败 / Bulk clear mistakes failed: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+        mistakeSets.removeAll()
+        Log.data.warning("一键清空 mistakes / Bulk cleared mistakes: count=\(count, privacy: .public)")
+        Log.record(.warning, category: "Data", message: "一键清空 mistakes / Bulk cleared mistakes: count=\(count)")
+        return count
+    }
+
+    /// 清空所有待办（作业 / 阅读材料），并把系统 Reminders 上的对应项也删除
+    @discardableResult
+    private func clearAllTodos() -> Int {
+        guard let context = modelContext else { return 0 }
+        let count = taskItems.count
+        // 收集需要从系统 Reminders 移除的 id
+        let reminderIds: [(eventId: String, calendarId: String?)] = taskItems
+            .compactMap { task in
+                guard let eventId = task.reminderEventId else { return nil }
+                return (eventId, task.reminderCalendarId)
+            }
+        // SwiftData: 删全部
+        do {
+            let entities = try context.fetch(FetchDescriptor<TaskItemRecord>())
+            for entity in entities {
+                context.delete(entity)
+            }
+            try context.save()
+        } catch {
+            Log.data.error("一键清空 todos 失败 / Bulk clear todos failed: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+        taskItems.removeAll()
+        // 系统 Reminders 清理放到后台
+        if !reminderIds.isEmpty {
+            Task {
+                var okCount = 0
+                for item in reminderIds {
+                    do {
+                        _ = try await CalendarManager.shared.removeTaskFromReminders(calendarItemId: item.eventId)
+                        okCount += 1
+                    } catch {
+                        Log.data.warning("清空 todos 时删除系统 Reminder 失败 / Failed to remove system Reminder during bulk clear: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+                Log.data.info("清空 todos 时清理 Reminders 完成 / Bulk clear todos reminders cleaned: ok=\(okCount, privacy: .public) total=\(reminderIds.count, privacy: .public)")
+            }
+        }
+        Log.data.warning("一键清空 todos / Bulk cleared todos: count=\(count, privacy: .public)")
+        Log.record(.warning, category: "Data", message: "一键清空 todos / Bulk cleared todos: count=\(count)")
+        return count
+    }
+
     // MARK: - Task Items (作业 / 阅读材料)
 
     /// 新增任务（作业 / 阅读材料）

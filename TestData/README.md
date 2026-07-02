@@ -40,6 +40,7 @@
 | ErrorReason | 错误原因 |
 | WrongSolution | 错误解答 |
 | CorrectSolution | 正确解答 |
+| SRSEnabled | 是否启用 SM-2 间隔复习（`true` / `false`），开启后导入会自动加入复习队列 |
 
 ### 考试数据 (`exams_sample.csv`)
 | 字段 | 说明 |

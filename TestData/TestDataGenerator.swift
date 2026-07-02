@@ -169,12 +169,14 @@ struct TestDataGenerator {
             let errorReason = errorReasons.randomElement()!
             let wrongSolution = wrongSolutions.randomElement()!
             let correctSolution = correctSolutions.randomElement()!
+            // SM-2 SRS 开关：测试数据全部开启
+            let srsEnabled = true
             
-            let mistakeLine = "\(UUID().uuidString),\(escapeCSV(title)),\(subjectKey),\(escapeCSV(originalQuestion)),\(escapeCSV(source)),\(formatDate(date)),\(escapeCSV(errorReason)),\(escapeCSV(wrongSolution)),\(escapeCSV(correctSolution))\n"
+            let mistakeLine = "\(UUID().uuidString),\(escapeCSV(title)),\(subjectKey),\(escapeCSV(originalQuestion)),\(escapeCSV(source)),\(formatDate(date)),\(escapeCSV(errorReason)),\(escapeCSV(wrongSolution)),\(escapeCSV(correctSolution)),\(srsEnabled)\n"
             mistakes.append(mistakeLine)
         }
         
-        return "ID,Title,Subject,OriginalQuestion,Source,Date,ErrorReason,WrongSolution,CorrectSolution\n" + mistakes.joined()
+        return "ID,Title,Subject,OriginalQuestion,Source,Date,ErrorReason,WrongSolution,CorrectSolution,SRSEnabled\n" + mistakes.joined()
     }
     
     // MARK: - 

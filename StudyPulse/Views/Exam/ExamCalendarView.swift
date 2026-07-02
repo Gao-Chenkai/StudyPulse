@@ -143,19 +143,22 @@ struct ExamCalendarView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-
-            monthGridContainer
-
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                monthGridContainer
                 glassHeaderLayer
-                Spacer(minLength: 100)
-                glassBottomPanel
             }
+            .frame(height: calendarSectionHeight)
+
+            glassBottomPanel
         }
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// 月历区域固定高度：顶部 header + 6 行日期格子
+    private var calendarSectionHeight: CGFloat {
+        headerTotalFixedHeight + 6 * 52 + 8
     }
 
     // MARK: - 月份网格背景层
@@ -178,7 +181,6 @@ struct ExamCalendarView: View {
             .simultaneousGesture(monthSwipeGesture)
         }
         .padding(.top, headerTotalFixedHeight)
-        .padding(.bottom, 190)
     }
 
     private var monthSwipeGesture: some Gesture {
@@ -353,8 +355,9 @@ struct ExamCalendarView: View {
     // MARK: - 底部玻璃详情面板
 
     private var glassBottomPanel: some View {
-        HStack(spacing: 0) {
-            Color.clear.frame(width: glassEdgeInset)
+        VStack(spacing: 0) {
+            Color.clear.frame(height: 6)
+
             selectedDayPanel
                 .padding(.top, 12)
                 .padding(.bottom, 16)
@@ -365,10 +368,9 @@ struct ExamCalendarView: View {
                         bottomGlassShape.fill(.regularMaterial)
                     }
                 }
-            Color.clear.frame(width: glassEdgeInset)
         }
-        .alignmentGuide(.bottom) { $0[.bottom] }
-        .ignoresSafeArea(edges: .bottom)
+        .padding(.horizontal, glassEdgeInset)
+        .padding(.bottom, glassEdgeInset)
     }
 
     private var bottomGlassShape: some Shape {
@@ -396,6 +398,7 @@ struct ExamCalendarView: View {
             }
 
             if itemsOnSelectedDate.isEmpty {
+                Spacer(minLength: 0)
                 HStack {
                     Spacer()
                     VStack(spacing: 4) {
@@ -406,9 +409,9 @@ struct ExamCalendarView: View {
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                     }
-                    .padding(.vertical, 18)
                     Spacer()
                 }
+                Spacer(minLength: 0)
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 8) {
@@ -427,9 +430,10 @@ struct ExamCalendarView: View {
                         }
                     }
                 }
-                .frame(maxHeight: 124)
+                .frame(maxHeight: .infinity)
             }
         }
+        .frame(maxHeight: .infinity)
         .padding(.horizontal, 16)
     }
 

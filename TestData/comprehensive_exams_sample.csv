@@ -1,11 +1,11 @@
 ID,名称,科目,日期,重要性,掌握程度,类型
-f04253f0-ad2e-4e8f-aa04-3b4ef4a5d190,Mid-Year Exam,Geography;Politics;Physics,2027-04-11 13:30:07,5,74,综合
-e633d1f3-07e5-4079-8156-eaafcaacb359,Mock Exam,Music;Chinese;Mathematics;Biology;Politics,2027-03-09 13:30:07,4,24,综合
-6a3b2a35-e177-49c7-82f9-652182c5f7f0,Final Exam,History;Politics;Chinese;Physics;English,2027-02-27 13:30:07,3,74,综合
-a6b3b201-35ec-4895-862c-a12f74fd086b,期末考试,English;Biology;Geography;History;Physics,2027-06-06 13:30:07,5,27,综合
-9d7d66b0-dc44-42d0-8cd9-a3fa16dfb6c7,高三模考,Chinese;Mathematics;Geography;Chemistry;Biology;Politics,2026-10-05 13:30:07,3,42,综合
-5e58ca8a-1888-4a41-94fa-c4effcfb418a,中考模拟,Mathematics;Music;Biology;Chemistry,2027-04-25 13:30:07,5,61,综合
-0df38de8-a063-46fd-a06e-01c74c5dca95,中考模拟,Chemistry;Geography;English,2026-10-30 13:30:07,5,40,综合
-84980243-3ceb-4715-9288-94aa010c825a,Mid-Year Exam,Mathematics;Politics;Music,2027-05-31 13:30:07,4,29,综合
-593f83be-f89c-49d1-acf3-fab895f52f0e,期中考试,Music;English;Chemistry;History;Geography;Politics,2026-09-22 13:30:07,5,28,综合
-a2c83759-c6e6-4009-b9cb-fe26f8100bb1,期中考试,Geography;Biology;Politics;Chemistry;Music;Physics,2027-02-19 13:30:07,3,69,综合
+424ead46-9608-4f5c-9529-410f8ff2e860,期末考试,History;Biology;Geography;Politics;Chinese;English,2027-03-17 16:09:30,5,42,综合
+1696a03e-9dcc-4a6e-ad9e-6c43badc621a,Mid-Year Exam,History;Chinese;English;Biology,2026-12-13 16:09:30,5,79,综合
+0a9237c7-408d-4a26-a5b3-d2a6e27ff09b,期中考试,History;Physics;Politics;Chemistry,2026-11-16 16:09:30,5,77,综合
+4fa08195-d8d1-44b1-9a68-87af86c12482,Final Exam,Music;Politics;Chinese;Chemistry;Geography;Physics,2027-04-21 16:09:30,5,42,综合
+0ee56a28-12be-41c4-915b-6892a4b599fa,期末考试,Chemistry;Geography;Physics,2026-08-12 16:09:30,5,22,综合
+de21b635-34b2-4232-bc71-60f36d70199c,模拟考试,Politics;Geography;Music,2027-05-09 16:09:30,4,24,综合
+6a05e577-1732-4df3-be75-7e6ba3697273,中考模拟,Biology;English;History;Chinese;Music;Chemistry,2026-07-23 16:09:30,3,74,综合
+1077c6de-b4e8-4844-8afb-0a8dcfed159b,Mock Exam,English;Music;Politics;Biology;History;Chemistry,2027-02-21 16:09:30,3,77,综合
+8cd90c97-31f6-4720-be30-5c546eacb720,Mock Exam,Physics;Biology;Chinese;Geography;Chemistry,2027-03-28 16:09:30,4,71,综合
+c15e4f33-692e-46d5-80a8-5551ccea454a,高三模考,Physics;English;Mathematics;History;Biology;Politics,2026-11-08 16:09:30,4,49,综合

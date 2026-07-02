@@ -29,7 +29,7 @@ enum DataExportManager {
     /// 错题 CSV 表头
     static let mistakesHeader = [
         "ID", "Title", "Subject", "OriginalQuestion", "Source",
-        "Date", "ErrorReason", "WrongSolution", "CorrectSolution"
+        "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled"
     ]
 
     /// 考试 CSV 表头
@@ -87,7 +87,8 @@ enum DataExportManager {
                 formatDate(mistake.date),
                 mistake.errorReason,
                 mistake.wrongSolution,
-                mistake.correctSolution
+                mistake.correctSolution,
+                mistake.isInReviewQueue ? "true" : "false"
             ]
             csv += joinRow(row)
         }
@@ -268,7 +269,8 @@ enum DataExportManager {
     }
 
     private static func parseMistakeRow(_ fields: [String]) -> MistakeNote? {
-        guard fields.count >= mistakesHeader.count else { return nil }
+        // 兼容 9 列旧格式（无 SRSEnabled），也支持 10 列新格式
+        guard fields.count >= 9 else { return nil }
 
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
         let subject = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -278,6 +280,13 @@ enum DataExportManager {
         let errorReason = fields[6].trimmingCharacters(in: .whitespacesAndNewlines)
         let wrongSolution = fields[7].trimmingCharacters(in: .whitespacesAndNewlines)
         let correctSolution = fields[8].trimmingCharacters(in: .whitespacesAndNewlines)
+        // SRSEnabled：true / 1 / yes / 是 视作开启 SM-2 间隔复习
+        // 缺列或空值时按 false 处理
+        let srsEnabledRaw = fields.count > 9
+            ? fields[9].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            : ""
+        let srsEnabled = srsEnabledRaw == "true" || srsEnabledRaw == "1" || srsEnabledRaw == "yes" || srsEnabledRaw == "是"
+        let reviewState: ReviewState? = srsEnabled ? ReviewState.initial(now: date) : nil
 
         return MistakeNote(
             title: title,
@@ -287,7 +296,8 @@ enum DataExportManager {
             date: date,
             errorReason: errorReason,
             wrongSolution: wrongSolution,
-            correctSolution: correctSolution
+            correctSolution: correctSolution,
+            reviewState: reviewState
         )
     }
 

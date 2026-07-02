@@ -29,7 +29,7 @@ GRADES_OLD_TO_NEW = {
 
 MISTAKES_NEW_HEADER = [
     "ID", "Title", "Subject", "OriginalQuestion", "Source",
-    "Date", "ErrorReason", "WrongSolution", "CorrectSolution",
+    "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
 ]
 MISTAKES_OLD_TO_NEW = {
     "ID": "ID", "标题": "Title", "科目": "Subject",

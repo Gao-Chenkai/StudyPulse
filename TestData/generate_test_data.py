@@ -292,7 +292,9 @@ def generate_mistakes(count=100):
         wrong_sol = random.choice(wrong_solutions)
         correct_sol = random.choice(correct_solutions)
         date = random_date_past(days_back=365)
-        
+        # SM-2 SRS 开关：测试数据全部开启
+        srs_enabled = True
+
         row = [
             str(uuid.uuid4()),
             clean(title),
@@ -302,10 +304,11 @@ def generate_mistakes(count=100):
             format_date(date),
             clean(error_reason),
             clean(wrong_sol),
-            clean(correct_sol)
+            clean(correct_sol),
+            "true" if srs_enabled else "false",
         ]
         data.append(row)
-    
+
     # 补充剩余的错题，随机科目
     remaining = count - len(all_subjects)
     for _ in range(remaining):
@@ -318,7 +321,9 @@ def generate_mistakes(count=100):
         wrong_sol = random.choice(wrong_solutions)
         correct_sol = random.choice(correct_solutions)
         date = random_date_past(days_back=365)
-        
+        # SM-2 SRS 开关：测试数据全部开启
+        srs_enabled = True
+
         row = [
             str(uuid.uuid4()),
             clean(title),
@@ -328,10 +333,11 @@ def generate_mistakes(count=100):
             format_date(date),
             clean(error_reason),
             clean(wrong_sol),
-            clean(correct_sol)
+            clean(correct_sol),
+            "true" if srs_enabled else "false",
         ]
         data.append(row)
-    
+
     return data
 
 def generate_exams(single_count=50, comp_count=10):
@@ -568,8 +574,8 @@ def main():
     with open("mistakes_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "ID", "标题", "科目", "原始问题", "来源", 
-            "日期", "错误原因", "错误解法", "正确解法"
+            "ID", "标题", "科目", "原始问题", "来源",
+            "日期", "错误原因", "错误解法", "正确解法", "SRSEnabled"
         ])
         writer.writerows(mistakes_data)
     print("  ✅ 错题数据已保存: mistakes_sample.csv (100条)")

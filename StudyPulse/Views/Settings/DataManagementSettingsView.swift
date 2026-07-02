@@ -33,6 +33,17 @@ struct DataManagementSettingsView: View {
     // Test notification
     @State private var showingTestAlert = false
 
+    // Bulk delete state
+    @State private var showingBulkDeleteSheet = false
+    @State private var bulkDeleteSelected: Set<DataManager.BulkClearCategory> = []
+    @State private var bulkDeleteConfirmPhrase: String = ""
+    @State private var showingBulkDeleteResult = false
+    @State private var bulkDeleteResultMessage = ""
+    @State private var bulkDeleteSuccess = false
+
+    /// 用户必须完整输入的确认短语
+    private static let bulkDeleteRequiredPhrase = "我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果"
+
     enum ImportType {
         case grades, mistakes, exams, tasks
     }
@@ -103,6 +114,22 @@ struct DataManagementSettingsView: View {
                     } label: {
                         Label("Test Notifications".localized(), systemImage: "bell.badge")
                     }
+                }
+
+                // Danger Zone: 一键清空数据
+                Section {
+                    Button {
+                        bulkDeleteSelected = []
+                        bulkDeleteConfirmPhrase = ""
+                        showingBulkDeleteSheet = true
+                    } label: {
+                        Label("Delete All Data".localized(), systemImage: "trash.fill")
+                            .foregroundColor(.red)
+                    }
+                } header: {
+                    Text("Danger Zone".localized())
+                } footer: {
+                    Text("Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later.".localized())
                 }
          }
          .listStyle(.insetGrouped)
@@ -188,6 +215,52 @@ struct DataManagementSettingsView: View {
         } message: {
             Text("Check your notification center in 5 seconds!".localized())
         }
+        .sheet(isPresented: $showingBulkDeleteSheet) {
+            BulkDeleteConfirmSheet(
+                selected: $bulkDeleteSelected,
+                confirmPhrase: $bulkDeleteConfirmPhrase,
+                requiredPhrase: Self.bulkDeleteRequiredPhrase,
+                onConfirm: performBulkDelete,
+                onCancel: { showingBulkDeleteSheet = false }
+            )
+        }
+        .alert(
+            bulkDeleteSuccess ? "Delete Complete".localized() : "Delete Failed".localized(),
+            isPresented: $showingBulkDeleteResult
+        ) {
+            Button("OK".localized()) { }
+        } message: {
+            Text(bulkDeleteResultMessage)
+        }
+    }
+
+    // MARK: - Bulk Delete
+
+    private func performBulkDelete() {
+        guard !bulkDeleteSelected.isEmpty else { return }
+        guard bulkDeleteConfirmPhrase == Self.bulkDeleteRequiredPhrase else { return }
+        // 再做一次二次校验，防止输入框 trim 后比对失误
+        let trimmed = bulkDeleteConfirmPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed == Self.bulkDeleteRequiredPhrase else { return }
+
+        let results = dataManager.bulkClearData(categories: bulkDeleteSelected)
+        showingBulkDeleteSheet = false
+
+        if results.isEmpty {
+            bulkDeleteSuccess = false
+            bulkDeleteResultMessage = "No category was selected.".localized()
+        } else {
+            bulkDeleteSuccess = true
+            let parts = results.map { cat, count -> String in
+                let title = cat.title
+                return "\(title): \(count)"
+            }
+            bulkDeleteResultMessage = parts.joined(separator: "\n")
+        }
+        showingBulkDeleteResult = true
+        // 复位输入,避免下次打开残留
+        bulkDeleteConfirmPhrase = ""
+        bulkDeleteSelected = []
     }
 
     // MARK: - Data Export
@@ -388,13 +461,240 @@ struct DataManagementSettingsView: View {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         center.removeAllPendingNotificationRequests()
         center.add(request) { error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    Log.record(.error, category: "Notification", message: "测试通知发送失败 / Test notification send failed: \(error.localizedDescription)")
-                } else {
-                    Log.record(.info, category: "Notification", message: "测试通知发送成功 / Test notification sent: identifier=\(identifier)")
+                DispatchQueue.main.async {
+                    if let error = error {
+                        Log.record(.error, category: "Notification", message: "测试通知发送失败 / Test notification send failed: \(error.localizedDescription)")
+                    } else {
+                        Log.record(.info, category: "Notification", message: "测试通知发送成功 / Test notification sent: identifier=\(identifier)")
+                    }
                 }
             }
         }
+}
+
+// MARK: - 一键删除确认弹窗
+
+/// 一键删除所有数据的二次确认弹窗
+/// Secondary confirmation sheet for "Delete All Data" action.
+///
+/// 大面积红色警告 + 类别勾选 + 强制输入完整确认短语
+struct BulkDeleteConfirmSheet: View {
+    @EnvironmentObject var dataManager: DataManager
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selected: Set<DataManager.BulkClearCategory>
+    @Binding var confirmPhrase: String
+    let requiredPhrase: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    private var phraseMatches: Bool {
+        confirmPhrase.trimmingCharacters(in: .whitespacesAndNewlines) == requiredPhrase
+    }
+    private var canConfirm: Bool {
+        !selected.isEmpty && phraseMatches
+    }
+
+    private func count(for cat: DataManager.BulkClearCategory) -> Int {
+        switch cat {
+        case .grades: return dataManager.grades.count
+        case .mistakes: return dataManager.mistakeSets.count
+        case .todos: return dataManager.taskItems.count
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    warningHeader
+                    categoriesSection
+                    phraseSection
+                    confirmButton
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Delete All Data".localized())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel".localized()) {
+                        onCancel()
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 大面积红色警告
+    private var warningHeader: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.red.opacity(0.15))
+                    .frame(width: 92, height: 92)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 52, weight: .bold))
+                    .foregroundColor(.red)
+            }
+            Text("DANGER".localized())
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundColor(.red)
+                .tracking(2)
+            Text("This action CANNOT be undone. All selected data will be permanently erased from this device.".localized())
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Please export your data first if you may need it later.".localized())
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.red.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.red.opacity(0.55), lineWidth: 1.5)
+        )
+    }
+
+    // MARK: - 类别勾选
+    private var categoriesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Select data to delete".localized())
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            VStack(spacing: 0) {
+                ForEach(DataManager.BulkClearCategory.allCases) { cat in
+                    BulkDeleteCategoryRow(
+                        category: cat,
+                        count: count(for: cat),
+                        isSelected: selected.contains(cat)
+                    ) {
+                        if selected.contains(cat) {
+                            selected.remove(cat)
+                        } else {
+                            selected.insert(cat)
+                        }
+                    }
+                    if cat != DataManager.BulkClearCategory.allCases.last {
+                        Divider().padding(.leading, 52)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        }
+    }
+
+    // MARK: - 确认短语
+    private var phraseSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Type the following to confirm".localized())
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            Text(requiredPhrase)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.red)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.red.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                )
+            TextField(requiredPhrase, text: $confirmPhrase, axis: .vertical)
+                .font(.system(size: 14, design: .rounded))
+                .foregroundColor(.primary)
+                .lineLimit(2...4)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(phraseMatches ? Color.red : Color(.separator), lineWidth: phraseMatches ? 1.5 : 1)
+                )
+            if !confirmPhrase.isEmpty && !phraseMatches {
+                Text("Phrase does not match. Please type it exactly.".localized())
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+            }
+        }
+    }
+
+    // MARK: - 确认按钮
+    private var confirmButton: some View {
+        Button {
+            onConfirm()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "trash.fill")
+                Text("Permanently Delete".localized())
+                    .fontWeight(.bold)
+            }
+            .font(.system(size: 16))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundColor(.white)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(canConfirm ? Color.red : Color.gray.opacity(0.4))
+            )
+        }
+        .disabled(!canConfirm)
+    }
+}
+
+/// 一键删除弹窗中,每个类别勾选行
+private struct BulkDeleteCategoryRow: View {
+    let category: DataManager.BulkClearCategory
+    let count: Int
+    let isSelected: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: category.systemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.red)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(category.title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    Text("\(count) " + "item(s)".localized())
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundColor(isSelected ? .red : Color(.tertiaryLabel))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
