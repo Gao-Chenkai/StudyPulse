@@ -447,7 +447,6 @@ struct OverviewStatsCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -508,22 +507,9 @@ struct SubjectOverviewCard: View {
         }
         .padding(16)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                
-                LinearGradient(
-                    colors: [
-                        Color(.systemPurple).opacity(0.08),
-                        Color(.systemPurple).opacity(0.02)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -557,12 +543,23 @@ struct SubjectCardView: View {
     let subject: String
     let mistakes: [MistakeNote]
     @State private var animateIn = false
-    
+
+    /// 随机主题色：基于科目名哈希在调色板中取色，每次启动 App 会重新分配
+    private static let palette: [Color] = [
+        .red, .orange, .yellow, .green, .mint, .teal,
+        .blue, .indigo, .purple, .pink, .brown, .cyan
+    ]
+
+    private var iconColor: Color {
+        let hash = abs(subject.hashValue)
+        return Self.palette[hash % Self.palette.count]
+    }
+
     var recentCount: Int {
         let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return mistakes.filter { $0.date > oneWeekAgo }.count
     }
-    
+
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             // 图标
@@ -571,15 +568,15 @@ struct SubjectCardView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(.systemPurple),
-                                Color(.systemPurple).opacity(0.7)
+                                iconColor,
+                                iconColor.opacity(0.7)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 52, height: 52)
-                
+
                 Image(systemName: "folder.fill")
                     .font(.title2)
                     .foregroundColor(.white)
@@ -616,25 +613,9 @@ struct SubjectCardView: View {
         }
         .padding(16)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color(.systemPurple).opacity(0.25),
-                                Color(.systemPurple).opacity(0.08)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
@@ -711,29 +692,8 @@ struct MistakeCardView: View {
         }
         .padding(14)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color(.systemPurple).opacity(0.25),
-                                Color(.systemPurple).opacity(0.08)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-        )
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 6,
-            x: 0,
-            y: 3
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
@@ -1047,26 +1007,9 @@ struct SuggestedMistakeCard: View {
         .padding(14)
         .frame(width: cardWidth)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                
-                LinearGradient(
-                    colors: [
-                        Color(.systemPurple).opacity(0.08),
-                        Color(.systemPurple).opacity(0.02)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
-        )
-        .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(.systemPurple).opacity(0.25), lineWidth: 1)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
         .opacity(animateIn ? 1 : 0)
         .offset(x: animateIn ? 0 : -20)
         .onAppear {

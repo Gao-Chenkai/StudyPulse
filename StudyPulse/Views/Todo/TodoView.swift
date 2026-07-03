@@ -260,27 +260,24 @@ struct TodoView: View {
     /// 渲染在「待办」标题正下方的水平滚动筛选 chip 行
     @ViewBuilder
     private var filterChips: some View {
-        VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(TodoTypeFilter.allCases, id: \.self) { filter in
-                        chip(for: filter)
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(TodoTypeFilter.allCases, id: \.self) { filter in
+                    chip(for: filter)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
             }
-            .background(Color(.systemGroupedBackground))
-            Divider()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
+        .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
         let selected = typeFilter == filter
-        // iOS 26 风格筛选胶囊：
-        // - 选中：accent 同色边框 + 较低不透明度的同色填充，文字保持 primary
-        // - 未选中：regularMaterial 半透明 + 几乎不可见的轻阴影
+        // iOS 26 风格筛选胶囊（Liquid Glass）：
+        // - 选中：accent 同色边框 + 轻微 tint 叠加，文字保持 primary
+        // - 未选中：纯 Liquid Glass 半透明
         // - 文字颜色在两种状态下都不变（不随选中切换颜色）
         let accent = chipAccent(for: filter)
         Button {
@@ -288,28 +285,35 @@ struct TodoView: View {
                 typeFilter = filter
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: filter.systemImage)
-                    .font(.caption2)
+                    .font(.footnote)
                 Text(filter.label)
-                    .font(.caption)
+                    .font(.footnote)
                     .fontWeight(.semibold)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
+            .background {
+                // 液态玻璃背景：iOS 26+ 用系统真正的 `glassEffect`，
+                // 低版本用 `.regularMaterial` 兜底。
+                // 注意：`glassEffect(_:in:)` 必须作用在透明画布上（`Color.clear`），
+                // 并通过 `in:` 把形状传进去；直接给 `Capsule()` 调 `glassEffect` 会得到
+                // 几乎不透明的大色块。
+                if #available(iOS 26, *) {
+                    Color.clear.glassEffect(.regular, in: Capsule())
+                } else {
+                    Capsule().fill(.regularMaterial)
+                }
+            }
+            .overlay(
+                // 选中态：accent 半透明填充 + 描边，叠在玻璃层之上
                 Capsule()
-                    .fill(selected ? AnyShapeStyle(accent.opacity(0.18)) : AnyShapeStyle(.regularMaterial))
+                    .fill(selected ? accent.opacity(0.18) : Color.clear)
             )
             .overlay(
                 Capsule()
                     .stroke(selected ? accent : Color.clear, lineWidth: selected ? 1.5 : 0)
-            )
-            .shadow(
-                color: Color.black.opacity(selected ? 0.18 : 0.08),
-                radius: selected ? 8 : 4,
-                x: 0,
-                y: selected ? 2 : 1
             )
             .foregroundColor(Color.primary)
         }
@@ -320,10 +324,10 @@ struct TodoView: View {
     /// 全部 → 蓝；考试 → 紫；作业 → 绿；阅读 → 青
     private func chipAccent(for filter: TodoTypeFilter) -> Color {
         switch filter {
-        case .all:       return Color(red: 0.10, green: 0.50, blue: 1.00)   // 亮蓝
-        case .exam:      return Color(red: 0.65, green: 0.30, blue: 0.95)   // 亮紫
-        case .homework:  return Color(red: 0.15, green: 0.78, blue: 0.40)   // 亮绿
-        case .reading:   return Color(red: 0.10, green: 0.70, blue: 0.95)   // 亮青
+        case .all:       return Color(red: 0.00, green: 0.42, blue: 1.00)   // 高饱和亮蓝
+        case .exam:      return Color(red: 0.58, green: 0.18, blue: 1.00)   // 高饱和亮紫
+        case .homework:  return Color(red: 0.05, green: 0.72, blue: 0.28)   // 高饱和亮绿
+        case .reading:   return Color(red: 0.00, green: 0.62, blue: 0.92)   // 高饱和亮青
         }
     }
 
@@ -331,12 +335,13 @@ struct TodoView: View {
 
     @ViewBuilder
     private var listContent: some View {
-        List {
-            // 胶囊作为列表的第一行，跟随列表一起滚动消失/出现
-            filterChipsListRow
+        ScrollView {
+            VStack(spacing: 0) {
+                // 顶部筛选胶囊行，跟随内容滚动
+                filterChips
+                    .padding(.bottom, 16)
 
-            if upcomingEntries.isEmpty {
-                Section {
+                if upcomingEntries.isEmpty {
                     HStack {
                         Spacer()
                         VStack(spacing: 6) {
@@ -347,73 +352,58 @@ struct TodoView: View {
                                 .font(.subheadline)
                                 .foregroundColor(Color(.secondaryLabel))
                         }
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 40)
                         Spacer()
                     }
-                    .listRowBackground(Color(.secondarySystemGroupedBackground))
-                }
-            } else {
-                ForEach(groupedUpcoming, id: \.0) { sectionTitle, entries in
-                    Section(header: Text(sectionTitle)
-                        .foregroundColor(Color(.secondaryLabel))
-                        .font(.subheadline)
-                        .textCase(.none)
-                    ) {
-                        ForEach(entries) { entry in
-                            TodoRowView(
-                                entry: entry,
-                                onTap: { tapped(entry) },
-                                onToggleCompletion: { toggleCompletion(of: entry) }
-                            )
-                            .listRowBackground(Color(.secondarySystemGroupedBackground))
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                if entry.kind == .homework || entry.kind == .reading {
-                                    Button {
-                                        toggleCompletion(of: entry)
-                                    } label: {
-                                        if entry.isCompleted {
-                                            Label("Pending".localized(), systemImage: "circle")
-                                        } else {
-                                            Label("Done".localized(), systemImage: "checkmark")
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 20) {
+                        ForEach(groupedUpcoming, id: \.0) { sectionTitle, entries in
+                            sectionHeader(sectionTitle)
+                            LazyVStack(spacing: 12) {
+                                ForEach(entries) { entry in
+                                    TodoRowView(
+                                        entry: entry,
+                                        onTap: { tapped(entry) },
+                                        onToggleCompletion: { toggleCompletion(of: entry) }
+                                    )
+                                    .contextMenu {
+                                        if entry.kind == .homework || entry.kind == .reading {
+                                            Button {
+                                                toggleCompletion(of: entry)
+                                            } label: {
+                                                if entry.isCompleted {
+                                                    Label("Pending".localized(), systemImage: "circle")
+                                                } else {
+                                                    Label("Done".localized(), systemImage: "checkmark")
+                                                }
+                                            }
+                                        }
+                                        Button(role: .destructive) {
+                                            deleteEntry(entry)
+                                        } label: {
+                                            Label("Delete".localized(), systemImage: "trash")
                                         }
                                     }
-                                    .tint(.green)
                                 }
-                                Button(role: .destructive) {
-                                    deleteEntry(entry)
-                                } label: {
-                                    Label("Delete".localized(), systemImage: "trash")
-                                }
-                                .tint(.red)
                             }
+                            .padding(.horizontal, 16)
                         }
                     }
+                    .padding(.bottom, 24)
                 }
             }
         }
         .background(Color(.systemGroupedBackground))
-        .scrollContentBackground(.hidden)
     }
 
-    /// 列表模式下作为「第一行」呈现的筛选胶囊行
-    /// - 跟随列表一起滚，而不是固定在顶部
-    /// - 横向 ScrollView 由 List 自动让出竖向手势，仅保留横向滚动
+    /// 分组标题
     @ViewBuilder
-    private var filterChipsListRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(TodoTypeFilter.allCases, id: \.self) { filter in
-                    chip(for: filter)
-                }
-            }
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline)
+            .foregroundColor(Color(.secondaryLabel))
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color(.systemGroupedBackground))
-        .listRowSeparator(.hidden)
     }
 
     // MARK: - 日历内容

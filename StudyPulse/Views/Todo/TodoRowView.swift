@@ -117,29 +117,8 @@ struct TodoRowView: View {
         }
         .padding(14)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(.secondarySystemGroupedBackground))
-
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                typeColor.opacity(0.25),
-                                typeColor.opacity(0.08)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-        )
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 6,
-            x: 0,
-            y: 3
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
         .opacity(entry.isCompleted ? 0.55 : 1.0)
         .hoverHighlight()

@@ -547,11 +547,6 @@ struct AttentionSubjectCard: View {
         .frame(width: cardWidth)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(14)
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.systemOrange).opacity(0.3), lineWidth: 1.5)
-        )
         .opacity(animateIn ? 1 : 0)
         .offset(x: animateIn ? 0 : -20)
         .onAppear {

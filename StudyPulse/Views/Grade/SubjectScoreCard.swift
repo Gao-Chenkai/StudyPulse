@@ -49,7 +49,7 @@ struct SubjectScoreCard: View {
                 Image(systemName: subjectIcon(subject))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.blue, .cyan],
+                            colors: [subjectColor(subject), subjectColor(subject).opacity(0.6)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -58,7 +58,7 @@ struct SubjectScoreCard: View {
                 Text(displayTitle) // 使用自定义显示名
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(Color(.label))
+                    .foregroundColor(subjectColor(subject))
                 Spacer()
                 if let g = latestGrade {
                     HStack(spacing: 6) {
@@ -149,29 +149,8 @@ struct SubjectScoreCard: View {
         }
         .padding(16)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color(.systemBlue).opacity(0.3),
-                                Color(.systemBlue).opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-        )
-        .shadow(
-            color: Color.black.opacity(0.06),
-            radius: 10,
-            x: 0,
-            y: 5
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(.secondarySystemGroupedBackground))
         )
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
@@ -202,6 +181,29 @@ struct SubjectScoreCard: View {
         case "Music": return "music.note.list"
         case "PE & Health": return "figure.run"
         default: return "book.fill"
+        }
+    }
+
+    /// 每个科目对应一种主题色，用于区分卡片
+    private func subjectColor(_ subject: String) -> Color {
+        switch subject {
+        case "Chinese": return .red
+        case "Mathematics", "Mathematics A", "Mathematics B": return .blue
+        case "English": return .purple
+        case "Science": return .teal
+        case "Physics": return .orange
+        case "Chemistry": return .green
+        case "Biology": return .mint
+        case "History": return .brown
+        case "Geography": return .indigo
+        case "Politics": return .pink
+        case "History & Society": return .gray
+        case "Information Technology": return .cyan
+        case "General Technology": return .secondary
+        case "Art": return .pink
+        case "Music": return .purple
+        case "PE & Health": return .red
+        default: return .blue
         }
     }
 }
