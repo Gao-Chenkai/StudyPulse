@@ -1017,3 +1017,58 @@
 "Select All" = "모두 선택";
 "Generate PDF" = "PDF 생성";
 "Mark Pending" = "미완료로 표시";
+
+// Data Management - Delete Data
+"Delete All Data" = "모든 데이터 삭제";
+"Danger Zone" = "위험 구역";
+"Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later." = "성적, 오답 및 할 일을 완전히 삭제합니다. 이 작업은 취소할 수 없습니다. 나중에 필요할 수 있는 경우 먼저 데이터를 내보내십시오.";
+"Tasks" = "작업";
+"Todos" = "할 일";
+"Export Log" = "로그 내보내기";
+"Log Export Success" = "로그 내보내기 성공";
+"Application logs have been exported." = "애플리케이션 로그가 내보내기되었습니다.";
+"Delete Complete" = "삭제 완료";
+"Delete Failed" = "삭제 실패";
+"No category was selected." = "카테고리가 선택되지 않았습니다.";
+"DANGER" = "위험";
+"This action CANNOT be undone. All selected data will be permanently erased from this device." = "이 작업은 취소할 수 없습니다. 선택한 모든 데이터가 이 기기에서 완전히 삭제됩니다.";
+"Please export your data first if you may need it later." = "나중에 필요할 수 있는 경우 먼저 데이터를 내보내십시오.";
+"Select data to delete" = "삭제할 데이터 선택";
+"Type the following to confirm" = "확인하려면 다음을 입력하십시오";
+"我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果" = "모든 데이터를 삭제하는 결과를 이해했으며 모든 데이터를 잃을 책임에 동의합니다";
+"Phrase does not match. Please type it exactly." = "구문이 일치하지 않습니다. 정확히 입력하십시오.";
+"Permanently Delete" = "영구 삭제";
+"item(s)" = "개";
+
+// Report - HRV Section
+"%.1fh sleep" = "%.1f시간 수면";
+
+// Learning Report Settings
+"Learning Reports" = "학습 보고서";
+"Weekly · Monthly · Auto Reports" = "주간 · 월간 · 자동 보고서";
+"Weekly Report" = "주간 보고서";
+"Monthly Report" = "월간 보고서";
+"Automatic Reports" = "자동 보고서";
+"Weekly reports are generated every Monday at 9:00 AM." = "주간 보고서는 매주 월요일 오전 9:00에 자동 생성됩니다.";
+"Monthly reports are generated on the 1st of each month at 9:00 AM." = "월간 보고서는 매월 1일 오전 9:00에 자동 생성됩니다.";
+"Saving..." = "저장 중...";
+"Manual Generation" = "수동 생성";
+"Generate Weekly Report Now" = "지금 주간 보고서 생성";
+"Generate Monthly Report Now" = "지금 월간 보고서 생성";
+"Generate a report for the past period and share it." = "과거 기간에 대한 보고서를 생성하고 공유합니다.";
+"Report generation failed" = "보고서 생성 실패";
+"Failed to generate report image" = "보고서 이미지 생성 실패";
+
+// Report Options Sheet
+"Last 7 Days" = "지난 7 일";
+"Last 30 Days" = "지난 30 일";
+"Last 90 Days" = "지난 90 일";
+"All Time" = "전체 기간";
+"Custom" = "사용자 정의";
+"Time Range" = "기간";
+"Start" = "시작일";
+"End" = "종료일";
+"Output Format" = "출력 형식";
+"Image Quality" = "이미지 품질";
+"Report Options" = "보고서 옵션";
+"Generate Report" = "보고서 생성";

@@ -348,7 +348,7 @@ struct ReportContentView: View {
                     .foregroundColor(.secondary)
             }
             if let sleep = body.restorativeSleepHours {
-                Text(String(format: "%.1fh sleep", sleep))
+                Text(String(format: "%.1fh sleep".localized(), sleep))
                     .font(.caption.monospacedDigit())
                     .foregroundColor(.secondary)
             }

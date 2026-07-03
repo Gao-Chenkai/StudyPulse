@@ -10,7 +10,7 @@ final class PartialTableScanner: MarkupScanner {
 
   init() {}
 
-  func scan(document: Document) -> Paragraph? {
+  func scan(document: Markdown.Document) -> Paragraph? {
     var result: Markup = document
     while result.childCount > 0 {
       if let rightMostChild = result.child(at: result.childCount - 1) {

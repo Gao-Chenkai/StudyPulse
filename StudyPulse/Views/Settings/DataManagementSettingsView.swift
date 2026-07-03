@@ -42,7 +42,7 @@ struct DataManagementSettingsView: View {
     @State private var bulkDeleteSuccess = false
 
     /// 用户必须完整输入的确认短语
-    private static let bulkDeleteRequiredPhrase = "我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果"
+    private static let bulkDeleteRequiredPhrase = "我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果".localized()
 
     enum ImportType {
         case grades, mistakes, exams, tasks

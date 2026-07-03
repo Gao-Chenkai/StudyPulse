@@ -10,6 +10,7 @@ import SwiftUI
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case appearance
     case health
+    case reports
     case data
     case about
     case faq
@@ -21,6 +22,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: return "Appearance & Layout".localized()
         case .health: return "Health & Readiness".localized()
+        case .reports: return "Learning Reports".localized()
         case .data: return "Data Management".localized()
         case .about: return "About".localized()
         case .faq: return "FAQ".localized()
@@ -33,6 +35,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: return "Language · Theme · Home · Widget".localized()
         case .health: return "HRV · Recovery · Focus".localized()
+        case .reports: return "Weekly · Monthly · Auto Reports".localized()
         case .data: return "Import · Export · Backup".localized()
         case .about: return "Version · License".localized()
         case .faq: return "Q&A · Help".localized()
@@ -45,6 +48,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: return "Customize the look, language, home dashboard layout and widget data.".localized()
         case .health: return "Connect Apple Health to read your HRV and get personalized study readiness suggestions.".localized()
+        case .reports: return "Configure automatic weekly and monthly learning reports with charts and summaries.".localized()
         case .data: return "Import, export and manage your grades, mistakes and exams data.".localized()
         case .about: return "App information, version and license details.".localized()
         case .faq: return "Frequently asked questions about using StudyPulse.".localized()
@@ -56,6 +60,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: return "paintpalette.fill"
         case .health: return "heart.text.square.fill"
+        case .reports: return "chart.bar.xaxis"
         case .data: return "externaldrive.fill"
         case .about: return "info.circle.fill"
         case .faq: return "questionmark.circle.fill"
@@ -67,6 +72,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: return .blue
         case .health: return .pink
+        case .reports: return .indigo
         case .data: return .green
         case .about: return .orange
         case .faq: return .blue
@@ -79,6 +85,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appearance: AppearanceSettingsView()
         case .health: HealthSettingsView()
+        case .reports: WeeklyReportSettingsView()
         case .data: DataManagementSettingsView()
         case .about: AboutSettingsView()
         case .faq: QASettingsView()

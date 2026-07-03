@@ -1017,3 +1017,58 @@
 "Select All" = "すべて選択";
 "Generate PDF" = "PDF を生成";
 "Mark Pending" = "未完了に戻す";
+
+// Data Management - Delete Data
+"Delete All Data" = "すべてのデータを削除";
+"Danger Zone" = "危険ゾーン";
+"Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later." = "成績、間違い、およびToDoを完全に削除します。この操作は取り消せません。後で必要になる可能性がある場合は、先にデータをエクスポートしてください。";
+"Tasks" = "タスク";
+"Todos" = "ToDo";
+"Export Log" = "ログをエクスポート";
+"Log Export Success" = "ログのエクスポートに成功";
+"Application logs have been exported." = "アプリケーションログがエクスポートされました。";
+"Delete Complete" = "削除完了";
+"Delete Failed" = "削除失敗";
+"No category was selected." = "カテゴリが選択されていません。";
+"DANGER" = "危険";
+"This action CANNOT be undone. All selected data will be permanently erased from this device." = "この操作は取り消せません。選択したすべてのデータはこのデバイスから完全に消去されます。";
+"Please export your data first if you may need it later." = "後で必要になる可能性がある場合は、先にデータをエクスポートしてください。";
+"Select data to delete" = "削除するデータを選択";
+"Type the following to confirm" = "確認のために以下を入力してください";
+"我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果" = "すべてのデータを削除する結果を理解し、すべてのデータを失う責任を負うことに同意します";
+"Phrase does not match. Please type it exactly." = "フレーズが一致しません。正確に入力してください。";
+"Permanently Delete" = "完全に削除";
+"item(s)" = "件";
+
+// Report - HRV Section
+"%.1fh sleep" = "%.1f時間睡眠";
+
+// Learning Report Settings
+"Learning Reports" = "学習レポート";
+"Weekly · Monthly · Auto Reports" = "週報 · 月報 · 自動レポート";
+"Weekly Report" = "週報";
+"Monthly Report" = "月報";
+"Automatic Reports" = "自動レポート";
+"Weekly reports are generated every Monday at 9:00 AM." = "週報は毎週月曜日の午前 9:00 に自動生成されます。";
+"Monthly reports are generated on the 1st of each month at 9:00 AM." = "月報は毎月 1 日の午前 9:00 に自動生成されます。";
+"Saving..." = "保存中...";
+"Manual Generation" = "手動生成";
+"Generate Weekly Report Now" = "今すぐ週報を生成";
+"Generate Monthly Report Now" = "今すぐ月報を生成";
+"Generate a report for the past period and share it." = "過去の期間のレポートを生成して共有します。";
+"Report generation failed" = "レポート生成に失敗しました";
+"Failed to generate report image" = "レポート画像の生成に失敗しました";
+
+// Report Options Sheet
+"Last 7 Days" = "過去 7 日間";
+"Last 30 Days" = "過去 30 日間";
+"Last 90 Days" = "過去 90 日間";
+"All Time" = "全期間";
+"Custom" = "カスタム";
+"Time Range" = "期間";
+"Start" = "開始日";
+"End" = "終了日";
+"Output Format" = "出力形式";
+"Image Quality" = "画質";
+"Report Options" = "レポートオプション";
+"Generate Report" = "レポートを生成";

@@ -1017,3 +1017,58 @@
 "Select All" = "全选";
 "Generate PDF" = "生成 PDF";
 "Mark Pending" = "标记未完成";
+
+// Data Management - Delete Data
+"Delete All Data" = "删除所有数据";
+"Danger Zone" = "危险区域";
+"Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later." = "永久删除成绩、错题和待办事项。此操作无法撤销。如需保留数据，请先导出。";
+"Tasks" = "待办";
+"Todos" = "待办";
+"Export Log" = "导出日志";
+"Log Export Success" = "日志导出成功";
+"Application logs have been exported." = "应用日志已导出。";
+"Delete Complete" = "删除完成";
+"Delete Failed" = "删除失败";
+"No category was selected." = "未选择任何类别。";
+"DANGER" = "危险";
+"This action CANNOT be undone. All selected data will be permanently erased from this device." = "此操作无法撤销。所有选中的数据将从此设备永久删除。";
+"Please export your data first if you may need it later." = "如需保留数据，请先导出。";
+"Select data to delete" = "选择要删除的数据";
+"Type the following to confirm" = "请输入以下内容以确认";
+"我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果" = "我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果";
+"Phrase does not match. Please type it exactly." = "输入不匹配，请完全一致地输入。";
+"Permanently Delete" = "永久删除";
+"item(s)" = "条";
+
+// Report - HRV Section
+"%.1fh sleep" = "%.1f 小时睡眠";
+
+// Learning Report Settings
+"Learning Reports" = "学习报告";
+"Weekly · Monthly · Auto Reports" = "周报 · 月报 · 自动报告";
+"Weekly Report" = "周报";
+"Monthly Report" = "月报";
+"Automatic Reports" = "自动报告";
+"Weekly reports are generated every Monday at 9:00 AM." = "周报在每周一上午 9:00 自动生成。";
+"Monthly reports are generated on the 1st of each month at 9:00 AM." = "月报在每月 1 日上午 9:00 自动生成。";
+"Saving..." = "保存中...";
+"Manual Generation" = "手动生成";
+"Generate Weekly Report Now" = "立即生成周报";
+"Generate Monthly Report Now" = "立即生成月报";
+"Generate a report for the past period and share it." = "生成过去一段时间的报告并分享。";
+"Report generation failed" = "报告生成失败";
+"Failed to generate report image" = "生成报告图片失败";
+
+// Report Options Sheet
+"Last 7 Days" = "最近 7 天";
+"Last 30 Days" = "最近 30 天";
+"Last 90 Days" = "最近 90 天";
+"All Time" = "全部时间";
+"Custom" = "自定义";
+"Time Range" = "时间范围";
+"Start" = "开始日期";
+"End" = "结束日期";
+"Output Format" = "输出格式";
+"Image Quality" = "图片质量";
+"Report Options" = "报告选项";
+"Generate Report" = "生成报告";

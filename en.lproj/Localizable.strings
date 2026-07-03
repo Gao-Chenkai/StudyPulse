@@ -1011,3 +1011,58 @@
 "Select All" = "Select All";
 "Generate PDF" = "Generate PDF";
 "Mark Pending" = "Mark Pending";
+
+// Data Management - Delete Data
+"Delete All Data" = "Delete All Data";
+"Danger Zone" = "Danger Zone";
+"Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later." = "Permanently delete grades, mistakes and todos. This action cannot be undone. Please export your data first if you may need it later.";
+"Tasks" = "Tasks";
+"Todos" = "Todos";
+"Export Log" = "Export Log";
+"Log Export Success" = "Log Export Success";
+"Application logs have been exported." = "Application logs have been exported.";
+"Delete Complete" = "Delete Complete";
+"Delete Failed" = "Delete Failed";
+"No category was selected." = "No category was selected.";
+"DANGER" = "DANGER";
+"This action CANNOT be undone. All selected data will be permanently erased from this device." = "This action CANNOT be undone. All selected data will be permanently erased from this device.";
+"Please export your data first if you may need it later." = "Please export your data first if you may need it later.";
+"Select data to delete" = "Select data to delete";
+"Type the following to confirm" = "Type the following to confirm";
+"我已知晓且了解删除所有数据的后果，我愿意承担丢失所有数据的后果" = "I understand the consequences of deleting all data and I am willing to take responsibility for losing all data";
+"Phrase does not match. Please type it exactly." = "Phrase does not match. Please type it exactly.";
+"Permanently Delete" = "Permanently Delete";
+"item(s)" = "item(s)";
+
+// Report - HRV Section
+"%.1fh sleep" = "%.1fh sleep";
+
+// Learning Report Settings
+"Learning Reports" = "Learning Reports";
+"Weekly · Monthly · Auto Reports" = "Weekly · Monthly · Auto Reports";
+"Weekly Report" = "Weekly Report";
+"Monthly Report" = "Monthly Report";
+"Automatic Reports" = "Automatic Reports";
+"Weekly reports are generated every Monday at 9:00 AM." = "Weekly reports are generated every Monday at 9:00 AM.";
+"Monthly reports are generated on the 1st of each month at 9:00 AM." = "Monthly reports are generated on the 1st of each month at 9:00 AM.";
+"Saving..." = "Saving...";
+"Manual Generation" = "Manual Generation";
+"Generate Weekly Report Now" = "Generate Weekly Report Now";
+"Generate Monthly Report Now" = "Generate Monthly Report Now";
+"Generate a report for the past period and share it." = "Generate a report for the past period and share it.";
+"Report generation failed" = "Report generation failed";
+"Failed to generate report image" = "Failed to generate report image";
+
+// Report Options Sheet
+"Last 7 Days" = "Last 7 Days";
+"Last 30 Days" = "Last 30 Days";
+"Last 90 Days" = "Last 90 Days";
+"All Time" = "All Time";
+"Custom" = "Custom";
+"Time Range" = "Time Range";
+"Start" = "Start";
+"End" = "End";
+"Output Format" = "Output Format";
+"Image Quality" = "Image Quality";
+"Report Options" = "Report Options";
+"Generate Report" = "Generate Report";

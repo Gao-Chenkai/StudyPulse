@@ -25,7 +25,7 @@ public final class MarkdownParserImpl: MarkdownParser {
     let targetString = latexPreprocessor.process(input: text, matchingRules: option.latexMatchingRules)
 
     var result: MarkdownParseResult = MarkdownParseResult(
-      document: Document(parsing: targetString),
+      document: Markdown.Document(parsing: targetString),
       speculativeRewritten: false
     )
 

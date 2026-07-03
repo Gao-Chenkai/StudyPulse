@@ -15,7 +15,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
     /// Whether the session completed naturally (true) or was cancelled (false).
     let completed: Bool
 
-    enum SessionIntensity: String, Codable, Equatable, Sendable {
+    enum SessionIntensity: String, Codable, Equatable, Sendable, CaseIterable {
         case peak
         case deepFocus
         case steady

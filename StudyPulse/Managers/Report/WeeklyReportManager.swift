@@ -1,0 +1,366 @@
+//
+//  WeeklyReportManager.swift
+//  StudyPulse
+//
+//  Generates weekly/monthly learning reports with charts and text summary.
+//  Supports scheduling via local notifications.
+//
+
+import Foundation
+import SwiftUI
+import UIKit
+import UserNotifications
+import os
+
+/// Manages generation and scheduling of periodic learning reports.
+@MainActor
+enum WeeklyReportManager {
+
+    // MARK: - Report Period
+
+    enum ReportPeriod: String, CaseIterable, Identifiable, Sendable {
+        case weekly
+        case monthly
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .weekly: return "Weekly Report".localized()
+            case .monthly: return "Monthly Report".localized()
+            }
+        }
+
+        var days: Int {
+            switch self {
+            case .weekly: return 7
+            case .monthly: return 30
+            }
+        }
+    }
+
+    // MARK: - Report Data
+
+    /// Aggregated data for a report period.
+    struct ReportData: Sendable {
+        let period: ReportPeriod
+        let startDate: Date
+        let endDate: Date
+        let totalStudyMinutes: Int
+        let sessionCount: Int
+        let averageSessionMinutes: Double
+        let subjectDistribution: [(subject: String, mistakeCount: Int, percentage: Double)]
+        let intensityDistribution: [(intensity: StudySession.SessionIntensity, count: Int)]
+        let gradeCount: Int
+        let averageScoreRate: Double
+        let mistakeCount: Int
+        let examCount: Int
+        let topSubject: String?
+        let weakestSubject: String?
+        let dailyStudyMinutes: [(date: Date, minutes: Int)]
+    }
+
+    // MARK: - Data Aggregation
+
+    /// Aggregate study data for the given period.
+    static func aggregateData(
+        period: ReportPeriod,
+        sessions: [StudySession],
+        grades: [Grade],
+        mistakes: [MistakeNote],
+        exams: [Exam],
+        subjects: [Subject],
+        now: Date = Date()
+    ) -> ReportData {
+        let calendar = Calendar.current
+        let endDate = now
+        let startDate = calendar.date(byAdding: .day, value: -period.days, to: endDate) ?? endDate
+
+        // Filter sessions within period
+        let periodSessions = sessions.filter {
+            $0.completed && $0.startDate >= startDate && $0.startDate <= endDate
+        }
+
+        // Total study time
+        let totalSeconds = periodSessions.reduce(0) { $0 + $1.durationSeconds }
+        let totalMinutes = totalSeconds / 60
+
+        // Average session length
+        let avgSessionMinutes = periodSessions.isEmpty
+            ? 0.0
+            : Double(totalMinutes) / Double(periodSessions.count)
+
+        // Subject distribution (approximate from session intensity as proxy)
+        // Since StudySession doesn't have subject, we use grades/mistakes for subject stats
+        let subjectStats = computeSubjectStats(
+            grades: grades.filter { $0.date >= startDate && $0.date <= endDate },
+            mistakes: mistakes.filter { $0.date >= startDate && $0.date <= endDate },
+            subjects: subjects
+        )
+
+        // Intensity distribution
+        let intensityGroups = Dictionary(grouping: periodSessions) { $0.intensity }
+        let intensityDist = StudySession.SessionIntensity.allCases.map { intensity in
+            (intensity: intensity, count: intensityGroups[intensity]?.count ?? 0)
+        }
+
+        // Daily study minutes (for chart)
+        let dailyMinutes = computeDailyMinutes(sessions: periodSessions, startDate: startDate, endDate: endDate)
+
+        // Grade stats
+        let periodGrades = grades.filter { $0.date >= startDate && $0.date <= endDate }
+        let avgScoreRate = periodGrades.isEmpty
+            ? 0.0
+            : periodGrades.reduce(0.0) { sum, g in
+                let full = subjects.first(where: { $0.name == g.subject })?.fullScore ?? 100
+                return sum + g.scoreRate(subjectFullScore: full)
+            } / Double(periodGrades.count)
+
+        // Exams in period
+        let periodExams = exams.filter { $0.examDate >= startDate && $0.examDate <= endDate }
+
+        // Top/weakest subjects
+        let topSubject = subjectStats.sorted { $0.avgRate > $1.avgRate }.first?.subject
+        let weakestSubject = subjectStats.sorted { $0.avgRate < $1.avgRate }.first?.subject
+
+        return ReportData(
+            period: period,
+            startDate: startDate,
+            endDate: endDate,
+            totalStudyMinutes: totalMinutes,
+            sessionCount: periodSessions.count,
+            averageSessionMinutes: avgSessionMinutes,
+            subjectDistribution: subjectStats.map { ($0.subject, $0.mistakeCount, $0.percentage) },
+            intensityDistribution: intensityDist,
+            gradeCount: periodGrades.count,
+            averageScoreRate: avgScoreRate,
+            mistakeCount: mistakes.filter { $0.date >= startDate && $0.date <= endDate }.count,
+            examCount: periodExams.count,
+            topSubject: topSubject,
+            weakestSubject: weakestSubject,
+            dailyStudyMinutes: dailyMinutes
+        )
+    }
+
+    private struct SubjectStat {
+        let subject: String
+        let avgRate: Double
+        let mistakeCount: Int
+        let percentage: Double
+    }
+
+    private static func computeSubjectStats(
+        grades: [Grade],
+        mistakes: [MistakeNote],
+        subjects: [Subject]
+    ) -> [SubjectStat] {
+        let gradeGroups = Dictionary(grouping: grades) { $0.subject }
+        let mistakeGroups = Dictionary(grouping: mistakes) { $0.subject }
+        let totalMistakes = mistakes.count
+
+        return subjects.map { subject in
+            let subjectGrades = gradeGroups[subject.name] ?? []
+            let avgRate = subjectGrades.isEmpty
+                ? 0.0
+                : subjectGrades.reduce(0.0) { $0 + $1.scoreRate(subjectFullScore: subject.fullScore) } / Double(subjectGrades.count)
+            let mistakeCount = mistakeGroups[subject.name]?.count ?? 0
+            let percentage = totalMistakes > 0 ? Double(mistakeCount) / Double(totalMistakes) : 0
+            return SubjectStat(subject: subject.displayName, avgRate: avgRate, mistakeCount: mistakeCount, percentage: percentage)
+        }
+    }
+
+    private static func computeDailyMinutes(
+        sessions: [StudySession],
+        startDate: Date,
+        endDate: Date
+    ) -> [(date: Date, minutes: Int)] {
+        let calendar = Calendar.current
+        var result: [(Date, Int)] = []
+        var current = calendar.startOfDay(for: startDate)
+        let endDay = calendar.startOfDay(for: endDate)
+
+        while current <= endDay {
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: current) ?? current
+            let daySessions = sessions.filter { $0.startDate >= current && $0.startDate < nextDay }
+            let minutes = daySessions.reduce(0) { $0 + $1.durationSeconds / 60 }
+            result.append((current, minutes))
+            current = nextDay
+        }
+        return result
+    }
+
+    // MARK: - Text Summary
+
+    /// Generate a text summary for the report.
+    static func generateSummary(data: ReportData, profile: UserProfile) -> String {
+        var lines: [String] = []
+
+        // Header
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        lines.append(String(format: "📊 %@ (%@ ~ %@)",
+            data.period.displayName,
+            dateFormatter.string(from: data.startDate),
+            dateFormatter.string(from: data.endDate)))
+        lines.append("")
+
+        // Study time
+        let hours = data.totalStudyMinutes / 60
+        let mins = data.totalStudyMinutes % 60
+        if hours > 0 {
+            lines.append(String(format: "⏱ %@".localized(), "\(hours)h \(mins)m"))
+        } else {
+            lines.append(String(format: "⏱ %@".localized(), "\(mins)m"))
+        }
+
+        // Sessions
+        lines.append(String(format: "📝 %@: %d".localized(), "Sessions".localized(), data.sessionCount))
+        lines.append(String(format: "📈 %@: %.0f min".localized(), "Avg Session".localized(), data.averageSessionMinutes))
+        lines.append("")
+
+        // Grades
+        if data.gradeCount > 0 {
+            lines.append(String(format: "📚 %@: %d".localized(), "Grades Recorded".localized(), data.gradeCount))
+            lines.append(String(format: "💯 %@: %.0f%%".localized(), "Avg Score Rate".localized(), data.averageScoreRate * 100))
+        }
+
+        // Mistakes
+        if data.mistakeCount > 0 {
+            lines.append(String(format: "✏️ %@: %d".localized(), "Mistakes Added".localized(), data.mistakeCount))
+        }
+
+        // Exams
+        if data.examCount > 0 {
+            lines.append(String(format: "📋 %@: %d".localized(), "Exams".localized(), data.examCount))
+        }
+        lines.append("")
+
+        // Top/Weakest subjects
+        if let top = data.topSubject {
+            lines.append(String(format: "🏆 %@: %@".localized(), "Best Subject".localized(), top))
+        }
+        if let weak = data.weakestSubject {
+            lines.append(String(format: "💪 %@: %@".localized(), "Needs Improvement".localized(), weak))
+        }
+
+        // Encouragement
+        lines.append("")
+        lines.append(generateEncouragement(data: data))
+
+        return lines.joined(separator: "\n")
+    }
+
+    private static func generateEncouragement(data: ReportData) -> String {
+        if data.totalStudyMinutes == 0 {
+            return "💡 " + "Start tracking your study sessions to see insights!".localized()
+        }
+        if data.averageScoreRate >= 0.9 {
+            return "🌟 " + "Outstanding performance! Keep up the excellent work!".localized()
+        }
+        if data.averageScoreRate >= 0.75 {
+            return "👍 " + "Good progress! A little more effort will take you even further.".localized()
+        }
+        if data.sessionCount >= 10 {
+            return "🔥 " + "Great consistency! Your dedication is paying off.".localized()
+        }
+        return "💪 " + "Every session counts. Keep going!".localized()
+    }
+
+    // MARK: - Report Generation
+
+    /// Generate a complete report image.
+    static func generateReportImage(
+        data: ReportData,
+        profile: UserProfile,
+        subjects: [Subject]
+    ) -> UIImage? {
+        let summary = generateSummary(data: data, profile: profile)
+        let view = WeeklyReportView(reportData: data, summary: summary, subjects: subjects)
+        return ReportRenderer.render(view)
+    }
+
+    // MARK: - Notification Scheduling
+
+    /// Schedule a weekly or monthly report notification.
+    static func scheduleNotification(period: ReportPeriod, enabled: Bool) async {
+        let center = UNUserNotificationCenter.current()
+
+        // Remove existing report notifications
+        center.removePendingNotificationRequests(withIdentifiers: [notificationIdentifier(for: period)])
+
+        guard enabled else { return }
+
+        // Request authorization
+        do {
+            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+            guard granted else {
+                Log.report.warning("Notification authorization denied")
+                return
+            }
+        } catch {
+            Log.report.error("Notification authorization failed: \(error.localizedDescription)")
+            return
+        }
+
+        // Schedule notification
+        let content = UNMutableNotificationContent()
+        content.title = period.displayName
+        content.body = "Your learning report is ready! Tap to view.".localized()
+        content.sound = .default
+
+        let trigger: UNNotificationTrigger
+        let identifier = notificationIdentifier(for: period)
+
+        switch period {
+        case .weekly:
+            // Every Monday at 9:00 AM
+            var dateComponents = DateComponents()
+            dateComponents.weekday = 2 // Monday
+            dateComponents.hour = 9
+            dateComponents.minute = 0
+            trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        case .monthly:
+            // First day of each month at 9:00 AM
+            var dateComponents = DateComponents()
+            dateComponents.day = 1
+            dateComponents.hour = 9
+            dateComponents.minute = 0
+            trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        }
+
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+        do {
+            try await center.add(request)
+            Log.report.info("Scheduled \(period.rawValue) report notification")
+        } catch {
+            Log.report.error("Failed to schedule notification: \(error.localizedDescription)")
+        }
+    }
+
+    private static func notificationIdentifier(for period: ReportPeriod) -> String {
+        "studyPulse.\(period.rawValue)Report"
+    }
+
+    // MARK: - Preferences
+
+    private static let weeklyEnabledKey = "weeklyReportEnabled"
+    private static let monthlyEnabledKey = "monthlyReportEnabled"
+
+    static var isWeeklyEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: weeklyEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: weeklyEnabledKey) }
+    }
+
+    static var isMonthlyEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: monthlyEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: monthlyEnabledKey) }
+    }
+}
+
+// MARK: - Log Extension
+
+extension Log {
+    static let report = Logger(subsystem: Bundle.main.bundleIdentifier ?? "StudyPulse", category: "Report")
+}

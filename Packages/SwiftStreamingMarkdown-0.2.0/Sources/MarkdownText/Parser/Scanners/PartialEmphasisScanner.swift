@@ -9,7 +9,7 @@ final class PartialEmphasisScanner: MarkupScanner {
 
   init() {}
 
-  func scan(document: Document) -> Text? {
+  func scan(document: Markdown.Document) -> Text? {
     let result = document.rightMostDescendant
     if let textNode = result as? Text {
       return textNode

@@ -1,13 +1,13 @@
 
-import ActivityKit
+@preconcurrency import ActivityKit
 import Foundation
 
 /// Live Activity attributes for the StudyPulse Pomodoro timer.
 /// Shared between the main app (which starts/updates/ends the activity)
 /// and the widget extension (which renders the Lock Screen & Dynamic Island UI).
-struct StudyTimerActivityAttributes: ActivityAttributes {
+nonisolated struct StudyTimerActivityAttributes: ActivityAttributes, Sendable {
     /// Static: set once when the activity starts.
-    public struct ContentState: Codable, Hashable {
+    public struct ContentState: Codable, Hashable, Sendable {
         /// Remaining seconds in the countdown.
         var remainingSeconds: Int
         /// Total session duration in seconds.

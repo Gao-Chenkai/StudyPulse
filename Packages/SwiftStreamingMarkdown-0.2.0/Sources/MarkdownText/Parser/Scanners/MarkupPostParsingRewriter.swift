@@ -12,42 +12,39 @@
 import Markdown
 
 protocol MarkupPostParsingRewriter {
-
-  func rewriteIfApplicable(document: Document) -> Document?
+  func rewriteIfApplicable(document: Markdown.Document) -> Markdown.Document?
 }
 
 final class PartialStrongMarkupPostParsingRewriter: MarkupPostParsingRewriter {
-
   private let scanner: PartialEmphasisScanner
 
   init() {
     self.scanner = PartialEmphasisScanner()
   }
 
-  func rewriteIfApplicable(document: Document) -> Document? {
-    guard let targetNode = scanner.scan(document: document) else {
+  func rewriteIfApplicable(document: Markdown.Document) -> Markdown.Document? {
+    guard let paragraph = scanner.scan(document: document) else {
       return nil
     }
 
-    var rewriter = PartialEmphasisRewriter(targetNode: targetNode)
-    return rewriter.visit(document) as? Document
+    var rewriter = PartialEmphasisRewriter(targetNode: paragraph)
+    return rewriter.visit(document) as? Markdown.Document
   }
 }
 
 final class PartialTableMarkupPostParsingRewriter: MarkupPostParsingRewriter {
-
   private let scanner: PartialTableScanner
 
   init() {
     self.scanner = PartialTableScanner()
   }
 
-  func rewriteIfApplicable(document: Document) -> Document? {
-    guard let targetNode = scanner.scan(document: document) else {
+  func rewriteIfApplicable(document: Markdown.Document) -> Markdown.Document? {
+    guard let paragraph = scanner.scan(document: document) else {
       return nil
     }
 
-    var rewriter = PartialTableRewriter(targetParagraph: targetNode)
-    return rewriter.visit(document) as? Document
+    var rewriter = PartialTableRewriter(targetParagraph: paragraph)
+    return rewriter.visit(document) as? Markdown.Document
   }
 }
