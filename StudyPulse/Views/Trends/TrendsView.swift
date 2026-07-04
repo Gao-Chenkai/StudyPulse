@@ -166,6 +166,9 @@ struct TrendsView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .principal) {
+                    PhaseSelectorView()
+                }
             }
             .sheet(isPresented: $showingAddGrade) {
                 AddGradeView()
@@ -176,12 +179,12 @@ struct TrendsView: View {
     
     // 
     private func hasGrades(for subject: String) -> Bool {
-        dataManager.grades.contains { $0.subject == subject }
+        dataManager.filteredGrades.contains { $0.subject == subject }
     }
     
     // 
     private func getLatestGrade(for subject: String) -> Grade? {
-        dataManager.grades
+        dataManager.filteredGrades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
             .last
@@ -189,7 +192,7 @@ struct TrendsView: View {
     
     // 
     private func getGradeHistory(for subject: String) -> [Grade] {
-        dataManager.grades
+        dataManager.filteredGrades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
     }
@@ -219,7 +222,7 @@ struct SubjectDetailView: View {
     
     // 
     var filteredGrades: [Grade] {
-        let base = dataManager.grades
+        let base = dataManager.filteredGrades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
         

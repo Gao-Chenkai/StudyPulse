@@ -27,7 +27,7 @@ struct MistakeView: View {
 
     // 按科目分组错题
     var subjectGroups: [String: [MistakeNote]] {
-        Dictionary(grouping: dataManager.mistakeSets) { $0.subject.isEmpty ? "Uncategorized" : $0.subject }
+        Dictionary(grouping: dataManager.filteredMistakeSets) { $0.subject.isEmpty ? "Uncategorized" : $0.subject }
     }
 
     // 科目列表（按错题数降序排列）
@@ -57,18 +57,18 @@ struct MistakeView: View {
     }
 
     var totalMistakeCount: Int {
-        dataManager.mistakeSets.count
+        dataManager.filteredMistakeSets.count
     }
 
     /// SRS 队列总览
     var srsOverview: SRSOverview {
-        SRSAlgorithm.overview(from: dataManager.mistakeSets)
+        SRSAlgorithm.overview(from: dataManager.filteredMistakeSets)
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if dataManager.mistakeSets.isEmpty {
+                if dataManager.filteredMistakeSets.isEmpty {
                     VStack(spacing: 24) {
                         ContentUnavailableView(
                             "No Mistakes".localized(),
@@ -149,7 +149,7 @@ struct MistakeView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
-                        if !dataManager.mistakeSets.isEmpty {
+                        if !dataManager.filteredMistakeSets.isEmpty {
                             Button {
                                 showingPDFExportSheet = true
                             } label: {
@@ -161,6 +161,9 @@ struct MistakeView: View {
                             Image(systemName: "plus")
                         }
                     }
+                }
+                ToolbarItem(placement: .principal) {
+                    PhaseSelectorView()
                 }
             }
             .sheet(isPresented: $showingNewMistakeSet) {

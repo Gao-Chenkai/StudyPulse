@@ -27,13 +27,16 @@ nonisolated struct AppPreferences: Codable {
     var glassEffectEnabled: Bool = false
     /// 是否在 Trends 页顶部显示 90 天学习热力图（默认开启）
     var learningHeatmapOnTrends: Bool = true
+    /// 当前选中的 study phase id；nil = 全部数据视图（不过滤）
+    /// Current active study phase id. nil = show all data (no filtering).
+    var activePhaseId: UUID? = nil
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
-        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends
+        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, activePhaseId
     }
 
     init() {}
@@ -46,6 +49,7 @@ nonisolated struct AppPreferences: Codable {
         self.accentPaletteId = try c.decodeIfPresent(String.self, forKey: .accentPaletteId)
         self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
         self.learningHeatmapOnTrends = try c.decodeIfPresent(Bool.self, forKey: .learningHeatmapOnTrends) ?? true
+        self.activePhaseId = try c.decodeIfPresent(UUID.self, forKey: .activePhaseId)
     }
     
     // MARK: - 语言常量

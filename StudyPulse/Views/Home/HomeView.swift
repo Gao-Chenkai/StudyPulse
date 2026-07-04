@@ -315,7 +315,7 @@ struct HomeView: View {
     
     var upcomingExams: [Exam] {
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        return dataManager.examSets
+        return dataManager.filteredExamSets
             .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
             .sorted { $0.examDate < $1.examDate }
     }
@@ -329,7 +329,7 @@ struct HomeView: View {
             return []
         }
         
-        return dataManager.examSets.filter { exam in
+        return dataManager.filteredExamSets.filter { exam in
             guard exam.examDate < threeDaysAgo && exam.examDate >= sevenDaysAgo else {
                 return false
             }
@@ -740,7 +740,7 @@ struct MainStatsCard: View {
     
     private var upcomingExamsCount: Int {
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        return dataManager.examSets
+        return dataManager.filteredExamSets
             .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
             .count
     }
@@ -913,7 +913,7 @@ struct UpcomingExamsSection: View {
     
     var upcomingExams: [Exam] {
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        return dataManager.examSets
+        return dataManager.filteredExamSets
             .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
             .sorted { $0.examDate < $1.examDate }
     }
@@ -1550,7 +1550,7 @@ struct StudySuggestionsCard: View {
         }
 
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-        let urgentExams = dataManager.examSets.filter {
+        let urgentExams = dataManager.filteredExamSets.filter {
             Calendar.current.isDate($0.examDate, inSameDayAs: Date()) ||
             Calendar.current.isDate($0.examDate, inSameDayAs: tomorrow)
         }
@@ -1601,7 +1601,7 @@ struct StudySuggestionsCard: View {
             )
         }
 
-        let upcomingExams = dataManager.examSets.filter {
+        let upcomingExams = dataManager.filteredExamSets.filter {
             $0.examDate > Date() &&
             $0.examDate <= Calendar.current.date(byAdding: .day, value: 14, to: Date())!
         }

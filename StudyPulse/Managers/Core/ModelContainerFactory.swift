@@ -29,6 +29,7 @@ enum ModelContainerFactory {
         ComprehensiveExamRecord.self,
         TaskItemRecord.self,
         UserProfileRecord.self,
+        StudyPhaseRecord.self,
     ]
 
     /// 创建或获取共享 ModelContainer。

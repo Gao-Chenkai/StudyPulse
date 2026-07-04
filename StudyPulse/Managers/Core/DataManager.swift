@@ -87,6 +87,8 @@ final class DataManager: ObservableObject {
    @Published var comprehensiveExamSets: [comprehensiveExam] = []
     /// 作业 / 阅读材料任务列表（与考试日程统一展示在「待办」页）
     @Published var taskItems: [TaskItem] = []
+    /// 学习阶段列表（学期 / 假期 / 冲刺等用户自定义时间段）
+    @Published var phases: [StudyPhase] = []
 
     /// Set by open-app App Intents to trigger pre-filled sheets in ContentView.
     @Published var pendingIntentAction: IntentAction? = nil
@@ -222,6 +224,12 @@ final class DataManager: ObservableObject {
                 FetchDescriptor<TaskItemRecord>(sortBy: [SortDescriptor(\.dueDate, order: .forward)])
             )
             self.taskItems = taskEntities.map { $0.toSnapshot() }
+
+            // StudyPhases (semester / holiday / sprint phases)
+            let phaseEntities = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)])
+            )
+            self.phases = phaseEntities.map { $0.toSnapshot() }
 
             // Profile (singleton)
             let profiles = try context.fetch(FetchDescriptor<UserProfileRecord>())
@@ -585,13 +593,17 @@ final class DataManager: ObservableObject {
 
     // 新增：添加错题的方法 / Add a mistake note
     func addMistake(_ mistake: MistakeNote) {
+        var stored = mistake
+        if stored.phaseId == nil {
+            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+        }
         if let context = modelContext {
-            context.insert(MistakeNoteRecord(from: mistake))
+            context.insert(MistakeNoteRecord(from: stored))
             try? context.save()
         }
-        mistakeSets.append(mistake)
-        Log.data.info("新增错题 / Added mistake: title=\(mistake.title, privacy: .public) subject=\(mistake.subject, privacy: .public)")
-        Log.record(.info, category: "Data", message: "新增错题 / Added mistake: title=\(mistake.title) subject=\(mistake.subject)")
+        mistakeSets.append(stored)
+        Log.data.info("新增错题 / Added mistake: title=\(stored.title, privacy: .public) subject=\(stored.subject, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增错题 / Added mistake: title=\(stored.title) subject=\(stored.subject) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
     }
 
     // 可选：删除错题的方法（方便后续扩展）/ Delete mistake notes (helpers)
@@ -657,13 +669,18 @@ final class DataManager: ObservableObject {
 
     // 新增：添加成绩的方法 / Add a grade
     func addGrade(_ grade: Grade) {
+        var stored = grade
+        // phaseId 为 nil 时自动归入当前 active phase,跟随全局过滤
+        if stored.phaseId == nil {
+            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+        }
         if let context = modelContext {
-            context.insert(GradeRecord(from: grade))
+            context.insert(GradeRecord(from: stored))
             try? context.save()
         }
-        grades.append(grade)
-        Log.data.info("新增成绩 / Added grade: subject=\(grade.subject, privacy: .public) score=\(grade.score, privacy: .public)")
-        Log.record(.info, category: "Data", message: "新增成绩 / Added grade: subject=\(grade.subject) score=\(grade.score)")
+        grades.append(stored)
+        Log.data.info("新增成绩 / Added grade: subject=\(stored.subject, privacy: .public) score=\(stored.score, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增成绩 / Added grade: subject=\(stored.subject) score=\(stored.score) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
         AchievementManager.shared.recordGradeRecorded()
         syncGradesToWidget()
     }
@@ -688,14 +705,20 @@ final class DataManager: ObservableObject {
     // 新增：批量添加成绩的方法（用于导入）
     // Batch add grades (for import)
     func addGrades(_ newGrades: [Grade]) {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let stored: [Grade] = newGrades.map { g in
+            var s = g
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
         if let context = modelContext {
-            for g in newGrades {
+            for g in stored {
                 context.insert(GradeRecord(from: g))
             }
             try? context.save()
         }
-        grades.append(contentsOf: newGrades)
-        let count = newGrades.count
+        grades.append(contentsOf: stored)
+        let count = stored.count
         Log.data.info("批量新增成绩 / Batch added grades: count=\(count, privacy: .public)")
         Log.record(.info, category: "Data", message: "批量新增成绩 / Batch added grades: count=\(count)")
         AchievementManager.shared.recordGradeRecorded(count: count)
@@ -720,15 +743,26 @@ final class DataManager: ObservableObject {
     // 新增：批量添加考试的方法（用于导入）
     // Batch add exams (for import)
     func addExams(single: [Exam], comprehensive: [comprehensiveExam]) {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let storedSingle: [Exam] = single.map { e in
+            var s = e
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
+        let storedComp: [comprehensiveExam] = comprehensive.map { e in
+            var s = e
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
         if let context = modelContext {
-            for e in single { context.insert(ExamRecord(from: e)) }
-            for e in comprehensive { context.insert(ComprehensiveExamRecord(from: e)) }
+            for e in storedSingle { context.insert(ExamRecord(from: e)) }
+            for e in storedComp { context.insert(ComprehensiveExamRecord(from: e)) }
             try? context.save()
         }
-        examSets.append(contentsOf: single)
-        comprehensiveExamSets.append(contentsOf: comprehensive)
-        Log.data.info("批量新增考试 / Batch added exams: single=\(single.count, privacy: .public) comprehensive=\(comprehensive.count, privacy: .public)")
-        Log.record(.info, category: "Data", message: "批量新增考试 / Batch added exams: single=\(single.count) comprehensive=\(comprehensive.count)")
+        examSets.append(contentsOf: storedSingle)
+        comprehensiveExamSets.append(contentsOf: storedComp)
+        Log.data.info("批量新增考试 / Batch added exams: single=\(storedSingle.count, privacy: .public) comprehensive=\(storedComp.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增考试 / Batch added exams: single=\(storedSingle.count) comprehensive=\(storedComp.count)")
         syncExamsToWidget()
     }
 
@@ -1024,6 +1058,9 @@ final class DataManager: ObservableObject {
             stored.reminderEventId = nil
             stored.reminderCalendarId = nil
         }
+        if stored.phaseId == nil {
+            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+        }
 
         if let context = modelContext {
             context.insert(TaskItemRecord(from: stored))
@@ -1032,24 +1069,31 @@ final class DataManager: ObservableObject {
         taskItems.append(stored)
         // 任务列表按 dueDate 升序保持
         taskItems.sort { $0.dueDate < $1.dueDate }
-        Log.data.info("新增任务 / Added task: title=\(stored.title, privacy: .public) type=\(stored.type.rawValue, privacy: .public) dueDate=\(stored.dueDate, privacy: .public)")
-        Log.record(.info, category: "Data", message: "新增任务 / Added task: title=\(stored.title) type=\(stored.type.rawValue) dueDate=\(stored.dueDate)")
+        Log.data.info("新增任务 / Added task: title=\(stored.title, privacy: .public) type=\(stored.type.rawValue, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增任务 / Added task: title=\(stored.title) type=\(stored.type.rawValue) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
     }
 
     /// 批量新增任务（用于 CSV 导入等场景）
     /// Batch add tasks (for CSV import etc.)
     func addTasks(_ newTasks: [TaskItem]) {
         guard !newTasks.isEmpty else { return }
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let stored: [TaskItem] = newTasks.map { t in
+            var s = t
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
         if let context = modelContext {
-            for t in newTasks {
+            for t in stored {
                 context.insert(TaskItemRecord(from: t))
             }
             try? context.save()
         }
-        taskItems.append(contentsOf: newTasks)
+        taskItems.append(contentsOf: stored)
         taskItems.sort { $0.dueDate < $1.dueDate }
-        Log.data.info("批量新增任务 / Batch added tasks: count=\(newTasks.count, privacy: .public)")
-        Log.record(.info, category: "Data", message: "批量新增任务 / Batch added tasks: count=\(newTasks.count)")
+        let count = stored.count
+        Log.data.info("批量新增任务 / Batch added tasks: count=\(count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "批量新增任务 / Batch added tasks: count=\(count)")
     }
 
     /// 更新已有任务
@@ -1184,10 +1228,26 @@ final class DataManager: ObservableObject {
     /// 构造统一的 TodoEntry 列表（考试 + 作业 + 阅读），按时间升序
     /// Build a unified `TodoEntry` list (exams + homework + reading) sorted ascending by date.
     /// - Parameter includeCompleted: 是否包含已完成的任务（默认 false：已完成的作业/阅读不进入主列表）
-    func todoEntries(includeCompleted: Bool = false) -> [TodoEntry] {
-        var entries: [TodoEntry] = []
+    /// - Parameter phaseId: 限定 phase 范围；nil = 跟随 active phase（activePhaseId 也为 nil 时返回全部）
+    func todoEntries(includeCompleted: Bool = false, phaseId: UUID? = nil) -> [TodoEntry] {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let resolved: UUID? = phaseId ?? activeId
 
-        for exam in examSets {
+        let examList: [Exam]
+        let compList: [comprehensiveExam]
+        let taskList: [TaskItem]
+        if let pid = resolved {
+            examList = examSets.filter { $0.phaseId == pid }
+            compList = comprehensiveExamSets.filter { $0.phaseId == pid }
+            taskList = taskItems.filter { $0.phaseId == pid && (includeCompleted || !$0.isCompleted) }
+        } else {
+            examList = examSets
+            compList = comprehensiveExamSets
+            taskList = taskItems.filter { includeCompleted || !$0.isCompleted }
+        }
+
+        var entries: [TodoEntry] = []
+        for exam in examList {
             entries.append(TodoEntry(
                 id: exam.id,
                 kind: .exam,
@@ -1202,7 +1262,7 @@ final class DataManager: ObservableObject {
                 taskItem: nil
             ))
         }
-        for exam in comprehensiveExamSets {
+        for exam in compList {
             let subjectText = exam.subject.joined(separator: ", ")
             entries.append(TodoEntry(
                 id: exam.id,
@@ -1218,7 +1278,7 @@ final class DataManager: ObservableObject {
                 taskItem: nil
             ))
         }
-        for task in taskItems where (includeCompleted || !task.isCompleted) {
+        for task in taskList {
             let kind: TodoEntryKind = task.type == .homework ? .homework : .reading
             entries.append(TodoEntry(
                 id: task.id,
@@ -1278,5 +1338,268 @@ final class DataManager: ObservableObject {
         } catch {
             Log.data.error("更新 TaskItemRecord 失败 / Failed to update TaskItemRecord: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    // MARK: - Study Phases (学期 / 假期阶段)
+
+    /// 当前激活的 phase（来自 AppEnvironmentManager.preferences.activePhaseId）。
+    /// Current active phase (mirrors AppEnvironmentManager preferences).
+    var activePhase: StudyPhase? {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return nil }
+        return phases.first(where: { $0.id == id })
+    }
+
+    /// 是否启用 phase 过滤（activePhaseId 非空）
+    var phaseFilterEnabled: Bool {
+        AppEnvironmentManager.shared.activePhaseId != nil
+    }
+
+    /// 按 active phase 过滤后的成绩
+    var filteredGrades: [Grade] {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return grades }
+        return grades.filter { $0.phaseId == id }
+    }
+
+    /// 按 active phase 过滤后的错题
+    var filteredMistakeSets: [MistakeNote] {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return mistakeSets }
+        return mistakeSets.filter { $0.phaseId == id }
+    }
+
+    /// 按 active phase 过滤后的单科考试
+    var filteredExamSets: [Exam] {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return examSets }
+        return examSets.filter { $0.phaseId == id }
+    }
+
+    /// 按 active phase 过滤后的综合考试
+    var filteredComprehensiveExamSets: [comprehensiveExam] {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return comprehensiveExamSets }
+        return comprehensiveExamSets.filter { $0.phaseId == id }
+    }
+
+    /// 按 active phase 过滤后的任务
+    var filteredTaskItems: [TaskItem] {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return taskItems }
+        return taskItems.filter { $0.phaseId == id }
+    }
+
+    /// 是否有未归类的数据(phaseId == nil)
+    var hasUnassignedData: Bool {
+        unassignedRecordCount > 0
+    }
+
+    /// 未归类(phaseId == nil)的总记录数
+    var unassignedRecordCount: Int {
+        grades.filter { $0.phaseId == nil }.count
+        + mistakeSets.filter { $0.phaseId == nil }.count
+        + examSets.filter { $0.phaseId == nil }.count
+        + comprehensiveExamSets.filter { $0.phaseId == nil }.count
+        + taskItems.filter { $0.phaseId == nil }.count
+    }
+
+    /// 新增阶段
+    /// Add a new study phase.
+    func addPhase(_ phase: StudyPhase) {
+        if let context = modelContext {
+            context.insert(StudyPhaseRecord(from: phase))
+            try? context.save()
+        }
+        phases.append(phase)
+        phases.sort { $0.startDate > $1.startDate }
+        Log.data.info("新增阶段 / Added phase: name=\(phase.name, privacy: .public) archived=\(phase.isArchived, privacy: .public)")
+        Log.record(.info, category: "Data", message: "新增阶段: \(phase.name)")
+    }
+
+    /// 更新阶段（按 id 匹配）。
+    /// Update phase by id.
+    func updatePhase(_ phase: StudyPhase) {
+        if let index = phases.firstIndex(where: { $0.id == phase.id }) {
+            phases[index] = phase
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(predicate: #Predicate { $0.id == phase.id })
+            ).first {
+                entity.name = phase.name
+                entity.startDate = phase.startDate
+                entity.endDate = phase.endDate
+                entity.isArchived = phase.isArchived
+                entity.archivedAt = phase.archivedAt
+                entity.goalsData = try? JSONEncoder().encode(phase.goals)
+                try context.save()
+            } else {
+                context.insert(StudyPhaseRecord(from: phase))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("更新 StudyPhaseRecord 失败 / Failed to update StudyPhaseRecord: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 删除阶段（会清除关联数据的 phaseId）
+    /// Delete phase (clears phaseId on linked records).
+    func deletePhase(_ phase: StudyPhase) {
+        // 1. 把所有 phaseId == phase.id 的数据置 nil
+        clearPhaseReferences(phaseId: phase.id)
+        // 2. 删 SwiftData
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(predicate: #Predicate { $0.id == phase.id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("删除 StudyPhaseRecord 失败 / Failed to delete StudyPhaseRecord: \(error.localizedDescription, privacy: .public)")
+        }
+        // 3. 从内存列表中移除
+        phases.removeAll { $0.id == phase.id }
+        // 4. 如果当前激活的 phase 被删了,清空 activePhaseId
+        if AppEnvironmentManager.shared.activePhaseId == phase.id {
+            AppEnvironmentManager.shared.setActivePhaseId(nil)
+        }
+        Log.data.info("删除阶段 / Deleted phase: name=\(phase.name, privacy: .public)")
+    }
+
+    /// 归档 / 取消归档
+    /// Archive / unarchive a phase.
+    func setPhaseArchived(_ phase: StudyPhase, archived: Bool) {
+        var updated = phase
+        updated.isArchived = archived
+        updated.archivedAt = archived ? Date() : nil
+        updatePhase(updated)
+    }
+
+    /// 设为当前激活 phase（写入 AppPreferences）。
+    /// Set the active phase (persisted to AppPreferences).
+    func activatePhase(_ phase: StudyPhase?) {
+        AppEnvironmentManager.shared.setActivePhaseId(phase?.id)
+    }
+
+    /// 创建第一个 phase 时,把未归类(phaseId == nil)的数据全部归入指定 phase。
+    /// On first-phase creation, bulk-assign all unassigned records to that phase.
+    /// - Returns: (grades, mistakes, exams, comprehensiveExams, tasks) 各归类条数
+    @discardableResult
+    func assignUnassignedDataToPhase(_ phaseId: UUID) -> (grades: Int, mistakes: Int, exams: Int, comprehensiveExams: Int, tasks: Int) {
+        guard let context = modelContext else { return (0, 0, 0, 0, 0) }
+        var gCount = 0, mCount = 0, eCount = 0, cCount = 0, tCount = 0
+
+        do {
+            // grades
+            for i in 0..<grades.count where grades[i].phaseId == nil {
+                grades[i].phaseId = phaseId
+                if let entity = try context.fetch(
+                    FetchDescriptor<GradeRecord>(predicate: #Predicate { $0.id == grades[i].id })
+                ).first {
+                    entity.phaseId = phaseId
+                }
+                gCount += 1
+            }
+            // mistakes
+            for i in 0..<mistakeSets.count where mistakeSets[i].phaseId == nil {
+                mistakeSets[i].phaseId = phaseId
+                if let entity = try context.fetch(
+                    FetchDescriptor<MistakeNoteRecord>(predicate: #Predicate { $0.id == mistakeSets[i].id })
+                ).first {
+                    entity.phaseId = phaseId
+                }
+                mCount += 1
+            }
+            // exams
+            for i in 0..<examSets.count where examSets[i].phaseId == nil {
+                examSets[i].phaseId = phaseId
+                if let entity = try context.fetch(
+                    FetchDescriptor<ExamRecord>(predicate: #Predicate { $0.id == examSets[i].id })
+                ).first {
+                    entity.phaseId = phaseId
+                }
+                eCount += 1
+            }
+            // comprehensiveExams
+            for i in 0..<comprehensiveExamSets.count where comprehensiveExamSets[i].phaseId == nil {
+                comprehensiveExamSets[i].phaseId = phaseId
+                if let entity = try context.fetch(
+                    FetchDescriptor<ComprehensiveExamRecord>(predicate: #Predicate { $0.id == comprehensiveExamSets[i].id })
+                ).first {
+                    entity.phaseId = phaseId
+                }
+                cCount += 1
+            }
+            // tasks
+            for i in 0..<taskItems.count where taskItems[i].phaseId == nil {
+                taskItems[i].phaseId = phaseId
+                if let entity = try context.fetch(
+                    FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == taskItems[i].id })
+                ).first {
+                    entity.phaseId = phaseId
+                }
+                tCount += 1
+            }
+            try context.save()
+            Log.data.info("未归类数据已归入 phase / Assigned unassigned data to phase: g=\(gCount, privacy: .public) m=\(mCount, privacy: .public) e=\(eCount, privacy: .public) c=\(cCount, privacy: .public) t=\(tCount, privacy: .public)")
+        } catch {
+            Log.data.error("归类未归类数据失败 / Failed to assign unassigned data: \(error.localizedDescription, privacy: .public)")
+        }
+        return (gCount, mCount, eCount, cCount, tCount)
+    }
+
+    /// 把所有引用指定 phaseId 的数据置为 nil(删除 phase 时调用)。
+    /// Clear all phaseId references for a given phase (called when deleting a phase).
+    private func clearPhaseReferences(phaseId: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            for i in 0..<grades.count where grades[i].phaseId == phaseId {
+                grades[i].phaseId = nil
+                if let entity = try context.fetch(
+                    FetchDescriptor<GradeRecord>(predicate: #Predicate { $0.id == grades[i].id })
+                ).first {
+                    entity.phaseId = nil
+                }
+            }
+            for i in 0..<mistakeSets.count where mistakeSets[i].phaseId == phaseId {
+                mistakeSets[i].phaseId = nil
+                if let entity = try context.fetch(
+                    FetchDescriptor<MistakeNoteRecord>(predicate: #Predicate { $0.id == mistakeSets[i].id })
+                ).first {
+                    entity.phaseId = nil
+                }
+            }
+            for i in 0..<examSets.count where examSets[i].phaseId == phaseId {
+                examSets[i].phaseId = nil
+                if let entity = try context.fetch(
+                    FetchDescriptor<ExamRecord>(predicate: #Predicate { $0.id == examSets[i].id })
+                ).first {
+                    entity.phaseId = nil
+                }
+            }
+            for i in 0..<comprehensiveExamSets.count where comprehensiveExamSets[i].phaseId == phaseId {
+                comprehensiveExamSets[i].phaseId = nil
+                if let entity = try context.fetch(
+                    FetchDescriptor<ComprehensiveExamRecord>(predicate: #Predicate { $0.id == comprehensiveExamSets[i].id })
+                ).first {
+                    entity.phaseId = nil
+                }
+            }
+            for i in 0..<taskItems.count where taskItems[i].phaseId == phaseId {
+                taskItems[i].phaseId = nil
+                if let entity = try context.fetch(
+                    FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == taskItems[i].id })
+                ).first {
+                    entity.phaseId = nil
+                }
+            }
+            try context.save()
+        } catch {
+            Log.data.error("清除 phase 引用失败 / Failed to clear phase references: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 解析 grade 的有效 phaseId:入参 nil → 用 active phase;否则用入参。
+    /// Resolve effective phaseId for a grade: nil input → use active phase; otherwise use input.
+    private func resolvePhaseId(_ requested: UUID?) -> UUID? {
+        requested ?? AppEnvironmentManager.shared.activePhaseId
     }
 }

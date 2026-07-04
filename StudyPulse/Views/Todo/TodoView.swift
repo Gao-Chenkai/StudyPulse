@@ -202,6 +202,9 @@ struct TodoView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     addMenu
                 }
+                ToolbarItem(placement: .principal) {
+                    PhaseSelectorView()
+                }
             }
             .sheet(isPresented: $showingNewExam) {
                 NewExamSetView()

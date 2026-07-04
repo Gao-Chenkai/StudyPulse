@@ -7,6 +7,74 @@
 
 import Foundation
 
+// MARK: - Study Phase (学期 / 假期阶段)
+
+/// 学期 / 假期阶段 / 考试冲刺等用户自定义时间段。
+/// 用来给历史数据划定边界,避免多年错题混在一起。
+/// Study phase: a user-defined time window (semester / break / sprint) used
+/// to scope grades / mistakes / exams / tasks so historical data stays bounded.
+nonisolated struct StudyPhase: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 阶段名称,如 "2026 春季学期" / "2026 暑假" / "高考冲刺"
+    var name: String
+    /// 阶段开始日期
+    var startDate: Date
+    /// 阶段结束日期
+    var endDate: Date
+    /// 是否已归档(已归档的阶段在主列表默认折叠,但仍可查看历史数据)
+    var isArchived: Bool
+    /// 归档时间
+    var archivedAt: Date?
+    /// 阶段内目标(科目 + 目标分 + 文字备注)
+    var goals: [PhaseGoal]
+    /// 创建时间
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        startDate: Date,
+        endDate: Date,
+        isArchived: Bool = false,
+        archivedAt: Date? = nil,
+        goals: [PhaseGoal] = [],
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.name = name
+        self.startDate = startDate
+        self.endDate = endDate
+        self.isArchived = isArchived
+        self.archivedAt = archivedAt
+        self.goals = goals
+        self.createdAt = createdAt
+    }
+}
+
+/// 阶段内目标:绑定一个科目 + 目标分 + 自由文字备注。
+/// Phase goal: subject + target score + free-form note.
+nonisolated struct PhaseGoal: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 关联的科目名称(对应 Subject.name)
+    var subject: String
+    /// 目标分数(可以为 0,表示仅备注)
+    var targetScore: Double
+    /// 备注,例如 "期末数学 ≥ 120"
+    var notes: String
+
+    init(
+        id: UUID = UUID(),
+        subject: String,
+        targetScore: Double = 0,
+        notes: String = ""
+    ) {
+        self.id = id
+        self.subject = subject
+        self.targetScore = targetScore
+        self.notes = notes
+    }
+}
+
 // MARK: - Subject Models (科目)
 
 /// 用户科目模型，支持自定义满分和显示名称
@@ -61,7 +129,9 @@ nonisolated struct Grade: Identifiable, Codable {
     var examName: String
     /// 该成绩对应的满分（为空时取科目配置的满分）
     var fullScore: Double? = nil
-    
+    /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
+    var phaseId: UUID? = nil
+
     /// 计算得分率
     /// - Parameter subjectFullScore: 科目默认满分（可选，优先使用成绩自带的满分）
     /// - Returns: 得分率（0.0 - 1.0）
@@ -74,7 +144,7 @@ nonisolated struct Grade: Identifiable, Codable {
     /// 创建成绩记录
     init(id: UUID = UUID(), subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
          importance: Int = 3, image: Data? = nil, imageFileName: String? = nil,
-         date: Date = Date(), examName: String = "", fullScore: Double? = nil) {
+         date: Date = Date(), examName: String = "", fullScore: Double? = nil, phaseId: UUID? = nil) {
         self.id = id
         self.subject = subject
         self.score = score
@@ -86,6 +156,7 @@ nonisolated struct Grade: Identifiable, Codable {
         self.date = date
         self.examName = examName
         self.fullScore = fullScore
+        self.phaseId = phaseId
     }
     
     /// 获取图片数据：优先从 imageFileName 加载，回退到内嵌 image
@@ -129,12 +200,14 @@ nonisolated struct MistakeNote: Identifiable, Codable {
     /// 间隔重复（SRS）状态，nil = 未加入复习队列
     /// Spaced repetition state; nil means not enrolled in the review queue.
     var reviewState: ReviewState?
+    /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
+    var phaseId: UUID? = nil
 
     init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
          questionImages: [Data] = [], reasonImages: [Data] = [],
          wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = [],
-         reviewState: ReviewState? = nil) {
+         reviewState: ReviewState? = nil, phaseId: UUID? = nil) {
         self.id = id
         self.title = title
         self.subject = subject
@@ -149,6 +222,7 @@ nonisolated struct MistakeNote: Identifiable, Codable {
         self.wrongSolutionImages = wrongSolutionImages
         self.correctSolutionImages = correctSolutionImages
         self.reviewState = reviewState
+        self.phaseId = phaseId
     }
 }
 
@@ -291,6 +365,8 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
     /// 创建时间
     /// Created at
     var createdAt: Date
+    /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
+    var phaseId: UUID? = nil
 
     init(
         id: UUID = UUID(),
@@ -304,7 +380,8 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
         isCompleted: Bool = false,
         reminderEventId: String? = nil,
         reminderCalendarId: String? = nil,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -318,6 +395,7 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
         self.reminderEventId = reminderEventId
         self.reminderCalendarId = reminderCalendarId
         self.createdAt = createdAt
+        self.phaseId = phaseId
     }
 }
 
@@ -343,8 +421,10 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 
 	/// 考试具体时间（用于日历同步，nil 时表示全天事件）
 	var timeSlot: ExamTimeSlot?
-    
-    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil) {
+    /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
+    var phaseId: UUID? = nil
+
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil, phaseId: UUID? = nil) {
         self.id = id
         self.name = name
         self.examDate = date
@@ -354,6 +434,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
         self.masteryDegree = masteryDegree
 		self.timeSlot = timeSlot
         self.examEndDate = examEndDate
+        self.phaseId = phaseId
     }
 }
 
@@ -377,8 +458,10 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
 
 	/// 各科目具体时间（用于日历同步，nil 时表示全天事件）
 	var subjectTimeSlots: [String: ExamTimeSlot]?
-    
-    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int, examEndDate: Date? = nil, subjectTimeSlots: [String: ExamTimeSlot]? = nil) {
+    /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
+    var phaseId: UUID? = nil
+
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: [String],examName: String, masteryDegree: Int, examEndDate: Date? = nil, subjectTimeSlots: [String: ExamTimeSlot]? = nil, phaseId: UUID? = nil) {
         self.id = id
         self.name = name
         self.examDate = date
@@ -387,5 +470,6 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
         self.examName = examName
         self.masteryDegree = masteryDegree
 		self.subjectTimeSlots = subjectTimeSlots
+        self.phaseId = phaseId
     }
 }

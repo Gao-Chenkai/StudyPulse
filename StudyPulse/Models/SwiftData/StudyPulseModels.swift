@@ -78,6 +78,8 @@ final class GradeRecord {
     var date: Date
     var examName: String
     var fullScore: Double?
+    /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    var phaseId: UUID?
 
     init(
         id: UUID,
@@ -90,7 +92,8 @@ final class GradeRecord {
         imageFileName: String?,
         date: Date,
         examName: String,
-        fullScore: Double?
+        fullScore: Double?,
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.subject = subject
@@ -103,6 +106,7 @@ final class GradeRecord {
         self.date = date
         self.examName = examName
         self.fullScore = fullScore
+        self.phaseId = phaseId
     }
 
     convenience init(from grade: Grade) {
@@ -117,7 +121,8 @@ final class GradeRecord {
             imageFileName: grade.imageFileName,
             date: grade.date,
             examName: grade.examName,
-            fullScore: grade.fullScore
+            fullScore: grade.fullScore,
+            phaseId: grade.phaseId
         )
     }
 
@@ -133,7 +138,8 @@ final class GradeRecord {
             imageFileName: imageFileName,
             date: date,
             examName: examName,
-            fullScore: fullScore
+            fullScore: fullScore,
+            phaseId: phaseId
         )
     }
 }
@@ -165,6 +171,8 @@ final class MistakeNoteRecord {
     @Attribute(.externalStorage) var reasonImagesData: [Data]
     @Attribute(.externalStorage) var wrongSolutionImagesData: [Data]
     @Attribute(.externalStorage) var correctSolutionImagesData: [Data]
+    /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    var phaseId: UUID?
 
     init(
         id: UUID,
@@ -185,7 +193,8 @@ final class MistakeNoteRecord {
         questionImagesData: [Data],
         reasonImagesData: [Data],
         wrongSolutionImagesData: [Data],
-        correctSolutionImagesData: [Data]
+        correctSolutionImagesData: [Data],
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -206,6 +215,7 @@ final class MistakeNoteRecord {
         self.reasonImagesData = reasonImagesData
         self.wrongSolutionImagesData = wrongSolutionImagesData
         self.correctSolutionImagesData = correctSolutionImagesData
+        self.phaseId = phaseId
     }
 
     convenience init(from note: MistakeNote) {
@@ -229,7 +239,8 @@ final class MistakeNoteRecord {
             questionImagesData: note.questionImages,
             reasonImagesData: note.reasonImages,
             wrongSolutionImagesData: note.wrongSolutionImages,
-            correctSolutionImagesData: note.correctSolutionImages
+            correctSolutionImagesData: note.correctSolutionImages,
+            phaseId: note.phaseId
         )
     }
 
@@ -260,7 +271,8 @@ final class MistakeNoteRecord {
             reasonImages: reasonImagesData,
             wrongSolutionImages: wrongSolutionImagesData,
             correctSolutionImages: correctSolutionImagesData,
-            reviewState: reviewState
+            reviewState: reviewState,
+            phaseId: phaseId
         )
     }
 }
@@ -280,6 +292,8 @@ final class ExamRecord {
     /// 拍平 timeSlot
     var timeSlotStart: Date?
     var timeSlotEnd: Date?
+    /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    var phaseId: UUID?
 
     init(
         id: UUID,
@@ -291,7 +305,8 @@ final class ExamRecord {
         examName: String,
         masteryDegree: Int,
         timeSlotStart: Date?,
-        timeSlotEnd: Date?
+        timeSlotEnd: Date?,
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -303,6 +318,7 @@ final class ExamRecord {
         self.masteryDegree = masteryDegree
         self.timeSlotStart = timeSlotStart
         self.timeSlotEnd = timeSlotEnd
+        self.phaseId = phaseId
     }
 
     convenience init(from exam: Exam) {
@@ -316,7 +332,8 @@ final class ExamRecord {
             examName: exam.examName,
             masteryDegree: exam.masteryDegree,
             timeSlotStart: exam.timeSlot?.startTime,
-            timeSlotEnd: exam.timeSlot?.endTime
+            timeSlotEnd: exam.timeSlot?.endTime,
+            phaseId: exam.phaseId
         )
     }
 
@@ -336,7 +353,8 @@ final class ExamRecord {
             examName: examName,
             masteryDegree: masteryDegree,
             timeSlot: timeSlot,
-            examEndDate: examEndDate
+            examEndDate: examEndDate,
+            phaseId: phaseId
         )
     }
 }
@@ -356,6 +374,8 @@ final class ComprehensiveExamRecord {
     var masteryDegree: Int
     /// 拍平 subjectTimeSlots：JSON 编码后存
     var subjectTimeSlotsData: Data?
+    /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    var phaseId: UUID?
 
     init(
         id: UUID,
@@ -366,7 +386,8 @@ final class ComprehensiveExamRecord {
         subjects: [String],
         examName: String,
         masteryDegree: Int,
-        subjectTimeSlotsData: Data?
+        subjectTimeSlotsData: Data?,
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -377,6 +398,7 @@ final class ComprehensiveExamRecord {
         self.examName = examName
         self.masteryDegree = masteryDegree
         self.subjectTimeSlotsData = subjectTimeSlotsData
+        self.phaseId = phaseId
     }
 
     convenience init(from exam: comprehensiveExam) {
@@ -396,7 +418,8 @@ final class ComprehensiveExamRecord {
             subjects: exam.subject,
             examName: exam.examName,
             masteryDegree: exam.masteryDegree,
-            subjectTimeSlotsData: slotsData
+            subjectTimeSlotsData: slotsData,
+            phaseId: exam.phaseId
         )
     }
 
@@ -414,7 +437,8 @@ final class ComprehensiveExamRecord {
             examName: examName,
             masteryDegree: masteryDegree,
             examEndDate: examEndDate,
-            subjectTimeSlots: slots
+            subjectTimeSlots: slots,
+            phaseId: phaseId
         )
     }
 }
@@ -446,6 +470,8 @@ final class TaskItemRecord {
     var reminderCalendarId: String?
     /// 创建时间
     var createdAt: Date
+    /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    var phaseId: UUID?
 
     init(
         id: UUID,
@@ -459,7 +485,8 @@ final class TaskItemRecord {
         isCompleted: Bool,
         reminderEventId: String?,
         reminderCalendarId: String?,
-        createdAt: Date
+        createdAt: Date,
+        phaseId: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -473,6 +500,7 @@ final class TaskItemRecord {
         self.reminderEventId = reminderEventId
         self.reminderCalendarId = reminderCalendarId
         self.createdAt = createdAt
+        self.phaseId = phaseId
     }
 
     convenience init(from task: TaskItem) {
@@ -488,7 +516,8 @@ final class TaskItemRecord {
             isCompleted: task.isCompleted,
             reminderEventId: task.reminderEventId,
             reminderCalendarId: task.reminderCalendarId,
-            createdAt: task.createdAt
+            createdAt: task.createdAt,
+            phaseId: task.phaseId
         )
     }
 
@@ -506,7 +535,8 @@ final class TaskItemRecord {
             isCompleted: isCompleted,
             reminderEventId: reminderEventId,
             reminderCalendarId: reminderCalendarId,
-            createdAt: createdAt
+            createdAt: createdAt,
+            phaseId: phaseId
         )
     }
 }
@@ -637,5 +667,77 @@ final class UserProfileRecord {
         profile.targetSchool = targetSchool
         profile.targetScore = targetScore
         return profile
+    }
+}
+
+// MARK: - Study Phase (学期 / 假期阶段)
+
+@Model
+final class StudyPhaseRecord {
+    @Attribute(.unique) var id: UUID
+    /// 阶段名称,如 "2026 春季学期" / "2026 暑假" / "高考冲刺"
+    var name: String
+    /// 阶段开始日期
+    var startDate: Date
+    /// 阶段结束日期
+    var endDate: Date
+    /// 是否已归档
+    var isArchived: Bool
+    /// 归档时间
+    var archivedAt: Date?
+    /// 目标列表(JSON 编码 [PhaseGoal],以 [Data] 形式存)
+    var goalsData: Data?
+    /// 创建时间
+    var createdAt: Date
+
+    init(
+        id: UUID,
+        name: String,
+        startDate: Date,
+        endDate: Date,
+        isArchived: Bool,
+        archivedAt: Date?,
+        goalsData: Data?,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.startDate = startDate
+        self.endDate = endDate
+        self.isArchived = isArchived
+        self.archivedAt = archivedAt
+        self.goalsData = goalsData
+        self.createdAt = createdAt
+    }
+
+    convenience init(from phase: StudyPhase) {
+        let data: Data? = try? JSONEncoder().encode(phase.goals)
+        self.init(
+            id: phase.id,
+            name: phase.name,
+            startDate: phase.startDate,
+            endDate: phase.endDate,
+            isArchived: phase.isArchived,
+            archivedAt: phase.archivedAt,
+            goalsData: data,
+            createdAt: phase.createdAt
+        )
+    }
+
+    func toSnapshot() -> StudyPhase {
+        let goals: [PhaseGoal] = {
+            guard let data = goalsData else { return [] }
+            return (try? JSONDecoder().decode([PhaseGoal].self, from: data)) ?? []
+        }()
+        return StudyPhase(
+            id: id,
+            name: name,
+            startDate: startDate,
+            endDate: endDate,
+            isArchived: isArchived,
+            archivedAt: archivedAt,
+            goals: goals,
+            createdAt: createdAt
+        )
     }
 }

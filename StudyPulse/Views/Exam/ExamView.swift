@@ -23,9 +23,9 @@ struct ExamView: View {
     /// 合并所有类型的考试，按时间排序
     private var allExamsSorted: [Any] {
         var exams: [Any] = []
-        exams.append(contentsOf: dataManager.examSets)
-        exams.append(contentsOf: dataManager.comprehensiveExamSets)
-        
+        exams.append(contentsOf: dataManager.filteredExamSets)
+        exams.append(contentsOf: dataManager.filteredComprehensiveExamSets)
+
         return exams.sorted { a, b in
             let dateA: Date = (a as? Exam)?.examDate ?? (a as? comprehensiveExam)?.examDate ?? .distantFuture
             let dateB: Date = (b as? Exam)?.examDate ?? (b as? comprehensiveExam)?.examDate ?? .distantFuture
@@ -122,6 +122,9 @@ struct ExamView: View {
                     Button(action: { showingNewExamSet = true }) {
                         Image(systemName: "plus")
                     }
+                }
+                ToolbarItem(placement: .principal) {
+                    PhaseSelectorView()
                 }
             }
             .sheet(isPresented: $showingNewExamSet) {

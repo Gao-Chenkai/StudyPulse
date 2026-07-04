@@ -46,6 +46,11 @@ class AppEnvironmentManager: ObservableObject {
         preferences.glassEffectEnabled
     }
 
+    /// 当前激活的 study phase id（nil = 全部数据）
+    var activePhaseId: UUID? {
+        preferences.activePhaseId
+    }
+
     /// 切换主色预设
     func setAccentPalette(_ accent: ThemeAccent) {
         Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
@@ -56,6 +61,12 @@ class AppEnvironmentManager: ObservableObject {
     func setGlassEffectEnabled(_ enabled: Bool) {
         Log.preferences.info("切换玻璃效果 / Glass effect: -> \(enabled, privacy: .public)")
         preferences.glassEffectEnabled = enabled
+    }
+
+    /// 设置当前激活的 study phase（nil = 全部数据）
+    func setActivePhaseId(_ id: UUID?) {
+        Log.preferences.info("切换 phase / Active phase change: -> \(id?.uuidString ?? "all", privacy: .public)")
+        preferences.activePhaseId = id
     }
     
     private init() {

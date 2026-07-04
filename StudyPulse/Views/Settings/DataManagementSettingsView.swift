@@ -55,7 +55,36 @@ struct DataManagementSettingsView: View {
                      .listRowInsets(EdgeInsets())
                      .listRowBackground(Color.clear)
              }
- 
+
+             // Study Phases (学期 / 假期阶段)
+             Section {
+                 NavigationLink(destination: PhaseManagementView()) {
+                     Label {
+                         VStack(alignment: .leading, spacing: 2) {
+                             Text("Study Phases".localized())
+                             if let active = dataManager.activePhase {
+                                 Text("Active: \(active.name)")
+                                     .font(.caption2)
+                                     .foregroundStyle(.secondary)
+                             } else if dataManager.phases.isEmpty {
+                                 Text("Create semester, break, or sprint phases to scope your data.".localized())
+                                     .font(.caption2)
+                                     .foregroundStyle(.secondary)
+                             } else {
+                                 Text("Showing all data (no active phase)".localized())
+                                     .font(.caption2)
+                                     .foregroundStyle(.secondary)
+                             }
+                         }
+                     } icon: {
+                         Image(systemName: "calendar.badge.clock")
+                             .foregroundStyle(.green)
+                     }
+                 }
+             } header: {
+                 Text("Phase Management".localized())
+             }
+
                 // Export
                 Section {
                     Menu {
