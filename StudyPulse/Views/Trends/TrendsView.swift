@@ -11,6 +11,7 @@ import Combine
 
 struct TrendsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingAddGrade = false
     
     // score = ranking = 
@@ -54,6 +55,12 @@ struct TrendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    // 90 天学习热力图（顶部全宽；通过 toolbar Menu 开关控制）
+                    if envManager.preferences.learningHeatmapOnTrends {
+                        LearningHeatmapView()
+                            .padding(.horizontal)
+                    }
+
                     if activeSubjects.isEmpty {
                         // 空状态
                         ContentUnavailableView(
@@ -131,6 +138,16 @@ struct TrendsView: View {
                             trendsShowingMode = "ranking"
                         } label: {
                             Label("", systemImage: "trophy.fill")
+                        }
+
+                        Divider()
+
+                        // 90 天热力图开关（持久化到 AppPreferences）
+                        Toggle(isOn: Binding(
+                            get: { envManager.preferences.learningHeatmapOnTrends },
+                            set: { envManager.preferences.learningHeatmapOnTrends = $0 }
+                        )) {
+                            Label("Show Learning Heatmap".localized(), systemImage: "square.grid.4x3.fill")
                         }
                     } label: {
                         if trendsShowingMode == "score" {

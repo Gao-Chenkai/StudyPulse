@@ -13,36 +13,43 @@ import SwiftUI
 struct HomeLayoutSettingsView: View {
     @State private var items: [HomeCardItem] = HomeLayoutPreference.load().items
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    HStack(spacing: 12) {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                            .frame(width: 24)
-                        
-                        Image(systemName: item.type.icon)
-                            .foregroundColor(.accentColor)
-                            .frame(width: 28)
-                        
-                        Text(item.type.displayName)
-                            .font(.system(size: 16))
-                        
-                        Spacer()
-                        
-                        Toggle("", isOn: binding(for: item))
-                            .labelsHidden()
+                Section {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        HStack(spacing: 12) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                                .frame(width: 24)
+
+                            Image(systemName: item.type.icon)
+                                .foregroundColor(.accentColor)
+                                .frame(width: 28)
+
+                            Text(item.type.displayName)
+                                .font(.system(size: 16))
+
+                            Spacer()
+
+                            Toggle("", isOn: binding(for: item))
+                                .labelsHidden()
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
-                }
-                .onMove { source, destination in
-                    items.move(fromOffsets: source, toOffset: destination)
-                    save()
+                    .onMove { source, destination in
+                        items.move(fromOffsets: source, toOffset: destination)
+                        save()
+                    }
+                } header: {
+                    Text("Home Cards".localized())
+                } footer: {
+                    Text("homeLayout.footer".localized())
                 }
             }
+            .listStyle(.insetGrouped)
             .environment(\.editMode, .constant(.active))
             .navigationTitle("Home Layout".localized())
             .navigationBarTitleDisplayMode(.inline)

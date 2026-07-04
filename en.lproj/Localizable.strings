@@ -815,6 +815,29 @@
 "streak.card.allGoalsMet" = "All goals met today!";
 "streak.card.noActivity" = "Start your first session today";
 
+// Home layout settings
+"Home Cards" = "Home Cards";
+"homeLayout.footer" = "Drag to reorder. Toggle off to hide. Full-width cards like the Learning Heatmap always span the entire row on iPad.";
+
+// Learning heatmap (GitHub-style 90-day activity grid)
+"Learning Heatmap" = "Learning Heatmap";
+"Show Learning Heatmap" = "Show Learning Heatmap";
+"heatmap.title" = "Learning Activity";
+"heatmap.subtitle" = "Last 90 days";
+"heatmap.activeDays" = "active days";
+"heatmap.less" = "Less";
+"heatmap.more" = "More";
+"heatmap.bestDay" = "Best: %d pts on %@";
+"heatmap.detail.title" = "Day Details";
+"heatmap.detail.subtitle" = "%d activity points";
+"heatmap.detail.emptyDay" = "No activity this day";
+"heatmap.detail.noData" = "No activity recorded";
+"heatmap.detail.reviews" = "Mistake Reviews";
+"heatmap.detail.grades" = "Grades Recorded";
+"heatmap.detail.focusMinutes" = "Focus Minutes";
+"heatmap.detail.minutesValue" = "%d min";
+"heatmap.detail.totalPoints" = "Total Activity Points";
+
 // Achievement catalog — onboarding
 "achievement.first_step.title" = "First Step";
 "achievement.first_step.description" = "Record your first learning activity";

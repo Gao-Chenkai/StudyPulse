@@ -22,6 +22,8 @@ enum HomeCardType: String, CaseIterable, Codable {
     case studyTimer = "studyTimer"
     case dailyQuote = "dailyQuote"
     case recentGrades = "recentGrades"
+    /// 90 天学习热力图（GitHub 风格活动格子图）
+    case learningHeatmap = "learningHeatmap"
 
     /// 本地化显示名称
     var displayName: String {
@@ -37,6 +39,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .upcomingExams: return "Upcoming Exams".localized()
         case .dailyQuote: return "Daily Quote".localized()
         case .recentGrades: return "Recent Grades".localized()
+        case .learningHeatmap: return "Learning Heatmap".localized()
         }
     }
 
@@ -54,6 +57,16 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .upcomingExams: return "calendar.badge.exclamationmark"
         case .dailyQuote: return "quote.bubble.fill"
         case .recentGrades: return "list.bullet.rectangle"
+        case .learningHeatmap: return "square.grid.4x3.fill"
+        }
+    }
+
+    /// 是否需要全宽渲染（iPad 双列网格中要独占一整行）。
+    /// 宽幅可视化卡片（如 90 天热力图、即将考试大卡）应标记为 true。
+    var isFullWidth: Bool {
+        switch self {
+        case .learningHeatmap: return true
+        default: return false
         }
     }
 }
@@ -76,6 +89,7 @@ struct HomeLayoutPreference: Codable, Equatable {
 
     /// 默认配置：全部启用，标准顺序
     static let `default` = HomeLayoutPreference(items: [
+        HomeCardItem(type: .learningHeatmap, enabled: true),
         HomeCardItem(type: .hrvStatus, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),

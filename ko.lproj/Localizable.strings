@@ -821,6 +821,29 @@
 "streak.card.allGoalsMet" = "오늘 목표 모두 달성!";
 "streak.card.noActivity" = "첫 학습을 시작하세요";
 
+// 홈 레이아웃 설정
+"Home Cards" = "홈 카드";
+"homeLayout.footer" = "드래그하여 순서 변경, 스위치로 숨기기 가능. 학습 히트맵 같은 전체 너비 카드는 iPad에서 항상 한 줄을 차지합니다.";
+
+// 학습 히트맵 (GitHub 스타일 90일 활동 그리드)
+"Learning Heatmap" = "학습 히트맵";
+"Show Learning Heatmap" = "학습 히트맵 표시";
+"heatmap.title" = "학습 활동";
+"heatmap.subtitle" = "최근 90일";
+"heatmap.activeDays" = "활동일";
+"heatmap.less" = "적음";
+"heatmap.more" = "많음";
+"heatmap.bestDay" = "최고: %d점 (%@)";
+"heatmap.detail.title" = "당일 상세";
+"heatmap.detail.subtitle" = "%d 활동 점";
+"heatmap.detail.emptyDay" = "당일 활동 없음";
+"heatmap.detail.noData" = "활동 기록 없음";
+"heatmap.detail.reviews" = "오답 복습";
+"heatmap.detail.grades" = "성적 기록";
+"heatmap.detail.focusMinutes" = "집중 시간(분)";
+"heatmap.detail.minutesValue" = "%d분";
+"heatmap.detail.totalPoints" = "총 활동 점";
+
 // 성취 카탈로그 — 입문
 "achievement.first_step.title" = "첫걸음";
 "achievement.first_step.description" = "첫 학습 활동 기록하기";

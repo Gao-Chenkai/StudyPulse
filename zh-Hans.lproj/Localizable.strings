@@ -821,6 +821,29 @@
 "streak.card.allGoalsMet" = "今日目标全部达成！";
 "streak.card.noActivity" = "开始你的第一节学习吧";
 
+// 主页布局设置
+"Home Cards" = "主页卡片";
+"homeLayout.footer" = "拖动可重新排序，关闭开关即可隐藏。宽幅卡片（如学习热力图）在 iPad 上始终独占整行。";
+
+// 学习热力图（GitHub 风格 90 天活动格子图）
+"Learning Heatmap" = "学习热力图";
+"Show Learning Heatmap" = "显示学习热力图";
+"heatmap.title" = "学习活动";
+"heatmap.subtitle" = "最近 90 天";
+"heatmap.activeDays" = "活跃天数";
+"heatmap.less" = "少";
+"heatmap.more" = "多";
+"heatmap.bestDay" = "最佳：%d 分（%@）";
+"heatmap.detail.title" = "当日详情";
+"heatmap.detail.subtitle" = "%d 活动分";
+"heatmap.detail.emptyDay" = "当日无活动";
+"heatmap.detail.noData" = "暂无活动记录";
+"heatmap.detail.reviews" = "错题复习";
+"heatmap.detail.grades" = "成绩录入";
+"heatmap.detail.focusMinutes" = "专注分钟";
+"heatmap.detail.minutesValue" = "%d 分钟";
+"heatmap.detail.totalPoints" = "总活动分";
+
 // 成就目录 — 入门
 "achievement.first_step.title" = "第一步";
 "achievement.first_step.description" = "记录你的第一次学习活动";

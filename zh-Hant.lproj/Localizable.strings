@@ -821,6 +821,29 @@
 "streak.card.allGoalsMet" = "今日目標全部達成！";
 "streak.card.noActivity" = "開始你的第一節學習吧";
 
+// 主頁佈局設定
+"Home Cards" = "主頁卡片";
+"homeLayout.footer" = "拖動可重新排序，關閉開關即可隱藏。寬幅卡片（如學習熱力圖）在 iPad 上始終獨佔整行。";
+
+// 學習熱力圖（GitHub 風格 90 天活動格子圖）
+"Learning Heatmap" = "學習熱力圖";
+"Show Learning Heatmap" = "顯示學習熱力圖";
+"heatmap.title" = "學習活動";
+"heatmap.subtitle" = "最近 90 天";
+"heatmap.activeDays" = "活躍天數";
+"heatmap.less" = "少";
+"heatmap.more" = "多";
+"heatmap.bestDay" = "最佳：%d 分（%@）";
+"heatmap.detail.title" = "當日詳情";
+"heatmap.detail.subtitle" = "%d 活動分";
+"heatmap.detail.emptyDay" = "當日無活動";
+"heatmap.detail.noData" = "暫無活動記錄";
+"heatmap.detail.reviews" = "錯題複習";
+"heatmap.detail.grades" = "成績錄入";
+"heatmap.detail.focusMinutes" = "專注分鐘";
+"heatmap.detail.minutesValue" = "%d 分鐘";
+"heatmap.detail.totalPoints" = "總活動分";
+
 // 成就目錄 — 入門
 "achievement.first_step.title" = "第一步";
 "achievement.first_step.description" = "記錄你的第一次學習活動";

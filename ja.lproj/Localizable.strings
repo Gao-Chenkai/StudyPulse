@@ -821,6 +821,29 @@
 "streak.card.allGoalsMet" = "今日の目標をすべて達成！";
 "streak.card.noActivity" = "最初の学習を始めましょう";
 
+// ホームレイアウト設定
+"Home Cards" = "ホームカード";
+"homeLayout.footer" = "ドラッグで並べ替え。スイッチで非表示にできます。学習ヒートマップなどのフル幅カードは iPad で常に 1 行を占めます。";
+
+// 学習ヒートマップ（GitHub 風 90 日間のアクティビティグリッド）
+"Learning Heatmap" = "学習ヒートマップ";
+"Show Learning Heatmap" = "学習ヒートマップを表示";
+"heatmap.title" = "学習アクティビティ";
+"heatmap.subtitle" = "直近 90 日間";
+"heatmap.activeDays" = "活動日数";
+"heatmap.less" = "少";
+"heatmap.more" = "多";
+"heatmap.bestDay" = "最高：%d ポイント（%@）";
+"heatmap.detail.title" = "当日の詳細";
+"heatmap.detail.subtitle" = "%d アクティビティポイント";
+"heatmap.detail.emptyDay" = "当日は活動なし";
+"heatmap.detail.noData" = "アクティビティ記録なし";
+"heatmap.detail.reviews" = "間違い復習";
+"heatmap.detail.grades" = "成績記録";
+"heatmap.detail.focusMinutes" = "集中時間（分）";
+"heatmap.detail.minutesValue" = "%d 分";
+"heatmap.detail.totalPoints" = "合計ポイント";
+
 // 実績カタログ — 入門
 "achievement.first_step.title" = "最初の一歩";
 "achievement.first_step.description" = "最初の学習活動を記録する";

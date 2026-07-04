@@ -25,13 +25,15 @@ nonisolated struct AppPreferences: Codable {
     var accentPaletteId: String? = nil
     /// 是否在支持的卡片上启用 iOS 26 glassEffect（默认关闭）
     var glassEffectEnabled: Bool = false
+    /// 是否在 Trends 页顶部显示 90 天学习热力图（默认开启）
+    var learningHeatmapOnTrends: Bool = true
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
-        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled
+        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends
     }
 
     init() {}
@@ -43,6 +45,7 @@ nonisolated struct AppPreferences: Codable {
         self.chartType = try c.decodeIfPresent(ChartType.self, forKey: .chartType) ?? .line
         self.accentPaletteId = try c.decodeIfPresent(String.self, forKey: .accentPaletteId)
         self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
+        self.learningHeatmapOnTrends = try c.decodeIfPresent(Bool.self, forKey: .learningHeatmapOnTrends) ?? true
     }
     
     // MARK: - 语言常量

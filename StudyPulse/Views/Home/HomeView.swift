@@ -39,6 +39,7 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @ObservedObject private var hrvManager = HealthKitManager.shared
     /// 异步加载的头像数据，避免 body 中同步读文件
     @State private var avatarData: Data? = nil
@@ -173,21 +174,15 @@ struct HomeView: View {
     }
     // MARK: - Dynamic Cards
 
-    /// 动态渲染可配置卡片：iPhone 单列，iPad 双列网格
+    /// 动态渲染可配置卡片：iPhone 单列，iPad 双列网格（全宽卡片独占一行）
     @ViewBuilder
     private var dynamicCards: some View {
         let layout = HomeLayoutPreference.load()
         let enabledTypes = layout.enabledTypes
 
         if isRegularWidth {
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
-                spacing: 16
-            ) {
-                ForEach(enabledTypes, id: \.self) { type in
-                    cardView(for: type)
-                }
-            }
+            // iPad: 按 enabledTypes 顺序渲染；全宽卡片独占一行，其他 2 列成行
+            iPadDynamicCards(types: enabledTypes)
         } else {
             // iPhone：LazyVStack 包装 ForEach 让屏外卡片跳过布局
             // iPhone: wrap ForEach in LazyVStack so off-screen cards skip layout
@@ -197,6 +192,55 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// iPad 上的卡片布局：把 enabledTypes 切成"块"——全宽卡片独立成块，
+    /// 其余按 2 个一组进网格。这样 heatmap 等宽幅卡片可以出现在任何排序位置。
+    @ViewBuilder
+    private func iPadDynamicCards(types: [HomeCardType]) -> some View {
+        let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+        let chunks = makeChunks(from: types)
+
+        LazyVStack(spacing: 16) {
+            ForEach(Array(chunks.enumerated()), id: \.offset) { _, chunk in
+                if chunk.count == 1 && chunk[0].isFullWidth {
+                    // 全宽卡片：脱离网格
+                    cardView(for: chunk[0])
+                } else {
+                    // 1-2 个普通卡片：进 2 列网格
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(chunk, id: \.self) { type in
+                            cardView(for: type)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 把 enabledTypes 切成行块：全宽卡片独占一块，普通卡片每 2 个一块。
+    private func makeChunks(from types: [HomeCardType]) -> [[HomeCardType]] {
+        var chunks: [[HomeCardType]] = []
+        var current: [HomeCardType] = []
+        for type in types {
+            if type.isFullWidth {
+                if !current.isEmpty {
+                    chunks.append(current)
+                    current = []
+                }
+                chunks.append([type])
+            } else {
+                current.append(type)
+                if current.count == 2 {
+                    chunks.append(current)
+                    current = []
+                }
+            }
+        }
+        if !current.isEmpty {
+            chunks.append(current)
+        }
+        return chunks
     }
 
     /// 根据卡片类型返回对应视图；数据不足时自动隐藏
@@ -249,6 +293,9 @@ struct HomeView: View {
                 RecentGradesSection()
                     .contextMenu { shareCardMenu(for: type) }
             }
+        case .learningHeatmap:
+            LearningHeatmapView()
+                .contextMenu { shareCardMenu(for: type) }
         }
     }
 
@@ -368,6 +415,7 @@ struct HomeView: View {
         case .dailyQuote: return "Daily Quote".localized()
         case .streakProgress: return "Streak Progress".localized()
         case .recentGrades: return "Recent Grades".localized()
+        case .learningHeatmap: return "Learning Heatmap".localized()
         }
     }
 
@@ -417,6 +465,8 @@ struct HomeView: View {
                     } else {
                         Text("No data in this period".localized())
                     }
+                case .learningHeatmap:
+                    LearningHeatmapView()
                 }
             }
             .frame(maxWidth: .infinity)
