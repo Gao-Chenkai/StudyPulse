@@ -25,10 +25,37 @@ class AppEnvironmentManager: ObservableObject {
     var effectiveColorScheme: ColorScheme? {
         preferences.colorScheme.toSwiftColorScheme()
     }
-    
+
     /// 当前有效的语言代码
     var effectiveLanguage: String? {
         preferences.appLanguage
+    }
+
+    /// 当前主色（用于 AccentColor / 折线 / 进度条）
+    var effectiveAccent: ThemeAccent {
+        ThemeAccent.resolve(preferences.accentPaletteId)
+    }
+
+    /// 当前主色对应的 `Color`
+    var effectiveAccentColor: Color {
+        effectiveAccent.color
+    }
+
+    /// 全局是否启用 iOS 26 glassEffect 卡片
+    var glassEffectEnabled: Bool {
+        preferences.glassEffectEnabled
+    }
+
+    /// 切换主色预设
+    func setAccentPalette(_ accent: ThemeAccent) {
+        Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
+        preferences.accentPaletteId = accent.rawValue
+    }
+
+    /// 切换玻璃效果开关
+    func setGlassEffectEnabled(_ enabled: Bool) {
+        Log.preferences.info("切换玻璃效果 / Glass effect: -> \(enabled, privacy: .public)")
+        preferences.glassEffectEnabled = enabled
     }
     
     private init() {

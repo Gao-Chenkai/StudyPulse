@@ -678,6 +678,24 @@
 "Show grade density by weekday and week." = "Show grade density by weekday and week.";
 "Count how often scores fall into each 20% bucket." = "Count how often scores fall into each 20% bucket.";
 
+// Theme Color & Liquid Glass (PreferencesView)
+"Theme Color" = "Theme Color";
+"Affects AccentColor, trend line and progress bars throughout the app." = "Affects AccentColor, trend line and progress bars throughout the app.";
+"Liquid Glass Effect" = "Liquid Glass Effect";
+"Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems." = "Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems.";
+"Enable Glass Effect" = "Enable Glass Effect";
+"System Default" = "System Default";
+"Blue" = "Blue";
+"Cyan" = "Cyan";
+"Teal" = "Teal";
+"Green" = "Green";
+"Mint" = "Mint";
+"Orange" = "Orange";
+"Red" = "Red";
+"Pink" = "Pink";
+"Purple" = "Purple";
+"Indigo" = "Indigo";
+
 // Flashcard / Spaced Repetition
 "Flashcard Review" = "Flashcard Review";
 "Spaced Repetition" = "Spaced Repetition";

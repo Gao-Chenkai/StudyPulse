@@ -684,6 +684,24 @@
 "Show grade density by weekday and week." = "按周次与星期展示考试密度。";
 "Count how often scores fall into each 20% bucket." = "按 20% 得分率统计每个区间的成绩次数。";
 
+// Theme Color & Liquid Glass / 主题色 & 液态玻璃
+"Theme Color" = "主题色";
+"Affects AccentColor, trend line and progress bars throughout the app." = "影响应用内 AccentColor、趋势折线和进度条。";
+"Liquid Glass Effect" = "液态玻璃效果";
+"Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems." = "在支持的卡片上启用 iOS 26 液态玻璃效果（需要 iOS 26+）；低版本回退到毛玻璃。";
+"Enable Glass Effect" = "启用液态玻璃";
+"System Default" = "跟随系统";
+"Blue" = "蓝色";
+"Cyan" = "青色";
+"Teal" = "蓝绿";
+"Green" = "绿色";
+"Mint" = "薄荷";
+"Orange" = "橙色";
+"Red" = "红色";
+"Pink" = "粉色";
+"Purple" = "紫色";
+"Indigo" = "靛蓝";
+
 // Flashcard / Spaced Repetition / 闪卡与间隔重复
 "Flashcard Review" = "闪卡复习";
 "Spaced Repetition" = "间隔重复";

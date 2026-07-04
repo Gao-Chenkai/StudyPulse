@@ -1233,7 +1233,8 @@ struct ChartSectionView: View {
                     TrendChartView(
                         grades: grades.sorted(by: { $0.date < $1.date }),
                         fullScore: dataManager.fullScore(for: subject),
-                        chartType: envManager.preferences.chartType
+                        chartType: envManager.preferences.chartType,
+                        tintColor: envManager.effectiveAccentColor
                     )
                     .frame(height: chartHeight)
                     .opacity(animateChart ? 1 : 0)

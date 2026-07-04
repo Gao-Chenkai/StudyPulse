@@ -32,7 +32,8 @@ struct GradeChartView: View {
             TrendChartView(
                 grades: filteredGrades,
                 fullScore: fullScore,
-                chartType: envManager.preferences.chartType
+                chartType: envManager.preferences.chartType,
+                tintColor: envManager.effectiveAccentColor
             )
             .frame(height: chartHeight)
             .padding()

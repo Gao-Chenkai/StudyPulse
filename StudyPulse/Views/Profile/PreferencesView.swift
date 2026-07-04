@@ -15,53 +15,11 @@ struct PreferencesView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(
-                    header: Text("Appearance".localized()),
-                    footer: Text("Choose your preferred color scheme.".localized())
-                ) {
-                    Picker("Theme".localized(), selection: Binding(
-                        get: { envManager.preferences.colorScheme },
-                        set: { envManager.setColorScheme($0) }
-                    )) {
-                        ForEach(ColorSchemeOption.allCases, id: \.self) { option in
-                            HStack {
-                                Image(systemName: option.icon)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 24)
-                                Text(option.localizedDisplayName)
-                            }
-                            .tag(option)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                }
-                
-                Section(
-                    header: Text("Language".localized()),
-                    footer: Text("App language can be changed here independently of the system language.".localized())
-                ) {
-                    Picker("App Language".localized(), selection: Binding(
-                        get: { envManager.preferences.appLanguage },
-                        set: { envManager.setLanguage($0) }
-                    )) {
-                        ForEach(AppPreferences.Language.allLocalized, id: \.code) { lang in
-                            Text(lang.displayName)
-                                .tag(lang.code)
-                        }
-                    }
-                }
-                
-                Section(footer: Text("Language changes require app restart to take full effect.".localized())) {
-                    Button(role: .destructive) {
-                        restartApp()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Restart Now".localized())
-                            Spacer()
-                        }
-                    }
-                }
+                themeColorSection
+                glassEffectSection
+                appearanceSection
+                languageSection
+                restartSection
             }
             .navigationTitle("Preferences".localized())
             .navigationBarTitleDisplayMode(.inline)
@@ -71,6 +29,129 @@ struct PreferencesView: View {
                     Button("Done".localized()) {
                         dismiss()
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - 主题色 Section
+
+    private var themeColorSection: some View {
+        Section(
+            header: Text("Theme Color".localized()),
+            footer: Text("Affects AccentColor, trend line and progress bars throughout the app.".localized())
+        ) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(ThemeAccent.allCases) { accent in
+                        Button {
+                            envManager.setAccentPalette(accent)
+                        } label: {
+                            VStack(spacing: 6) {
+                                ZStack {
+                                    Circle()
+                                        .fill(accent.color)
+                                        .frame(width: 36, height: 36)
+                                    if envManager.effectiveAccent == accent {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                    Circle()
+                                        .strokeBorder(
+                                            envManager.effectiveAccent == accent
+                                                ? Color.primary.opacity(0.4)
+                                                : Color.primary.opacity(0.1),
+                                            lineWidth: envManager.effectiveAccent == accent ? 2 : 1
+                                        )
+                                        .frame(width: 40, height: 40)
+                                }
+                                Text(accent.localizedDisplayName)
+                                    .font(.caption2)
+                                    .foregroundColor(envManager.effectiveAccent == accent ? .primary : .secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+        }
+    }
+
+    // MARK: - 玻璃效果 Section
+
+    private var glassEffectSection: some View {
+        Section(
+            header: Text("Liquid Glass Effect".localized()),
+            footer: Text("Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems.".localized())
+        ) {
+            Toggle(isOn: Binding(
+                get: { envManager.glassEffectEnabled },
+                set: { envManager.setGlassEffectEnabled($0) }
+            )) {
+                Label("Enable Glass Effect".localized(), systemImage: "drop.fill")
+            }
+        }
+    }
+
+    // MARK: - Appearance Section (旧)
+
+    private var appearanceSection: some View {
+        Section(
+            header: Text("Appearance".localized()),
+            footer: Text("Choose your preferred color scheme.".localized())
+        ) {
+            Picker("Theme".localized(), selection: Binding(
+                get: { envManager.preferences.colorScheme },
+                set: { envManager.setColorScheme($0) }
+            )) {
+                ForEach(ColorSchemeOption.allCases, id: \.self) { option in
+                    HStack {
+                        Image(systemName: option.icon)
+                            .foregroundColor(.primary)
+                            .frame(width: 24)
+                        Text(option.localizedDisplayName)
+                    }
+                    .tag(option)
+                }
+            }
+            .pickerStyle(.inline)
+        }
+    }
+
+    // MARK: - Language Section
+
+    private var languageSection: some View {
+        Section(
+            header: Text("Language".localized()),
+            footer: Text("App language can be changed here independently of the system language.".localized())
+        ) {
+            Picker("App Language".localized(), selection: Binding(
+                get: { envManager.preferences.appLanguage },
+                set: { envManager.setLanguage($0) }
+            )) {
+                ForEach(AppPreferences.Language.allLocalized, id: \.code) { lang in
+                    Text(lang.displayName)
+                        .tag(lang.code)
+                }
+            }
+        }
+    }
+
+    // MARK: - Restart Section
+
+    private var restartSection: some View {
+        Section(footer: Text("Language changes require app restart to take full effect.".localized())) {
+            Button(role: .destructive) {
+                restartApp()
+            } label: {
+                HStack {
+                    Spacer()
+                    Text("Restart Now".localized())
+                    Spacer()
                 }
             }
         }

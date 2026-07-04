@@ -19,6 +19,7 @@ struct TodoRowView: View {
     /// 点击作业/阅读行的完成按钮时的回调
     var onToggleCompletion: (() -> Void)? = nil
     @State private var animateIn = false
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: entry.date)
@@ -116,10 +117,7 @@ struct TodoRowView: View {
             }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 14)
         .opacity(entry.isCompleted ? 0.55 : 1.0)
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)

@@ -20,6 +20,30 @@ nonisolated struct AppPreferences: Codable {
     var colorScheme: ColorSchemeOption = .system
     /// 成绩趋势图表显示类型（折线/柱状/饼图/散点/热力）
     var chartType: ChartType = .line
+    /// 自定义主色预设（影响 AccentColor / 折线 / 进度条）
+    /// nil = 跟随系统默认蓝色
+    var accentPaletteId: String? = nil
+    /// 是否在支持的卡片上启用 iOS 26 glassEffect（默认关闭）
+    var glassEffectEnabled: Bool = false
+
+    // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
+    // Custom decoder: fall back to defaults for missing fields so older
+    // serialized preferences (without accentPaletteId / glassEffectEnabled)
+    // continue to decode instead of throwing.
+    enum CodingKeys: String, CodingKey {
+        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.appLanguage = try c.decodeIfPresent(String.self, forKey: .appLanguage)
+        self.colorScheme = try c.decodeIfPresent(ColorSchemeOption.self, forKey: .colorScheme) ?? .system
+        self.chartType = try c.decodeIfPresent(ChartType.self, forKey: .chartType) ?? .line
+        self.accentPaletteId = try c.decodeIfPresent(String.self, forKey: .accentPaletteId)
+        self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
+    }
     
     // MARK: - 语言常量
     
@@ -143,6 +167,75 @@ nonisolated enum ChartType: String, Codable, CaseIterable, Identifiable {
         case .scatter: "Show each grade as an independent dot.".localized()
         case .heatmap: "Show grade density by weekday and week.".localized()
         case .histogram: "Count how often scores fall into each 20% bucket.".localized()
+        }
+    }
+}
+
+// MARK: - Theme Accent (主色预设)
+
+/// 自定义主色预设：影响 AccentColor、趋势折线、进度条、设置项高亮等。
+/// 通过 `accentPaletteId` 字符串持久化；新加预设请追加 `id`，不要改老的 id。
+nonisolated enum ThemeAccent: String, CaseIterable, Identifiable {
+    case system = "system"       // 跟随系统 AccentColor（默认）
+    case blue = "blue"
+    case cyan = "cyan"
+    case teal = "teal"
+    case green = "green"
+    case mint = "mint"
+    case orange = "orange"
+    case red = "red"
+    case pink = "pink"
+    case purple = "purple"
+    case indigo = "indigo"
+
+    var id: String { rawValue }
+
+    /// 解析持久化的 id，未知值回退到 `.system`
+    static func resolve(_ id: String?) -> ThemeAccent {
+        guard let id, let value = ThemeAccent(rawValue: id) else { return .system }
+        return value
+    }
+
+    /// SF Symbol 图标（用于色板预览）
+    var swatchSystemImage: String {
+        switch self {
+        case .system: "circle.righthalf.fill"
+        default: "circle.fill"
+        }
+    }
+
+    /// 主色（用于 `tint()`、折线、进度条等）
+    /// `.system` 走 SwiftUI 系统 AccentColor，遵循系统浅深色
+    var color: Color {
+        switch self {
+        case .system: .accentColor
+        case .blue: .blue
+        case .cyan: .cyan
+        case .teal: .teal
+        case .green: .green
+        case .mint: .mint
+        case .orange: .orange
+        case .red: .red
+        case .pink: .pink
+        case .purple: .purple
+        case .indigo: .indigo
+        }
+    }
+
+    /// 本地化显示名
+    @MainActor var localizedDisplayName: String {
+        switch self {
+        case .system: "System Default".localized()
+        case .blue: "Blue".localized()
+        case .cyan: "Cyan".localized()
+        case .teal: "Teal".localized()
+        case .green: "Green".localized()
+        case .mint: "Mint".localized()
+        case .orange: "Orange".localized()
+        case .red: "Red".localized()
+        case .pink: "Pink".localized()
+        case .purple: "Purple".localized()
+        case .indigo: "Indigo".localized()
         }
     }
 }

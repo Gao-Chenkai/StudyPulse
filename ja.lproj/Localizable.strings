@@ -684,6 +684,24 @@
 "Show grade density by weekday and week." = "週・曜日ごとの試験密度をヒートマップで表示します。";
 "Count how often scores fall into each 20% bucket." = "20% 刻みの各得率帯に成績が何回入ったかを集計します。";
 
+// Theme Color & Liquid Glass / テーマカラー & リキッドガラス
+"Theme Color" = "テーマカラー";
+"Affects AccentColor, trend line and progress bars throughout the app." = "アプリ全体の AccentColor、折れ線グラフ、プログレスバーに反映されます。";
+"Liquid Glass Effect" = "リキッドガラス効果";
+"Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems." = "対応するカードで iOS 26 のガラス効果を有効化（iOS 26+ 必須）。古い OS ではマテリアルにフォールバックします。";
+"Enable Glass Effect" = "ガラス効果を有効化";
+"System Default" = "システム標準";
+"Blue" = "ブルー";
+"Cyan" = "シアン";
+"Teal" = "ティール";
+"Green" = "グリーン";
+"Mint" = "ミント";
+"Orange" = "オレンジ";
+"Red" = "レッド";
+"Pink" = "ピンク";
+"Purple" = "パープル";
+"Indigo" = "インディゴ";
+
 // Flashcard / Spaced Repetition / フラッシュカードと間隔反復
 "Flashcard Review" = "フラッシュカード復習";
 "Spaced Repetition" = "間隔反復";

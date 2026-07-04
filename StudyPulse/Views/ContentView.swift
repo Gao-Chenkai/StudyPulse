@@ -41,6 +41,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selectedTab: AppTab = .home
     @State private var showingAddGradeFromIntent = false
@@ -56,7 +57,7 @@ struct ContentView: View {
                 iPhoneTabLayout(selectedTab: $selectedTab)
             }
         }
-        .tint(.cyan)
+        .tint(envManager.effectiveAccentColor)
         .overlay(alignment: .top) {
             AchievementUnlockToast()
         }

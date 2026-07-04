@@ -347,7 +347,8 @@ struct SubjectDetailView: View {
                         TrendChartView(
                             grades: filteredGrades,
                             fullScore: dataManager.fullScore(for: subject),
-                            chartType: envManager.preferences.chartType
+                            chartType: envManager.preferences.chartType,
+                            tintColor: envManager.effectiveAccentColor
                         )
                         .frame(height: chartHeight)
                     } else {

@@ -30,6 +30,7 @@ struct SubjectScoreCard: View {
     let history: [Grade]
     let displayMode: String // 新增：接收显示模式
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var animateIn = false
     
     var fullScore: Double {
@@ -148,10 +149,7 @@ struct SubjectScoreCard: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 18)
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 20)
@@ -244,7 +242,8 @@ struct miniChartView: View {
                     grades: grades,
                     fullScore: fullScore,
                     chartType: envManager.preferences.chartType,
-                    compact: true
+                    compact: true,
+                    tintColor: envManager.effectiveAccentColor
                 )
             }
         }

@@ -12,6 +12,7 @@ import SwiftUI
 
 struct StreakHomeCard: View {
     @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     private var config: DailyGoalConfig {
         achievementManager.snapshot.config
@@ -72,10 +73,7 @@ struct StreakHomeCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 12)
     }
 
     // MARK: - Today Done Banner

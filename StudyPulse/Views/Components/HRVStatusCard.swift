@@ -13,6 +13,7 @@ import Charts
 struct HRVStatusCard: View {
     @ObservedObject var hrvManager = HealthKitManager.shared
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var animateIn = false
 
     var body: some View {
@@ -48,13 +49,10 @@ struct HRVStatusCard: View {
                 }
             }
             .padding(16)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(accent.opacity(0.25), lineWidth: 1)
-                }
+            .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 18)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(accent.opacity(0.25), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             .opacity(animateIn ? 1 : 0)

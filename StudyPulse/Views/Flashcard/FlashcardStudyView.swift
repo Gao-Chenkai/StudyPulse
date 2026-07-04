@@ -71,6 +71,7 @@ enum FlashcardFilter: Equatable {
 /// 全屏闪卡复习入口
 struct FlashcardStudyView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
 
     let filter: FlashcardFilter
@@ -224,7 +225,7 @@ struct FlashcardStudyView: View {
 
                 ProgressView(value: progress)
                     .progressViewStyle(.linear)
-                    .tint(.purple)
+                    .tint(envManager.effectiveAccentColor)
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)

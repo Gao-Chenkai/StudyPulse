@@ -6,7 +6,7 @@
         {
           "blend-mode-specializations" : [
             {
-              "value" : "darken"
+              "value" : "normal"
             },
             {
               "appearance" : "tinted",
@@ -15,7 +15,7 @@
           ],
           "fill-specializations" : [
             {
-              "value" : "automatic"
+              "value" : "none"
             },
             {
               "appearance" : "tinted",

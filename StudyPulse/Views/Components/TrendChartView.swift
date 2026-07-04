@@ -18,6 +18,8 @@ struct TrendChartView: View {
     let chartType: ChartType
     /// compact 模式：隐藏所有数字标注、简化坐标轴（用于 mini chart 等小尺寸场景）
     var compact: Bool = false
+    /// 自定义主色（用于折线 / 柱状图等）
+    var tintColor: Color = .accentColor
 
     // MARK: - 触屏选中状态（用于"手指放到表上显示数据点"交互）
     @State private var selectedGrade: Grade?
@@ -57,7 +59,7 @@ struct TrendChartView: View {
                 x: .value("Date", grade.date),
                 y: .value("Score", grade.score)
             )
-            .foregroundStyle(Color.blue)
+            .foregroundStyle(tintColor)
             .interpolationMethod(.linear)
 
             PointMark(
@@ -176,7 +178,7 @@ struct TrendChartView: View {
                     x: .value("Date", grade.date),
                     y: .value("Score", grade.score)
                 )
-                .foregroundStyle(scoreColor(grade.score, fullScore: fullScore).opacity(isSelected ? 1.0 : 0.85))
+                .foregroundStyle(tintColor.opacity(isSelected ? 1.0 : 0.85))
                 .cornerRadius(3)
             }
         }

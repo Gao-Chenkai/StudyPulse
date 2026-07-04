@@ -684,6 +684,24 @@
 "Show grade density by weekday and week." = "주차와 요일별 시험 밀도를 히트맵으로 표시합니다.";
 "Count how often scores fall into each 20% bucket." = "20% 득점율 구간별로 성적이 몇 번 포함되는지 집계합니다.";
 
+// Theme Color & Liquid Glass / 테마 색상 & 리퀴드 글래스
+"Theme Color" = "테마 색상";
+"Affects AccentColor, trend line and progress bars throughout the app." = "앱 전체의 AccentColor, 추세 선, 진행률 바에 반영됩니다.";
+"Liquid Glass Effect" = "리퀴드 글래스 효과";
+"Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems." = "지원되는 카드에서 iOS 26 글래스 효과를 활성화합니다 (iOS 26+ 필요). 하위 버전에서는 머티리얼로 대체됩니다.";
+"Enable Glass Effect" = "글래스 효과 활성화";
+"System Default" = "시스템 기본";
+"Blue" = "블루";
+"Cyan" = "시안";
+"Teal" = "틸";
+"Green" = "그린";
+"Mint" = "민트";
+"Orange" = "오렌지";
+"Red" = "레드";
+"Pink" = "핑크";
+"Purple" = "퍼플";
+"Indigo" = "인디고";
+
 // Flashcard / Spaced Repetition / 플래시카드와 간격 반복
 "Flashcard Review" = "플래시카드 복습";
 "Spaced Repetition" = "간격 반복";
