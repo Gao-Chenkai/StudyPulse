@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct NewTaskView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 
     /// 预设类型（作业 / 阅读），由父视图传入；用户在表单内仍可切换
@@ -45,7 +45,7 @@ struct NewTaskView: View {
     }
 
     private var availableSubjects: [String] {
-        dataManager.subjects.filter { $0.enabled }.map { $0.name }
+        container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
 
     var body: some View {
@@ -164,7 +164,7 @@ struct NewTaskView: View {
         )
 
         if !syncToReminders {
-            dataManager.addTask(task, syncToReminders: false)
+            container.addTask(task, syncToReminders: false)
             isSaving = false
             dismiss()
             return
@@ -180,7 +180,7 @@ struct NewTaskView: View {
                     subject: subject.isEmpty ? nil : subject
                 )
                 await MainActor.run {
-                    dataManager.addTask(task, syncToReminders: true, reminderResult: result)
+                    container.addTask(task, syncToReminders: true, reminderResult: result)
                     isSaving = false
                     resultAlertMessage = "Saved and added to system Reminders.".localized()
                     showingResultAlert = true
@@ -188,7 +188,7 @@ struct NewTaskView: View {
             } catch {
                 await MainActor.run {
                     // Reminders 同步失败：仍然把任务存到本地
-                    dataManager.addTask(task, syncToReminders: false)
+                    container.addTask(task, syncToReminders: false)
                     isSaving = false
                     resultAlertMessage = "Saved to StudyPulse, but Reminders sync failed: \(error.localizedDescription)"
                     showingResultAlert = true
@@ -199,11 +199,11 @@ struct NewTaskView: View {
 }
 
 #Preview {
-    let dm = DataManager()
-    dm.subjects = [
+    let mockContainer = RepositoryContainer()
+    mockContainer.subjectRepo.subjects = [
         Subject(name: "Mathematics", enabled: true),
         Subject(name: "Physics", enabled: true)
     ]
     return NewTaskView(initialType: .homework)
-        .environmentObject(dm)
+        .environment(mockContainer)
 }

@@ -10,60 +10,20 @@ import Charts
 import Combine
 
 struct TrendsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
+    @StateObject private var viewModel: TrendsViewModel
     @State private var showingAddGrade = false
 
     // score = ranking =
     @State var trendsShowingMode = "score"
 
-    // 派生数据缓存(避免 body 每次 re-render 全量重算)
-    /// 按 subject 分组的已排序成绩(asc),供 getLatestGrade/getGradeHistory 复用
-    @State private var gradesBySubjectCache: [String: [Grade]] = [:]
-    /// 启用的有成绩的科目列表
-    @State private var activeSubjectsCache: [String] = []
-    /// 需要关注的科目(平均分 < 70 或近期下滑 > 15)
-    @State private var subjectsNeedingAttentionCache: [String] = []
-
-    /// 集中重算 3 个缓存,O(n) 一次扫
-    private func recomputeAll() {
-        // 1. 单次 group by subject + sort
-        var groups: [String: [Grade]] = [:]
-        for g in dataManager.filteredGrades {
-            groups[g.subject, default: []].append(g)
-        }
-        // 排序 + 缓存
-        var sorted: [String: [Grade]] = [:]
-        for (subject, arr) in groups {
-            sorted[subject] = arr.sorted { $0.date < $1.date }
-        }
-        gradesBySubjectCache = sorted
-
-        // 2. 启用的 + 有成绩的科目
-        let enabledNames = dataManager.subjects.filter { $0.enabled }.map { $0.name }
-        activeSubjectsCache = enabledNames.filter { !(sorted[$0]?.isEmpty ?? true) }
-
-        // 3. 需要关注的:平均分 < 70 或最近下滑 > 15
-        var needAttention: [String] = []
-        for subject in activeSubjectsCache {
-            guard let arr = sorted[subject], arr.count >= 2 else { continue }
-            let recent = Array(arr.suffix(3))
-            let avg = recent.reduce(0.0) { $0 + $1.score } / Double(recent.count)
-            if avg < 70 {
-                needAttention.append(subject)
-                continue
-            }
-            if recent.count >= 2 {
-                let first = recent.first!.score
-                let last = recent.last!.score
-                if last < first - 15 {
-                    needAttention.append(subject)
-                }
-            }
-        }
-        subjectsNeedingAttentionCache = needAttention
+    init(container: RepositoryContainer) {
+        _viewModel = StateObject(wrappedValue: TrendsViewModel.makeDefault(container: container))
     }
-    
+
+    // 派生数据缓存(已迁移到 TrendsViewModel)
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -74,7 +34,7 @@ struct TrendsView: View {
                             .padding(.horizontal)
                     }
 
-                    if activeSubjectsCache.isEmpty {
+                    if viewModel.activeSubjects.isEmpty {
                         // 空状态
                         ContentUnavailableView(
                             "No Grades Yet".localized(),
@@ -83,7 +43,7 @@ struct TrendsView: View {
                         )
                         .padding(.top, 100)
                     } else {
-                        if !subjectsNeedingAttentionCache.isEmpty {
+                        if !viewModel.subjectsNeedingAttention.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -95,9 +55,9 @@ struct TrendsView: View {
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
-                                        ForEach(subjectsNeedingAttentionCache, id: \.self) { subjectName in
+                                        ForEach(viewModel.subjectsNeedingAttention, id: \.self) { subjectName in
                                             NavigationLink(value: subjectName) {
-                                                AttentionSubjectCard(subjectName: subjectName, grades: getGradeHistory(for: subjectName))
+                                                AttentionSubjectCard(subjectName: subjectName, grades: viewModel.gradeHistory(for: subjectName))
                                             }
                                             .buttonStyle(.plain)
                                         }
@@ -108,12 +68,12 @@ struct TrendsView: View {
                         }
 
                         LazyVGrid(columns: AdaptiveGridColumns().columns, spacing: 20) {
-                            ForEach(activeSubjectsCache, id: \.self) { subjectName in
+                            ForEach(viewModel.activeSubjects, id: \.self) { subjectName in
                                 NavigationLink(value: subjectName) {
                                     SubjectScoreCard(
                                         subject: subjectName,
-                                        latestGrade: getLatestGrade(for: subjectName),
-                                        history: getGradeHistory(for: subjectName),
+                                        latestGrade: viewModel.latestGrade(for: subjectName),
+                                        history: viewModel.gradeHistory(for: subjectName),
                                         displayMode: trendsShowingMode
                                     )
                                 }
@@ -135,7 +95,6 @@ struct TrendsView: View {
                     subject: subjectName,
                     displayMode: $trendsShowingMode
                 )
-                .environmentObject(dataManager)
             }
             .toolbar {
                 //  /  
@@ -188,31 +147,26 @@ struct TrendsView: View {
                     .adaptiveSheet()
             }
             // 派生数据重算:仅在 grades/subjects 变化时触发
-            .onAppear { recomputeAll() }
-            .onChange(of: dataManager.filteredGrades) { _, _ in recomputeAll() }
-            .onChange(of: dataManager.subjects) { _, _ in recomputeAll() }
+            .onAppear { viewModel.recompute() }
+            .onChange(of: container.gradeRepo.filteredGrades) { _, _ in viewModel.recompute() }
+            .onChange(of: container.subjectRepo.subjects) { _, _ in viewModel.recompute() }
         }
     }
 
-    private func hasGrades(for subject: String) -> Bool {
-        !(gradesBySubjectCache[subject]?.isEmpty ?? true)
-    }
-
-    /// O(1) 字典查表(已在 recomputeAll 排序)
+    // O(1) 字典查表(已在 ViewModel.recompute 排序)
     private func getLatestGrade(for subject: String) -> Grade? {
-        gradesBySubjectCache[subject]?.last
+        viewModel.latestGrade(for: subject)
     }
 
-    /// O(1) 字典查表
     private func getGradeHistory(for subject: String) -> [Grade] {
-        gradesBySubjectCache[subject] ?? []
+        viewModel.gradeHistory(for: subject)
     }
 }
 
 // MARK: - 科目详情页
 struct SubjectDetailView: View {
     let subject: String
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -233,7 +187,7 @@ struct SubjectDetailView: View {
     
     // 
     var filteredGrades: [Grade] {
-        let base = dataManager.filteredGrades
+        let base = container.gradeRepo.filteredGrades
             .filter { $0.subject == subject }
             .sorted { $0.date < $1.date }
         
@@ -377,7 +331,7 @@ struct SubjectDetailView: View {
                     if displayMode == "score" {
                         TrendChartView(
                             grades: filteredGrades,
-                            fullScore: dataManager.fullScore(for: subject),
+                            fullScore: container.fullScore(for: subject),
                             chartType: envManager.preferences.chartType,
                             tintColor: envManager.effectiveAccentColor
                         )
@@ -487,7 +441,7 @@ struct SubjectDetailView: View {
     
     // 
     private func deleteGrade(_ grade: Grade) {
-        dataManager.deleteGrade(grade)
+        container.deleteGrade(grade)
     }
 }
 
@@ -590,12 +544,10 @@ struct AttentionSubjectCard: View {
 }
 
 #Preview {
-    TrendsView()
-        .environmentObject(DataManager())
+    TrendsView(container: RepositoryContainer())
 }
 
 #Preview("Dark Mode") {
-    TrendsView()
-        .environmentObject(DataManager())
+    TrendsView(container: RepositoryContainer())
         .preferredColorScheme(.dark)
 }

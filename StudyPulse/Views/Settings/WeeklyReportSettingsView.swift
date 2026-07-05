@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct WeeklyReportSettingsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var weeklyEnabled = WeeklyReportManager.isWeeklyEnabled
     @State private var monthlyEnabled = WeeklyReportManager.isMonthlyEnabled
     @State private var isSaving = false
@@ -118,16 +118,16 @@ struct WeeklyReportSettingsView: View {
         let reportData = WeeklyReportManager.aggregateData(
             period: period,
             sessions: sessions,
-            grades: dataManager.grades,
-            mistakes: dataManager.mistakeSets,
-            exams: dataManager.examSets,
-            subjects: dataManager.subjects
+            grades: container.gradeRepo.grades,
+            mistakes: container.mistakeRepo.mistakeSets,
+            exams: container.examRepo.examSets,
+            subjects: container.subjectRepo.subjects
         )
 
         guard let image = WeeklyReportManager.generateReportImage(
             data: reportData,
-            profile: dataManager.profile,
-            subjects: dataManager.subjects
+            profile: container.profileRepo.profile,
+            subjects: container.subjectRepo.subjects
         ) else {
             errorMessage = "Failed to generate report image".localized()
             return

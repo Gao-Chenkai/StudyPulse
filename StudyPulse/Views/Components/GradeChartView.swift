@@ -11,7 +11,7 @@ import Charts
 struct GradeChartView: View {
     let grades: [Grade]
     let subject: String
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
@@ -20,7 +20,7 @@ struct GradeChartView: View {
     }
 
     var fullScore: Double {
-        dataManager.fullScore(for: subject)
+        container.fullScore(for: subject)
     }
 
     private var chartHeight: CGFloat {

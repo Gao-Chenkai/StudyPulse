@@ -12,14 +12,14 @@ import SwiftUI
 /// Global phase switcher. Shows current phase (or "All Data") and opens a menu
 /// to switch. Embedded in each main page's toolbar.
 struct PhaseSelectorView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
 
     var body: some View {
         Menu {
             // 全部数据选项
             Button {
-                dataManager.activatePhase(nil)
+                container.activatePhase(nil)
             } label: {
                 Label {
                     Text("All Data".localized())
@@ -30,12 +30,12 @@ struct PhaseSelectorView: View {
                 }
             }
 
-            if !dataManager.phases.isEmpty {
+            if !container.phaseRepo.phases.isEmpty {
                 Divider()
                 // 按 startDate 降序(最新优先)
-                ForEach(dataManager.phases) { phase in
+                ForEach(container.phaseRepo.phases) { phase in
                     Button {
-                        dataManager.activatePhase(phase)
+                        container.activatePhase(phase)
                     } label: {
                         Label {
                             HStack {
@@ -89,7 +89,7 @@ struct PhaseSelectorView: View {
     }
 
     private var labelText: String {
-        if let phase = dataManager.activePhase {
+        if let phase = container.phaseRepo.activePhase {
             return phase.name
         }
         return "All Data".localized()

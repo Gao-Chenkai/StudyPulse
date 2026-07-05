@@ -64,6 +64,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "278CBE102FE778660035AA84"
             BuildableName = "StudyPulseWidgetExtension.appex"
+            BlueprintName = "StudyPulseWidgetExtension"
             ReferencedContainer = "container:StudyPulse.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>

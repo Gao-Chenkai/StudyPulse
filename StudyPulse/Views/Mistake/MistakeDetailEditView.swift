@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MistakeDetailEditView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
     let mistakeSet: MistakeNote
     
@@ -92,7 +92,7 @@ private extension MistakeDetailEditView {
 
             Picker("Subject".localized(), selection: $selectedSubject) {
                 Text("Select".localized()).tag("")
-                ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
+                ForEach(container.subjectRepo.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
                 }
             }
@@ -327,12 +327,12 @@ private extension MistakeDetailEditView {
             }
         }
 
-        dataManager.updateMistake(updatedMistake)
+        container.mistakeRepo.update(updatedMistake)
 
         // 重调度该错题的通知
         if reviewEnabled {
             // 重新调度所有（简化：调 rescheduleAll）
-            SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+            SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
         } else {
             SRSReviewNotifications.shared.cancel(for: updatedMistake.id)
         }
@@ -340,8 +340,8 @@ private extension MistakeDetailEditView {
 }
 
 #Preview {
-    let mockDataManager = DataManager()
-    
+    let mockContainer = RepositoryContainer()
+
     let mockMistake = MistakeNote(
         title: "Calculus Example",
         subject: "Mathematics",
@@ -356,7 +356,7 @@ private extension MistakeDetailEditView {
         wrongSolutionImages: [],
         correctSolutionImages: []
     )
-    
+
     return MistakeDetailEditView(mistakeSet: mockMistake)
-        .environmentObject(mockDataManager)
+        .environment(mockContainer)
 }

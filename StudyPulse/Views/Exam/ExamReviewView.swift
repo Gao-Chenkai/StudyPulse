@@ -56,7 +56,7 @@ private enum ReviewSection: String, CaseIterable, Identifiable {
 struct ExamReviewView: View {
     let exam: Exam
 
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
     /// 4 段 Markdown 文本(初值取自已有复盘)
@@ -78,7 +78,7 @@ struct ExamReviewView: View {
 
     /// 关联错题列表(同 subject)
     private var relatedMistakes: [MistakeNote] {
-        dataManager.mistakeSets
+        container.mistakeRepo.mistakeSets
             .filter { $0.subject == exam.subject }
             .sorted { $0.date > $1.date }
     }
@@ -280,7 +280,7 @@ struct ExamReviewView: View {
             nextStrategy: nextStrategy,
             linkedMistakeIds: Array(linkedMistakeIds)
         )
-        dataManager.updateExamReview(exam.id, review: review)
+        container.examRepo.updateExamReview(exam.id, review: review)
         Log.data.info("复盘保存 / Review saved: exam=\(exam.id.uuidString, privacy: .public)")
         presentationMode.wrappedValue.dismiss()
     }
@@ -290,7 +290,7 @@ struct ExamReviewView: View {
         // 标题去重:已有"复盘:<examName>"则追加日期后缀
         let baseTitle = "复盘:\(exam.name)"
         var title = baseTitle
-        let sameTitle = dataManager.mistakeSets.filter { $0.title.hasPrefix(baseTitle) }
+        let sameTitle = container.mistakeRepo.mistakeSets.filter { $0.title.hasPrefix(baseTitle) }
         if !sameTitle.isEmpty {
             let df = DateFormatter()
             df.dateFormat = "yyyyMMdd"
@@ -316,9 +316,9 @@ struct ExamReviewView: View {
             reviewState: .initial(),
             phaseId: exam.phaseId
         )
-        dataManager.addMistake(note)
+        container.addMistake(note)
         // 调度 SRS 复习通知(沿用 NewMistakeSetView 的做法)
-        SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+        SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
 
         didGenerateNote = true
         generateAlertMessage = String(
@@ -332,7 +332,7 @@ struct ExamReviewView: View {
 // MARK: - Preview
 
 #Preview {
-    let dm = DataManager()
+    let container = RepositoryContainer()
     let testExam = Exam(
         name: "Math Midterm",
         date: Date().addingTimeInterval(-86400 * 1.5),
@@ -341,7 +341,7 @@ struct ExamReviewView: View {
         examName: "2026 春季期中",
         masteryDegree: 60
     )
-    dm.examSets = [testExam]
+    container.examRepo.add(single: [testExam], comprehensive: [])
     return ExamReviewView(exam: testExam)
-        .environmentObject(dm)
+        .environment(container)
 }

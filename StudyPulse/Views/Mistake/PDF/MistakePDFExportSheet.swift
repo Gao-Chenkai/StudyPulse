@@ -37,7 +37,7 @@ struct MistakeExportOptions: Sendable {
 struct MistakePDFExportSheet: View {
     let onGenerate: (MistakeExportOptions) -> Void
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     @State private var mode: MistakeExportMode = .bySubjects
 
@@ -113,7 +113,7 @@ struct MistakePDFExportSheet: View {
 
     private var subjectSelectionSection: some View {
         Section {
-            let subjects = dataManager.subjects.filter { $0.enabled }
+            let subjects = container.subjectRepo.subjects.filter { $0.enabled }
             if subjects.isEmpty {
                 Text("No subjects available".localized())
                     .font(.caption)
@@ -129,7 +129,7 @@ struct MistakePDFExportSheet: View {
                             Text(subject.displayName.localized())
                                 .foregroundColor(.primary)
                             Spacer()
-                            let count = dataManager.mistakeSets.filter { $0.subject == subject.name }.count
+                            let count = container.mistakeRepo.mistakeSets.filter { $0.subject == subject.name }.count
                             Text("\(count)")
                                 .font(.caption.monospacedDigit())
                                 .foregroundColor(.secondary)
@@ -143,7 +143,7 @@ struct MistakePDFExportSheet: View {
                 Spacer()
                 if !selectedSubjects.isEmpty {
                     Button("Select All".localized()) {
-                        selectedSubjects = Set(dataManager.subjects.filter { $0.enabled }.map { $0.name })
+                        selectedSubjects = Set(container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name })
                     }
                     .font(.caption)
                 }
@@ -169,12 +169,12 @@ struct MistakePDFExportSheet: View {
 
     private var mistakeSelectionSection: some View {
         Section {
-            if dataManager.mistakeSets.isEmpty {
+            if container.mistakeRepo.mistakeSets.isEmpty {
                 Text("No mistakes available".localized())
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                let sorted = dataManager.mistakeSets.sorted { $0.date > $1.date }
+                let sorted = container.mistakeRepo.mistakeSets.sorted { $0.date > $1.date }
                 ForEach(filteredMistakes(sorted), id: \.id) { mistake in
                     Button {
                         toggleMistake(mistake.id)
@@ -280,7 +280,7 @@ struct MistakePDFExportSheet: View {
     /// 实时计算错题数（不创建 snapshot）。
     private var previewCount: Int {
         guard let sel = currentSelection else { return 0 }
-        return MistakePDFSnapshot.filter(dataManager.mistakeSets, with: sel).count
+        return MistakePDFSnapshot.filter(container.mistakeRepo.mistakeSets, with: sel).count
     }
 
     /// 根据当前 UI 状态生成 selection。
@@ -312,7 +312,7 @@ struct MistakePDFExportSheet: View {
     }
 
     private func generate() {
-        guard let sel = currentSelection, !dataManager.mistakeSets.isEmpty else { return }
+        guard let sel = currentSelection, !container.mistakeRepo.mistakeSets.isEmpty else { return }
         let options = MistakeExportOptions(selection: sel, includeImages: includeImages)
         Log.record(.info, category: "Export", message: "错题 PDF 导出开始 / Mistake PDF export started: count=\(previewCount), mode=\(mode.rawValue), includeImages=\(includeImages)")
         dismiss()

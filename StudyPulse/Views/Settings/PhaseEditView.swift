@@ -11,7 +11,7 @@ import SwiftUI
 /// 新建或编辑一个 study phase。
 /// Create or edit a study phase, including its goal list.
 struct PhaseEditView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
     /// nil = 新建模式
@@ -43,7 +43,7 @@ struct PhaseEditView: View {
         NavigationStack {
             Form {
                 basicSection
-                if !isEditing && dataManager.hasUnassignedData {
+                if !isEditing && container.phaseRepo.hasUnassignedData {
                     Section {
                         Toggle(isOn: $assignExistingData) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -104,7 +104,7 @@ struct PhaseEditView: View {
             footer: Text("Set a target score per subject. You can edit later.".localized())
         ) {
             ForEach($goals) { $goal in
-                GoalRowView(goal: $goal, subjects: dataManager.subjects)
+                GoalRowView(goal: $goal, subjects: container.subjectRepo.subjects)
             }
             .onDelete { offsets in
                 goals.remove(atOffsets: offsets)
@@ -118,7 +118,7 @@ struct PhaseEditView: View {
     }
 
     private var defaultSubjectName: String {
-        dataManager.subjects.first(where: { $0.enabled })?.name ?? ""
+        container.subjectRepo.subjects.first(where: { $0.enabled })?.name ?? ""
     }
 
     private func save() {
@@ -129,7 +129,7 @@ struct PhaseEditView: View {
             p.startDate = startDate
             p.endDate = endDate
             p.goals = goals
-            dataManager.updatePhase(p)
+            container.phaseRepo.update(p)
         } else {
             let new = StudyPhase(
                 name: trimmed,
@@ -137,7 +137,7 @@ struct PhaseEditView: View {
                 endDate: endDate,
                 goals: goals
             )
-            dataManager.addPhase(new)
+            container.phaseRepo.add(new)
             onCreate?(new, assignExistingData)
         }
     }

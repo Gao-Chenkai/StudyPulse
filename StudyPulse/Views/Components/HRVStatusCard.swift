@@ -12,7 +12,7 @@ import Charts
 // MARK: - HRV Status Card
 struct HRVStatusCard: View {
     @ObservedObject var hrvManager = HealthKitManager.shared
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var animateIn = false
 
@@ -34,7 +34,7 @@ struct HRVStatusCard: View {
                             hrv: hrvManager.readiness,
                             body: hrvManager.bodyStatus,
                             baselines: hrvManager.personalBaselines,
-                            age: dataManager.profile.age
+                            age: container.profileRepo.profile.age
                         )
                         BodyRadarChart(values: radar)
                             .frame(height: 220)
@@ -106,7 +106,7 @@ struct HRVStatusCard: View {
             hrv: hrvManager.readiness,
             body: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
-            age: dataManager.profile.age
+            age: container.profileRepo.profile.age
         )
         return HStack(spacing: 10) {
             axisTile(
@@ -197,7 +197,7 @@ struct HRVStatusCard: View {
                 hrv: hrvManager.readiness,
                 bodyStatus: hrvManager.bodyStatus,
                 baselines: hrvManager.personalBaselines,
-                age: dataManager.profile.age
+                age: container.profileRepo.profile.age
             ) {
                 integratedSuggestionView(suggestion)
             } else if hrvManager.readiness.category == .insufficient {

@@ -149,11 +149,11 @@ extension StudyReport {
 // MARK: - Factory
 
 extension StudyReport {
-    /// 在主线程上从 DataManager / HealthKitManager 拷贝快照。
-    /// Make a snapshot from the live managers.
+    /// 在主线程上从 RepositoryContainer / HealthKitManager 拷贝快照。
+    /// Make a snapshot from the live container.
     @MainActor
     static func make(
-        from dataManager: DataManager,
+        from container: RepositoryContainer,
         hrvManager: HealthKitManager,
         start: Date,
         end: Date
@@ -162,12 +162,12 @@ extension StudyReport {
             generatedAt: Date(),
             startDate: start,
             endDate: end,
-            profile: dataManager.profile,
-            grades: dataManager.grades,
-            mistakeSets: dataManager.mistakeSets,
-            examSets: dataManager.examSets,
-            comprehensiveExamSets: dataManager.comprehensiveExamSets,
-            subjects: dataManager.subjects,
+            profile: container.profileRepo.profile,
+            grades: container.gradeRepo.grades,
+            mistakeSets: container.mistakeRepo.mistakeSets,
+            examSets: container.examRepo.examSets,
+            comprehensiveExamSets: container.examRepo.comprehensiveExamSets,
+            subjects: container.subjectRepo.subjects,
             hrvEnabled: hrvManager.hrvEnabled,
             hrvOnboardingCompleted: hrvManager.hrvOnboardingCompleted,
             hrv: hrvManager.readiness,

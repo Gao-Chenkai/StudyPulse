@@ -13,10 +13,10 @@ import UniformTypeIdentifiers
 
 // MARK: - 一级菜单：科目列表
 struct MistakeView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
+    @StateObject private var viewModel: MistakeViewModel
     @State private var showingNewMistakeSet = false
     @State private var showingFlashcards = false
-    @State private var searchText = ""
 
     // PDF 导出状态
     @State private var showingPDFExportSheet = false
@@ -25,57 +25,16 @@ struct MistakeView: View {
     @State private var pdfDocument: MistakePDFDocument?
     @State private var pdfErrorMessage: String?
 
-    // 按科目分组错题(缓存)
-    @State private var subjectGroupsCache: [String: [MistakeNote]] = [:]
-    // 科目列表(按错题数降序排列)(缓存)
-    @State private var sortedSubjectsCache: [String] = []
-    // 搜索过滤后的科目列表(缓存)
-    @State private var filteredSubjectsCache: [String] = []
-    // 错题总数(缓存)
-    @State private var totalMistakeCountCache: Int = 0
-    // SRS 队列总览(缓存)
-    @State private var srsOverviewCache: SRSOverview = SRSOverview(dueCount: 0, upcomingCount: 0, totalEnrolled: 0)
+    // 派生数据已迁移到 MistakeViewModel。View 通过 $viewModel.searchText 与 VM 双向绑定搜索词。
 
-    /// 集中重算 5 个缓存,O(n) 一次扫,避免 body 每次重建字典
-    private func recomputeAll() {
-        // 1. 按 subject 分组
-        var groups: [String: [MistakeNote]] = [:]
-        for m in dataManager.filteredMistakeSets {
-            let key = m.subject.isEmpty ? "Uncategorized" : m.subject
-            groups[key, default: []].append(m)
-        }
-        subjectGroupsCache = groups
-
-        // 2. 排序:按错题数降序,同数按字母升序
-        sortedSubjectsCache = groups.keys.sorted { a, b in
-            let ca = groups[a]?.count ?? 0
-            let cb = groups[b]?.count ?? 0
-            if ca != cb { return ca > cb }
-            return a.localizedCompare(b) == .orderedAscending
-        }
-
-        // 3. 搜索过滤
-        if searchText.isEmpty {
-            filteredSubjectsCache = sortedSubjectsCache
-        } else {
-            filteredSubjectsCache = sortedSubjectsCache.filter { subject in
-                if subject.localizedCaseInsensitiveContains(searchText) { return true }
-                return groups[subject]?.contains {
-                    $0.title.localizedCaseInsensitiveContains(searchText) ||
-                    $0.originalQuestion.localizedCaseInsensitiveContains(searchText)
-                } ?? false
-            }
-        }
-
-        // 4. 总数 + SRS
-        totalMistakeCountCache = dataManager.filteredMistakeSets.count
-        srsOverviewCache = SRSAlgorithm.overview(from: dataManager.filteredMistakeSets)
+    init(container: RepositoryContainer) {
+        _viewModel = StateObject(wrappedValue: MistakeViewModel.makeDefault(container: container))
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if dataManager.filteredMistakeSets.isEmpty {
+                if container.mistakeRepo.filteredMistakeSets.isEmpty {
                     VStack(spacing: 24) {
                         ContentUnavailableView(
                             "No Mistakes".localized(),
@@ -91,14 +50,14 @@ struct MistakeView: View {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 24) {
                             // 待复习横幅（搜索时不显示）
-                            if searchText.isEmpty {
-                                OverviewStatsCard(totalCount: totalMistakeCountCache, subjectCount: sortedSubjectsCache.count)
+                            if viewModel.searchText.isEmpty {
+                                OverviewStatsCard(totalCount: viewModel.groups.totalCount, subjectCount: viewModel.groups.sortedSubjects.count)
                                     .padding(.horizontal)
                             }
 
                             // SRS 待复习入口
-                            if searchText.isEmpty && srsOverviewCache.dueCount > 0 {
-                                DueReviewBanner(overview: srsOverviewCache) {
+                            if viewModel.searchText.isEmpty && viewModel.srsOverview.dueCount > 0 {
+                                DueReviewBanner(overview: viewModel.srsOverview) {
                                     showingFlashcards = true
                                 }
                                 .padding(.horizontal)
@@ -106,14 +65,14 @@ struct MistakeView: View {
 
                             // 科目列表
                             VStack(alignment: .leading, spacing: 12) {
-                                Text(searchText.isEmpty ? "Subjects".localized() : "Search Results".localized())
+                                Text(viewModel.searchText.isEmpty ? "Subjects".localized() : "Search Results".localized())
                                     .font(.headline)
                                     .padding(.horizontal)
 
                                 LazyVStack(spacing: 12) {
-                                    ForEach(filteredSubjectsCache, id: \.self) { subject in
-                                        NavigationLink(destination: SubjectMistakesView(subject: subject, mistakes: subjectGroupsCache[subject] ?? [])) {
-                                            SubjectCardView(subject: subject, mistakes: subjectGroupsCache[subject] ?? [])
+                                    ForEach(viewModel.groups.filteredSubjects, id: \.self) { subject in
+                                        NavigationLink(destination: SubjectMistakesView(subject: subject, mistakes: viewModel.groups.bySubject[subject] ?? [])) {
+                                            SubjectCardView(subject: subject, mistakes: viewModel.groups.bySubject[subject] ?? [])
                                         }
                                         .buttonStyle(.plain)
                                     }
@@ -129,21 +88,21 @@ struct MistakeView: View {
                 }
             }
             .navigationTitle("Mistakes".localized())
-            .searchable(text: $searchText, prompt: "Search subjects or mistakes...".localized())
+            .searchable(text: $viewModel.searchText, prompt: "Search subjects or mistakes...".localized())
             // 派生数据重算:搜索/数据源变化时触发
-            .onAppear { recomputeAll() }
-            .onChange(of: searchText) { _, _ in recomputeAll() }
-            .onChange(of: dataManager.filteredMistakeSets) { _, _ in recomputeAll() }
+            .onAppear { viewModel.recompute() }
+            .onChange(of: viewModel.searchText) { _, _ in viewModel.recompute() }
+            .onChange(of: container.mistakeRepo.filteredMistakeSets) { _, _ in viewModel.recompute() }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if srsOverviewCache.totalEnrolled > 0 {
+                    if viewModel.srsOverview.totalEnrolled > 0 {
                         Button {
                             showingFlashcards = true
                         } label: {
                             ZStack(alignment: .topTrailing) {
                                 Image(systemName: "rectangle.stack")
-                                if srsOverviewCache.dueCount > 0 {
-                                    Text("\(srsOverviewCache.dueCount)")
+                                if viewModel.srsOverview.dueCount > 0 {
+                                    Text("\(viewModel.srsOverview.dueCount)")
                                         .font(.system(size: 10).weight(.bold))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 5)
@@ -160,7 +119,7 @@ struct MistakeView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
-                        if !dataManager.filteredMistakeSets.isEmpty {
+                        if !container.mistakeRepo.filteredMistakeSets.isEmpty {
                             Button {
                                 showingPDFExportSheet = true
                             } label: {
@@ -179,14 +138,12 @@ struct MistakeView: View {
             }
             .sheet(isPresented: $showingNewMistakeSet) {
                 NewMistakeSetView()
-                    .environmentObject(dataManager)
                     .adaptiveSheet()
             }
             .sheet(isPresented: $showingPDFExportSheet) {
                 MistakePDFExportSheet { options in
                     handlePDFExport(options: options)
                 }
-                .environmentObject(dataManager)
                 .adaptiveSheet()
             }
             .sheet(item: $pendingPDFSnapshot) { snapshot in
@@ -199,7 +156,6 @@ struct MistakeView: View {
                         pdfErrorMessage = message
                     }
                 )
-                .environmentObject(dataManager)
                 .interactiveDismissDisabled(true)
             }
             .alert("Export Failed".localized(), isPresented: Binding(
@@ -229,7 +185,6 @@ struct MistakeView: View {
             .fullScreenCover(isPresented: $showingFlashcards) {
                 NavigationStack {
                     FlashcardStudyView()
-                        .environmentObject(dataManager)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
                                 Button {
@@ -252,7 +207,7 @@ struct MistakeView: View {
     /// 选项 sheet 回调：构建快照并弹出进度 sheet。
     private func handlePDFExport(options: MistakeExportOptions) {
         guard let snapshot = MistakePDFSnapshot.make(
-            from: dataManager,
+            from: container,
             selection: options.selection,
             includeImages: options.includeImages
         ) else {
@@ -264,9 +219,7 @@ struct MistakeView: View {
 
     /// 进度 sheet 回调：弹 fileExporter 分享 PDF。
     private func presentPDFExportSheet(data: Data) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        let fileName = "StudyPulse_Mistakes_\(formatter.string(from: Date())).pdf"
+        let fileName = "StudyPulse_Mistakes_\(DateFormatters.fileTimestamp.string(from: Date())).pdf"
         pdfDocument = MistakePDFDocument(data: data, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExportingPDF = true
@@ -349,40 +302,22 @@ struct DueReviewBanner: View {
 struct SubjectMistakesView: View {
     let subject: String
     let mistakes: [MistakeNote]
-    @EnvironmentObject var dataManager: DataManager
+    @StateObject private var viewModel: SubjectMistakesViewModel
     @State private var searchText = ""
-    
-    var filteredMistakes: [MistakeNote] {
-        if searchText.isEmpty {
-            return mistakes.sorted { $0.date > $1.date }
-        }
-        return mistakes.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.originalQuestion.localizedCaseInsensitiveContains(searchText) ||
-            $0.source.localizedCaseInsensitiveContains(searchText)
-        }.sorted { $0.date > $1.date }
+
+    init(subject: String, mistakes: [MistakeNote]) {
+        self.subject = subject
+        self.mistakes = mistakes
+        _viewModel = StateObject(wrappedValue: SubjectMistakesViewModel(initialMistakes: mistakes))
     }
-    
-    var sortedMistakes: [MistakeNote] {
-        filteredMistakes.sorted { $0.date > $1.date }
+
+    // filteredMistakes / sortedMistakes / suggestedForReview 全部迁移到 SubjectMistakesViewModel
+    private var filteredMistakes: [MistakeNote] {
+        viewModel.searchInSubject(mistakes, searchText: searchText)
     }
-    
-    // 建议复习的题目
-    var suggestedForReview: [MistakeNote] {
-        let allMistakes = sortedMistakes
-        
-        let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
-        
-        return allMistakes.sorted { a, b in
-            let priorityA = (a.date > oneWeekAgo ? 2 : a.date < oneMonthAgo ? 1 : 0)
-            let priorityB = (b.date > oneWeekAgo ? 2 : b.date < oneMonthAgo ? 1 : 0)
-            
-            if priorityA != priorityB {
-                return priorityA > priorityB
-            }
-            return a.date > b.date
-        }.prefix(4).map { $0 }
+    private var sortedMistakes: [MistakeNote] { filteredMistakes }
+    private var suggestedForReview: [MistakeNote] {
+        viewModel.suggestedForReview(mistakes)
     }
     
     var body: some View {
@@ -723,15 +658,15 @@ struct MistakeCardView: View {
 // MARK: - Mistake Detail View
 struct MistakeSetDetailView: View {
     let mistakeSet: MistakeNote
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingEditSheet = false
     @State private var showingQuickReview = false
 
-    /// 始终从 dataManager 里取最新快照（错题标题/内容/掌握度等可能
+    /// 始终从 mistakeRepo 里取最新快照（错题标题/内容/掌握度等可能
     /// 在闪卡复习后被异步更新），这样 MasteryCurveView 才会随 review 实时刷新。
     private var liveMistake: MistakeNote {
-        dataManager.mistakeSets.first(where: { $0.id == mistakeSet.id }) ?? mistakeSet
+        container.mistakeRepo.mistakeSets.first(where: { $0.id == mistakeSet.id }) ?? mistakeSet
     }
 
     var body: some View {
@@ -888,7 +823,6 @@ struct MistakeSetDetailView: View {
         .fullScreenCover(isPresented: $showingQuickReview) {
             NavigationStack {
                 FlashcardStudyView(filter: .single(liveMistake))
-                    .environmentObject(dataManager)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button {
@@ -904,7 +838,7 @@ struct MistakeSetDetailView: View {
         }
         .onAppear {
             // 每次进入详情页曝光 +1
-            dataManager.recordMistakeExposure(mistakeSet.id)
+            container.mistakeRepo.recordExposure(mistakeSet.id)
         }
     }
     
@@ -1059,6 +993,6 @@ struct SuggestedMistakeCard: View {
 }
 
 #Preview {
-    MistakeView()
-        .environmentObject(DataManager())
+    MistakeView(container: RepositoryContainer())
+        .environment(RepositoryContainer())
 }

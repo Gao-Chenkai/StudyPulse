@@ -10,7 +10,7 @@ import SwiftUI
 import os
 
 struct PhaseManagementView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     @State private var showingNewPhase = false
     @State private var editingPhase: StudyPhase? = nil
@@ -45,7 +45,7 @@ struct PhaseManagementView: View {
         .alert("Assign existing data?".localized(), isPresented: $showingFirstPhasePrompt) {
             Button("Assign".localized()) {
                 if let p = pendingNewPhase {
-                    let result = dataManager.assignUnassignedDataToPhase(p.id)
+                    let result = container.phaseRepo.assignUnassignedDataToPhase(p.id)
                     Log.data.info("弹窗确认归类 / Prompt-confirmed bulk assign: g=\(result.grades) m=\(result.mistakes) e=\(result.exams) c=\(result.comprehensiveExams) t=\(result.tasks)")
                 }
                 pendingNewPhase = nil
@@ -65,11 +65,11 @@ struct PhaseManagementView: View {
     // MARK: - Active phases
 
     private var activePhases: [StudyPhase] {
-        dataManager.phases.filter { !$0.isArchived }
+        container.phaseRepo.phases.filter { !$0.isArchived }
     }
 
     private var archivedPhases: [StudyPhase] {
-        dataManager.phases.filter { $0.isArchived }
+        container.phaseRepo.phases.filter { $0.isArchived }
     }
 
     @ViewBuilder
@@ -83,24 +83,24 @@ struct PhaseManagementView: View {
                 ForEach(activePhases) { phase in
                     PhaseRow(
                         phase: phase,
-                        isActive: dataManager.activePhase?.id == phase.id
+                        isActive: container.phaseRepo.activePhase?.id == phase.id
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        if dataManager.activePhase?.id == phase.id {
-                            dataManager.activatePhase(nil)
+                        if container.phaseRepo.activePhase?.id == phase.id {
+                            container.phaseRepo.activate(nil)
                         } else {
-                            dataManager.activatePhase(phase)
+                            container.phaseRepo.activate(phase)
                         }
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            dataManager.deletePhase(phase)
+                            container.phaseRepo.delete(phase)
                         } label: {
                             Label("Delete".localized(), systemImage: "trash")
                         }
                         Button {
-                            dataManager.setPhaseArchived(phase, archived: true)
+                            container.phaseRepo.setArchived(phase, archived: true)
                         } label: {
                             Label("Archive".localized(), systemImage: "archivebox")
                         }
@@ -132,12 +132,12 @@ struct PhaseManagementView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    dataManager.deletePhase(phase)
+                                    container.phaseRepo.delete(phase)
                                 } label: {
                                     Label("Delete".localized(), systemImage: "trash")
                                 }
                                 Button {
-                                    dataManager.setPhaseArchived(phase, archived: false)
+                                    container.phaseRepo.setArchived(phase, archived: false)
                                 } label: {
                                     Label("Unarchive".localized(), systemImage: "tray.and.arrow.up")
                                 }
@@ -158,7 +158,7 @@ struct PhaseManagementView: View {
             HStack {
                 Text("Total Phases".localized())
                 Spacer()
-                Text("\(dataManager.phases.count)")
+                Text("\(container.phaseRepo.phases.count)")
                     .foregroundStyle(.secondary)
             }
             HStack {
@@ -176,7 +176,7 @@ struct PhaseManagementView: View {
             HStack {
                 Text("Unassigned Records".localized())
                 Spacer()
-                Text("\(dataManager.unassignedRecordCount)")
+                Text("\(container.phaseRepo.unassignedRecordCount)")
                     .foregroundStyle(.secondary)
             }
         }
@@ -186,8 +186,8 @@ struct PhaseManagementView: View {
 
     /// 在用户创建第一个 phase 后,如果存在未归类数据,弹窗询问是否归类。
     private func handleNewPhase(_ newPhase: StudyPhase, assignExisting: Bool) {
-        if assignExisting && dataManager.hasUnassignedData {
-            let result = dataManager.assignUnassignedDataToPhase(newPhase.id)
+        if assignExisting && container.phaseRepo.hasUnassignedData {
+            let result = container.phaseRepo.assignUnassignedDataToPhase(newPhase.id)
             Log.data.info("弹窗勾选归类 / Toggle-bulk assign: g=\(result.grades) m=\(result.mistakes) e=\(result.exams) c=\(result.comprehensiveExams) t=\(result.tasks)")
         }
     }

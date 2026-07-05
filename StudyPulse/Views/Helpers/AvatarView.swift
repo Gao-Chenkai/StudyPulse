@@ -82,7 +82,7 @@ struct AvatarView: View {
 
 // MARK: - 头像选择器
 struct AvatarEditView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) var dismiss
 
     @State private var avatarData: Data?
@@ -93,7 +93,7 @@ struct AvatarEditView: View {
         VStack(spacing: 24) {
             // 头像预览
             AvatarView(
-                username: dataManager.profile.username,
+                username: container.profileRepo.profile.username,
                 avatarData: avatarData,
                 size: 140
             )
@@ -130,7 +130,7 @@ struct AvatarEditView: View {
                     }
                 }
 
-                if dataManager.profile.avatarFileName != nil {
+                if container.profileRepo.profile.avatarFileName != nil {
                     Button(action: removeAvatar) {
                         Label("Remove Avatar".localized(), systemImage: "trash")
                             .frame(maxWidth: .infinity)
@@ -159,7 +159,7 @@ struct AvatarEditView: View {
             }
         }
         .onAppear {
-            avatarData = dataManager.loadAvatar()
+            avatarData = container.profileRepo.loadAvatar()
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(sourceType: imagePickerSourceType, image: .constant(nil)) { image in
@@ -190,18 +190,18 @@ struct AvatarEditView: View {
 
     private func saveAvatar() {
         if let data = avatarData {
-            if let filename = dataManager.saveAvatar(data) {
-                dataManager.profile.avatarFileName = filename
-                dataManager.saveProfile()
+            if let filename = container.saveAvatar(data) {
+                container.profileRepo.profile.avatarFileName = filename
+                container.profileRepo.saveProfile()
             }
         }
     }
 
     private func removeAvatar() {
-        if let filename = dataManager.profile.avatarFileName {
-            dataManager.deleteAvatar(filename: filename)
-            dataManager.profile.avatarFileName = nil
-            dataManager.saveProfile()
+        if let filename = container.profileRepo.profile.avatarFileName {
+            container.deleteAvatar(filename: filename)
+            container.profileRepo.profile.avatarFileName = nil
+            container.profileRepo.saveProfile()
             avatarData = nil
         }
     }

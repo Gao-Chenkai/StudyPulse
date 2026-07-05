@@ -92,15 +92,15 @@ extension MistakePDFSnapshot {
 // MARK: - 工厂
 
 extension MistakePDFSnapshot {
-    /// 在主线程上从 DataManager 拷贝快照。
+    /// 在主线程上从 RepositoryContainer 拷贝快照。
     /// - Returns: 当无错题可导出时返回 nil。
     @MainActor
     static func make(
-        from dataManager: DataManager,
+        from container: RepositoryContainer,
         selection: MistakePDFSelection,
         includeImages: Bool
     ) -> MistakePDFSnapshot? {
-        let all = dataManager.mistakeSets
+        let all = container.mistakeRepo.mistakeSets
         let filtered = filter(all, with: selection)
         guard !filtered.isEmpty else { return nil }
 
@@ -114,8 +114,8 @@ extension MistakePDFSnapshot {
 
         return MistakePDFSnapshot(
             generatedAt: Date(),
-            profile: dataManager.profile,
-            subjects: dataManager.subjects,
+            profile: container.profileRepo.profile,
+            subjects: container.subjectRepo.subjects,
             mistakes: sorted,
             selection: selection,
             includeImages: includeImages
@@ -123,7 +123,7 @@ extension MistakePDFSnapshot {
     }
 
     /// 纯函数：在 selection 下过滤错题。
-    /// Pure filter function (no DataManager dependency).
+    /// Pure filter function (no RepositoryContainer dependency).
     static func filter(_ mistakes: [MistakeNote], with selection: MistakePDFSelection) -> [MistakeNote] {
         switch selection {
         case .bySubjects(let subjects):
@@ -143,9 +143,9 @@ extension MistakePDFSnapshot {
     /// Preview the count without instantiating a snapshot.
     @MainActor
     static func previewCount(
-        from dataManager: DataManager,
+        from container: RepositoryContainer,
         selection: MistakePDFSelection
     ) -> Int {
-        filter(dataManager.mistakeSets, with: selection).count
+        filter(container.mistakeRepo.mistakeSets, with: selection).count
     }
 }

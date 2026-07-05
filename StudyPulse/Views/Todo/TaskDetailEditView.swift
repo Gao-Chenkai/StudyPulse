@@ -10,7 +10,7 @@ import SwiftUI
 
 struct TaskDetailEditView: View {
     let originalTask: TaskItem
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 
     // 表单状态
@@ -46,7 +46,7 @@ struct TaskDetailEditView: View {
     }
 
     private var availableSubjects: [String] {
-        dataManager.subjects.filter { $0.enabled }.map { $0.name }
+        container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
 
     var body: some View {
@@ -176,7 +176,7 @@ struct TaskDetailEditView: View {
             }
             updated.reminderEventId = nil
             updated.reminderCalendarId = nil
-            dataManager.updateTask(updated, reminderResult: nil)
+            container.taskRepo.update(updated, reminderResult: nil)
             isSaving = false
             dismiss()
             return
@@ -209,7 +209,7 @@ struct TaskDetailEditView: View {
                             subject: subject.isEmpty ? nil : subject
                         )
                         await MainActor.run {
-                            dataManager.updateTask(updated, reminderResult: newResult)
+                            container.taskRepo.update(updated, reminderResult: newResult)
                             isSaving = false
                             resultAlertMessage = "Saved and re-linked to system Reminders.".localized()
                             showingResultAlert = true
@@ -218,7 +218,7 @@ struct TaskDetailEditView: View {
                     }
                     await MainActor.run {
                         // update 成功,identifier 不变
-                        dataManager.updateTask(updated, reminderResult: nil)
+                        container.taskRepo.update(updated, reminderResult: nil)
                         isSaving = false
                         resultAlertMessage = "Saved.".localized()
                         showingResultAlert = true
@@ -233,7 +233,7 @@ struct TaskDetailEditView: View {
                         subject: subject.isEmpty ? nil : subject
                     )
                     await MainActor.run {
-                        dataManager.updateTask(updated, reminderResult: newResult)
+                        container.taskRepo.update(updated, reminderResult: newResult)
                         isSaving = false
                         resultAlertMessage = "Saved and added to system Reminders.".localized()
                         showingResultAlert = true
@@ -245,7 +245,7 @@ struct TaskDetailEditView: View {
                     var fallback = updated
                     fallback.reminderEventId = nil
                     fallback.reminderCalendarId = nil
-                    dataManager.updateTask(fallback, reminderResult: nil)
+                    container.taskRepo.update(fallback, reminderResult: nil)
                     isSaving = false
                     resultAlertMessage = "Saved to StudyPulse, but Reminders sync failed: \(error.localizedDescription)"
                     showingResultAlert = true
@@ -256,7 +256,7 @@ struct TaskDetailEditView: View {
 }
 
 #Preview {
-    let dm = DataManager()
+    let mockContainer = RepositoryContainer()
     let task = TaskItem(
         title: "Math Homework Ch.3",
         type: .homework,
@@ -266,7 +266,7 @@ struct TaskDetailEditView: View {
         importance: 4,
         notes: "Problems 1-20"
     )
-    dm.taskItems = [task]
+    mockContainer.taskRepo.add([task])
     return TaskDetailEditView(task: task)
-        .environmentObject(dm)
+        .environment(mockContainer)
 }

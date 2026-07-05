@@ -62,11 +62,11 @@ final class AchievementManager: ObservableObject {
 
     /// 由 StudyPulseApp 在 dataManager.isReady == true 之后调用一次。
     /// 负责：回填历史 + 处理日期滚动 + 写入 todayLog 初始值。
-    func bootstrap() {
+    func bootstrap(container: RepositoryContainer) {
         var snap = snapshot
         let isFresh = snap.logs.isEmpty && snap.streak.totalActiveDays == 0
         if isFresh {
-            backfillFromHistory(into: &snap)
+            backfillFromHistory(into: &snap, container: container)
             Log.achievement.info("成就系统回填完成 / Achievements backfilled: totalActive=\(snap.streak.totalActiveDays, privacy: .public) streak=\(snap.streak.current, privacy: .public)")
         }
         handleDayRolloverIfNeeded(into: &snap)
@@ -149,7 +149,7 @@ final class AchievementManager: ObservableObject {
     }
 
     /// 调试用：清空全部状态（DataAdminView 可触发）。
-    func resetAll() {
+    func resetAll(container: RepositoryContainer) {
         AchievementStore.reset()
         let today = Calendar.current.startOfDay(for: Date())
         snapshot = Self.normalizeAchievements(.empty)
@@ -158,7 +158,7 @@ final class AchievementManager: ObservableObject {
         longestStreak = 0
         totalActiveDays = 0
         newlyUnlocked.removeAll()
-        bootstrap()
+        bootstrap(container: container)
     }
 
     // MARK: - Convenience for views
@@ -365,7 +365,7 @@ final class AchievementManager: ObservableObject {
     // MARK: - Backfill (Phase 4)
 
     /// 首次启动：扫描过去 30 天的 grades + study sessions，反推活动日 + streak。
-    private func backfillFromHistory(into snap: inout AchievementsSnapshot) {
+    private func backfillFromHistory(into snap: inout AchievementsSnapshot, container: RepositoryContainer) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         guard let cutoff = cal.date(byAdding: .day, value: -30, to: today) else { return }
@@ -375,7 +375,7 @@ final class AchievementManager: ObservableObject {
             $0.completed && cal.startOfDay(for: $0.startDate) >= cutoff
         }
         // 聚合 grades
-        let grades = DataManager.shared.grades.filter {
+        let grades = container.gradeRepo.grades.filter {
             cal.startOfDay(for: $0.date) >= cutoff
         }
 

@@ -96,7 +96,7 @@ struct WeeklyReportView: View {
                 statTile(
                     value: percentString(reportData.averageScoreRate),
                     label: "Avg Score".localized(),
-                    color: scoreColor(rate: reportData.averageScoreRate)
+                    color: scoreColor(reportData.averageScoreRate, fullScore: 1)
                 )
             }
         }
@@ -258,7 +258,7 @@ struct WeeklyReportView: View {
 
     private var footer: some View {
         VStack(alignment: .center, spacing: 6) {
-            Text(dailyQuote)
+            Text(QuoteProvider.dailyQuote())
                 .font(.footnote)
                 .italic()
                 .multilineTextAlignment(.center)
@@ -302,15 +302,6 @@ struct WeeklyReportView: View {
 
     private func percentString(_ rate: Double) -> String {
         String(format: "%.0f%%", max(0, min(1, rate)) * 100)
-    }
-
-    private func scoreColor(rate: Double) -> Color {
-        switch rate {
-        case ..<0.6: return .red
-        case ..<0.75: return .orange
-        case ..<0.9: return .blue
-        default: return .green
-        }
     }
 
     private func intensityColor(_ intensity: StudySession.SessionIntensity) -> Color {

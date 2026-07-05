@@ -40,30 +40,31 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
 }
 
 struct ContentView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selectedTab: AppTab = .home
     @State private var showingAddGradeFromIntent = false
     @State private var showingNewMistakeFromIntent = false
     @State private var currentIntentAction: IntentAction? = nil
+    @ObservedObject private var intentStore = IntentActionStore.shared
    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         Group {
             if sizeClass == .regular {
-                iPadSidebarLayout(selectedTab: $selectedTab)
+                iPadSidebarLayout(selectedTab: $selectedTab, container: container)
             } else {
-                iPhoneTabLayout(selectedTab: $selectedTab)
+                iPhoneTabLayout(selectedTab: $selectedTab, container: container)
             }
         }
         .tint(envManager.effectiveAccentColor)
         .overlay(alignment: .top) {
             AchievementUnlockToast()
         }
-        // 首次启动 welcome 流程结束后，把用户填写的基础资料写入 DataManager
+        // 首次启动 welcome 流程结束后，把用户填写的基础资料写入 ProfileRepository
         .versionedWelcomeView { draft, selectedSubjects in
-            dataManager.commitOnboardingProfile(
+            container.profileRepo.commitOnboardingProfile(
                 draft: draft,
                 selectedSubjectNames: selectedSubjects
             )
@@ -94,7 +95,7 @@ struct ContentView: View {
             }
         }
         // ===== App Intent Navigation Bridge =====
-        .onChange(of: dataManager.pendingIntentAction) { _, action in
+        .onChange(of: intentStore.pendingIntentAction) { _, action in
            guard let action = action else { return }
             currentIntentAction = action
            selectedTab = .home
@@ -104,24 +105,24 @@ struct ContentView: View {
             case .recordMistake:
                 showingNewMistakeFromIntent = true
             }
-            dataManager.pendingIntentAction = nil
+            IntentActionStore.setPending(nil)
         }
        .sheet(isPresented: $showingAddGradeFromIntent) {
             if case let .addGrade(subject, score, examName) = currentIntentAction {
                 AddGradeView(presetSubject: subject, presetScore: score, presetExamName: examName)
-                    .environmentObject(dataManager)
+                    .environment(container)
             } else {
                 AddGradeView()
-                    .environmentObject(dataManager)
+                    .environment(container)
             }
        }
        .sheet(isPresented: $showingNewMistakeFromIntent) {
             if case let .recordMistake(subject, title) = currentIntentAction {
                 NewMistakeSetView(presetSubject: subject, presetTitle: title)
-                    .environmentObject(dataManager)
+                    .environment(container)
             } else {
                 NewMistakeSetView()
-                    .environmentObject(dataManager)
+                    .environment(container)
             }
        }
     }
@@ -143,6 +144,7 @@ struct ContentView: View {
 // MARK: - iPad 传统侧边栏布局
 struct iPadSidebarLayout: View {
     @Binding var selectedTab: AppTab
+    let container: RepositoryContainer
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var selection: AppTab?
 
@@ -183,13 +185,13 @@ struct iPadSidebarLayout: View {
     private func detailView(for tab: AppTab) -> some View {
         switch tab {
         case .home:
-            HomeView(selectedTab: intBinding)
+            HomeView(container: container, selectedTab: intBinding)
         case .trends:
-            TrendsView()
+            TrendsView(container: container)
         case .mistake:
-            MistakeView()
+            MistakeView(container: container)
         case .todo:
-            TodoView()
+            TodoView(container: container)
         case .settings:
             SettingsView()
         }
@@ -210,22 +212,23 @@ struct iPadSidebarLayout: View {
 // MARK: - iPhone 底部 Tab 栏布局
 struct iPhoneTabLayout: View {
     @Binding var selectedTab: AppTab
+    let container: RepositoryContainer
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView(selectedTab: intBinding)
+            HomeView(container: container, selectedTab: intBinding)
                 .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
                 .tag(AppTab.home)
 
-            TrendsView()
+            TrendsView(container: container)
                 .tabItem { Label(AppTab.trends.title, systemImage: AppTab.trends.icon) }
                 .tag(AppTab.trends)
 
-            MistakeView()
+            MistakeView(container: container)
                 .tabItem { Label(AppTab.mistake.title, systemImage: AppTab.mistake.icon) }
                 .tag(AppTab.mistake)
 
-            TodoView()
+            TodoView(container: container)
                 .tabItem { Label(AppTab.todo.title, systemImage: AppTab.todo.icon) }
                 .tag(AppTab.todo)
 
@@ -249,5 +252,5 @@ struct iPhoneTabLayout: View {
 
 #Preview {
     ContentView()
-        .environmentObject(DataManager())
+        .environment(RepositoryContainer())
 }

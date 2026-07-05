@@ -34,9 +34,7 @@ struct AddGradeIntent: AppIntent {
             score: score,
             examName: examName
         )
-        await MainActor.run {
-            DataManager.shared.pendingIntentAction = action
-        }
+        IntentActionStore.setPending(action)
         return .result()
     }
 }

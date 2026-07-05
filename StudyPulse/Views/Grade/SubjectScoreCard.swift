@@ -29,16 +29,16 @@ struct SubjectScoreCard: View {
     let latestGrade: Grade?
     let history: [Grade]
     let displayMode: String // 新增：接收显示模式
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var animateIn = false
     
     var fullScore: Double {
-        dataManager.fullScore(for: subject)
+        container.fullScore(for: subject)
     }
     
     var displayTitle: String {
-        if let s = dataManager.subjects.first(where: { $0.name == subject }) {
+        if let s = container.subjectRepo.subjects.first(where: { $0.name == subject }) {
             return s.displayName.isEmpty ? subject.localized() : s.displayName
         }
         return subject.localized()
@@ -296,8 +296,8 @@ struct miniChartView: View {
             ],
             displayMode: "score"
         )
-        .environmentObject(DataManager())
-        
+        .environment(RepositoryContainer())
+
         SubjectScoreCard(
             subject: "Mathematics",
             latestGrade: Grade(subject: "Mathematics", score: 89.0, ranking: 20, date: Date()),
@@ -308,7 +308,7 @@ struct miniChartView: View {
             ],
             displayMode: "ranking"
         )
-        .environmentObject(DataManager())
+        .environment(RepositoryContainer())
     }
     .padding()
     .background(Color(.systemGroupedBackground))

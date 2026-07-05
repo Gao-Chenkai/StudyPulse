@@ -9,7 +9,7 @@ import SwiftUI
 import os
 
 struct AddGradeView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
     
     // 基础信息
@@ -52,14 +52,14 @@ struct AddGradeView: View {
 
    // 可用科目
     var availableSubjects: [String] {
-        dataManager.subjects.filter {
+        container.subjectRepo.subjects.filter {
             $0.enabled && !$0.name.starts(with: "GROUP:")
         }.map { $0.name }
     }
-    
+
     // 显示用的科目名
     func displayName(forSubject name: String) -> String {
-        if let subject = dataManager.subjects.first(where: { $0.name == name }) {
+        if let subject = container.subjectRepo.subjects.first(where: { $0.name == name }) {
             return subject.displayName.isEmpty ? name.localized() : subject.displayName
         }
         return name.localized()
@@ -164,7 +164,7 @@ private extension AddGradeView {
     var scoreInputSections: some View {
         ForEach($subjectScores) { $subject in
             Section(header: Text("Score \(subject.subject.localized())".localized())) {
-                let maxScore = dataManager.fullScore(for: subject.subject)
+                let maxScore = container.fullScore(for: subject.subject)
                 
                 ScoreControlView(
                     title: "Score".localized(),
@@ -257,21 +257,21 @@ private extension AddGradeView {
     }
     
     func saveGrades() {
-        subjectScores.forEach {
+        let newGrades: [Grade] = subjectScores.map { subjectScore in
             var grade = Grade(
-                subject: $0.subject,
-                score: $0.score,
-                rawScore: $0.useRawScore ? $0.rawScore : nil,
-                ranking: $0.ranking,
+                subject: subjectScore.subject,
+                score: subjectScore.score,
+                rawScore: subjectScore.useRawScore ? subjectScore.rawScore : nil,
+                ranking: subjectScore.ranking,
                 importance: importance,
                 date: selectedDate,
                 examName: examName
             )
             // 记录此次成绩对应的满分
-            grade.fullScore = dataManager.fullScore(for: $0.subject)
-            dataManager.grades.append(grade)
+            grade.fullScore = container.fullScore(for: subjectScore.subject)
+            return grade
         }
-        dataManager.saveGrades()
+        container.addGrades(newGrades)
     }
 }
 
@@ -386,5 +386,5 @@ struct RankingControlView: View {
 }
 
 #Preview {
-    AddGradeView().environmentObject(DataManager())
+    AddGradeView().environment(RepositoryContainer())
 }

@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct ProfileSettingsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     // Local editing state — auto-saved on change
     @State private var username = ""
@@ -39,7 +39,7 @@ struct ProfileSettingsView: View {
     }
 
     private var profileSubtitle: String {
-        let p = dataManager.profile
+        let p = container.profileRepo.profile
         if !p.studentId.isEmpty {
             return "Student ID · \(p.studentId)"
         } else if !p.schoolName.isEmpty {
@@ -75,8 +75,8 @@ struct ProfileSettingsView: View {
             Section {
                 VStack(spacing: 8) {
                     AvatarView(
-                        username: dataManager.profile.username,
-                        avatarData: dataManager.loadAvatar(),
+                        username: container.profileRepo.profile.username,
+                        avatarData: container.profileRepo.loadAvatar(),
                         size: 88
                     )
                     .padding(.top, 8)
@@ -100,8 +100,8 @@ struct ProfileSettingsView: View {
                 NavigationLink(destination: AvatarEditView()) {
                     HStack(spacing: 14) {
                         AvatarView(
-                            username: dataManager.profile.username,
-                            avatarData: dataManager.loadAvatar(),
+                            username: container.profileRepo.profile.username,
+                            avatarData: container.profileRepo.loadAvatar(),
                             size: 36
                         )
                         Text("Edit Avatar".localized())
@@ -416,47 +416,46 @@ struct ProfileSettingsView: View {
     }
 
     private func loadFromProfile() {
-        username = dataManager.profile.username
-        realName = dataManager.profile.realName
-        age = dataManager.profile.age
-        gender = dataManager.profile.gender
-        educationStage = EducationStage(rawValue: dataManager.profile.educationStage) ?? .highSchool
-        regionCode = dataManager.profile.regionCode
-        grade = dataManager.profile.grade
-        className = dataManager.profile.className
-        schoolName = dataManager.profile.schoolName
-        studentId = dataManager.profile.studentId
-        enrollmentYear = dataManager.profile.enrollmentYear
-        examYear = dataManager.profile.examYear
-        targetSchool = dataManager.profile.targetSchool
-        targetScore = dataManager.profile.targetScore
+        username = container.profileRepo.profile.username
+        realName = container.profileRepo.profile.realName
+        age = container.profileRepo.profile.age
+        gender = container.profileRepo.profile.gender
+        educationStage = EducationStage(rawValue: container.profileRepo.profile.educationStage) ?? .highSchool
+        regionCode = container.profileRepo.profile.regionCode
+        grade = container.profileRepo.profile.grade
+        className = container.profileRepo.profile.className
+        schoolName = container.profileRepo.profile.schoolName
+        studentId = container.profileRepo.profile.studentId
+        enrollmentYear = container.profileRepo.profile.enrollmentYear
+        examYear = container.profileRepo.profile.examYear
+        targetSchool = container.profileRepo.profile.targetSchool
+        targetScore = container.profileRepo.profile.targetScore
     }
 
     private func saveToProfile() {
-        dataManager.profile.username = username
-        dataManager.profile.realName = realName
-        dataManager.profile.age = age
-        dataManager.profile.gender = gender
-        dataManager.profile.educationStage = educationStage.rawValue
-        dataManager.profile.regionCode = regionCode
-        dataManager.profile.educationLevel = educationStage.rawValue
+        container.profileRepo.profile.username = username
+        container.profileRepo.profile.realName = realName
+        container.profileRepo.profile.age = age
+        container.profileRepo.profile.gender = gender
+        container.profileRepo.profile.educationStage = educationStage.rawValue
+        container.profileRepo.profile.regionCode = regionCode
+        container.profileRepo.profile.educationLevel = educationStage.rawValue
         if let region = currentRegion {
-            dataManager.profile.educationSystem = region.displayName
-            dataManager.profile.region = region.displayName
+            container.profileRepo.profile.educationSystem = region.displayName
+            container.profileRepo.profile.region = region.displayName
         }
-        dataManager.profile.grade = grade
-        dataManager.profile.className = className
-        dataManager.profile.schoolName = schoolName
-        dataManager.profile.studentId = studentId
-        dataManager.profile.enrollmentYear = enrollmentYear
-        dataManager.profile.examYear = examYear
-        dataManager.profile.targetSchool = targetSchool
-        dataManager.profile.targetScore = targetScore
-        dataManager.saveProfile()
+        container.profileRepo.profile.grade = grade
+        container.profileRepo.profile.className = className
+        container.profileRepo.profile.schoolName = schoolName
+        container.profileRepo.profile.studentId = studentId
+        container.profileRepo.profile.enrollmentYear = enrollmentYear
+        container.profileRepo.profile.examYear = examYear
+        container.profileRepo.profile.targetSchool = targetSchool
+        container.profileRepo.profile.targetScore = targetScore
+        container.profileRepo.saveProfile()
     }
 
     private func applySmartRecommendation() {
-        dataManager.applySmartSubjectRecommendation(stage: educationStage, regionCode: regionCode)
-        dataManager.saveSubjects()
+        container.applySmartSubjectRecommendation(stage: educationStage, regionCode: regionCode)
     }
 }

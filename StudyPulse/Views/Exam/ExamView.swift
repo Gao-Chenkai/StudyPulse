@@ -9,7 +9,8 @@ import SwiftUI
 
 /// 考试列表主视图
 struct ExamView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
+    @StateObject private var viewModel: ExamViewModel
     @State private var showingNewExamSet = false
     @State private var selectedExamForDetail: Exam? = nil
     @State private var selectedComprehensiveExam: comprehensiveExam? = nil
@@ -20,68 +21,57 @@ struct ExamView: View {
     /// 预测目标(综合考试)：非空时弹出 ComprehensiveScorePredictionSheet
     @State private var comprehensivePredictionTarget: ComprehensivePredictionTarget? = nil
 
+    init(container: RepositoryContainer) {
+        _viewModel = StateObject(wrappedValue: ExamViewModel.makeDefault(container: container))
+    }
+
     private var showsCalendar: Bool {
         viewMode == .calendar
     }
 
-    /// 合并所有类型的考试，按时间排序
+    // MARK: - 派生数据来源:全部从 ExamViewModel 取。View 内只做"Any" 适配
+    // (下游 PastExamsSheet / listContent 接受 [Any])
+
+    /// 合并所有类型的考试，按时间排序(保持原 [Any] 类型,兼容下游)
     private var allExamsSorted: [Any] {
-        var exams: [Any] = []
-        exams.append(contentsOf: dataManager.filteredExamSets)
-        exams.append(contentsOf: dataManager.filteredComprehensiveExamSets)
-
-        return exams.sorted { a, b in
-            let dateA: Date = (a as? Exam)?.examDate ?? (a as? comprehensiveExam)?.examDate ?? .distantFuture
-            let dateB: Date = (b as? Exam)?.examDate ?? (b as? comprehensiveExam)?.examDate ?? .distantFuture
-            return dateA < dateB
+        viewModel.allItems.map { (item: ExamItem) -> Any in
+            switch item {
+            case .single(let e): return e
+            case .comprehensive(let e): return e
+            }
         }
     }
-    
-    /// 未过期的考试（日期 >= 今天）
+
+    /// 未过期的考试(日期 >= 今天)
     private var upcomingExams: [Any] {
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        return allExamsSorted.filter { item in
-            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
-            return date >= todayStart
+        viewModel.upcomingItems.map { (item: ExamItem) -> Any in
+            switch item {
+            case .single(let e): return e
+            case .comprehensive(let e): return e
+            }
         }
     }
-    
-    /// 已过期的考试（日期 < 今天）
-    private var pastExams: [Any] {
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        return allExamsSorted.filter { item in
-            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
-            return date < todayStart
-        }
-    }
-    
-    /// 将未来考试按时间范围分组
-    private var groupedExams: [(sectionTitle: String, exams: [Any])] {
-        let now = Date()
-        guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
-              let oneMonthLater = Calendar.current.date(byAdding: .month, value: 1, to: now) else {
-            return []
-        }
-        
-        let week = upcomingExams.filter { item in
-            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
-            return date <= oneWeekLater
-        }
-        let month = upcomingExams.filter { item in
-            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
-            return date > oneWeekLater && date <= oneMonthLater
-        }
-        let later = upcomingExams.filter { item in
-            let date = (item as? Exam)?.examDate ?? (item as? comprehensiveExam)?.examDate ?? .distantFuture
-            return date > oneMonthLater
-        }
-        
-        var result: [(String, [Any])] = []
-        if !week.isEmpty { result.append(("Within 1 Week".localized(), week)) }
-        if !month.isEmpty { result.append(("Within 1 Month".localized(), month)) }
-        if !later.isEmpty { result.append(("Later".localized(), later)) }
 
-        return result
+    /// 已过期的考试(日期 < 今天)
+    private var pastExams: [Any] {
+        viewModel.pastItems.map { (item: ExamItem) -> Any in
+            switch item {
+            case .single(let e): return e
+            case .comprehensive(let e): return e
+            }
+        }
+    }
+
+    /// 未来考试分桶(转回 [Any] 兼容旧 listContent)
+    private var groupedExams: [(sectionTitle: String, exams: [Any])] {
+        viewModel.groupedUpcoming.map { bucket in
+            (bucket.title, bucket.items.map { (item: ExamItem) -> Any in
+                switch item {
+                case .single(let e): return e
+                case .comprehensive(let e): return e
+                }
+            })
+        }
     }
 
     var body: some View {
@@ -180,6 +170,10 @@ struct ExamView: View {
                 )
                 .adaptiveSheet(detents: [.medium, .large])
             }
+            // 派生数据重算
+            .onAppear { viewModel.recompute() }
+            .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
+            .onChange(of: container.examRepo.filteredComprehensiveExamSets) { _, _ in viewModel.recompute() }
         }
     }
 
@@ -304,26 +298,20 @@ struct ExamView: View {
     }
     
     private func deleteExam(_ exam: Exam) {
-        if let index = dataManager.examSets.firstIndex(where: { $0.id == exam.id }) {
-            dataManager.examSets.remove(at: index)
-            dataManager.saveExamSets()
-        }
+        container.deleteExam(exam)
     }
 
     private func deleteComprehensiveExam(_ exam: comprehensiveExam) {
-        if let index = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
-            dataManager.comprehensiveExamSets.remove(at: index)
-            dataManager.saveComprehensiveExams()
-        }
+        container.deleteComprehensiveExam(exam)
     }
 
     /// 触发预测 Sheet：按考试科目取历史成绩 + 满分。
     /// Open the prediction sheet for a given exam, using same-subject history
     /// and the subject's full score.
     private func openPrediction(for exam: Exam) {
-        let subjectGrades = dataManager.filteredGrades
+        let subjectGrades = container.gradeRepo.filteredGrades
             .filter { $0.subject == exam.subject }
-        let fullScore = dataManager.subjects.first(where: { $0.name == exam.subject })?.fullScore ?? 100
+        let fullScore = container.subjectRepo.subjects.first(where: { $0.name == exam.subject })?.fullScore ?? 100
         predictionTarget = PredictionTarget(
             exam: exam,
             history: subjectGrades,
@@ -344,9 +332,11 @@ struct ExamView: View {
         var totalUpper: Double = 0
 
         for subject in allSubjects {
-            let grades = dataManager.filteredGrades.filter { $0.subject == subject }
-            let fullScore = dataManager.subjects.first(where: { $0.name == subject })?.fullScore ?? 100
-            if let r = predictor.predict(history: grades, examDate: exam.examDate, fullScore: fullScore) {
+            let grades = container.gradeRepo.filteredGrades.filter { $0.subject == subject }
+            let mistakes = container.mistakeRepo.filteredMistakeSets.filter { $0.subject == subject }
+            let context = MistakeContext.build(from: mistakes)
+            let fullScore = container.subjectRepo.subjects.first(where: { $0.name == subject })?.fullScore ?? 100
+            if let r = predictor.predict(history: grades, mistakeContext: context, examDate: exam.examDate, fullScore: fullScore) {
                 perSubject.append(PerSubjectPrediction(subject: subject, result: r))
                 totalFull += fullScore
                 totalPredicted += r.predicted
@@ -794,14 +784,14 @@ struct ComprehensiveExamRowView: View {
 }
 
 #Preview {
-    ExamView()
-        .environmentObject(DataManager())
+    ExamView(container: RepositoryContainer())
+        .environment(RepositoryContainer())
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
-    ExamView()
-        .environmentObject(DataManager())
+    ExamView(container: RepositoryContainer())
+        .environment(RepositoryContainer())
         .preferredColorScheme(.dark)
 }
 

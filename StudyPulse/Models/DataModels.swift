@@ -162,7 +162,7 @@ nonisolated struct Grade: Identifiable, Codable, Hashable {
     /// 获取图片数据：优先从 imageFileName 加载，回退到内嵌 image
     @MainActor func getImage() -> Data? {
         if let fileName = imageFileName {
-            return DataManager.shared.loadGradeImage(filename: fileName)
+            return ImageStorage.load(filename: fileName)
         }
         return image
     }

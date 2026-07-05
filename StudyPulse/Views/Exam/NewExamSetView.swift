@@ -10,7 +10,7 @@ import UserNotifications
 
 struct NewExamSetView: View {
     // 从环境中自动获取 DataManager，不需要在 init 中传参
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.dismiss) private var dismiss
     
@@ -47,7 +47,7 @@ struct NewExamSetView: View {
     
     @State private var subjectTimeEntries: [SubjectTimeEntry] = []
     var enabledSubjects: [Subject] {
-        dataManager.subjects.filter {
+        container.subjectRepo.subjects.filter {
             $0.enabled && !$0.name.starts(with: "GROUP:")
         }
     }
@@ -65,7 +65,7 @@ struct NewExamSetView: View {
     
     // 获取可用科目
     private var availableSubjects: [String] {
-        dataManager.subjects.filter { $0.enabled }.map { $0.name }
+        container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
     
     var body: some View {
@@ -292,8 +292,7 @@ struct NewExamSetView: View {
                 examEndDate: examEndDate,
                 subjectTimeSlots: addToCalendarToggle ? timeSlots : nil
             )
-            dataManager.comprehensiveExamSets.append(newCompExam)
-            dataManager.saveComprehensiveExams()
+            container.addExams(single: [], comprehensive: [newCompExam])
             
             if addToCalendarToggle {
                 Task {
@@ -352,8 +351,7 @@ struct NewExamSetView: View {
                 masteryDegree: masteryDegree,
                 timeSlot: timeSlot
             )
-            dataManager.examSets.append(newExam)
-            dataManager.saveExamSets()
+            container.addExams(single: [newExam], comprehensive: [])
             
             if addToCalendarToggle, let slot = timeSlot {
                 Task {
@@ -385,14 +383,13 @@ struct NewExamSetView: View {
 }
 
 #Preview {
-    let mockManager = DataManager()
-    mockManager.subjects = [
+    let mockContainer = RepositoryContainer()
+    mockContainer.subjectRepo.subjects = [
         Subject(name: "Mathematics", enabled: true),
         Subject(name: "Physics", enabled: true),
         Subject(name: "Swift", enabled: true),
-
     ]
-    
+
     return NewExamSetView()
-        .environmentObject(mockManager)
+        .environment(mockContainer)
 }

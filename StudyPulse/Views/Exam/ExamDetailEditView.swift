@@ -9,7 +9,7 @@ import SwiftUI
 import os
 
 struct ExamDetailEditView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
     // 接收要编辑的原始对象
@@ -57,7 +57,7 @@ struct ExamDetailEditView: View {
     }
 
     private var availableSubjects: [String] {
-        dataManager.subjects.filter { $0.enabled }.map { $0.name }
+        container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
 
     var body: some View {
@@ -263,15 +263,15 @@ struct ExamDetailEditView: View {
             )
         }
 
-        // 写回 DataManager（同时落盘 SwiftData）
-        dataManager.updateExam(updatedExam)
+        // 写回 examRepo（同时落盘 SwiftData）
+        container.examRepo.updateExam(updatedExam)
         Log.data.info("考试编辑成功 / Exam updated: name=\(updatedExam.name, privacy: .public) id=\(originalExam.id.uuidString, privacy: .public) checklist=\(updatedExam.checklist.count, privacy: .public) notifyDays=\(Array(notifyDays).sorted(), privacy: .public)")
         presentationMode.wrappedValue.dismiss()
     }
 }
 
 #Preview {
-    let dm = DataManager()
+    let container = RepositoryContainer()
     let testExam = Exam(
         name: "Final Physics",
         date: Date().addingTimeInterval(86400 * 20),
@@ -287,8 +287,8 @@ struct ExamDetailEditView: View {
         locationClassroom: "305",
         locationSeat: "23"
     )
-    dm.examSets = [testExam]
+    container.examRepo.add(single: [testExam], comprehensive: [])
 
     return ExamDetailEditView(exam: testExam)
-        .environmentObject(dm)
+        .environment(container)
 }

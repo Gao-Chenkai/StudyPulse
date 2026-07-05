@@ -205,3 +205,63 @@ else:                     intensity = recovery
   算法会回退到个人均值路径 (若 30 天数据不足则该项不参与评分)。
 - 阈值参考的是普通人群体均值,运动员、青少年、孕期等人群可能需要单独校准。
 - 算法只为建议,不能替代医生。如果持续感到异常,请优先就医。
+
+---
+
+## 7. 代码位置与消费链路 (v1.2)
+
+`StudyPulse/Managers/Health/StudyReadinessAlgorithm.swift` 提供顶层
+`recommend(...)` 静态实现,纯函数 `nonisolated` enum,可被任意 actor
+调用。**视图层不直接调用算法**,消费链路如下:
+
+1. **`HealthKitManager.shared`**(`StudyPulse/Managers/Health/HealthKitManager.swift`)
+   提供三类运行时数据:`BodyStatus`(5 维身体信号,心率 / 呼吸率 / 深睡+REM / 锻炼)、
+   `PersonalBaselines`(30 天个人基线,持久化于
+   `~/Documents/health_history.json`,由 `HealthHistoryStore` 管理)、
+   `HRVReadiness`(14 天 SDNN Z-score 分类)。
+2. **`StudyReadinessAlgorithm.recommend(hrvEnabled:bodyStatus:baselines:hrvReadiness:)`**
+   输入上述数据,输出 `StudyRecommendation { intensity, focus }` (5 档 × 5 重点 → 25 种
+   组合;未覆盖组合回退到 `steady / balanced`)。
+3. **`HomeViewModel`**(`StudyPulse/ViewModels/HomeViewModel.swift`)
+   把 `StudyRecommendation` 与今日具体上下文 (错题 SRS 队列、即将到来的考试、
+   未登记考试等) 打包成 `StudySuggestionsContext`,再调用
+   `Services/SuggestionEngine.swift` 的 `generate(from:max:)`
+   把 `StudyRecommendation` 翻译为用户可见的 `StudySuggestion` 列表
+   (最多 5 条,每条带本地化文案与 `Color`)。
+4. **`HomeView`** + 主页「Study Suggestions」卡片按 ViewModel 暴露的
+   `suggestions` 渲染;`HRVStatusCard` 同时显示 `StudyRecommendation`
+   的 radar。
+
+涉及类型:
+- `HealthKitManager.BodyStatus`(`HealthKitManager` 内定义,非 SwiftData)。
+- `HealthKitManager.PersonalBaselines`(`HealthKitManager` 内定义)。
+- `HealthKitManager.HRVReadiness`(`HealthKitManager` 内定义)。
+- `StudyReadinessAlgorithm.StudyRecommendation` / `StudyIntensity` / `StudyFocus`。
+- `StudySuggestion`(`Services/SuggestionEngine.swift` 产出,
+  **唯一**引用 `SwiftUI` 的纯函数服务,因 `color: Color`)。
+
+注意:
+- `Models/SwiftData/StudyPulseModels.swift` 不涉及算法;`HealthHistory`
+  单独持久化为 `~/Documents/health_history.json`(NSLock 线程安全),
+  **不**写入 SwiftData。
+- `StudyReadinessAlgorithm` 自身是 `nonisolated` enum,
+  `HomeViewModel` 是 `@MainActor ObservableObject`;ViewModel 在主线程调用
+  `recommend(...)` 不会触发 actor hop,结果赋给 `@Published` 即触发
+  SwiftUI 重渲染。
+- MVVM 重构前,`HomeView` 直接调用算法;v1.2 之后 View 层只读
+  `HomeViewModel` 暴露的状态,保证 5 个主页面 + ViewModel + Service
+  架构一致。
+
+---
+
+## 8. 版本与变更
+
+- v1.0:HRV 单独 5 档(`excellent` / `normal` / `low` / `insufficient` / `noAuthorization`),
+  视图层直接读 `HealthKitManager.readiness`。
+- v1.1:引入 `BodyStatus`(5 维身体信号)与 `PersonalBaselines`(30 天个人基线),
+  算法升级为 5 档 × 5 重点 → 25 种组合,HRV 仍为硬覆盖;
+  新增 `StudyReadinessAlgorithm` 与 `SuggestionEngine` 拆分。
+- v1.2:MVVM + Repository 重构后,`StudyReadinessAlgorithm` 与
+  `SuggestionEngine` 进一步解耦,`StudySuggestion` 由 `HomeViewModel` 协调
+  产出;底层评分函数未变,但消费路径由 `HomeView → algorithm` 变为
+  `HomeView → HomeViewModel → algorithm + SuggestionEngine`。

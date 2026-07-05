@@ -10,14 +10,14 @@ import SwiftUI
 
 struct TaskDetailView: View {
     let task: TaskItem
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showingEditSheet: Bool = false
     @State private var showingReminderAlert: Bool = false
     @State private var reminderAlertMessage: String = ""
 
-    /// 用于反映 dataManager 中实时状态（例如外部删除后页面同步）
+    /// 用于反映 container 中实时状态（例如外部删除后页面同步）
     private var currentTask: TaskItem? {
-        dataManager.taskItems.first(where: { $0.id == task.id })
+        container.taskRepo.taskItems.first(where: { $0.id == task.id })
     }
 
     private var typeColor: Color {
@@ -168,7 +168,7 @@ struct TaskDetailView: View {
                         Label("Edit".localized(), systemImage: "pencil")
                     }
                     Button {
-                        dataManager.setTaskCompletion(current.id, isCompleted: !current.isCompleted)
+                        container.setTaskCompletion(current.id, isCompleted: !current.isCompleted)
                     } label: {
                         if current.isCompleted {
                             Label("Mark Pending".localized(), systemImage: "circle")
@@ -177,7 +177,7 @@ struct TaskDetailView: View {
                         }
                     }
                     Button(role: .destructive) {
-                        dataManager.deleteTask(current)
+                        container.deleteTask(current)
                     } label: {
                         Label("Delete".localized(), systemImage: "trash")
                     }
@@ -188,7 +188,6 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             TaskDetailEditView(task: current)
-                .environmentObject(dataManager)
                 .adaptiveSheet()
         }
     }
@@ -204,7 +203,7 @@ struct TaskDetailView: View {
                     subject: current.subject.isEmpty ? nil : current.subject
                 )
                 await MainActor.run {
-                    dataManager.updateTask(current, reminderResult: result)
+                    container.taskRepo.update(current, reminderResult: result)
                     reminderAlertMessage = "Added to system Reminders.".localized()
                     showingReminderAlert = true
                 }
@@ -219,7 +218,7 @@ struct TaskDetailView: View {
 }
 
 #Preview {
-    let dm = DataManager()
+    let mockContainer = RepositoryContainer()
     let task = TaskItem(
         title: "Math Homework Ch.3",
         type: .homework,
@@ -229,9 +228,9 @@ struct TaskDetailView: View {
         importance: 4,
         notes: "Problems 1-20"
     )
-    dm.taskItems = [task]
+    mockContainer.taskRepo.add([task])
     return NavigationStack {
         TaskDetailView(task: task)
-            .environmentObject(dm)
+            .environment(mockContainer)
     }
 }

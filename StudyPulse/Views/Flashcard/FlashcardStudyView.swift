@@ -70,7 +70,7 @@ enum FlashcardFilter: Equatable {
 
 /// 全屏闪卡复习入口
 struct FlashcardStudyView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
 
@@ -282,7 +282,7 @@ struct FlashcardStudyView: View {
     private func loadQueue() {
         switch filter {
         case .dueQueue:
-            queue = SRSAlgorithm.dueMistakes(from: dataManager.mistakeSets)
+            queue = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
         case .single(let note):
             queue = [note]
         }
@@ -301,7 +301,7 @@ struct FlashcardStudyView: View {
         case .dueQueue:
             if var state = current.reviewState {
                 state = SRSAlgorithm.apply(quality: quality, to: state)
-                dataManager.updateMistakeReviewState(current.id, newState: state)
+                container.mistakeRepo.updateReviewState(current.id, newState: state)
             }
         case .single:
             // 单题模式：只把 nextReviewDate 推后 1 天
@@ -310,12 +310,12 @@ struct FlashcardStudyView: View {
                 if let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
                     state.nextReviewDate = nextDay
                 }
-                dataManager.updateMistakeReviewState(current.id, newState: state)
+                container.mistakeRepo.updateReviewState(current.id, newState: state)
             }
         }
 
         // 记录曝光 / 掌握度：自评后曝光 +1，按 quality 调整 masteryScore 并追加 history
-        dataManager.recordMistakeReview(current.id, quality: quality)
+        container.mistakeRepo.recordReview(current.id, quality: quality, now: Date())
 
         // 「Again」立即重插入队尾（确保至少复习一次）
         if quality == .again && filter == .dueQueue {
@@ -353,7 +353,7 @@ struct FlashcardStudyView: View {
             showingSummary = true
         }
         // 通知全部重调度
-        SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+        SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
     }
 }
 

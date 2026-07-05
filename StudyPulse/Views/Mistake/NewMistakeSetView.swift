@@ -36,7 +36,7 @@ enum EditSection: String, CaseIterable, Identifiable {
 }
 
 struct NewMistakeSetView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
     @State private var editedTitle = ""
@@ -144,7 +144,7 @@ private extension NewMistakeSetView {
 
             Picker("Subject".localized(), selection: $selectedSubject) {
                 Text("Select".localized()).tag("")
-                ForEach(dataManager.subjects.filter { $0.enabled }, id: \.name) { subject in
+                ForEach(container.subjectRepo.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
                 }
             }
@@ -349,11 +349,11 @@ private extension NewMistakeSetView {
             correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
             reviewState: reviewEnabled ? .initial() : nil
         )
-        dataManager.addMistake(newMistake)
+        container.addMistake(newMistake)
 
         // 调度 SRS 复习通知
         if reviewEnabled {
-            SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+            SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
         }
     }
 }
@@ -473,12 +473,12 @@ struct SampleMistake {
 }
 
 #Preview("New Mistake") {
-    let mockDataManager = DataManager()
+    let mockContainer = RepositoryContainer()
     // Seed a few default subjects so the subject picker isn't empty in
     // the preview canvas. The view's @State text fields are still empty
     // — type into the editor to see the markdown render in the live
     // preview pane below.
-    mockDataManager.subjects = [
+    mockContainer.subjectRepo.subjects = [
         Subject(name: "Mathematics", displayName: "Math", enabled: true, fullScore: 150),
         Subject(name: "Physics", displayName: "Physics", enabled: true, fullScore: 100),
         Subject(name: "Chemistry", displayName: "Chemistry", enabled: true, fullScore: 100),
@@ -486,12 +486,12 @@ struct SampleMistake {
     ]
 
     return NewMistakeSetView()
-        .environmentObject(mockDataManager)
+        .environment(mockContainer)
 }
 
 #Preview("New Mistake — Wrong Solution Sample") {
-    let mockDataManager = DataManager()
-    mockDataManager.subjects = [
+    let mockContainer = RepositoryContainer()
+    mockContainer.subjectRepo.subjects = [
         Subject(name: "Mathematics", displayName: "Math", enabled: true, fullScore: 150),
         Subject(name: "Physics", displayName: "Physics", enabled: true, fullScore: 100),
         Subject(name: "Chemistry", displayName: "Chemistry", enabled: true, fullScore: 100),
@@ -499,7 +499,7 @@ struct SampleMistake {
     ]
 
     return NewMistakeSetView(sampleMistake: .quadratic)
-        .environmentObject(mockDataManager)
+        .environment(mockContainer)
 }
 
 // MARK: - Image Picker with Completion Handler

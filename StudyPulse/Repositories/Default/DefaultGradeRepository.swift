@@ -1,0 +1,205 @@
+//
+//  DefaultGradeRepository.swift
+//  StudyPulse
+//
+//  成绩 (Grade) Repository 默认实现。
+//  Default GradeRepository implementation backed by SwiftData.
+//  纯 CRUD:无 widget sync / achievement 副作用(由 RepositoryContainer 编排)。
+//
+
+import Foundation
+import SwiftData
+import os
+
+@Observable @MainActor
+final class DefaultGradeRepository: GradeRepository {
+    /// 全量成绩(按 date desc 排序)
+    var grades: [Grade] = []
+    /// 按 active phase 过滤后的成绩缓存
+    var filteredGrades: [Grade] = []
+
+    /// ModelContext:由 RepositoryContainer.setModelContainer 注入
+    @ObservationIgnored
+    private var modelContext: ModelContext?
+
+    init() {}
+
+    // MARK: - Lifecycle
+
+    func loadAll(context: ModelContext) async {
+        self.modelContext = context
+        await reloadFromSwiftData()
+    }
+
+    func reloadFromSwiftData() async {
+        guard let context = modelContext else { return }
+        do {
+            let entities = try context.fetch(
+                FetchDescriptor<GradeRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+            )
+            // 在主 actor 上做 toSnapshot(@Model 不可跨 actor 边界)
+            let snap = entities.map { $0.toSnapshot() }
+            self.grades = snap
+            recomputeFiltered()
+        } catch {
+            Log.data.error("DefaultGradeRepository reloadFromSwiftData failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    @discardableResult
+    func migrateInlineImagesIfNeeded() -> Int {
+        guard let context = modelContext else { return 0 }
+        var migrated = 0
+        for i in 0..<grades.count where grades[i].image != nil && grades[i].imageFileName == nil {
+            let grade = grades[i]
+            guard let imageData = grade.image else { continue }
+            let filename = "grade_\(grade.id.uuidString).jpg"
+            if ImageStorage.save(imageData, filename: filename) {
+                grades[i].imageFileName = filename
+                grades[i].image = nil
+                if let entity = try? context.fetch(
+                    FetchDescriptor<GradeRecord>(predicate: #Predicate { $0.id == grade.id })
+                ).first {
+                    entity.imageFileName = filename
+                    entity.image = nil
+                }
+                migrated += 1
+            }
+        }
+        if migrated > 0 {
+            try? context.save()
+            Log.data.info("DefaultGradeRepository migrated inline grade images: count=\(migrated, privacy: .public)")
+        }
+        return migrated
+    }
+
+    // MARK: - CRUD
+
+    func add(_ grade: Grade) {
+        var stored = grade
+        if stored.phaseId == nil {
+            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+        }
+        if let context = modelContext {
+            context.insert(GradeRecord(from: stored))
+            try? context.save()
+        }
+        grades.append(stored)
+        Log.data.info("GradeRepository added: subject=\(stored.subject, privacy: .public) score=\(stored.score, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
+        Log.record(.info, category: "Data", message: "GradeRepository added: subject=\(stored.subject) score=\(stored.score) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
+        recomputeFiltered()
+    }
+
+    func add(_ newGrades: [Grade]) {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let stored: [Grade] = newGrades.map { g in
+            var s = g
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
+        if let context = modelContext {
+            for g in stored {
+                context.insert(GradeRecord(from: g))
+            }
+            try? context.save()
+        }
+        grades.append(contentsOf: stored)
+        let count = stored.count
+        Log.data.info("GradeRepository batch added: count=\(count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "GradeRepository batch added: count=\(count)")
+        recomputeFiltered()
+    }
+
+    func update(_ grade: Grade) {
+        if let index = grades.firstIndex(where: { $0.id == grade.id }) {
+            grades[index] = grade
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<GradeRecord>(predicate: #Predicate { $0.id == grade.id })
+            ).first {
+                entity.subject = grade.subject
+                entity.score = grade.score
+                entity.rawScore = grade.rawScore
+                entity.ranking = grade.ranking
+                entity.importance = grade.importance
+                entity.image = grade.image
+                entity.imageFileName = grade.imageFileName
+                entity.date = grade.date
+                entity.examName = grade.examName
+                entity.fullScore = grade.fullScore
+                entity.phaseId = grade.phaseId
+                try context.save()
+            } else {
+                context.insert(GradeRecord(from: grade))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("GradeRepository update failed: \(error.localizedDescription, privacy: .public)")
+        }
+        recomputeFiltered()
+    }
+
+    func delete(_ grade: Grade) {
+        if let imageFileName = grade.imageFileName {
+            ImageStorage.delete(filename: imageFileName)
+            Log.data.debug("GradeRepository removed grade image: \(imageFileName, privacy: .public)")
+        }
+        removeRecord(id: grade.id)
+        grades.removeAll { $0.id == grade.id }
+        Log.data.info("GradeRepository deleted: subject=\(grade.subject, privacy: .public)")
+        Log.record(.info, category: "Data", message: "GradeRepository deleted: subject=\(grade.subject)")
+        recomputeFiltered()
+    }
+
+    @discardableResult
+    func clearAll() -> Int {
+        guard let context = modelContext else { return 0 }
+        let count = grades.count
+        for g in grades {
+            if let name = g.imageFileName {
+                ImageStorage.delete(filename: name)
+            }
+        }
+        do {
+            let entities = try context.fetch(FetchDescriptor<GradeRecord>())
+            for entity in entities { context.delete(entity) }
+            try context.save()
+        } catch {
+            Log.data.error("GradeRepository clearAll failed: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+        grades.removeAll()
+        Log.data.warning("GradeRepository clearAll: count=\(count, privacy: .public)")
+        Log.record(.warning, category: "Data", message: "GradeRepository clearAll: count=\(count)")
+        recomputeFiltered()
+        return count
+    }
+
+    // MARK: - Internals
+
+    /// 按 active phase 过滤(从外部 phase 切换时由容器调用,本类内部每次增删改后也会自动调)。
+    func recomputeFiltered() {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        if let id = activeId {
+            filteredGrades = grades.filter { $0.phaseId == id }
+        } else {
+            filteredGrades = grades
+        }
+    }
+
+    private func removeRecord(id: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<GradeRecord>(predicate: #Predicate { $0.id == id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("GradeRepository removeRecord failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+}

@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct AppearanceSettingsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
 
   var body: some View {
@@ -59,18 +59,18 @@ struct AppearanceSettingsView: View {
 
     private var trendWidgetSubjectPicker: some View {
         let preferredSubject = TrendWidgetDataStore.loadPreferredSubject()
-        let subjectsWithGrades = Dictionary(grouping: dataManager.grades, by: \.subject).keys.sorted()
+        let subjectsWithGrades = Dictionary(grouping: container.gradeRepo.grades, by: \.subject).keys.sorted()
 
         return Picker(selection: Binding<String?>(
             get: { preferredSubject },
             set: { newSubject in
                 TrendWidgetDataStore.savePreferredSubject(newSubject)
-                TrendWidgetSyncManager.syncTrend(grades: dataManager.grades, subjects: dataManager.subjects)
+                TrendWidgetSyncManager.syncTrend(grades: container.gradeRepo.grades, subjects: container.subjectRepo.subjects)
             }
         )) {
             Text("Auto".localized()).tag(String?.none)
             ForEach(subjectsWithGrades, id: \.self) { subjectName in
-                Text(dataManager.displayName(for: subjectName)).tag(String?.some(subjectName))
+                Text(container.displayName(for: subjectName)).tag(String?.some(subjectName))
             }
         } label: {
             Label("Trend Widget Subject".localized(), systemImage: "chart.line.uptrend.xyaxis")

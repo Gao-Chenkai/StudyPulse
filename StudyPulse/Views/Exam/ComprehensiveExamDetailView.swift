@@ -11,7 +11,7 @@ import SwiftUI
 struct ComprehensiveExamDetailView: View {
     let exam: comprehensiveExam
 
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showingCalendarAlert = false
     @State private var calendarAlertMessage = ""
     /// 综合考试预测目标(非空时弹出 ComprehensiveScorePredictionSheet)
@@ -19,15 +19,15 @@ struct ComprehensiveExamDetailView: View {
 
     // MARK: - 派生数据
 
-    /// 始终从 dataManager 拿最新的 comprehensiveExam(确保状态实时同步)
+    /// 始终从 examRepo 拿最新的 comprehensiveExam(确保状态实时同步)
     private var currentExam: comprehensiveExam {
-        dataManager.comprehensiveExamSets.first(where: { $0.id == exam.id }) ?? exam
+        container.examRepo.comprehensiveExamSets.first(where: { $0.id == exam.id }) ?? exam
     }
 
     /// 各科目的错题(去重,按时间倒序)
     private var relatedMistakes: [MistakeNote] {
         let subjectSet = Set(currentExam.subject)
-        return dataManager.mistakeSets
+        return container.mistakeRepo.mistakeSets
             .filter { subjectSet.contains($0.subject) }
             .sorted { $0.date > $1.date }
     }
@@ -210,7 +210,7 @@ struct ComprehensiveExamDetailView: View {
                     .listRowBackground(Color(.secondarySystemGroupedBackground))
                 } else {
                     ForEach(relatedMistakes.prefix(6)) { mistake in
-                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake).environmentObject(dataManager)) {
+                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
                             HStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.bubble.fill")
                                     .foregroundColor(.orange)
@@ -313,9 +313,11 @@ struct ComprehensiveExamDetailView: View {
         var totalUpper: Double = 0
 
         for subject in allSubjects {
-            let grades = dataManager.filteredGrades.filter { $0.subject == subject }
-            let fullScore = dataManager.subjects.first(where: { $0.name == subject })?.fullScore ?? 100
-            if let r = predictor.predict(history: grades, examDate: currentExam.examDate, fullScore: fullScore) {
+            let grades = container.gradeRepo.filteredGrades.filter { $0.subject == subject }
+            let mistakes = container.mistakeRepo.filteredMistakeSets.filter { $0.subject == subject }
+            let context = MistakeContext.build(from: mistakes)
+            let fullScore = container.subjectRepo.subjects.first(where: { $0.name == subject })?.fullScore ?? 100
+            if let r = predictor.predict(history: grades, mistakeContext: context, examDate: currentExam.examDate, fullScore: fullScore) {
                 perSubject.append(PerSubjectPrediction(subject: subject, result: r))
                 totalFull += fullScore
                 totalPredicted += r.predicted

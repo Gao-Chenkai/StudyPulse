@@ -5,13 +5,17 @@
 import SwiftUI
 
 struct EditSubjectsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
+        let subjectsBinding = Binding<[Subject]>(
+            get: { container.subjectRepo.subjects },
+            set: { container.subjectRepo.subjects = $0 }
+        )
         List {
             Section(header: Text("Subjects".localized()),
                     footer: Text("Toggle the subjects you're studying. Tap the score to adjust the full score for each subject.".localized())) {
-                ForEach($dataManager.subjects) { $subject in
+                ForEach(subjectsBinding) { $subject in
                     HStack(spacing: 12) {
                         Toggle(isOn: $subject.enabled) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -45,12 +49,12 @@ struct EditSubjectsView: View {
 
             Section {
                 Button(action: {
-                    if let stage = EducationStage(rawValue: dataManager.profile.educationStage) {
-                        dataManager.applySmartSubjectRecommendation(
+                    if let stage = EducationStage(rawValue: container.profileRepo.profile.educationStage) {
+                        container.applySmartSubjectRecommendation(
                             stage: stage,
-                            regionCode: dataManager.profile.regionCode
+                            regionCode: container.profileRepo.profile.regionCode
                         )
-                        dataManager.saveSubjects()
+                        container.subjectRepo.saveSubjects()
                     }
                 }) {
                     HStack {
@@ -66,8 +70,8 @@ struct EditSubjectsView: View {
         .navigationTitle("Edit Subjects".localized())
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
-            dataManager.saveProfile()
-            dataManager.saveSubjects()
+            container.profileRepo.saveProfile()
+            container.subjectRepo.saveSubjects()
         }
     }
 }
@@ -75,6 +79,6 @@ struct EditSubjectsView: View {
 #Preview {
     NavigationStack {
         EditSubjectsView()
-            .environmentObject(DataManager())
+            .environment(RepositoryContainer())
     }
 }

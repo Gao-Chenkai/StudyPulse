@@ -28,9 +28,7 @@ struct RecordMistakeIntent: AppIntent {
             subject: subject.id,
             title: title_
         )
-        await MainActor.run {
-            DataManager.shared.pendingIntentAction = action
-        }
+        IntentActionStore.setPending(action)
         return .result()
     }
 }

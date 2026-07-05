@@ -7,9 +7,9 @@ import SwiftUI
 
 // MARK: - DataAdminView
 struct DataAdminView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -17,19 +17,19 @@ struct DataAdminView: View {
                     NavigationLink {
                         GradeAdminView()
                     } label: {
-                        Label("Grades (\(dataManager.grades.count))".localized(), systemImage: "chart.bar.fill")
+                        Label("Grades (\(container.gradeRepo.grades.count))".localized(), systemImage: "chart.bar.fill")
                     }
 
                     NavigationLink {
                         ExamAdminView()
                     } label: {
-                        Label("Exams (\(dataManager.examSets.count + dataManager.comprehensiveExamSets.count))".localized(), systemImage: "calendar")
+                        Label("Exams (\(container.examRepo.examSets.count + container.examRepo.comprehensiveExamSets.count))".localized(), systemImage: "calendar")
                     }
 
                     NavigationLink {
                         MistakeAdminView()
                     } label: {
-                        Label("Mistakes (\(dataManager.mistakeSets.count))".localized(), systemImage: "book.fill")
+                        Label("Mistakes (\(container.mistakeRepo.mistakeSets.count))".localized(), systemImage: "book.fill")
                     }
                 }
             }
@@ -47,15 +47,15 @@ struct DataAdminView: View {
 
 // MARK: - GradeAdminView
 struct GradeAdminView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var editingGrade: Grade?
-    
+
     var body: some View {
         List {
-            if dataManager.grades.isEmpty {
+            if container.gradeRepo.grades.isEmpty {
                 Text("No grades".localized()).foregroundColor(.secondary)
             } else {
-                ForEach(dataManager.grades) { grade in
+                ForEach(container.gradeRepo.grades) { grade in
                     Button {
                         editingGrade = grade
                     } label: {
@@ -81,7 +81,7 @@ struct GradeAdminView: View {
                 }
                 .onDelete { indexSet in
                     for i in indexSet.sorted(by: >) {
-                        dataManager.deleteGrade(dataManager.grades[i])
+                        container.deleteGrade(container.gradeRepo.grades[i])
                     }
                 }
             }
@@ -90,10 +90,7 @@ struct GradeAdminView: View {
         .adaptiveMaxWidth(820)
         .sheet(item: $editingGrade) { grade in
             GradeEditSheet(grade: grade) { updated in
-                if let index = dataManager.grades.firstIndex(where: { $0.id == grade.id }) {
-                    dataManager.grades[index] = updated
-                    dataManager.saveGrades()
-                }
+                container.gradeRepo.update(updated)
                 editingGrade = nil
             }
         }
@@ -102,15 +99,15 @@ struct GradeAdminView: View {
 
 // MARK: - ExamAdminView
 struct ExamAdminView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var editingExam: Exam?
     @State private var editingCompExam: comprehensiveExam?
-    
+
     var body: some View {
         List {
-            if !dataManager.examSets.isEmpty {
-                Section(header: Text("Regular Exams (\(dataManager.examSets.count))".localized())) {
-                    ForEach(dataManager.examSets) { exam in
+            if !container.examRepo.examSets.isEmpty {
+                Section(header: Text("Regular Exams (\(container.examRepo.examSets.count))".localized())) {
+                    ForEach(container.examRepo.examSets) { exam in
                         Button {
                             editingExam = exam
                         } label: {
@@ -137,15 +134,16 @@ struct ExamAdminView: View {
                         .buttonStyle(.plain)
                     }
                     .onDelete { indexSet in
-                        for i in indexSet.sorted(by: >) { dataManager.examSets.remove(at: i) }
-                        dataManager.saveExamSets()
+                        for i in indexSet.sorted(by: >) {
+                            container.deleteExam(container.examRepo.examSets[i])
+                        }
                     }
                 }
             }
-            
-            if !dataManager.comprehensiveExamSets.isEmpty {
-                Section(header: Text("Comprehensive (\(dataManager.comprehensiveExamSets.count))".localized())) {
-                    ForEach(dataManager.comprehensiveExamSets) { exam in
+
+            if !container.examRepo.comprehensiveExamSets.isEmpty {
+                Section(header: Text("Comprehensive (\(container.examRepo.comprehensiveExamSets.count))".localized())) {
+                    ForEach(container.examRepo.comprehensiveExamSets) { exam in
                         Button {
                             editingCompExam = exam
                         } label: {
@@ -171,13 +169,14 @@ struct ExamAdminView: View {
                         .buttonStyle(.plain)
                     }
                     .onDelete { indexSet in
-                        for i in indexSet.sorted(by: >) { dataManager.comprehensiveExamSets.remove(at: i) }
-                        dataManager.saveComprehensiveExams()
+                        for i in indexSet.sorted(by: >) {
+                            container.deleteComprehensiveExam(container.examRepo.comprehensiveExamSets[i])
+                        }
                     }
                 }
             }
-            
-            if dataManager.examSets.isEmpty && dataManager.comprehensiveExamSets.isEmpty {
+
+            if container.examRepo.examSets.isEmpty && container.examRepo.comprehensiveExamSets.isEmpty {
                 Text("No exams".localized()).foregroundColor(.secondary)
             }
         }
@@ -185,19 +184,13 @@ struct ExamAdminView: View {
         .adaptiveMaxWidth(820)
         .sheet(item: $editingExam) { exam in
             ExamEditSheet(exam: exam) { updated in
-                if let index = dataManager.examSets.firstIndex(where: { $0.id == exam.id }) {
-                    dataManager.examSets[index] = updated
-                    dataManager.saveExamSets()
-                }
+                container.examRepo.updateExam(updated)
                 editingExam = nil
             }
         }
         .sheet(item: $editingCompExam) { exam in
             CompExamEditSheet(exam: exam) { updated in
-                if let index = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
-                    dataManager.comprehensiveExamSets[index] = updated
-                    dataManager.saveComprehensiveExams()
-                }
+                container.examRepo.updateComprehensiveExam(updated)
                 editingCompExam = nil
             }
         }
@@ -206,15 +199,15 @@ struct ExamAdminView: View {
 
 // MARK: - MistakeAdminView
 struct MistakeAdminView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var editingMistake: MistakeNote?
-    
+
     var body: some View {
         List {
-            if dataManager.mistakeSets.isEmpty {
+            if container.mistakeRepo.mistakeSets.isEmpty {
                 Text("No mistakes".localized()).foregroundColor(.secondary)
             } else {
-                ForEach(dataManager.mistakeSets) { mistake in
+                ForEach(container.mistakeRepo.mistakeSets) { mistake in
                     Button {
                         editingMistake = mistake
                     } label: {
@@ -238,7 +231,7 @@ struct MistakeAdminView: View {
                 }
                 .onDelete { indexSet in
                     for i in indexSet.sorted(by: >) {
-                        dataManager.deleteMistake(dataManager.mistakeSets[i])
+                        container.deleteMistake(container.mistakeRepo.mistakeSets[i])
                     }
                 }
             }
@@ -247,7 +240,6 @@ struct MistakeAdminView: View {
         .adaptiveMaxWidth(820)
         .sheet(item: $editingMistake) { mistake in
             MistakeDetailEditView(mistakeSet: mistake)
-                .environmentObject(dataManager)
         }
     }
 }
@@ -257,7 +249,7 @@ struct GradeEditSheet: View {
     let grade: Grade
     let onSave: (Grade) -> Void
     @Environment(\.presentationMode) var presentationMode
-    
+
     @State private var subject: String
     @State private var score: Double
     @State private var examName: String
@@ -265,7 +257,7 @@ struct GradeEditSheet: View {
     @State private var importance: Int
     @State private var rawScore: Double
     @State private var ranking: String
-    
+
     init(grade: Grade, onSave: @escaping (Grade) -> Void) {
         self.grade = grade
         self.onSave = onSave
@@ -277,7 +269,7 @@ struct GradeEditSheet: View {
         _rawScore = State(initialValue: grade.rawScore ?? grade.score)
         _ranking = State(initialValue: grade.ranking.map(String.init) ?? "")
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -352,12 +344,12 @@ struct ExamEditSheet: View {
     let exam: Exam
     let onSave: (Exam) -> Void
     @Environment(\.presentationMode) var presentationMode
-    
+
     @State private var examName: String
     @State private var subject: String
     @State private var date: Date
     @State private var importance: Int
-    
+
     init(exam: Exam, onSave: @escaping (Exam) -> Void) {
         self.exam = exam
         self.onSave = onSave
@@ -366,7 +358,7 @@ struct ExamEditSheet: View {
         _date = State(initialValue: exam.examDate)
         _importance = State(initialValue: exam.importance)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -420,14 +412,14 @@ struct CompExamEditSheet: View {
     let exam: comprehensiveExam
     let onSave: (comprehensiveExam) -> Void
     @Environment(\.presentationMode) var presentationMode
-    
+
     @State private var name: String
     @State private var aliasName: String
     @State private var subjectsText: String
     @State private var date: Date
     @State private var importance: Int
     @State private var masteryDegree: Double
-    
+
     init(exam: comprehensiveExam, onSave: @escaping (comprehensiveExam) -> Void) {
         self.exam = exam
         self.onSave = onSave
@@ -438,7 +430,7 @@ struct CompExamEditSheet: View {
         _importance = State(initialValue: exam.importance)
         _masteryDegree = State(initialValue: Double(exam.masteryDegree))
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -502,5 +494,5 @@ struct CompExamEditSheet: View {
 
 #Preview {
     DataAdminView()
-        .environmentObject(DataManager())
+        .environment(RepositoryContainer())
 }

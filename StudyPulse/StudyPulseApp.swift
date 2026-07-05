@@ -13,13 +13,13 @@ import os
 
 // 1. 新增：专门处理通知代理的类
 class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
-    
+
     // 处理前台收到通知的情况
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // 即使在前台，也显示横幅、播放声音、更新角标
         completionHandler([[.banner, .sound, .badge]])
     }
-    
+
     // 处理用户点击通知的情况
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         // 核心代码：点击通知后强制清除角标
@@ -36,15 +36,15 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 
 @main
 struct StudyPulseApp: App {
-    @StateObject private var dataManager = DataManager()
+    @State private var container: RepositoryContainer = RepositoryContainer()
     @StateObject private var envManager = AppEnvironmentManager.shared
     @StateObject private var hrvManager = HealthKitManager.shared
     @StateObject private var timerManager = StudyTimerManager.shared
     @Environment(\.scenePhase) private var scenePhase
-    
+
     // 2. 声明协调器实例
     private let notificationCoordinator = NotificationCoordinator()
-    
+
     init() {
         // 3. 将代理设置为我们的协调器实例 / Set our coordinator as the delegate
         UNUserNotificationCenter.current().delegate = notificationCoordinator
@@ -82,25 +82,21 @@ struct StudyPulseApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(dataManager)
+                .environment(container)
                 .environmentObject(envManager)
                 .environmentObject(hrvManager)
                 .environmentObject(timerManager)
                 .preferredColorScheme(envManager.effectiveColorScheme)
                 .task {
-                    // 初始化 SwiftData 容器 + 迁移旧 JSON（DataManager 内部处理）
-                    // Init SwiftData container + migrate legacy JSON (handled inside DataManager)
-                    if let container = DataManager.sharedModelContainer {
-                        DataManager.shared.setModelContainer(container)
-                    }
-                    await dataManager.asyncInit()
-                    Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady, privacy: .public)")
-                    Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(dataManager.isReady)")
+                    // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
+                    await container.asyncInit()
+                    Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(container.isReady, privacy: .public)")
+                    Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(container.isReady)")
                     // 主数据加载就绪后再去问 HealthKit，避免启动期 I/O 竞争
                     // Ask HealthKit only after the main data is ready to avoid I/O contention at launch
                     await hrvManager.bootstrap()
                     await MainActor.run {
-                        AchievementManager.shared.bootstrap()
+                        AchievementManager.shared.bootstrap(container: container)
                     }
                     Log.app.info("HealthKit bootstrap 完成 / HealthKit bootstrap complete")
                     Log.record(.info, category: "App", message: "HealthKit bootstrap 完成 / HealthKit bootstrap complete")
@@ -111,32 +107,32 @@ struct StudyPulseApp: App {
                     if phase == .active {
                         // 数据未就绪时跳过 widget 同步，避免写入空数据
                         // Skip widget sync if data is not ready to avoid writing empty data
-                        guard dataManager.isReady else {
+                        guard container.isReady else {
                             Log.app.debug("数据未就绪，跳过 widget 同步 / Data not ready, skipping widget sync")
                             return
                         }
                         Log.widget.info("应用进入前台，开始同步 widget / App became active, syncing widgets")
                         Log.record(.info, category: "Widget", message: "应用进入前台，开始同步 widget / App became active, syncing widgets")
                         WidgetDataSyncManager.syncUpcomingExams(
-                            examSets: dataManager.examSets,
-                            comprehensiveExamSets: dataManager.comprehensiveExamSets
+                            examSets: container.examRepo.examSets,
+                            comprehensiveExamSets: container.examRepo.comprehensiveExamSets
                         )
-                        TrendWidgetSyncManager.syncTrend(grades: dataManager.grades, subjects: dataManager.subjects)
+                        TrendWidgetSyncManager.syncTrend(grades: container.gradeRepo.grades, subjects: container.subjectRepo.subjects)
                         HRVWidgetSyncManager.syncHRV(from: hrvManager)
                         // 同步 SRS 复习通知（错题已 opt-in 但尚未到期的）
                         timerManager.cleanupStaleActivities()
-                        SRSReviewNotifications.shared.rescheduleAll(mistakes: dataManager.mistakeSets)
+                        SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
                         // 从系统 Reminders 拉取任务完成态（幂等，重复调用安全）
                         // Pull task completion flags from the system Reminders app (idempotent)
-                        dataManager.refreshTaskCompletionStatesFromReminders()
+                        container.taskRepo.refreshCompletionStatesFromReminders()
                         Task { await hrvManager.refreshBodyStatus() }
                         AchievementManager.shared.handleDayRolloverIfNeeded()
                         DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)
                     }
                 }
         }
-        // 注入 SwiftData 容器，DataManager 会通过 mainContext 共享
-        // Inject the SwiftData container; DataManager shares the same mainContext
-        .modelContainer(DataManager.sharedModelContainer ?? ModelContainerFactory.makeContainer())
+        // 注入 SwiftData 容器,与 RepositoryContainer.asyncInit 通过 ModelContainerFactory
+        // 的进程内单例缓存共享同一 ModelContainer。
+        .modelContainer(ModelContainerFactory.makeContainer())
     }
 }

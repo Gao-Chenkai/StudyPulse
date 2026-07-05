@@ -9,7 +9,7 @@ import UserNotifications
 import os
 
 struct DataManagementSettingsView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     // Export state
     @State private var isExporting = false
@@ -35,7 +35,7 @@ struct DataManagementSettingsView: View {
 
     // Bulk delete state
     @State private var showingBulkDeleteSheet = false
-    @State private var bulkDeleteSelected: Set<DataManager.BulkClearCategory> = []
+    @State private var bulkDeleteSelected: Set<BulkClearCategory> = []
     @State private var bulkDeleteConfirmPhrase: String = ""
     @State private var showingBulkDeleteResult = false
     @State private var bulkDeleteResultMessage = ""
@@ -49,41 +49,41 @@ struct DataManagementSettingsView: View {
     }
 
   var body: some View {
-         List {
-             Section {
-                 SettingsDetailHeader(category: .data)
-                     .listRowInsets(EdgeInsets())
-                     .listRowBackground(Color.clear)
-             }
+        List {
+            Section {
+                SettingsDetailHeader(category: .data)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
 
-             // Study Phases (学期 / 假期阶段)
-             Section {
-                 NavigationLink(destination: PhaseManagementView()) {
-                     Label {
-                         VStack(alignment: .leading, spacing: 2) {
-                             Text("Study Phases".localized())
-                             if let active = dataManager.activePhase {
-                                 Text("Active: \(active.name)")
-                                     .font(.caption2)
-                                     .foregroundStyle(.secondary)
-                             } else if dataManager.phases.isEmpty {
-                                 Text("Create semester, break, or sprint phases to scope your data.".localized())
-                                     .font(.caption2)
-                                     .foregroundStyle(.secondary)
-                             } else {
-                                 Text("Showing all data (no active phase)".localized())
-                                     .font(.caption2)
-                                     .foregroundStyle(.secondary)
-                             }
-                         }
-                     } icon: {
-                         Image(systemName: "calendar.badge.clock")
-                             .foregroundStyle(.green)
-                     }
-                 }
-             } header: {
-                 Text("Phase Management".localized())
-             }
+            // Study Phases (学期 / 假期阶段)
+            Section {
+                NavigationLink(destination: PhaseManagementView()) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Study Phases".localized())
+                            if let active = container.phaseRepo.activePhase {
+                                Text("Active: \(active.name)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else if container.phaseRepo.phases.isEmpty {
+                                Text("Create semester, break, or sprint phases to scope your data.".localized())
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Showing all data (no active phase)".localized())
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundStyle(.green)
+                    }
+                }
+            } header: {
+                Text("Phase Management".localized())
+            }
 
                 // Export
                 Section {
@@ -133,7 +133,7 @@ struct DataManagementSettingsView: View {
 
                 // Admin & Debug
                 Section {
-                    NavigationLink(destination: DataAdminView().environmentObject(dataManager)) {
+                    NavigationLink(destination: DataAdminView()) {
                         Label("Data Admin".localized(), systemImage: "tablecells")
                     }
 
@@ -272,7 +272,7 @@ struct DataManagementSettingsView: View {
         let trimmed = bulkDeleteConfirmPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed == Self.bulkDeleteRequiredPhrase else { return }
 
-        let results = dataManager.bulkClearData(categories: bulkDeleteSelected)
+        let results = container.bulkClearData(categories: bulkDeleteSelected)
         showingBulkDeleteSheet = false
 
         if results.isEmpty {
@@ -280,9 +280,9 @@ struct DataManagementSettingsView: View {
             bulkDeleteResultMessage = "No category was selected.".localized()
         } else {
             bulkDeleteSuccess = true
-            let parts = results.map { cat, count -> String in
-                let title = cat.title
-                return "\(title): \(count)"
+            let parts = results.map { entry -> String in
+                let title = entry.category.displayName
+                return "\(title): \(entry.count)"
             }
             bulkDeleteResultMessage = parts.joined(separator: "\n")
         }
@@ -296,13 +296,13 @@ struct DataManagementSettingsView: View {
 
     private func exportGrades() {
         let csv = DataExportManager.exportGradesToCSV(
-            grades: dataManager.grades,
-            subjects: dataManager.subjects
+            grades: container.gradeRepo.grades,
+            subjects: container.subjectRepo.subjects
         )
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Grades_\(dateFormatter.string(from: Date())).csv"
-        exportSuccessMessage = "\(dataManager.grades.count) "
+        exportSuccessMessage = "\(container.gradeRepo.grades.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExporting = true
@@ -310,11 +310,11 @@ struct DataManagementSettingsView: View {
     }
 
     private func exportMistakes() {
-        let csv = DataExportManager.exportMistakesToCSV(mistakes: dataManager.mistakeSets)
+        let csv = DataExportManager.exportMistakesToCSV(mistakes: container.mistakeRepo.mistakeSets)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Mistakes_\(dateFormatter.string(from: Date())).csv"
-        exportSuccessMessage = "\(dataManager.mistakeSets.count) "
+        exportSuccessMessage = "\(container.mistakeRepo.mistakeSets.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExporting = true
@@ -323,13 +323,13 @@ struct DataManagementSettingsView: View {
 
     private func exportExams() {
         let csv = DataExportManager.exportExamsToCSV(
-            exams: dataManager.examSets,
-            comprehensiveExams: dataManager.comprehensiveExamSets
+            exams: container.examRepo.examSets,
+            comprehensiveExams: container.examRepo.comprehensiveExamSets
         )
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Exams_\(dateFormatter.string(from: Date())).csv"
-        let totalCount = dataManager.examSets.count + dataManager.comprehensiveExamSets.count
+        let totalCount = container.examRepo.examSets.count + container.examRepo.comprehensiveExamSets.count
         exportSuccessMessage = "\(totalCount) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -338,11 +338,11 @@ struct DataManagementSettingsView: View {
     }
 
     private func exportTasks() {
-        let csv = DataExportManager.exportTasksToCSV(tasks: dataManager.taskItems)
+        let csv = DataExportManager.exportTasksToCSV(tasks: container.taskRepo.taskItems)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Tasks_\(dateFormatter.string(from: Date())).csv"
-        exportSuccessMessage = "\(dataManager.taskItems.count) "
+        exportSuccessMessage = "\(container.taskRepo.taskItems.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isExporting = true
@@ -378,13 +378,13 @@ struct DataManagementSettingsView: View {
             showingImportError = true
             return
         }
-        let grades = DataExportManager.parseGrades(from: content, subjects: dataManager.subjects)
+        let grades = DataExportManager.parseGrades(from: content, subjects: container.subjectRepo.subjects)
         if grades.isEmpty {
             importErrorMessage = ""
             showingImportError = true
             return
         }
-        dataManager.addGrades(grades)
+        container.addGrades(grades)
         importSuccessMessage = " \(grades.count) "
         showingImportSuccess = true
     }
@@ -413,7 +413,7 @@ struct DataManagementSettingsView: View {
             showingImportError = true
             return
         }
-        dataManager.addMistakes(mistakes)
+        container.addMistakes(mistakes)
         importSuccessMessage = " \(mistakes.count) "
         showingImportSuccess = true
     }
@@ -438,7 +438,7 @@ struct DataManagementSettingsView: View {
             showingImportError = true
             return
         }
-        dataManager.addExams(single: single, comprehensive: comprehensive)
+        container.addExams(single: single, comprehensive: comprehensive)
         let total = single.count + comprehensive.count
         importSuccessMessage = " \(total) "
         showingImportSuccess = true
@@ -468,7 +468,7 @@ struct DataManagementSettingsView: View {
             showingImportError = true
             return
         }
-        dataManager.addTasks(tasks)
+        container.addTasks(tasks)
         importSuccessMessage = " \(tasks.count) "
         showingImportSuccess = true
     }
@@ -508,9 +508,9 @@ struct DataManagementSettingsView: View {
 ///
 /// 大面积红色警告 + 类别勾选 + 强制输入完整确认短语
 struct BulkDeleteConfirmSheet: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
-    @Binding var selected: Set<DataManager.BulkClearCategory>
+    @Binding var selected: Set<BulkClearCategory>
     @Binding var confirmPhrase: String
     let requiredPhrase: String
     let onConfirm: () -> Void
@@ -523,11 +523,13 @@ struct BulkDeleteConfirmSheet: View {
         !selected.isEmpty && phraseMatches
     }
 
-    private func count(for cat: DataManager.BulkClearCategory) -> Int {
+    private func count(for cat: BulkClearCategory) -> Int {
         switch cat {
-        case .grades: return dataManager.grades.count
-        case .mistakes: return dataManager.mistakeSets.count
-        case .todos: return dataManager.taskItems.count
+        case .grades: return container.gradeRepo.grades.count
+        case .mistakes: return container.mistakeRepo.mistakeSets.count
+        case .exams: return container.examRepo.examSets.count + container.examRepo.comprehensiveExamSets.count
+        case .tasks: return container.taskRepo.taskItems.count
+        case .profileReset: return 1
         }
     }
 
@@ -602,7 +604,7 @@ struct BulkDeleteConfirmSheet: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.secondary)
             VStack(spacing: 0) {
-                ForEach(DataManager.BulkClearCategory.allCases) { cat in
+                ForEach(BulkClearCategory.allCases) { cat in
                     BulkDeleteCategoryRow(
                         category: cat,
                         count: count(for: cat),
@@ -614,7 +616,7 @@ struct BulkDeleteConfirmSheet: View {
                             selected.insert(cat)
                         }
                     }
-                    if cat != DataManager.BulkClearCategory.allCases.last {
+                    if cat != BulkClearCategory.allCases.last {
                         Divider().padding(.leading, 52)
                     }
                 }
@@ -691,7 +693,7 @@ struct BulkDeleteConfirmSheet: View {
 
 /// 一键删除弹窗中,每个类别勾选行
 private struct BulkDeleteCategoryRow: View {
-    let category: DataManager.BulkClearCategory
+    let category: BulkClearCategory
     let count: Int
     let isSelected: Bool
     let toggle: () -> Void
@@ -708,7 +710,7 @@ private struct BulkDeleteCategoryRow: View {
                         .foregroundColor(.red)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(category.title)
+                    Text(category.displayName)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.primary)
                     Text("\(count) " + "item(s)".localized())

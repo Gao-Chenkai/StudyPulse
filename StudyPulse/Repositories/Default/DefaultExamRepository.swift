@@ -1,0 +1,253 @@
+//
+//  DefaultExamRepository.swift
+//  StudyPulse
+//
+//  考试 (单科 + 综合) Repository 默认实现。
+//  Default ExamRepository implementation backed by SwiftData.
+//
+
+import Foundation
+import SwiftData
+import os
+
+@Observable @MainActor
+final class DefaultExamRepository: ExamRepository {
+    var examSets: [Exam] = []
+    var comprehensiveExamSets: [comprehensiveExam] = []
+    var filteredExamSets: [Exam] = []
+    var filteredComprehensiveExamSets: [comprehensiveExam] = []
+
+    @ObservationIgnored
+    private var modelContext: ModelContext?
+
+    init() {}
+
+    // MARK: - Lifecycle
+
+    func loadAll(context: ModelContext) async {
+        self.modelContext = context
+        do {
+            // 主线程上完成 fetch + 转换,避免 @Model 跨 actor 边界
+            let examEntities = try context.fetch(
+                FetchDescriptor<ExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
+            )
+            let compEntities = try context.fetch(
+                FetchDescriptor<ComprehensiveExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
+            )
+            let examsSnap: [Exam] = examEntities.map { $0.toSnapshot() }
+            let compSnap: [comprehensiveExam] = compEntities.map { $0.toSnapshot() }
+            self.examSets = examsSnap
+            self.comprehensiveExamSets = compSnap
+            recomputeFiltered()
+        } catch {
+            Log.data.error("DefaultExamRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    // MARK: - CRUD
+
+    func add(single: [Exam], comprehensive: [comprehensiveExam]) {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let storedSingle: [Exam] = single.map { e in
+            var s = e
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
+        let storedComp: [comprehensiveExam] = comprehensive.map { e in
+            var s = e
+            if s.phaseId == nil { s.phaseId = activeId }
+            return s
+        }
+        if let context = modelContext {
+            for e in storedSingle { context.insert(ExamRecord(from: e)) }
+            for e in storedComp { context.insert(ComprehensiveExamRecord(from: e)) }
+            try? context.save()
+        }
+        examSets.append(contentsOf: storedSingle)
+        comprehensiveExamSets.append(contentsOf: storedComp)
+        for e in storedSingle {
+            ExamReviewNotifications.shared.schedule(for: e)
+        }
+        Log.data.info("ExamRepository batch added: single=\(storedSingle.count, privacy: .public) comprehensive=\(storedComp.count, privacy: .public)")
+        Log.record(.info, category: "Data", message: "ExamRepository batch added: single=\(storedSingle.count) comprehensive=\(storedComp.count)")
+        recomputeFiltered()
+    }
+
+    func updateExam(_ exam: Exam) {
+        if let index = examSets.firstIndex(where: { $0.id == exam.id }) {
+            examSets[index] = exam
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<ExamRecord>(predicate: #Predicate { $0.id == exam.id })
+            ).first {
+                entity.name = exam.name
+                entity.examDate = exam.examDate
+                entity.examEndDate = exam.examEndDate
+                entity.importance = exam.importance
+                entity.subject = exam.subject
+                entity.examName = exam.examName
+                entity.masteryDegree = exam.masteryDegree
+                entity.timeSlotStart = exam.timeSlot?.startTime
+                entity.timeSlotEnd = exam.timeSlot?.endTime
+                entity.phaseId = exam.phaseId
+                entity.checklistData = exam.checklist.isEmpty ? nil : (try? JSONEncoder().encode(exam.checklist))
+                entity.locationSchool = exam.locationSchool
+                entity.locationClassroom = exam.locationClassroom
+                entity.locationSeat = exam.locationSeat
+                entity.countdownNotifyDaysData = {
+                    if let days = exam.countdownNotifyDays {
+                        return (try? JSONEncoder().encode(days)) ?? nil
+                    }
+                    return nil
+                }()
+                entity.reviewData = exam.examReview.flatMap { try? JSONEncoder().encode($0) }
+                try context.save()
+            } else {
+                context.insert(ExamRecord(from: exam))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("ExamRepository updateExam failed: \(error.localizedDescription, privacy: .public)")
+        }
+        Log.data.info("ExamRepository updated: name=\(exam.name, privacy: .public) id=\(exam.id.uuidString, privacy: .public)")
+        Log.record(.info, category: "Data", message: "ExamRepository updated: \(exam.name) checklist=\(exam.checklist.count) location.school=\(exam.locationSchool)")
+        ExamReviewNotifications.shared.schedule(for: exam)
+        recomputeFiltered()
+    }
+
+    func updateComprehensiveExam(_ exam: comprehensiveExam) {
+        if let index = comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
+            comprehensiveExamSets[index] = exam
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<ComprehensiveExamRecord>(predicate: #Predicate { $0.id == exam.id })
+            ).first {
+                entity.name = exam.name
+                entity.examDate = exam.examDate
+                entity.importance = exam.importance
+                entity.phaseId = exam.phaseId
+                try context.save()
+            } else {
+                context.insert(ComprehensiveExamRecord(from: exam))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("ExamRepository updateComprehensiveExam failed: \(error.localizedDescription, privacy: .public)")
+        }
+        recomputeFiltered()
+    }
+
+    func deleteExam(_ exam: Exam) {
+        removeExamRecord(id: exam.id)
+        examSets.removeAll { $0.id == exam.id }
+        Log.data.info("ExamRepository deleted exam: id=\(exam.id.uuidString, privacy: .public)")
+        recomputeFiltered()
+    }
+
+    func deleteComprehensiveExam(_ exam: comprehensiveExam) {
+        removeCompExamRecord(id: exam.id)
+        comprehensiveExamSets.removeAll { $0.id == exam.id }
+        Log.data.info("ExamRepository deleted comprehensive exam: id=\(exam.id.uuidString, privacy: .public)")
+        recomputeFiltered()
+    }
+
+    @discardableResult
+    func clearAll() -> Int {
+        guard let context = modelContext else { return 0 }
+        let count = examSets.count + comprehensiveExamSets.count
+        do {
+            let singleEntities = try context.fetch(FetchDescriptor<ExamRecord>())
+            for entity in singleEntities { context.delete(entity) }
+            let compEntities = try context.fetch(FetchDescriptor<ComprehensiveExamRecord>())
+            for entity in compEntities { context.delete(entity) }
+            try context.save()
+        } catch {
+            Log.data.error("ExamRepository clearAll failed: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+        examSets.removeAll()
+        comprehensiveExamSets.removeAll()
+        Log.data.warning("ExamRepository clearAll: count=\(count, privacy: .public)")
+        recomputeFiltered()
+        return count
+    }
+
+    // MARK: - 复盘 & Checklist
+
+    func updateExamReview(_ examId: UUID, review: ExamReview?) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else {
+            Log.data.warning("ExamRepository updateExamReview: not found id=\(examId.uuidString, privacy: .public)")
+            return
+        }
+        examSets[index].examReview = review
+        updateExam(examSets[index])
+        if review != nil {
+            ExamReviewNotifications.shared.cancel(for: examId)
+        } else {
+            ExamReviewNotifications.shared.schedule(for: examSets[index])
+        }
+        Log.data.info("ExamRepository updated review: id=\(examId.uuidString, privacy: .public) hasReview=\(review != nil, privacy: .public)")
+    }
+
+    func toggleChecklistItem(_ examId: UUID, itemId: UUID) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else { return }
+        var exam = examSets[index]
+        guard let ci = exam.checklist.firstIndex(where: { $0.id == itemId }) else { return }
+        exam.checklist[ci].isChecked.toggle()
+        examSets[index] = exam
+        updateExam(exam)
+    }
+
+    func setChecklist(_ examId: UUID, items: [ExamChecklistItem]) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else { return }
+        var exam = examSets[index]
+        exam.checklist = items
+        examSets[index] = exam
+        updateExam(exam)
+    }
+
+    // MARK: - Internals
+
+    func recomputeFiltered() {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        if let id = activeId {
+            filteredExamSets = examSets.filter { $0.phaseId == id }
+            filteredComprehensiveExamSets = comprehensiveExamSets.filter { $0.phaseId == id }
+        } else {
+            filteredExamSets = examSets
+            filteredComprehensiveExamSets = comprehensiveExamSets
+        }
+    }
+
+    private func removeExamRecord(id: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<ExamRecord>(predicate: #Predicate { $0.id == id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("ExamRepository removeExamRecord failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func removeCompExamRecord(id: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<ComprehensiveExamRecord>(predicate: #Predicate { $0.id == id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("ExamRepository removeCompExamRecord failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+}

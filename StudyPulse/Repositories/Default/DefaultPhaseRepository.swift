@@ -1,0 +1,256 @@
+//
+//  DefaultPhaseRepository.swift
+//  StudyPulse
+//
+//  学习阶段 (StudyPhase) Repository 默认实现。
+//  Default PhaseRepository implementation backed by SwiftData.
+//
+
+import Foundation
+import SwiftData
+import os
+
+@Observable @MainActor
+final class DefaultPhaseRepository: PhaseRepository {
+    var phases: [StudyPhase] = []
+
+    @ObservationIgnored
+    private var modelContext: ModelContext?
+
+    /// 跨域引用:Phase 操作会读 / 改其它域的 phaseId。
+    /// 这些 weak 引用由容器在 init 时注入。
+    @ObservationIgnored
+    weak var gradeRef: (any GradeRepository)?
+    @ObservationIgnored
+    weak var mistakeRef: (any MistakeRepository)?
+    @ObservationIgnored
+    weak var examRef: (any ExamRepository)?
+    @ObservationIgnored
+    weak var taskRef: (any TaskRepository)?
+
+    init() {}
+
+    /// 由容器调用,注入其它 4 个 repo 的 weak 引用以支持跨域 phaseId 操作。
+    func setCrossRefs(
+        grade: any GradeRepository,
+        mistake: any MistakeRepository,
+        exam: any ExamRepository,
+        task: any TaskRepository
+    ) {
+        self.gradeRef = grade
+        self.mistakeRef = mistake
+        self.examRef = exam
+        self.taskRef = task
+    }
+
+    // MARK: - Lifecycle
+
+    func loadAll(context: ModelContext) async {
+        self.modelContext = context
+        do {
+            let entities = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)])
+            )
+            self.phases = entities.map { $0.toSnapshot() }
+        } catch {
+            Log.data.error("DefaultPhaseRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    // MARK: - Computed
+
+    var activePhase: StudyPhase? {
+        guard let id = AppEnvironmentManager.shared.activePhaseId else { return nil }
+        return phases.first(where: { $0.id == id })
+    }
+
+    var phaseFilterEnabled: Bool {
+        AppEnvironmentManager.shared.activePhaseId != nil
+    }
+
+    var hasUnassignedData: Bool {
+        unassignedRecordCount > 0
+    }
+
+    var unassignedRecordCount: Int {
+        let g = gradeRef?.grades.filter { $0.phaseId == nil }.count ?? 0
+        let m = mistakeRef?.mistakeSets.filter { $0.phaseId == nil }.count ?? 0
+        let e = examRef?.examSets.filter { $0.phaseId == nil }.count ?? 0
+        let c = examRef?.comprehensiveExamSets.filter { $0.phaseId == nil }.count ?? 0
+        let t = taskRef?.taskItems.filter { $0.phaseId == nil }.count ?? 0
+        return g + m + e + c + t
+    }
+
+    // MARK: - CRUD
+
+    func add(_ phase: StudyPhase) {
+        if let context = modelContext {
+            context.insert(StudyPhaseRecord(from: phase))
+            try? context.save()
+        }
+        phases.append(phase)
+        phases.sort { $0.startDate > $1.startDate }
+        Log.data.info("PhaseRepository added: name=\(phase.name, privacy: .public) archived=\(phase.isArchived, privacy: .public)")
+        Log.record(.info, category: "Data", message: "PhaseRepository added: \(phase.name)")
+    }
+
+    func update(_ phase: StudyPhase) {
+        if let index = phases.firstIndex(where: { $0.id == phase.id }) {
+            phases[index] = phase
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(predicate: #Predicate { $0.id == phase.id })
+            ).first {
+                entity.name = phase.name
+                entity.startDate = phase.startDate
+                entity.endDate = phase.endDate
+                entity.isArchived = phase.isArchived
+                entity.archivedAt = phase.archivedAt
+                entity.goalsData = try? JSONEncoder().encode(phase.goals)
+                try context.save()
+            } else {
+                context.insert(StudyPhaseRecord(from: phase))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("PhaseRepository update failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func delete(_ phase: StudyPhase) {
+        // 1. 清空其它域对 phase 的引用
+        clearPhaseReferences(phaseId: phase.id)
+        // 2. 删 SwiftData
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<StudyPhaseRecord>(predicate: #Predicate { $0.id == phase.id })
+            ).first {
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            Log.data.error("PhaseRepository delete failed: \(error.localizedDescription, privacy: .public)")
+        }
+        // 3. 从内存列表中移除
+        phases.removeAll { $0.id == phase.id }
+        // 4. 如果当前激活的 phase 被删了,清空 activePhaseId
+        if AppEnvironmentManager.shared.activePhaseId == phase.id {
+            AppEnvironmentManager.shared.setActivePhaseId(nil)
+        }
+        Log.data.info("PhaseRepository deleted: name=\(phase.name, privacy: .public)")
+    }
+
+    func setArchived(_ phase: StudyPhase, archived: Bool) {
+        var updated = phase
+        updated.isArchived = archived
+        updated.archivedAt = archived ? Date() : nil
+        update(updated)
+    }
+
+    func activate(_ phase: StudyPhase?) {
+        AppEnvironmentManager.shared.setActivePhaseId(phase?.id)
+    }
+
+    // MARK: - 跨域 phaseId 工具
+
+    @discardableResult
+    func assignUnassignedDataToPhase(_ phaseId: UUID) -> (grades: Int, mistakes: Int, exams: Int, comprehensiveExams: Int, tasks: Int) {
+        guard let context = modelContext else { return (0, 0, 0, 0, 0) }
+        var gCount = 0, mCount = 0, eCount = 0, cCount = 0, tCount = 0
+        do {
+            // grades
+            if let g = gradeRef {
+                for i in 0..<g.grades.count where g.grades[i].phaseId == nil {
+                    var updated = g.grades[i]
+                    updated.phaseId = phaseId
+                    g.update(updated)
+                    gCount += 1
+                }
+            }
+            // mistakes
+            if let m = mistakeRef {
+                for i in 0..<m.mistakeSets.count where m.mistakeSets[i].phaseId == nil {
+                    var updated = m.mistakeSets[i]
+                    updated.phaseId = phaseId
+                    m.update(updated)
+                    mCount += 1
+                }
+            }
+            // single exams
+            if let e = examRef {
+                for i in 0..<e.examSets.count where e.examSets[i].phaseId == nil {
+                    var updated = e.examSets[i]
+                    updated.phaseId = phaseId
+                    e.updateExam(updated)
+                    eCount += 1
+                }
+                // comprehensive exams
+                for i in 0..<e.comprehensiveExamSets.count where e.comprehensiveExamSets[i].phaseId == nil {
+                    var updated = e.comprehensiveExamSets[i]
+                    updated.phaseId = phaseId
+                    e.updateComprehensiveExam(updated)
+                    cCount += 1
+                }
+            }
+            // tasks
+            if let t = taskRef {
+                for i in 0..<t.taskItems.count where t.taskItems[i].phaseId == nil {
+                    var updated = t.taskItems[i]
+                    updated.phaseId = phaseId
+                    t.update(updated, reminderResult: nil)
+                    tCount += 1
+                }
+            }
+            try context.save()
+            Log.data.info("PhaseRepository assigned unassigned: g=\(gCount, privacy: .public) m=\(mCount, privacy: .public) e=\(eCount, privacy: .public) c=\(cCount, privacy: .public) t=\(tCount, privacy: .public)")
+        } catch {
+            Log.data.error("PhaseRepository assignUnassigned failed: \(error.localizedDescription, privacy: .public)")
+        }
+        return (gCount, mCount, eCount, cCount, tCount)
+    }
+
+    func clearPhaseReferences(phaseId: UUID) {
+        guard let context = modelContext else { return }
+        do {
+            if let g = gradeRef {
+                for i in 0..<g.grades.count where g.grades[i].phaseId == phaseId {
+                    var updated = g.grades[i]
+                    updated.phaseId = nil
+                    g.update(updated)
+                }
+            }
+            if let m = mistakeRef {
+                for i in 0..<m.mistakeSets.count where m.mistakeSets[i].phaseId == phaseId {
+                    var updated = m.mistakeSets[i]
+                    updated.phaseId = nil
+                    m.update(updated)
+                }
+            }
+            if let e = examRef {
+                for i in 0..<e.examSets.count where e.examSets[i].phaseId == phaseId {
+                    var updated = e.examSets[i]
+                    updated.phaseId = nil
+                    e.updateExam(updated)
+                }
+                for i in 0..<e.comprehensiveExamSets.count where e.comprehensiveExamSets[i].phaseId == phaseId {
+                    var updated = e.comprehensiveExamSets[i]
+                    updated.phaseId = nil
+                    e.updateComprehensiveExam(updated)
+                }
+            }
+            if let t = taskRef {
+                for i in 0..<t.taskItems.count where t.taskItems[i].phaseId == phaseId {
+                    var updated = t.taskItems[i]
+                    updated.phaseId = nil
+                    t.update(updated, reminderResult: nil)
+                }
+            }
+            try context.save()
+        } catch {
+            Log.data.error("PhaseRepository clearPhaseReferences failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+}

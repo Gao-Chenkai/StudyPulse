@@ -42,20 +42,26 @@ enum TodoTypeFilter: Hashable, CaseIterable {
 // MARK: - TodoView
 
 struct TodoView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
+    @StateObject private var viewModel: TodoViewModel
 
     // 列表 vs 日历视图模式
     @State private var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
     // 类型筛选
-    @State private var typeFilter: TodoTypeFilter = .all
+    // (移到 TodoViewModel.typeFilter; View 通过 $viewModel.typeFilter 双向绑定)
+
     // 是否显示已完成（默认隐藏，主列表更干净）
-    @State private var showCompleted: Bool = false
+    // (移到 TodoViewModel.showCompleted; View 通过 $viewModel.showCompleted 双向绑定)
 
     // 新增菜单控制
     @State private var showingNewExam: Bool = false
     @State private var showingNewTask: TaskType? = nil
 
     // 详情导航
+
+    init(container: RepositoryContainer) {
+        _viewModel = StateObject(wrappedValue: TodoViewModel.makeDefault(container: container))
+    }
     @State private var selectedExam: Exam? = nil
     @State private var selectedComprehensive: comprehensiveExam? = nil
     @State private var selectedTask: TaskItem? = nil
@@ -63,84 +69,14 @@ struct TodoView: View {
     // 已过期面板
     @State private var showingPastSheet: Bool = false
 
-    // MARK: - 派生数据缓存(避免 body 每次重新计算)
-
-    /// 应用类型筛选 + 已完成筛选后的统一条目
-    @State private var allEntriesCache: [TodoEntry] = []
-    /// 未过期条目(截止 / 考试时间 >= 今天 0 点)
-    @State private var upcomingEntriesCache: [TodoEntry] = []
-    /// 已过期条目
-    @State private var pastEntriesCache: [TodoEntry] = []
-    /// 把即将到来的条目按时间分组
-    @State private var groupedUpcomingCache: [(sectionTitle: String, entries: [TodoEntry])] = []
-
-    /// 集中重算 4 个缓存,O(n) 一次扫,O(1) 分桶
-    private func recomputeEntries() {
-        let includeCompleted = showCompleted
-        let all = dataManager.todoEntries(includeCompleted: includeCompleted)
-        let filtered: [TodoEntry]
-        if typeFilter == .all {
-            filtered = all
-        } else {
-            filtered = all.filter { entry in
-                switch typeFilter {
-                case .all: return true
-                case .exam: return entry.kind == .exam || entry.kind == .comprehensiveExam
-                case .homework: return entry.kind == .homework
-                case .reading: return entry.kind == .reading
-                }
-            }
-        }
-        allEntriesCache = filtered
-
-        // 单次遍历拆分 past / upcoming
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        var upcoming: [TodoEntry] = []
-        var past: [TodoEntry] = []
-        upcoming.reserveCapacity(filtered.count)
-        for entry in filtered {
-            if entry.date >= todayStart {
-                upcoming.append(entry)
-            } else {
-                past.append(entry)
-            }
-        }
-        upcomingEntriesCache = upcoming
-        pastEntriesCache = past
-
-        // 单次遍历 upcomingEntriesCache 分桶
-        let now = Date()
-        guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
-              let oneMonthLater = Calendar.current.date(byAdding: .month, value: 1, to: now) else {
-            groupedUpcomingCache = []
-            return
-        }
-        var weekBucket: [TodoEntry] = []
-        var monthBucket: [TodoEntry] = []
-        var laterBucket: [TodoEntry] = []
-        weekBucket.reserveCapacity(upcoming.count)
-        for entry in upcoming {
-            if entry.date <= oneWeekLater {
-                weekBucket.append(entry)
-            } else if entry.date <= oneMonthLater {
-                monthBucket.append(entry)
-            } else {
-                laterBucket.append(entry)
-            }
-        }
-        var result: [(String, [TodoEntry])] = []
-        if !weekBucket.isEmpty { result.append(("Within 1 Week".localized(), weekBucket)) }
-        if !monthBucket.isEmpty { result.append(("Within 1 Month".localized(), monthBucket)) }
-        if !laterBucket.isEmpty { result.append(("Later".localized(), laterBucket)) }
-        groupedUpcomingCache = result
-    }
+    // MARK: - 派生数据来源已全部迁移到 TodoViewModel。View 只读 vm.allEntries / vm.upcomingEntries 等。
 
     // MARK: - 主体
 
     var body: some View {
         NavigationStack {
             Group {
-                if allEntriesCache.isEmpty && pastEntriesCache.isEmpty {
+                if viewModel.allEntries.isEmpty && viewModel.pastEntries.isEmpty {
                     VStack(spacing: 0) {
                         filterChips
                         ContentUnavailableView {
@@ -196,13 +132,13 @@ struct TodoView: View {
             .frame(maxWidth: .infinity)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !pastEntriesCache.isEmpty {
+                    if !viewModel.pastEntries.isEmpty {
                         Button {
                             showingPastSheet = true
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.arrow.circlepath")
-                                Text("\(pastEntriesCache.count)")
+                                Text("\(viewModel.pastEntries.count)")
                                     .font(.caption2)
                                     .fontWeight(.semibold)
                             }
@@ -212,11 +148,11 @@ struct TodoView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         withAnimation(.easeInOut(duration: 0.15)) {
-                            showCompleted.toggle()
+                            viewModel.showCompleted.toggle()
                         }
                     } label: {
-                        Image(systemName: showCompleted ? "checkmark.circle.fill" : "checkmark.circle")
-                            .foregroundColor(showCompleted ? Color(.systemGreen) : .accentColor)
+                        Image(systemName: viewModel.showCompleted ? "checkmark.circle.fill" : "checkmark.circle")
+                            .foregroundColor(viewModel.showCompleted ? Color(.systemGreen) : .accentColor)
                     }
                     .accessibilityLabel("Show Completed".localized())
                 }
@@ -231,24 +167,23 @@ struct TodoView: View {
                 }
             }
             // 派生数据重算:仅在筛选条件/数据源变化时触发,避免 body 每次 re-render 全量重算
-            .onAppear { recomputeEntries() }
-            .onChange(of: typeFilter) { _, _ in recomputeEntries() }
-            .onChange(of: showCompleted) { _, _ in recomputeEntries() }
-            .onChange(of: dataManager.filteredExamSets) { _, _ in recomputeEntries() }
-            .onChange(of: dataManager.comprehensiveExamSets) { _, _ in recomputeEntries() }
-            .onChange(of: dataManager.taskItems) { _, _ in recomputeEntries() }
+            .onAppear { viewModel.recompute() }
+            .onChange(of: viewModel.typeFilter) { _, _ in viewModel.recompute() }
+            .onChange(of: viewModel.showCompleted) { _, _ in viewModel.recompute() }
+            .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
+            .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
+            .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
             .sheet(isPresented: $showingNewExam) {
                 NewExamSetView()
                     .adaptiveSheet()
             }
             .sheet(item: $showingNewTask) { taskType in
                 NewTaskView(initialType: taskType)
-                    .environmentObject(dataManager)
                     .adaptiveSheet()
             }
             .sheet(isPresented: $showingPastSheet) {
                 PastItemsSheet(
-                    pastEntries: pastEntriesCache,
+                    pastEntries: viewModel.pastEntries,
                     onSelectExam: { exam in
                         showingPastSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -286,7 +221,7 @@ struct TodoView: View {
             .onAppear {
                 // 页面出现时从系统 Reminders 拉取一次完成态
                 // Pull completion flags from the system Reminders app on view appear.
-                dataManager.refreshTaskCompletionStatesFromReminders()
+                container.refreshTaskCompletionStatesFromReminders()
             }
     }
 }
@@ -308,7 +243,7 @@ struct TodoView: View {
 
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
-        let selected = typeFilter == filter
+        let selected = viewModel.typeFilter == filter
         // iOS 26 风格筛选胶囊（Liquid Glass）：
         // - 选中：accent 同色边框 + 轻微 tint 叠加，文字保持 primary
         // - 未选中：纯 Liquid Glass 半透明
@@ -316,7 +251,7 @@ struct TodoView: View {
         let accent = chipAccent(for: filter)
         Button {
             withAnimation(.easeInOut(duration: 0.15)) {
-                typeFilter = filter
+                viewModel.typeFilter = filter
             }
         } label: {
             HStack(spacing: 5) {
@@ -375,7 +310,7 @@ struct TodoView: View {
                 filterChips
                     .padding(.bottom, 16)
 
-                if upcomingEntriesCache.isEmpty {
+                if viewModel.upcomingEntries.isEmpty {
                     HStack {
                         Spacer()
                         VStack(spacing: 6) {
@@ -391,7 +326,7 @@ struct TodoView: View {
                     }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 20) {
-                        ForEach(groupedUpcomingCache, id: \.0) { sectionTitle, entries in
+                        ForEach(viewModel.groupedUpcoming, id: \.0) { sectionTitle, entries in
                             sectionHeader(sectionTitle)
                             LazyVStack(spacing: 12) {
                                 ForEach(entries) { entry in
@@ -455,7 +390,7 @@ struct TodoView: View {
 
     /// 把列表顶部的 TodoTypeFilter 映射为月历视图使用的 CalendarItemKindFilter
     private var calendarFilter: CalendarItemKindFilter {
-        switch typeFilter {
+        switch viewModel.typeFilter {
         case .all: return .all
         case .exam: return .exam
         case .homework: return .homework
@@ -521,24 +456,22 @@ struct TodoView: View {
 
     private func toggleCompletion(of entry: TodoEntry) {
         guard let task = entry.taskItem else { return }
-        dataManager.setTaskCompletion(task.id, isCompleted: !task.isCompleted)
+        container.setTaskCompletion(task.id, isCompleted: !task.isCompleted)
     }
 
     private func deleteEntry(_ entry: TodoEntry) {
         switch entry.kind {
         case .exam:
-            if let exam = entry.exam, let idx = dataManager.examSets.firstIndex(where: { $0.id == exam.id }) {
-                dataManager.examSets.remove(at: idx)
-                dataManager.saveExamSets()
+            if let exam = entry.exam {
+                container.deleteExam(exam)
             }
         case .comprehensiveExam:
-            if let comp = entry.comprehensiveExam, let idx = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == comp.id }) {
-                dataManager.comprehensiveExamSets.remove(at: idx)
-                dataManager.saveComprehensiveExams()
+            if let comp = entry.comprehensiveExam {
+                container.deleteComprehensiveExam(comp)
             }
         case .homework, .reading:
             if let task = entry.taskItem {
-                dataManager.deleteTask(task)
+                container.deleteTask(task)
             }
         }
     }
@@ -656,23 +589,8 @@ struct PastItemsSheet: View {
 }
 
 #Preview {
-    let dm = DataManager()
-    dm.subjects = [Subject(name: "Mathematics", enabled: true), Subject(name: "Physics", enabled: true)]
-    dm.examSets = [
-        Exam(name: "Midterm Math", date: Date().addingTimeInterval(86400 * 3),
-             importance: 4, subject: "Mathematics", examName: "Midterm", masteryDegree: 60)
-    ]
-    dm.taskItems = [
-        TaskItem(title: "Ch.3 Exercises", type: .homework,
-                 dueDate: Date().addingTimeInterval(86400),
-                 reminderDate: Date().addingTimeInterval(86400 - 3600),
-                 subject: "Mathematics", importance: 3, notes: "1-20"),
-        TaskItem(title: "Read Physics Ch.5", type: .reading,
-                 dueDate: Date().addingTimeInterval(86400 * 5),
-                 reminderDate: Date().addingTimeInterval(86400 * 4),
-                 subject: "Physics", importance: 2)
-    ]
-    return TodoView()
-        .environmentObject(dm)
+    let container = RepositoryContainer()
+    TodoView(container: container)
+        .environment(container)
         .preferredColorScheme(.light)
 }

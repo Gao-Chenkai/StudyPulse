@@ -13,7 +13,7 @@ import SwiftUI
 /// 视觉上与原 ExamCalendarView 完全一致；现在 `CalendarItem.kind` 把考试 / 综合考试 / 作业 / 阅读
 /// 统一在同一个月历内展示。每个 dot / 每行 row 用不同颜色区分类型。
 struct ExamCalendarView: View {
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// 当前显示月份（动画过程中已提前切为目标月）
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
@@ -43,7 +43,7 @@ struct ExamCalendarView: View {
         var items: [CalendarItem] = []
 
         if typeFilter == .all || typeFilter == .exam {
-            for exam in dataManager.examSets {
+            for exam in container.examRepo.examSets {
                 items.append(CalendarItem(
                     id: exam.id,
                     kind: .exam,
@@ -59,7 +59,7 @@ struct ExamCalendarView: View {
                     taskItem: nil
                 ))
             }
-            for exam in dataManager.comprehensiveExamSets {
+            for exam in container.examRepo.comprehensiveExamSets {
                 let subjectText = exam.subject.joined(separator: ", ")
                 items.append(CalendarItem(
                     id: exam.id,
@@ -79,7 +79,7 @@ struct ExamCalendarView: View {
         }
 
         if typeFilter == .all || typeFilter == .homework {
-            for task in dataManager.taskItems where task.type == .homework && !task.isCompleted {
+            for task in container.taskRepo.taskItems where task.type == .homework && !task.isCompleted {
                 items.append(CalendarItem(
                     id: task.id,
                     kind: .homework,
@@ -98,7 +98,7 @@ struct ExamCalendarView: View {
         }
 
         if typeFilter == .all || typeFilter == .reading {
-            for task in dataManager.taskItems where task.type == .reading && !task.isCompleted {
+            for task in container.taskRepo.taskItems where task.type == .reading && !task.isCompleted {
                 items.append(CalendarItem(
                     id: task.id,
                     kind: .reading,
@@ -776,28 +776,27 @@ private extension Calendar {
 
 #Preview("With Sample Data") {
     ExamCalendarView()
-        .environmentObject(PreviewSupport.makeSampleDataManager())
+        .environment(PreviewSupport.makeSampleContainer())
 }
 
 #Preview("Empty") {
     ExamCalendarView()
-        .environmentObject(DataManager())
+        .environment(RepositoryContainer())
 }
 
 #Preview("Dark Mode") {
     ExamCalendarView()
-        .environmentObject(PreviewSupport.makeSampleDataManager())
+        .environment(PreviewSupport.makeSampleContainer())
         .preferredColorScheme(.dark)
 }
 
 @MainActor
 private enum PreviewSupport {
-    static func makeSampleDataManager() -> DataManager {
-        let manager = DataManager()
-        manager.examSets = sampleExams
-        manager.comprehensiveExamSets = sampleComprehensiveExams
-        manager.taskItems = sampleTasks
-        return manager
+    static func makeSampleContainer() -> RepositoryContainer {
+        let container = RepositoryContainer()
+        container.examRepo.add(single: sampleExams, comprehensive: sampleComprehensiveExams)
+        container.taskRepo.add(sampleTasks)
+        return container
     }
 
     private static var sampleExams: [Exam] {

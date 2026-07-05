@@ -109,7 +109,7 @@ struct ReportContentView: View {
                 statTile(
                     value: percentString(report.averageScoreRate),
                     label: "Avg Score".localized(),
-                    color: scoreColor(rate: report.averageScoreRate)
+                    color: scoreColor(report.averageScoreRate, fullScore: 1)
                 )
                 statTile(
                     value: "\(report.periodMistakes.count)",
@@ -178,7 +178,7 @@ struct ReportContentView: View {
                     x: .value("Avg", item.avg * 100),
                     y: .value("Subject", report.displayName(for: item.subject))
                 )
-                .foregroundStyle(scoreColor(rate: item.avg))
+                .foregroundStyle(scoreColor(item.avg, fullScore: 1))
                 .cornerRadius(3)
                 .annotation(position: .trailing) {
                     Text(percentString(item.avg))
@@ -207,7 +207,7 @@ struct ReportContentView: View {
         let rate = grade.scoreRate(subjectFullScore: subjectFull)
         return HStack(spacing: 10) {
             Circle()
-                .fill(scoreColor(rate: rate))
+                .fill(scoreColor(rate, fullScore: 1))
                 .frame(width: 8, height: 8)
             Text(report.displayName(for: grade.subject))
                 .font(.caption.weight(.semibold))
@@ -222,7 +222,7 @@ struct ReportContentView: View {
                 .foregroundColor(.primary)
             Text(percentString(rate))
                 .font(.caption2.weight(.semibold))
-                .foregroundColor(scoreColor(rate: rate))
+                .foregroundColor(scoreColor(rate, fullScore: 1))
                 .frame(width: 44, alignment: .trailing)
         }
         .padding(.horizontal, 10)
@@ -359,7 +359,7 @@ struct ReportContentView: View {
 
     private var footer: some View {
         VStack(alignment: .center, spacing: 6) {
-            Text(dailyQuote)
+            Text(QuoteProvider.dailyQuote())
                 .font(.footnote)
                 .italic()
                 .multilineTextAlignment(.center)
@@ -408,15 +408,6 @@ struct ReportContentView: View {
     private func formatScore(_ value: Double) -> String {
         if value.rounded() == value { return "\(Int(value))" }
         return String(format: "%.1f", value)
-    }
-
-    private func scoreColor(rate: Double) -> Color {
-        switch rate {
-        case ..<0.6: return .red
-        case ..<0.75: return .orange
-        case ..<0.9: return .blue
-        default: return .green
-        }
     }
 
     private func masteryColor(_ value: Int) -> Color {

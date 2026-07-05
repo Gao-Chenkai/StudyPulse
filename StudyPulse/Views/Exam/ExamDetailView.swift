@@ -10,7 +10,7 @@ import EventKit
 
 struct ExamDetailView: View {
     let exam: Exam
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showingEditSheet = false
     @State private var showingCalendarAlert = false
     @State private var calendarAlertMessage = ""
@@ -21,15 +21,15 @@ struct ExamDetailView: View {
 
     // 关联的错题
     var relatedMistakes: [MistakeNote] {
-        dataManager.mistakeSets
+        container.mistakeRepo.mistakeSets
             .filter { $0.subject == exam.subject }
             .sorted { $0.date > $1.date }
     }
 
-    /// 始终从 dataManager 拿最新的 Exam（确保 checklist 勾选状态等实时同步）
-    /// Always read the latest Exam snapshot from dataManager so checklist toggles etc. are reflected immediately.
+    /// 始终从 examRepo 拿最新的 Exam（确保 checklist 勾选状态等实时同步）
+    /// Always read the latest Exam snapshot from examRepo so checklist toggles etc. are reflected immediately.
     private var currentExam: Exam {
-        dataManager.examSets.first(where: { $0.id == exam.id }) ?? exam
+        container.examRepo.examSets.first(where: { $0.id == exam.id }) ?? exam
     }
 
     /// 倒计时通知天数（默认 [1, 3, 5, 10, 30]）
@@ -147,7 +147,7 @@ struct ExamDetailView: View {
                             item: item,
                             onToggle: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
-                                    dataManager.toggleExamChecklistItem(currentExam.id, itemId: item.id)
+                                    container.toggleExamChecklistItem(currentExam.id, itemId: item.id)
                                 }
                             }
                         )
@@ -266,7 +266,7 @@ struct ExamDetailView: View {
                     .listRowBackground(Color(.secondarySystemGroupedBackground))
                 } else {
                     ForEach(relatedMistakes.prefix(4)) { mistake in
-                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake).environmentObject(dataManager)) {
+                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
                             RelatedMistakeCard(mistake: mistake)
                         }
                     }
@@ -347,12 +347,10 @@ struct ExamDetailView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             ExamDetailEditView(exam: currentExam)
-                .environmentObject(dataManager)
                 .adaptiveSheet()
         }
         .sheet(isPresented: $showingReviewSheet) {
             ExamReviewView(exam: currentExam)
-                .environmentObject(dataManager)
                 .adaptiveSheet()
         }
         .alert("Calendar".localized(), isPresented: $showingCalendarAlert) {
@@ -388,9 +386,9 @@ struct ExamDetailView: View {
 
     /// 打开预测 Sheet(用同科目历史成绩 + 满分)
     private func openPrediction() {
-        let subjectGrades = dataManager.filteredGrades
+        let subjectGrades = container.gradeRepo.filteredGrades
             .filter { $0.subject == currentExam.subject }
-        let fullScore = dataManager.subjects.first(where: { $0.name == currentExam.subject })?.fullScore ?? 100
+        let fullScore = container.subjectRepo.subjects.first(where: { $0.name == currentExam.subject })?.fullScore ?? 100
         predictionTarget = PredictionTarget(
             exam: currentExam,
             history: subjectGrades,
@@ -496,7 +494,6 @@ struct ExamDetailView: View {
                             mistakeIds: review.linkedMistakeIds,
                             subject: currentExam.subject
                         )
-                        .environmentObject(dataManager)
                     } label: {
                         HStack {
                             Image(systemName: "link")
@@ -627,7 +624,7 @@ struct ChecklistRowView: View {
 }
 
 #Preview {
-    let dm = DataManager()
+    let container = RepositoryContainer()
     let testExam = Exam(
         name: "Test",
         date: Date().addingTimeInterval(1000),
@@ -644,9 +641,9 @@ struct ChecklistRowView: View {
         locationClassroom: "教学楼 3 楼 305",
         locationSeat: "23"
     )
-    dm.examSets = [testExam]
+    container.examRepo.add(single: [testExam], comprehensive: [])
     return ExamDetailView(exam: testExam)
-        .environmentObject(dm)
+        .environment(container)
 }
 
 // MARK: - 关联的错题卡片
@@ -734,11 +731,11 @@ struct RelatedMistakeCard: View {
 }
 
 #Preview("Dark Mode") {
-    let dm = DataManager()
+    let container = RepositoryContainer()
     let testExam = Exam(name: "Test", date: Date().addingTimeInterval(1000), importance: 3, subject: "Math", examName: "", masteryDegree: 50)
-    dm.examSets = [testExam]
+    container.examRepo.add(single: [testExam], comprehensive: [])
     return ExamDetailView(exam: testExam)
-        .environmentObject(dm)
+        .environment(container)
         .preferredColorScheme(.dark)
 }
 
@@ -795,11 +792,11 @@ struct LinkedMistakesListView: View {
     let mistakeIds: [UUID]
     let subject: String
 
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// 实际能查到的错题(过滤掉已删除的 id)
     private var resolved: [MistakeNote] {
-        dataManager.mistakeSets.filter { mistakeIds.contains($0.id) }
+        container.mistakeRepo.mistakeSets.filter { mistakeIds.contains($0.id) }
     }
 
     var body: some View {
@@ -818,7 +815,6 @@ struct LinkedMistakesListView: View {
                     ForEach(resolved) { mistake in
                         NavigationLink {
                             MistakeSetDetailView(mistakeSet: mistake)
-                                .environmentObject(dataManager)
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(mistake.title)
