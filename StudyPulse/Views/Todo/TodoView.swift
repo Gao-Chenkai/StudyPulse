@@ -245,7 +245,7 @@ struct TodoView: View {
                     .background(Color(.systemBackground))
             }
             .navigationDestination(item: $selectedComprehensive) { exam in
-                Text("Comprehensive Exam: ".localized() + exam.name)
+                ComprehensiveExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
             }
             .navigationDestination(item: $selectedTask) { task in

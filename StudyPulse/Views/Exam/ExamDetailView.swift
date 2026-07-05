@@ -14,29 +14,43 @@ struct ExamDetailView: View {
     @State private var showingEditSheet = false
     @State private var showingCalendarAlert = false
     @State private var calendarAlertMessage = ""
-    
+    /// 预测目标(非空时弹出 ScorePredictionSheet)
+    @State private var predictionTarget: PredictionTarget? = nil
+
     // 关联的错题
     var relatedMistakes: [MistakeNote] {
         dataManager.mistakeSets
             .filter { $0.subject == exam.subject }
             .sorted { $0.date > $1.date }
     }
-    
+
+    /// 始终从 dataManager 拿最新的 Exam（确保 checklist 勾选状态等实时同步）
+    /// Always read the latest Exam snapshot from dataManager so checklist toggles etc. are reflected immediately.
+    private var currentExam: Exam {
+        dataManager.examSets.first(where: { $0.id == exam.id }) ?? exam
+    }
+
+    /// 倒计时通知天数（默认 [1, 3, 5, 10, 30]）
+    /// Countdown notification days (default [1, 3, 5, 10, 30])
+    private var effectiveNotifyDays: [Int] {
+        currentExam.countdownNotifyDays ?? [1, 3, 5, 10, 30]
+    }
+
     var body: some View {
         Form {
             Section(header: Text("Overview".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
-                LabeledContent("Exam Name".localized(), value: exam.name)
+                LabeledContent("Exam Name".localized(), value: currentExam.name)
                     .foregroundColor(Color(.label))
-                LabeledContent("Subject".localized(), value: exam.subject)
-                    .foregroundColor(Color(.label))
-
-                LabeledContent("Date".localized(), value: exam.examDate.formatted(date: .complete, time: .omitted))
+                LabeledContent("Subject".localized(), value: currentExam.subject)
                     .foregroundColor(Color(.label))
 
-                if !exam.examName.isEmpty {
-                    LabeledContent("Note/Title".localized(), value: exam.examName)
+                LabeledContent("Date".localized(), value: currentExam.examDate.formatted(date: .complete, time: .omitted))
+                    .foregroundColor(Color(.label))
+
+                if !currentExam.examName.isEmpty {
+                    LabeledContent("Note/Title".localized(), value: currentExam.examName)
                         .foregroundColor(Color(.label))
                 }
             }
@@ -51,8 +65,8 @@ struct ExamDetailView: View {
                     Spacer()
                     HStack(spacing: 2) {
                         ForEach(1...5, id: \.self) { i in
-                            Image(systemName: i <= exam.importance ? "star.fill" : "star")
-                                .foregroundColor(i <= exam.importance ? .yellow : Color(.tertiaryLabel))
+                            Image(systemName: i <= currentExam.importance ? "star.fill" : "star")
+                                .foregroundColor(i <= currentExam.importance ? .yellow : Color(.tertiaryLabel))
                         }
                     }
                 }
@@ -61,11 +75,11 @@ struct ExamDetailView: View {
                     Text("Mastery Degree".localized())
                         .foregroundColor(Color(.label))
                     Spacer()
-                    Text("\(exam.masteryDegree)%")
+                    Text("\(currentExam.masteryDegree)%")
                         .fontWeight(.semibold)
                         .foregroundColor(masteryColor)
                 }
-                ProgressView(value: Double(exam.masteryDegree), total: 100.0)
+                ProgressView(value: Double(currentExam.masteryDegree), total: 100.0)
                     .progressViewStyle(LinearProgressViewStyle(tint: masteryProgressColor))
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
@@ -73,7 +87,7 @@ struct ExamDetailView: View {
             Section(header: Text("Time Status".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
-                let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate).day ?? 0
+                let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: currentExam.examDate).day ?? 0
                 HStack {
                     Text("Days Remaining".localized())
                         .foregroundColor(Color(.label))
@@ -82,6 +96,117 @@ struct ExamDetailView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(daysLeft <= 3 ? Color(.systemRed) : Color(.label))
                 }
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+            // MARK: - 考场信息
+            Section(header: Text("Exam Location".localized())
+                .foregroundColor(Color(.secondaryLabel))
+            ) {
+                if currentExam.locationSchool.isEmpty &&
+                   currentExam.locationClassroom.isEmpty &&
+                   currentExam.locationSeat.isEmpty {
+                    HStack {
+                        Image(systemName: "mappin.slash")
+                            .foregroundColor(.secondary)
+                        Text("No location set".localized())
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    if !currentExam.locationSchool.isEmpty {
+                        LabeledContent("School".localized(), value: currentExam.locationSchool)
+                            .foregroundColor(Color(.label))
+                    }
+                    if !currentExam.locationClassroom.isEmpty {
+                        LabeledContent("Classroom".localized(), value: currentExam.locationClassroom)
+                            .foregroundColor(Color(.label))
+                    }
+                    if !currentExam.locationSeat.isEmpty {
+                        LabeledContent("Seat".localized(), value: currentExam.locationSeat)
+                            .foregroundColor(Color(.label))
+                    }
+                }
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+            // MARK: - 考前待办清单
+            Section {
+                if currentExam.checklist.isEmpty {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.secondary)
+                        Text("No checklist items. Tap Edit to add some.".localized())
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
+                    }
+                } else {
+                    ForEach(currentExam.checklist.sorted(by: { $0.sortOrder < $1.sortOrder })) { item in
+                        ChecklistRowView(
+                            item: item,
+                            onToggle: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    dataManager.toggleExamChecklistItem(currentExam.id, itemId: item.id)
+                                }
+                            }
+                        )
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Pre-Exam Checklist".localized())
+                        .foregroundColor(Color(.secondaryLabel))
+                    Spacer()
+                    Text(String(format: "%d / %d".localized(),
+                                currentExam.checklist.filter { $0.isChecked }.count,
+                                currentExam.checklist.count))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+            // MARK: - 倒计时通知
+            Section {
+                if effectiveNotifyDays.isEmpty {
+                    HStack {
+                        Image(systemName: "bell.slash")
+                            .foregroundColor(.secondary)
+                        Text("Notifications disabled".localized())
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .foregroundColor(.accentColor)
+                        Text(String(format: "Notify me %@ day(s) before the exam".localized(),
+                                    effectiveNotifyDays.sorted(by: >).map(String.init).joined(separator: ", ")))
+                            .foregroundColor(Color(.label))
+                            .font(.subheadline)
+                    }
+                }
+                Button {
+                    ExamPrepareNotifications.shared.requestAuthorization()
+                    ExamPrepareNotifications.shared.scheduleNotifications(
+                        for: currentExam.name,
+                        date: currentExam.examDate,
+                        days: effectiveNotifyDays
+                    )
+                    calendarAlertMessage = "Notifications rescheduled.".localized()
+                    showingCalendarAlert = true
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.clockwise.bell")
+                            .foregroundColor(.accentColor)
+                        Text("Reschedule Notifications".localized())
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            } header: {
+                Text("Countdown Notifications".localized())
+                    .foregroundColor(Color(.secondaryLabel))
+            } footer: {
+                Text("Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize.".localized())
+                    .foregroundColor(.secondary)
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
@@ -97,9 +222,30 @@ struct ExamDetailView: View {
                     }
                 }
             } footer: {
-                Text(exam.timeSlot != nil
+                Text(currentExam.timeSlot != nil
                      ? "Will create a timed event with a 1-day advance reminder in your system calendar.".localized()
                      : "Will create an all-day event with a 1-day advance reminder in your system calendar.".localized())
+                    .foregroundColor(.secondary)
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+            // MARK: - 分享给家人
+            Section {
+                ShareLink(
+                    item: shareText,
+                    subject: Text(currentExam.name),
+                    message: Text("Exam Details".localized())
+                ) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                        Text("Share with Family".localized())
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            } footer: {
+                Text("Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc.".localized())
                     .foregroundColor(.secondary)
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
@@ -136,13 +282,48 @@ struct ExamDetailView: View {
                 }
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+            // MARK: - 预测入口
+            Section {
+                Button {
+                    openPrediction()
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                        Text("Predict Next Score".localized())
+                            .foregroundColor(.accentColor)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            } header: {
+                Text("Score Prediction".localized())
+                    .foregroundColor(Color(.secondaryLabel))
+            } footer: {
+                Text("Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam.".localized())
+                    .foregroundColor(.secondary)
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(exam.name)
+        .navigationTitle(currentExam.name)
         .navigationBarTitleDisplayMode(.large)
         .adaptiveMaxWidth(720)
         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    openPrediction()
+                } label: {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                }
+                .accessibilityLabel("Predict".localized())
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Edit".localized()) {
                     showingEditSheet = true
@@ -150,8 +331,17 @@ struct ExamDetailView: View {
                 .foregroundColor(Color(.systemBlue))
             }
         }
+        .sheet(item: $predictionTarget) { target in
+            ScorePredictionSheet(
+                exam: target.exam,
+                history: target.history,
+                fullScore: target.fullScore,
+                onDismiss: { predictionTarget = nil }
+            )
+            .adaptiveSheet(detents: [.medium, .large])
+        }
         .sheet(isPresented: $showingEditSheet) {
-            ExamDetailEditView(exam: exam)
+            ExamDetailEditView(exam: currentExam)
                 .environmentObject(dataManager)
                 .adaptiveSheet()
         }
@@ -161,17 +351,17 @@ struct ExamDetailView: View {
             Text(calendarAlertMessage)
         }
     }
-    
+
     private func addToCalendar() {
         Task {
             do {
                 _ = try await CalendarManager.shared.addExamToCalendar(
-                    examName: exam.name,
-                    subject: exam.subject,
-                    examDate: exam.examDate,
-                    startTime: exam.timeSlot?.startTime,
-                    endTime: exam.timeSlot?.endTime,
-                    note: exam.examName.isEmpty ? nil : exam.examName
+                    examName: currentExam.name,
+                    subject: currentExam.subject,
+                    examDate: currentExam.examDate,
+                    startTime: currentExam.timeSlot?.startTime,
+                    endTime: currentExam.timeSlot?.endTime,
+                    note: currentExam.examName.isEmpty ? nil : currentExam.examName
                 )
                 await MainActor.run {
                     calendarAlertMessage = "Successfully added to calendar!".localized()
@@ -185,23 +375,70 @@ struct ExamDetailView: View {
             }
         }
     }
-    
+
+    /// 打开预测 Sheet(用同科目历史成绩 + 满分)
+    private func openPrediction() {
+        let subjectGrades = dataManager.filteredGrades
+            .filter { $0.subject == currentExam.subject }
+        let fullScore = dataManager.subjects.first(where: { $0.name == currentExam.subject })?.fullScore ?? 100
+        predictionTarget = PredictionTarget(
+            exam: currentExam,
+            history: subjectGrades,
+            fullScore: fullScore
+        )
+    }
+
+    /// 构造可分享的考试信息文本
+    /// Build a shareable text summary of the exam.
+    private var shareText: String {
+        var lines: [String] = []
+        lines.append("📚 " + currentExam.name)
+        lines.append("📅 " + currentExam.examDate.formatted(date: .complete, time: .omitted))
+        if let slot = currentExam.timeSlot {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "HH:mm"
+            lines.append("⏰ " + String(format: "%@ - %@".localized(), fmt.string(from: slot.startTime), fmt.string(from: slot.endTime)))
+        }
+        lines.append("📝 " + currentExam.subject.localized())
+        if !currentExam.locationSchool.isEmpty {
+            var loc = "📍 " + currentExam.locationSchool
+            if !currentExam.locationClassroom.isEmpty {
+                loc += " · " + currentExam.locationClassroom
+            }
+            if !currentExam.locationSeat.isEmpty {
+                loc += " · Seat: " + currentExam.locationSeat
+            }
+            lines.append(loc)
+        }
+        let unchecked = currentExam.checklist.filter { !$0.isChecked }
+        if !unchecked.isEmpty {
+            lines.append("")
+            lines.append("✅ " + "Checklist".localized() + ":")
+            for item in unchecked.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                lines.append("  • " + item.title)
+            }
+        }
+        lines.append("")
+        lines.append("— from StudyPulse")
+        return lines.joined(separator: "\n")
+    }
+
     // 根据掌握程度确定颜色
     private var masteryColor: Color {
-        if exam.masteryDegree <= 20 {
+        if currentExam.masteryDegree <= 20 {
             return Color(.systemRed)
-        } else if exam.masteryDegree <= 60 {
+        } else if currentExam.masteryDegree <= 60 {
             return Color(.systemOrange)
         } else {
             return Color(.systemGreen)
         }
     }
-    
+
     // 进度条颜色
     private var masteryProgressColor: Color {
-        if exam.masteryDegree <= 20 {
+        if currentExam.masteryDegree <= 20 {
             return Color(.systemRed)
-        } else if exam.masteryDegree <= 60 {
+        } else if currentExam.masteryDegree <= 60 {
             return Color(.systemOrange)
         } else {
             return Color(.systemBlue)
@@ -209,9 +446,48 @@ struct ExamDetailView: View {
     }
 }
 
+// MARK: - Checklist Row
+
+struct ChecklistRowView: View {
+    let item: ExamChecklistItem
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(item.isChecked ? Color(.systemGreen) : Color(.tertiaryLabel))
+                Text(item.title)
+                    .strikethrough(item.isChecked, color: .secondary)
+                    .foregroundColor(item.isChecked ? Color(.secondaryLabel) : Color(.label))
+                    .font(.subheadline)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 #Preview {
     let dm = DataManager()
-    let testExam = Exam(name: "Test", date: Date().addingTimeInterval(1000), importance: 3, subject: "Math", examName: "", masteryDegree: 50)
+    let testExam = Exam(
+        name: "Test",
+        date: Date().addingTimeInterval(1000),
+        importance: 3,
+        subject: "Math",
+        examName: "",
+        masteryDegree: 50,
+        checklist: [
+            ExamChecklistItem(title: "身份证", sortOrder: 0),
+            ExamChecklistItem(title: "准考证", isChecked: true, sortOrder: 1),
+            ExamChecklistItem(title: "2B 铅笔 + 橡皮", sortOrder: 2)
+        ],
+        locationSchool: "市一中",
+        locationClassroom: "教学楼 3 楼 305",
+        locationSeat: "23"
+    )
     dm.examSets = [testExam]
     return ExamDetailView(exam: testExam)
         .environmentObject(dm)
@@ -221,12 +497,12 @@ struct ExamDetailView: View {
 struct RelatedMistakeCard: View {
     let mistake: MistakeNote
     @State private var animateIn = false
-    
+
     var totalImages: Int {
         mistake.questionImages.count + mistake.reasonImages.count +
         mistake.wrongSolutionImages.count + mistake.correctSolutionImages.count
     }
-    
+
     var daysSinceAdded: String {
         let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
         let days = components.day ?? 0
@@ -242,7 +518,7 @@ struct RelatedMistakeCard: View {
             return formatter.string(from: mistake.date)
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
@@ -251,14 +527,14 @@ struct RelatedMistakeCard: View {
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                
+
                 if !mistake.originalQuestion.isEmpty {
                     Text(mistake.originalQuestion)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 }
-                
+
                 HStack(spacing: 8) {
                     if !mistake.subject.isEmpty {
                         Text(mistake.subject.localized())
@@ -269,11 +545,11 @@ struct RelatedMistakeCard: View {
                             .foregroundColor(Color(.systemPurple))
                             .cornerRadius(4)
                     }
-                    
+
                     Text(daysSinceAdded)
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    
+
                     if totalImages > 0 {
                         Label("\(totalImages)", systemImage: "photo")
                             .font(.caption2)
@@ -281,9 +557,9 @@ struct RelatedMistakeCard: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)

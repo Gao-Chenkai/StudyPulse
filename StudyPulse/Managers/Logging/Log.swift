@@ -152,6 +152,9 @@ nonisolated enum Log {
 
     /// 成就 / 连续打卡系统 / Achievements & streak system
 
+    /// 成绩预测 / Score prediction (linear regression / future Core ML)
+    nonisolated static let prediction = Logger(subsystem: subsystem, category: "Prediction")
+
     // MARK: - Record to both os.Logger and in-memory store
 
     /// 同时写入 os.Logger 和内存 LogStore。

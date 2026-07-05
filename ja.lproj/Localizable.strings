@@ -447,6 +447,18 @@
 "No images" = "画像なし";
 "Select" = "選択";
 
+// MasteryCurveView.swift
+"Exposures" = "閲覧回数";
+"No reviews yet" = "復習履歴がありません";
+"Review this card to start tracking your mastery progress" = "このカードを復習して、習熟度の記録を開始しましょう";
+"reviews" = "回復習";
+"Struggling" = "苦戦中";
+"Building" = "構築中";
+"Familiar" = "慣れてきた";
+"Confident" = "自信あり";
+"Mastered" = "習得済み";
+"View" = "閲覧";
+
 // AvatarView.swift
 "Choose from Library" = "ライブラリから選択";
 "Take Photo" = "写真を撮る";
@@ -1151,3 +1163,89 @@
 "Notes (e.g. 期末数学 ≥ 120)" = "メモ(例:期末数学 ≥ 120)";
 "Set a target score per subject. You can edit later." = "科目ごとに目標点を設定します。後で編集できます。";
 "e.g. 2026 春季学期" = "例:2026 春季学期";
+
+// MARK: - 試験会場 / 試験前チェックリスト / カウントダウン / 共有
+"Exam Location" = "試験会場";
+"School" = "学校";
+"Classroom" = "教室";
+"Seat" = "座席番号";
+"No location set" = "会場が未設定";
+"Pre-Exam Checklist" = "試験前チェックリスト";
+"No checklist items. Tap Edit to add some." = "項目がありません。編集ボタンから追加できます。";
+"No items yet" = "まだ項目がありません";
+"Item" = "項目";
+"Add item (e.g. 身份证, 2B 铅笔, 复习清单)" = "項目を追加(例:身分証、2B 鉛筆、復習リスト)";
+"Countdown Notifications" = "カウントダウン通知";
+"Notifications disabled" = "通知オフ";
+"Notify me %@ day(s) before the exam" = "試験 %@ 日前に通知";
+"Reschedule Notifications" = "通知を再設定";
+"Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize." = "デフォルト:試験 1、3、5、10、30 日前。編集で変更できます。";
+"Share with Family" = "家族に共有";
+"Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc." = "試験概要(日付・科目・会場)を作成して、WeChat・メール・メッセージなどで共有。";
+"Fill in the school / classroom / seat number so you can find it on exam day." = "試験当日に迷わないよう、学校・教室・座席番号を入力してください。";
+"Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list." = "行をタップで完了マーク。例:身分証、受験票、文具、復習リスト。";
+"Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule." = "試験までの何日前に通知するか選択。空 = 通知なし。保存で再設定されます。";
+"%d day(s) before" = "%d 日前";
+"Checklist" = "チェックリスト";
+"Notifications rescheduled." = "通知を再設定しました。";
+
+// Score Prediction (ScorePredictionEngine.swift / ScorePredictionSheet.swift / ExamView.swift)
+"Predict" = "予測";
+"Score Prediction" = "成績予測";
+"Target Plan" = "目標プラン";
+"Not Enough Data" = "データ不足";
+"Add at least 2 grades for this subject to enable prediction." = "予測を有効にするにはこの科目の成績が少なくとも 2 件必要です。";
+"95%% Confidence Interval" = "95%% 信頼区間";
+"Predicted score range with 95%% confidence." = "95%% 信頼度での予測スコア範囲。";
+"Engine: %@" = "エンジン:%@";
+"Key Stats" = "主要統計";
+"Sample Size" = "サンプル数";
+"Trend (per week)" = "トレンド(週単位)";
+"Fit Quality" = "当てはめ精度";
+"Change vs. Last" = "前回比";
+"Flat" = "横ばい";
+"Rising" = "上昇";
+"Falling" = "下降";
+"Strong" = "強い";
+"Moderate" = "中程度";
+"Weak" = "弱い";
+"Recent Grades Used" = "使用された最近の成績";
+"(no name)" = "(名前なし)";
+"How to Reach Your Target" = "目標達成のために";
+"Target Score" = "目標点数";
+"e.g. 130" = "例:130";
+"Score Gap" = "点数ギャップ";
+"To %d" = "%d まで";
+"pts" = "点";
+"To safely reach %d (with 95%% confidence), you need to close the gap above your lower bound (%d)." = "%d 点を確実に達成するには(95%% 信頼度)、下限(%d)との差を埋める必要があります。";
+"Recommended Mistakes" = "おすすめのミス";
+"On Track" = "順調";
+"Your predicted lower bound (%d) already meets or exceeds the target (%d). No extra review needed based on current trend." = "予測下限(%d)はすでに目標(%d)以上です。現在の傾向では追加の復習は不要です。";
+"No mistakes found for this subject yet. Add some to get targeted recommendations." = "この科目のミス記録がまだありません。追加すると具体的な提案が受けられます。";
+"Mastery %d%%" = "習得度 %d%%";
+"Linear Regression" = "線形回帰";
+"Core ML (Beta)" = "Core ML (Beta)";
+"Local regression, no network required." = "ローカル回帰、ネットワーク不要。";
+"On-device ML model, currently disabled." = "オンデバイス ML モデル、現在未有効。";
+"Last %d" = "前回 %d";
+"Last %@" = "前回 %@";
+"%d / %d" = "%d / %d";
+"× %d" = "× %d";
+"%@ pts (%@)" = "%@ 点/週 (%@)";
+"%@ (%@)" = "%@ (%@)";
+"%@ pts" = "%@ 点";
+"%@ %@" = "%@ %@";
+"Total" = "合計";
+"95%% Confidence Interval (Sum)" = "95%% 信頼区間(合計)";
+"n = %d" = "サンプル数 n = %d";
+"Predict Next Score" = "次のスコアを予測";
+"Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "直近 5 回の同科目成績から次回の 95%% 信頼区間を予測します。";
+"Predict Total Score" = "合計スコアを予測";
+"Predicts each subject separately (95% confidence interval), then sums the totals." = "各科目を個別に予測(95%% 信頼区間)し、合計します。";
+"End Date" = "終了日";
+"Subjects" = "科目";
+"All Day" = "終日";
+"All-day subjects use one calendar event; subjects with time slots use individual events." = "終日科目は 1 つのカレンダーイベント、時刻指定科目は個別のイベントとして登録されます。";
+"Will add an all-day event to your system calendar with a 1-day advance reminder." = "システムのカレンダーに終日イベントを追加し、1 日前のリマインダーを設定します。";
+"Comprehensive" = "総合";
+"No related mistakes across these subjects" = "これらの科目に関連するミスはありません";

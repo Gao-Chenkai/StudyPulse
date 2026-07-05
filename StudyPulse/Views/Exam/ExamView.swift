@@ -15,6 +15,10 @@ struct ExamView: View {
     @State private var selectedComprehensiveExam: comprehensiveExam? = nil
     @State private var showingPastExams = false
     @State private var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
+    /// 预测目标(单科)：非空时弹出 ScorePredictionSheet
+    @State private var predictionTarget: PredictionTarget? = nil
+    /// 预测目标(综合考试)：非空时弹出 ComprehensiveScorePredictionSheet
+    @State private var comprehensivePredictionTarget: ComprehensivePredictionTarget? = nil
 
     private var showsCalendar: Bool {
         viewMode == .calendar
@@ -157,8 +161,24 @@ struct ExamView: View {
                     .background(Color(.systemBackground))
             }
             .navigationDestination(item: $selectedComprehensiveExam) { exam in
-                Text("Comprehensive Exam: ".localized() + exam.name)
+                ComprehensiveExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
+            }
+            .sheet(item: $predictionTarget) { target in
+                ScorePredictionSheet(
+                    exam: target.exam,
+                    history: target.history,
+                    fullScore: target.fullScore,
+                    onDismiss: { predictionTarget = nil }
+                )
+                .adaptiveSheet(detents: [.medium, .large])
+            }
+            .sheet(item: $comprehensivePredictionTarget) { target in
+                ComprehensiveScorePredictionSheet(
+                    target: target,
+                    onDismiss: { comprehensivePredictionTarget = nil }
+                )
+                .adaptiveSheet(detents: [.medium, .large])
             }
         }
     }
@@ -196,13 +216,23 @@ struct ExamView: View {
                             let item = exams[index]
 
                             if let exam = item as? Exam {
-                                ExamRowView(exam: exam)
+                                ExamRowView(
+                                    exam: exam,
+                                    onPredict: { openPrediction(for: exam) }
+                                )
                                     .listRowBackground(Color(.secondarySystemGroupedBackground))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         selectedExamForDetail = exam
                                     }
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                        Button {
+                                            openPrediction(for: exam)
+                                        } label: {
+                                            Label("Predict".localized(), systemImage: "chart.line.uptrend.xyaxis")
+                                        }
+                                        .tint(Color(.systemBlue))
+
                                         Button(role: .destructive) {
                                             deleteExam(exam)
                                         } label: {
@@ -212,13 +242,23 @@ struct ExamView: View {
                                     }
                             }
                             else if let comprehensive = item as? comprehensiveExam {
-                                ComprehensiveExamRowView(exam: comprehensive)
+                                ComprehensiveExamRowView(
+                                    exam: comprehensive,
+                                    onPredict: { openPrediction(for: comprehensive) }
+                                )
                                     .listRowBackground(Color(.secondarySystemGroupedBackground))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         selectedComprehensiveExam = comprehensive
                                     }
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                        Button {
+                                            openPrediction(for: comprehensive)
+                                        } label: {
+                                            Label("Predict".localized(), systemImage: "chart.line.uptrend.xyaxis")
+                                        }
+                                        .tint(Color(.systemPurple))
+
                                         Button(role: .destructive) {
                                             deleteComprehensiveExam(comprehensive)
                                         } label: {
@@ -269,13 +309,71 @@ struct ExamView: View {
             dataManager.saveExamSets()
         }
     }
-    
+
     private func deleteComprehensiveExam(_ exam: comprehensiveExam) {
         if let index = dataManager.comprehensiveExamSets.firstIndex(where: { $0.id == exam.id }) {
             dataManager.comprehensiveExamSets.remove(at: index)
             dataManager.saveComprehensiveExams()
         }
     }
+
+    /// 触发预测 Sheet：按考试科目取历史成绩 + 满分。
+    /// Open the prediction sheet for a given exam, using same-subject history
+    /// and the subject's full score.
+    private func openPrediction(for exam: Exam) {
+        let subjectGrades = dataManager.filteredGrades
+            .filter { $0.subject == exam.subject }
+        let fullScore = dataManager.subjects.first(where: { $0.name == exam.subject })?.fullScore ?? 100
+        predictionTarget = PredictionTarget(
+            exam: exam,
+            history: subjectGrades,
+            fullScore: fullScore
+        )
+    }
+
+    /// 触发预测 Sheet(综合考试):逐科预测,再汇总总分。
+    /// Open the prediction sheet for a comprehensive exam, predicting each
+    /// subject separately and aggregating the total.
+    private func openPrediction(for exam: comprehensiveExam) {
+        let predictor = ScorePredictorFactory.active
+        let allSubjects = exam.subject
+        var perSubject: [PerSubjectPrediction] = []
+        var totalFull: Double = 0
+        var totalPredicted: Double = 0
+        var totalLower: Double = 0
+        var totalUpper: Double = 0
+
+        for subject in allSubjects {
+            let grades = dataManager.filteredGrades.filter { $0.subject == subject }
+            let fullScore = dataManager.subjects.first(where: { $0.name == subject })?.fullScore ?? 100
+            if let r = predictor.predict(history: grades, examDate: exam.examDate, fullScore: fullScore) {
+                perSubject.append(PerSubjectPrediction(subject: subject, result: r))
+                totalFull += fullScore
+                totalPredicted += r.predicted
+                totalLower += r.lowerBound
+                totalUpper += r.upperBound
+            }
+        }
+        guard !perSubject.isEmpty else { return }
+        comprehensivePredictionTarget = ComprehensivePredictionTarget(
+            exam: exam,
+            perSubject: perSubject,
+            totalFull: totalFull,
+            totalPredicted: totalPredicted,
+            totalLower: totalLower,
+            totalUpper: totalUpper
+        )
+    }
+}
+
+// MARK: - 预测目标
+
+/// 触发 ScorePredictionSheet 的目标（Identifiable 用于 sheet(item:) 绑定）
+struct PredictionTarget: Identifiable {
+    let id = UUID()
+    let exam: Exam
+    let history: [Grade]
+    let fullScore: Double
 }
 
 // MARK: - 过去考试 Sheet
@@ -381,20 +479,22 @@ struct PastExamsSheet: View {
 
 struct ExamRowView: View {
     let exam: Exam
+    /// 点击"预测"按钮的回调
+    var onPredict: (() -> Void)? = nil
     @State private var animateIn = false
-    
+
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         return max(0, components.day ?? 0)
     }
-    
+
     private var timeProgress: Double {
         min(Double(daysRemaining) / 30.0, 1.0)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(exam.name)
                     .font(.headline)
                     .foregroundColor(Color(.label))
@@ -409,7 +509,7 @@ struct ExamRowView: View {
                     )
                     .foregroundColor(Color(.systemBlue))
             }
-            
+
             Group {
                 if let endDate = exam.examEndDate, !Calendar.current.isDate(exam.examDate, inSameDayAs: endDate) {
                     Text("\(exam.examDate.formatted(date: .abbreviated, time: .omitted)) - \(endDate.formatted(date: .abbreviated, time: .omitted))")
@@ -419,7 +519,7 @@ struct ExamRowView: View {
             }
             .font(.caption)
                 .foregroundColor(Color(.secondaryLabel))
-            
+
             HStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Time Left".localized())
@@ -434,7 +534,7 @@ struct ExamRowView: View {
                         .foregroundColor(daysRemaining > 2 ? Color(.secondaryLabel) : Color(.systemRed))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Mastery".localized())
                         .font(.caption2)
@@ -450,13 +550,37 @@ struct ExamRowView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            // 预测按钮：放在进度条下方,显眼易找
+            if let onPredict = onPredict {
+                Button {
+                    onPredict()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.caption.weight(.bold))
+                        Text("Predict".localized())
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Capsule()
+                            .fill(Color(.systemBlue).opacity(0.12))
+                    )
+                    .foregroundColor(Color(.systemBlue))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
         }
         .padding(14)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(.secondarySystemGroupedBackground))
-                
+
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(
                         LinearGradient(
@@ -512,6 +636,8 @@ struct ExamRowView: View {
 
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
+    /// 点击"预测"按钮的回调
+    var onPredict: (() -> Void)? = nil
     @State private var animateIn = false
     
     private var daysRemaining: Int {
@@ -585,13 +711,37 @@ struct ComprehensiveExamRowView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            // 预测按钮(综合考试,预测总分)
+            if let onPredict = onPredict {
+                Button {
+                    onPredict()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.caption.weight(.bold))
+                        Text("Predict".localized())
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Capsule()
+                            .fill(Color(.systemPurple).opacity(0.12))
+                    )
+                    .foregroundColor(Color(.systemPurple))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
         }
         .padding(14)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(.secondarySystemGroupedBackground))
-                
+
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(
                         LinearGradient(

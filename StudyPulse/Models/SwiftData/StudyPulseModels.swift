@@ -173,6 +173,12 @@ final class MistakeNoteRecord {
     @Attribute(.externalStorage) var correctSolutionImagesData: [Data]
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
     var phaseId: UUID?
+    /// 曝光次数：详情页 / 闪卡被打开的累计次数
+    var exposureCount: Int = 0
+    /// 当前掌握度（0-1）
+    var masteryScore: Double = 0.0
+    /// 掌握度历史（JSON 编码 [MasteryHistoryEntry]）
+    var masteryHistoryData: Data?
 
     init(
         id: UUID,
@@ -194,7 +200,10 @@ final class MistakeNoteRecord {
         reasonImagesData: [Data],
         wrongSolutionImagesData: [Data],
         correctSolutionImagesData: [Data],
-        phaseId: UUID? = nil
+        phaseId: UUID? = nil,
+        exposureCount: Int = 0,
+        masteryScore: Double = 0.0,
+        masteryHistoryData: Data? = nil
     ) {
         self.id = id
         self.title = title
@@ -216,10 +225,16 @@ final class MistakeNoteRecord {
         self.wrongSolutionImagesData = wrongSolutionImagesData
         self.correctSolutionImagesData = correctSolutionImagesData
         self.phaseId = phaseId
+        self.exposureCount = exposureCount
+        self.masteryScore = masteryScore
+        self.masteryHistoryData = masteryHistoryData
     }
 
     convenience init(from note: MistakeNote) {
         let srs = note.reviewState
+        let historyData: Data? = note.masteryHistory.isEmpty
+            ? nil
+            : try? JSONEncoder().encode(note.masteryHistory)
         self.init(
             id: note.id,
             title: note.title,
@@ -240,7 +255,10 @@ final class MistakeNoteRecord {
             reasonImagesData: note.reasonImages,
             wrongSolutionImagesData: note.wrongSolutionImages,
             correctSolutionImagesData: note.correctSolutionImages,
-            phaseId: note.phaseId
+            phaseId: note.phaseId,
+            exposureCount: note.exposureCount,
+            masteryScore: note.masteryScore,
+            masteryHistoryData: historyData
         )
     }
 
@@ -255,6 +273,11 @@ final class MistakeNoteRecord {
                 lastReviewDate: srsLastReviewDate,
                 lapses: srsLapses
             )
+        }()
+
+        let history: [MasteryHistoryEntry] = {
+            guard let data = masteryHistoryData else { return [] }
+            return (try? JSONDecoder().decode([MasteryHistoryEntry].self, from: data)) ?? []
         }()
 
         return MistakeNote(
@@ -272,7 +295,10 @@ final class MistakeNoteRecord {
             wrongSolutionImages: wrongSolutionImagesData,
             correctSolutionImages: correctSolutionImagesData,
             reviewState: reviewState,
-            phaseId: phaseId
+            phaseId: phaseId,
+            exposureCount: exposureCount,
+            masteryScore: masteryScore,
+            masteryHistory: history
         )
     }
 }
@@ -294,6 +320,16 @@ final class ExamRecord {
     var timeSlotEnd: Date?
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
     var phaseId: UUID?
+    /// 考前待办清单（JSON 编码 [ExamChecklistItem]）
+    var checklistData: Data?
+    /// 考场学校（SwiftData 轻量迁移需要 inline 默认值,否则老 store 打不开）
+    var locationSchool: String = ""
+    /// 教室 / 考场号
+    var locationClassroom: String = ""
+    /// 座位号
+    var locationSeat: String = ""
+    /// 考前 N 天倒计时通知（JSON 编码 [Int]）；nil = 字段未写入（默认计划）
+    var countdownNotifyDaysData: Data?
 
     init(
         id: UUID,
@@ -306,7 +342,12 @@ final class ExamRecord {
         masteryDegree: Int,
         timeSlotStart: Date?,
         timeSlotEnd: Date?,
-        phaseId: UUID? = nil
+        phaseId: UUID? = nil,
+        checklistData: Data? = nil,
+        locationSchool: String = "",
+        locationClassroom: String = "",
+        locationSeat: String = "",
+        countdownNotifyDaysData: Data? = nil
     ) {
         self.id = id
         self.name = name
@@ -319,9 +360,22 @@ final class ExamRecord {
         self.timeSlotStart = timeSlotStart
         self.timeSlotEnd = timeSlotEnd
         self.phaseId = phaseId
+        self.checklistData = checklistData
+        self.locationSchool = locationSchool
+        self.locationClassroom = locationClassroom
+        self.locationSeat = locationSeat
+        self.countdownNotifyDaysData = countdownNotifyDaysData
     }
 
     convenience init(from exam: Exam) {
+        let checklistData: Data? = exam.checklist.isEmpty ? nil : try? JSONEncoder().encode(exam.checklist)
+        // 把 nil 和 [] 都当作 "未指定",用 nil 存；显式空数组也用 nil 存(语义上等价)
+        let countdownData: Data?
+        if let days = exam.countdownNotifyDays {
+            countdownData = (try? JSONEncoder().encode(days)) ?? nil
+        } else {
+            countdownData = nil
+        }
         self.init(
             id: exam.id,
             name: exam.name,
@@ -333,7 +387,12 @@ final class ExamRecord {
             masteryDegree: exam.masteryDegree,
             timeSlotStart: exam.timeSlot?.startTime,
             timeSlotEnd: exam.timeSlot?.endTime,
-            phaseId: exam.phaseId
+            phaseId: exam.phaseId,
+            checklistData: checklistData,
+            locationSchool: exam.locationSchool,
+            locationClassroom: exam.locationClassroom,
+            locationSeat: exam.locationSeat,
+            countdownNotifyDaysData: countdownData
         )
     }
 
@@ -343,6 +402,14 @@ final class ExamRecord {
                 return ExamTimeSlot(startTime: s, endTime: e)
             }
             return nil
+        }()
+        let checklist: [ExamChecklistItem] = {
+            guard let data = checklistData else { return [] }
+            return (try? JSONDecoder().decode([ExamChecklistItem].self, from: data)) ?? []
+        }()
+        let countdownDays: [Int]? = {
+            guard let data = countdownNotifyDaysData else { return nil }
+            return try? JSONDecoder().decode([Int].self, from: data)
         }()
         return Exam(
             id: id,
@@ -354,7 +421,12 @@ final class ExamRecord {
             masteryDegree: masteryDegree,
             timeSlot: timeSlot,
             examEndDate: examEndDate,
-            phaseId: phaseId
+            phaseId: phaseId,
+            checklist: checklist,
+            locationSchool: locationSchool,
+            locationClassroom: locationClassroom,
+            locationSeat: locationSeat,
+            countdownNotifyDays: countdownDays
         )
     }
 }

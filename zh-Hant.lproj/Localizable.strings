@@ -447,6 +447,18 @@
 "No images" = "暫無圖片";
 "Select" = "選擇";
 
+// MasteryCurveView.swift
+"Exposures" = "曝光次數";
+"No reviews yet" = "暫無複習記錄";
+"Review this card to start tracking your mastery progress" = "複習這張卡片,開始追蹤你的掌握進度";
+"reviews" = "次複習";
+"Struggling" = "仍在掙扎";
+"Building" = "逐漸建立";
+"Familiar" = "基本熟悉";
+"Confident" = "比較自信";
+"Mastered" = "已掌握";
+"View" = "查看";
+
 // AvatarView.swift
 "Choose from Library" = "從相簿選擇";
 "Take Photo" = "拍照";
@@ -1151,3 +1163,89 @@
 "Notes (e.g. 期末数学 ≥ 120)" = "備註(如 期末數學 ≥ 120)";
 "Set a target score per subject. You can edit later." = "為每個科目設目標分,稍後可編輯。";
 "e.g. 2026 春季学期" = "如 2026 春季學期";
+
+// MARK: - 考場資訊 / 考前待辦 / 倒數計時 / 分享
+"Exam Location" = "考場資訊";
+"School" = "學校";
+"Classroom" = "教室";
+"Seat" = "座位號";
+"No location set" = "未設定考場";
+"Pre-Exam Checklist" = "考前待辦清單";
+"No checklist items. Tap Edit to add some." = "暫無待辦,點擊編輯新增";
+"No items yet" = "暫無項目";
+"Item" = "項目";
+"Add item (e.g. 身份证, 2B 铅笔, 复习清单)" = "新增項目(如 身份證、2B 鉛筆、複習清單)";
+"Countdown Notifications" = "倒數通知";
+"Notifications disabled" = "通知已關閉";
+"Notify me %@ day(s) before the exam" = "考前 %@ 天提醒我";
+"Reschedule Notifications" = "重新排定通知";
+"Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize." = "預設計劃:考前 1、3、5、10、30 天。編輯考試以自訂。";
+"Share with Family" = "分享給家人";
+"Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc." = "生成考試摘要(日期、科目、考場),透過微信、郵件、訊息等分享。";
+"Fill in the school / classroom / seat number so you can find it on exam day." = "填寫學校/教室/座位號,方便考試當天找到。";
+"Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list." = "點擊行可標記完成。例如:身份證、准考證、文具、複習清單。";
+"Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule." = "選擇考試前幾天提醒。留空 = 不通知。儲存後重新排定。";
+"%d day(s) before" = "考前 %d 天";
+"Checklist" = "清單";
+"Notifications rescheduled." = "通知已重新排定。";
+
+// Score Prediction (ScorePredictionEngine.swift / ScorePredictionSheet.swift / ExamView.swift)
+"Predict" = "預測";
+"Score Prediction" = "成績預測";
+"Target Plan" = "目標計劃";
+"Not Enough Data" = "資料不足";
+"Add at least 2 grades for this subject to enable prediction." = "至少需要 2 筆該科目的成績才能開啟預測。";
+"95%% Confidence Interval" = "95%% 置信區間";
+"Predicted score range with 95%% confidence." = "95%% 置信度下預測分數區間。";
+"Engine: %@" = "引擎:%@";
+"Key Stats" = "關鍵統計";
+"Sample Size" = "樣本數";
+"Trend (per week)" = "趨勢(每週)";
+"Fit Quality" = "擬合度";
+"Change vs. Last" = "相對最近";
+"Flat" = "平穩";
+"Rising" = "上升";
+"Falling" = "下降";
+"Strong" = "強";
+"Moderate" = "中";
+"Weak" = "弱";
+"Recent Grades Used" = "使用的近期成績";
+"(no name)" = "(無名稱)";
+"How to Reach Your Target" = "如何達到你的目標";
+"Target Score" = "目標分數";
+"e.g. 130" = "例如 130";
+"Score Gap" = "分數差距";
+"To %d" = "到 %d";
+"pts" = "分";
+"To safely reach %d (with 95%% confidence), you need to close the gap above your lower bound (%d)." = "要穩妥達到 %d 分(95%% 置信度),你需要彌補相對下界(%d)的差距。";
+"Recommended Mistakes" = "推薦錯題";
+"On Track" = "狀態良好";
+"Your predicted lower bound (%d) already meets or exceeds the target (%d). No extra review needed based on current trend." = "你的預測下界(%d)已經不低於目標(%d)。按當前趨勢無需額外複習。";
+"No mistakes found for this subject yet. Add some to get targeted recommendations." = "該科目暫無錯題。新增錯題以獲得針對性建議。";
+"Mastery %d%%" = "掌握度 %d%%";
+"Linear Regression" = "線性回歸";
+"Core ML (Beta)" = "Core ML (Beta)";
+"Local regression, no network required." = "本地回歸,無需連線。";
+"On-device ML model, currently disabled." = "本地機器學習模型,暫未啟用。";
+"Last %d" = "最近 %d";
+"Last %@" = "最近 %@";
+"%d / %d" = "%d / %d";
+"× %d" = "× %d";
+"%@ pts (%@)" = "%@ 分/週 (%@)";
+"%@ (%@)" = "%@ (%@)";
+"%@ pts" = "%@ 分";
+"%@ %@" = "%@ %@";
+"Total" = "總分";
+"95%% Confidence Interval (Sum)" = "95%% 置信區間(合計)";
+"n = %d" = "樣本 n = %d";
+"Predict Next Score" = "預測下次成績";
+"Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "基於最近 5 次該科目成績,預測下次考試的 95%% 置信區間。";
+"Predict Total Score" = "預測總分";
+"Predicts each subject separately (95% confidence interval), then sums the totals." = "按科目分別預測(95%% 置信區間),再加總為總分。";
+"End Date" = "結束日期";
+"Subjects" = "科目";
+"All Day" = "全天";
+"All-day subjects use one calendar event; subjects with time slots use individual events." = "全天科目共用一個日曆事件,有具體時間的科目各自一個事件。";
+"Will add an all-day event to your system calendar with a 1-day advance reminder." = "會在系統日曆新增一個全天事件,並設定提前 1 天提醒。";
+"Comprehensive" = "綜合";
+"No related mistakes across these subjects" = "這些科目暫無關聯錯題";

@@ -454,6 +454,18 @@
 "No images" = "No images";
 "Select" = "Select";
 
+// MasteryCurveView.swift
+"Exposures" = "Exposures";
+"No reviews yet" = "No reviews yet";
+"Review this card to start tracking your mastery progress" = "Review this card to start tracking your mastery progress";
+"reviews" = "reviews";
+"Struggling" = "Struggling";
+"Building" = "Building";
+"Familiar" = "Familiar";
+"Confident" = "Confident";
+"Mastered" = "Mastered";
+"View" = "View";
+
 // AvatarView.swift
 "Choose from Library" = "Choose from Library";
 "Take Photo" = "Take Photo";
@@ -1145,3 +1157,89 @@
 "Notes (e.g. 期末数学 ≥ 120)" = "Notes (e.g. final math ≥ 120)";
 "Set a target score per subject. You can edit later." = "Set a target score per subject. You can edit later.";
 "e.g. 2026 春季学期" = "e.g. 2026 Spring Semester";
+
+// MARK: - Exam Location / Checklist / Countdown / Share
+"Exam Location" = "Exam Location";
+"School" = "School";
+"Classroom" = "Classroom";
+"Seat" = "Seat";
+"No location set" = "No location set";
+"Pre-Exam Checklist" = "Pre-Exam Checklist";
+"No checklist items. Tap Edit to add some." = "No checklist items. Tap Edit to add some.";
+"No items yet" = "No items yet";
+"Item" = "Item";
+"Add item (e.g. 身份证, 2B 铅笔, 复习清单)" = "Add item (e.g. ID card, 2B pencil, review list)";
+"Countdown Notifications" = "Countdown Notifications";
+"Notifications disabled" = "Notifications disabled";
+"Notify me %@ day(s) before the exam" = "Notify me %@ day(s) before the exam";
+"Reschedule Notifications" = "Reschedule Notifications";
+"Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize." = "Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize.";
+"Share with Family" = "Share with Family";
+"Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc." = "Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc.";
+"Fill in the school / classroom / seat number so you can find it on exam day." = "Fill in the school / classroom / seat number so you can find it on exam day.";
+"Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list." = "Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list.";
+"Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule." = "Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule.";
+"%d day(s) before" = "%d day(s) before";
+"Checklist" = "Checklist";
+"Notifications rescheduled." = "Notifications rescheduled.";
+
+// Score Prediction (ScorePredictionEngine.swift / ScorePredictionSheet.swift / ExamView.swift)
+"Predict" = "Predict";
+"Score Prediction" = "Score Prediction";
+"Target Plan" = "Target Plan";
+"Not Enough Data" = "Not Enough Data";
+"Add at least 2 grades for this subject to enable prediction." = "Add at least 2 grades for this subject to enable prediction.";
+"95%% Confidence Interval" = "95%% Confidence Interval";
+"Predicted score range with 95%% confidence." = "Predicted score range with 95%% confidence.";
+"Engine: %@" = "Engine: %@";
+"Key Stats" = "Key Stats";
+"Sample Size" = "Sample Size";
+"Trend (per week)" = "Trend (per week)";
+"Fit Quality" = "Fit Quality";
+"Change vs. Last" = "Change vs. Last";
+"Flat" = "Flat";
+"Rising" = "Rising";
+"Falling" = "Falling";
+"Strong" = "Strong";
+"Moderate" = "Moderate";
+"Weak" = "Weak";
+"Recent Grades Used" = "Recent Grades Used";
+"(no name)" = "(no name)";
+"How to Reach Your Target" = "How to Reach Your Target";
+"Target Score" = "Target Score";
+"e.g. 130" = "e.g. 130";
+"Score Gap" = "Score Gap";
+"To %d" = "To %d";
+"pts" = "pts";
+"To safely reach %d (with 95%% confidence), you need to close the gap above your lower bound (%d)." = "To safely reach %d (with 95%% confidence), you need to close the gap above your lower bound (%d).";
+"Recommended Mistakes" = "Recommended Mistakes";
+"On Track" = "On Track";
+"Your predicted lower bound (%d) already meets or exceeds the target (%d). No extra review needed based on current trend." = "Your predicted lower bound (%d) already meets or exceeds the target (%d). No extra review needed based on current trend.";
+"No mistakes found for this subject yet. Add some to get targeted recommendations." = "No mistakes found for this subject yet. Add some to get targeted recommendations.";
+"Mastery %d%%" = "Mastery %d%%";
+"Linear Regression" = "Linear Regression";
+"Core ML (Beta)" = "Core ML (Beta)";
+"Local regression, no network required." = "Local regression, no network required.";
+"On-device ML model, currently disabled." = "On-device ML model, currently disabled.";
+"Last %d" = "Last %d";
+"Last %@" = "Last %@";
+"%d / %d" = "%d / %d";
+"× %d" = "× %d";
+"%@ pts (%@)" = "%@ pts (%@)";
+"%@ (%@)" = "%@ (%@)";
+"%@ pts" = "%@ pts";
+"%@ %@" = "%@ %@";
+"Total" = "Total";
+"95%% Confidence Interval (Sum)" = "95%% Confidence Interval (Sum)";
+"n = %d" = "n = %d";
+"Predict Next Score" = "Predict Next Score";
+"Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam.";
+"Predict Total Score" = "Predict Total Score";
+"Predicts each subject separately (95% confidence interval), then sums the totals." = "Predicts each subject separately (95% confidence interval), then sums the totals.";
+"End Date" = "End Date";
+"Subjects" = "Subjects";
+"All Day" = "All Day";
+"All-day subjects use one calendar event; subjects with time slots use individual events." = "All-day subjects use one calendar event; subjects with time slots use individual events.";
+"Will add an all-day event to your system calendar with a 1-day advance reminder." = "Will add an all-day event to your system calendar with a 1-day advance reminder.";
+"Comprehensive" = "Comprehensive";
+"No related mistakes across these subjects" = "No related mistakes across these subjects";
