@@ -340,6 +340,9 @@ final class ExamRecord {
     var locationSeat: String = ""
     /// 考前 N 天倒计时通知（JSON 编码 [Int]）；nil = 字段未写入（默认计划）
     var countdownNotifyDaysData: Data?
+    /// 考后复盘内容（JSON 编码 ExamReview）；nil = 尚未复盘
+    /// Post-exam review content (JSON-encoded ExamReview). nil = not yet reviewed.
+    var reviewData: Data?
 
     init(
         id: UUID,
@@ -357,7 +360,8 @@ final class ExamRecord {
         locationSchool: String = "",
         locationClassroom: String = "",
         locationSeat: String = "",
-        countdownNotifyDaysData: Data? = nil
+        countdownNotifyDaysData: Data? = nil,
+        reviewData: Data? = nil
     ) {
         self.id = id
         self.name = name
@@ -375,6 +379,7 @@ final class ExamRecord {
         self.locationClassroom = locationClassroom
         self.locationSeat = locationSeat
         self.countdownNotifyDaysData = countdownNotifyDaysData
+        self.reviewData = reviewData
     }
 
     convenience init(from exam: Exam) {
@@ -386,6 +391,7 @@ final class ExamRecord {
         } else {
             countdownData = nil
         }
+        let reviewData: Data? = exam.examReview.flatMap { try? JSONEncoder().encode($0) }
         self.init(
             id: exam.id,
             name: exam.name,
@@ -402,7 +408,8 @@ final class ExamRecord {
             locationSchool: exam.locationSchool,
             locationClassroom: exam.locationClassroom,
             locationSeat: exam.locationSeat,
-            countdownNotifyDaysData: countdownData
+            countdownNotifyDaysData: countdownData,
+            reviewData: reviewData
         )
     }
 
@@ -421,6 +428,10 @@ final class ExamRecord {
             guard let data = countdownNotifyDaysData else { return nil }
             return try? JSONDecoder().decode([Int].self, from: data)
         }()
+        let examReview: ExamReview? = {
+            guard let data = reviewData else { return nil }
+            return try? JSONDecoder().decode(ExamReview.self, from: data)
+        }()
         return Exam(
             id: id,
             name: name,
@@ -436,7 +447,8 @@ final class ExamRecord {
             locationSchool: locationSchool,
             locationClassroom: locationClassroom,
             locationSeat: locationSeat,
-            countdownNotifyDays: countdownDays
+            countdownNotifyDays: countdownDays,
+            examReview: examReview
         )
     }
 }

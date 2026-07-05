@@ -564,6 +564,107 @@ nonisolated struct ExamChecklistItem: Identifiable, Codable, Hashable {
     }
 }
 
+// MARK: - Exam Review (考试复盘)
+
+/// 考试复盘:考完 24h 内填写的 4 段 Markdown 总结 + 关联错题。
+/// Exam review: a 4-section Markdown summary + linked mistakes, filled in
+/// within 24h after the exam ends. Stored as JSON inside `Exam.examReview`.
+nonisolated struct ExamReview: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 复盘填写时间
+    /// Timestamp when the user filled the review.
+    var reviewedAt: Date
+    /// 考了什么
+    /// "What was tested" — content / scope of the exam.
+    var whatWasTested: String
+    /// 错什么
+    /// "What went wrong" — mistakes / pain points.
+    var whatWentWrong: String
+    /// 学到什么
+    /// "What I learned" — insights / takeaways.
+    var whatLearned: String
+    /// 下次策略
+    /// "Next strategy" — concrete plan for the next exam.
+    var nextStrategy: String
+    /// 关联的错题 id 列表(同 subject 范围内多选,无反向引用)
+    /// Linked mistake note ids (multi-select within the same subject, no
+    /// reverse reference stored on MistakeNote).
+    var linkedMistakeIds: [UUID]
+
+    init(
+        id: UUID = UUID(),
+        reviewedAt: Date = Date(),
+        whatWasTested: String = "",
+        whatWentWrong: String = "",
+        whatLearned: String = "",
+        nextStrategy: String = "",
+        linkedMistakeIds: [UUID] = []
+    ) {
+        self.id = id
+        self.reviewedAt = reviewedAt
+        self.whatWasTested = whatWasTested
+        self.whatWentWrong = whatWentWrong
+        self.whatLearned = whatLearned
+        self.nextStrategy = nextStrategy
+        self.linkedMistakeIds = linkedMistakeIds
+    }
+
+    /// 把 4 段拼成一张错题的 correctSolution 文本(供"生成错题"按钮使用)。
+    /// Compose the 4 sections into a single Markdown body for the
+    /// "Generate Mistake Note" action.
+    var composedMarkdown: String {
+        """
+        ## \(WhatILearnedLabel.localized())
+
+        \(whatLearned)
+
+        ## \(NextStrategyLabel.localized())
+
+        \(nextStrategy)
+        """
+    }
+
+    /// 把 4 段拼成可分享的完整 Markdown 文本(供 ShareLink)。
+    /// Compose all 4 sections into a shareable Markdown body.
+    var fullShareText: String {
+        """
+        ## \(WhatWasTestedLabel.localized())
+
+        \(whatWasTested)
+
+        ## \(WhatWentWrongLabel.localized())
+
+        \(whatWentWrong)
+
+        ## \(WhatILearnedLabel.localized())
+
+        \(whatLearned)
+
+        ## \(NextStrategyLabel.localized())
+
+        \(nextStrategy)
+        """
+    }
+
+    /// 是否所有字段都为空(用于判断"未填写的复盘可丢弃")
+    /// Whether all sections are empty (used to discard an unsubmitted draft).
+    var isEmpty: Bool {
+        whatWasTested.isEmpty &&
+        whatWentWrong.isEmpty &&
+        whatLearned.isEmpty &&
+        nextStrategy.isEmpty &&
+        linkedMistakeIds.isEmpty
+    }
+}
+
+// Section labels kept here so both the editor view and the share text
+// formatter pull the same localized strings. Defined as file-scope
+// `nonisolated let` to avoid `@MainActor` on the struct.
+private nonisolated let WhatWasTestedLabel: String = "What Was Tested"
+private nonisolated let WhatWentWrongLabel: String = "What Went Wrong"
+private nonisolated let WhatILearnedLabel: String = "What I Learned"
+private nonisolated let NextStrategyLabel: String = "Next Strategy"
+
 // MARK: - Exam Models (考试)
 
 /// 单科目考试
@@ -600,8 +701,12 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
     /// 考前 N 天倒计时通知；nil = 使用默认 [1, 3, 5, 10, 30]
     /// 空数组 = 关闭通知
     var countdownNotifyDays: [Int]? = nil
+    /// 考后复盘内容；nil = 尚未复盘。复盘为 4 段 Markdown + 关联错题。
+    /// Post-exam review content; nil means not yet reviewed. 4-section
+    /// Markdown + linked mistakes, filled in within 24h after the exam.
+    var examReview: ExamReview? = nil
 
-    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil, phaseId: UUID? = nil, checklist: [ExamChecklistItem] = [], locationSchool: String = "", locationClassroom: String = "", locationSeat: String = "", countdownNotifyDays: [Int]? = nil) {
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil, phaseId: UUID? = nil, checklist: [ExamChecklistItem] = [], locationSchool: String = "", locationClassroom: String = "", locationSeat: String = "", countdownNotifyDays: [Int]? = nil, examReview: ExamReview? = nil) {
         self.id = id
         self.name = name
         self.examDate = date
@@ -617,6 +722,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
         self.locationClassroom = locationClassroom
         self.locationSeat = locationSeat
         self.countdownNotifyDays = countdownNotifyDays
+        self.examReview = examReview
     }
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
@@ -624,7 +730,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
     // serialized exams (without checklist / location / countdownNotifyDays)
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
-        case id, name, examDate, examEndDate, importance, subject, examName, masteryDegree, timeSlot, phaseId, checklist, locationSchool, locationClassroom, locationSeat, countdownNotifyDays
+        case id, name, examDate, examEndDate, importance, subject, examName, masteryDegree, timeSlot, phaseId, checklist, locationSchool, locationClassroom, locationSeat, countdownNotifyDays, examReview
     }
 
     init(from decoder: Decoder) throws {
@@ -644,6 +750,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
         self.locationClassroom = try c.decodeIfPresent(String.self, forKey: .locationClassroom) ?? ""
         self.locationSeat = try c.decodeIfPresent(String.self, forKey: .locationSeat) ?? ""
         self.countdownNotifyDays = try c.decodeIfPresent([Int].self, forKey: .countdownNotifyDays)
+        self.examReview = try c.decodeIfPresent(ExamReview.self, forKey: .examReview)
     }
 }
 

@@ -1249,3 +1249,32 @@
 "Will add an all-day event to your system calendar with a 1-day advance reminder." = "会在系统日历添加一个全天事件,并设置提前 1 天提醒。";
 "Comprehensive" = "综合";
 "No related mistakes across these subjects" = "这些科目暂无关联错题";
+
+// MARK: - Exam Review (复盘)
+"Exam Review" = "复盘";
+"Fill Out Review" = "填写复盘";
+"Edit Review" = "编辑复盘";
+"Reviewed On" = "复盘于";
+"Review Reminder" = "复盘提醒";
+"Review Window Closed" = "24h 复盘窗口已关闭。但仍可现在填写,适合作为延迟复盘。";
+"What Was Tested" = "考了什么";
+"What Went Wrong" = "错什么";
+"What I Learned" = "学到什么";
+"Next Strategy" = "下次策略";
+"Linked Mistakes" = "关联的错题";
+"Generate Mistake Note" = "生成错题";
+"Share Review" = "分享复盘";
+"Post-Exam Review" = "考后复盘";
+"Template" = "模板";
+"Empty" = "空白";
+"Mistake Note Added" = "已添加错题";
+"%d selected" = "已选 %d 项";
+"%d mistakes" = "%d 道错题";
+"Weekly review for this exam is here. Fill in: tested / wrong / learned / next strategy." = "这场考试的复盘时间到了,请填写:考了什么 / 错什么 / 学到什么 / 下次策略。";
+"4-section Markdown: tested / wrong / learned / strategy" = "4 段 Markdown 模板:考了什么 / 错什么 / 学到什么 / 下次策略";
+"A reflection filled in within 24h of the exam. Edit anytime to add new insights." = "考试结束 24h 内填写的复盘,任何时候都能编辑以补充新感悟。";
+"Tick mistakes you made on this exam. They'll be linked to the review but won't change the original mistake notes." = "勾选本次考试中做错的题,这些错题会被关联到复盘,但不会修改错题本身。";
+"Creates a new mistake note from this review, auto-enrolled in SRS." = "基于本复盘创建一张错题,并自动加入 SRS 复习队列。";
+"Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "适合希望把本次复盘归档到错题本,纳入间隔复习的场景。";
+"%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ 的复盘时间到了,填写:考了什么 / 错什么 / 学到什么 / 下次策略。";
+"已创建错题 \"%@\",并加入 SRS 复习队列。" = "已创建错题「%@」,并加入 SRS 复习队列。";

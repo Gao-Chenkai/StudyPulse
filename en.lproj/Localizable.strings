@@ -1243,3 +1243,32 @@
 "Will add an all-day event to your system calendar with a 1-day advance reminder." = "Will add an all-day event to your system calendar with a 1-day advance reminder.";
 "Comprehensive" = "Comprehensive";
 "No related mistakes across these subjects" = "No related mistakes across these subjects";
+
+// MARK: - Exam Review (复盘)
+"Exam Review" = "Exam Review";
+"Fill Out Review" = "Fill Out Review";
+"Edit Review" = "Edit Review";
+"Reviewed On" = "Reviewed on";
+"Review Reminder" = "Time to Reflect";
+"Review Window Closed" = "The 24h review window has closed. You can still fill it out now — useful as a delayed reflection.";
+"What Was Tested" = "What Was Tested";
+"What Went Wrong" = "What Went Wrong";
+"What I Learned" = "What I Learned";
+"Next Strategy" = "Next Strategy";
+"Linked Mistakes" = "Linked Mistakes";
+"Generate Mistake Note" = "Generate Mistake Note";
+"Share Review" = "Share Review";
+"Post-Exam Review" = "Post-Exam Review";
+"Template" = "Template";
+"Empty" = "Empty";
+"Mistake Note Added" = "Mistake Note Added";
+"%d selected" = "%d selected";
+"%d mistakes" = "%d mistakes";
+"Weekly review for this exam is here. Fill in: tested / wrong / learned / next strategy." = "Weekly review for this exam is here. Fill in: tested / wrong / learned / next strategy.";
+"4-section Markdown: tested / wrong / learned / strategy" = "4-section Markdown: tested / wrong / learned / strategy";
+"A reflection filled in within 24h of the exam. Edit anytime to add new insights." = "A reflection filled in within 24h of the exam. Edit anytime to add new insights.";
+"Tick mistakes you made on this exam. They'll be linked to the review but won't change the original mistake notes." = "Tick mistakes you made on this exam. They'll be linked to the review but won't change the original mistake notes.";
+"Creates a new mistake note from this review, auto-enrolled in SRS." = "Creates a new mistake note from this review, auto-enrolled in SRS.";
+"Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "Useful when you want to attach this review to your mistake notebook for spaced-repetition review.";
+"%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy.";
+"已创建错题 \"%@\",并加入 SRS 复习队列。" = "Created mistake note \"%@\" and added it to the SRS review queue.";

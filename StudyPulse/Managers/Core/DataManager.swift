@@ -201,6 +201,9 @@ final class DataManager: ObservableObject {
         // 启动时同步 SRS 复习通知
         SRSReviewNotifications.shared.rescheduleAll(mistakes: self.mistakeSets)
 
+        // 启动时同步考后复盘通知(处理 phase 切换 / 日期编辑 / 老数据无 review 字段)
+        ExamReviewNotifications.shared.rescheduleAll(exams: self.examSets)
+
         // 启动时同步考试与趋势数据到 Widget
         WidgetDataSyncManager.syncUpcomingExams(
             examSets: self.examSets,
@@ -799,6 +802,7 @@ final class DataManager: ObservableObject {
                     }
                     return nil
                 }()
+                entity.reviewData = updated.examReview.flatMap { try? JSONEncoder().encode($0) }
                 try context.save()
             } else {
                 // 没找到就插入新记录
@@ -810,6 +814,34 @@ final class DataManager: ObservableObject {
         }
         Log.data.info("更新考试 / Updated exam: name=\(updated.name, privacy: .public) id=\(updated.id.uuidString, privacy: .public)")
         Log.record(.info, category: "Data", message: "更新考试: \(updated.name) checklist=\(updated.checklist.count) location.school=\(updated.locationSchool)")
+
+        // 调度考后复盘提醒(内部会跳过已复盘 / 过期触发点)
+        ExamReviewNotifications.shared.schedule(for: updated)
+    }
+
+    /// 写入 / 清除一场考试的复盘(ExamReview),并落盘 SwiftData。
+    /// 已复盘时自动取消 24h 复盘提醒。
+    /// Save or clear an exam's `ExamReview` to SwiftData.
+    /// Auto-cancels the 24h review reminder once a review is filled.
+    /// - Parameters:
+    ///   - examId: 考试 UUID
+    ///   - review: 复盘内容;传 nil = 清除已有复盘
+    func updateExamReview(_ examId: UUID, review: ExamReview?) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else {
+            Log.data.warning("未找到要复盘的考试 / Exam not found for review: id=\(examId.uuidString, privacy: .public)")
+            return
+        }
+        examSets[index].examReview = review
+        // 复用 updateExam 写盘(它会同步 reviewData)
+        updateExam(examSets[index])
+        // 已复盘 → 取消未来提醒(若用户主动清除复盘,则重新调度)
+        if review != nil {
+            ExamReviewNotifications.shared.cancel(for: examId)
+        } else {
+            ExamReviewNotifications.shared.schedule(for: examSets[index])
+        }
+        Log.data.info("更新考试复盘 / Updated exam review: id=\(examId.uuidString, privacy: .public) hasReview=\(review != nil, privacy: .public)")
+        Log.record(.info, category: "Data", message: "更新考试复盘: id=\(examId.uuidString) hasReview=\(review != nil)")
     }
 
     /// 切换某条 checklist item 的勾选状态，并落盘。
@@ -935,6 +967,10 @@ final class DataManager: ObservableObject {
         }
         examSets.append(contentsOf: storedSingle)
         comprehensiveExamSets.append(contentsOf: storedComp)
+        // 调度每场新加考试的考后复盘提醒
+        for e in storedSingle {
+            ExamReviewNotifications.shared.schedule(for: e)
+        }
         Log.data.info("批量新增考试 / Batch added exams: single=\(storedSingle.count, privacy: .public) comprehensive=\(storedComp.count, privacy: .public)")
         Log.record(.info, category: "Data", message: "批量新增考试 / Batch added exams: single=\(storedSingle.count) comprehensive=\(storedComp.count)")
         syncExamsToWidget()

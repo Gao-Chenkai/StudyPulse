@@ -16,6 +16,8 @@ struct ExamDetailView: View {
     @State private var calendarAlertMessage = ""
     /// 预测目标(非空时弹出 ScorePredictionSheet)
     @State private var predictionTarget: PredictionTarget? = nil
+    /// 复盘编辑器(为空时不弹)
+    @State private var showingReviewSheet = false
 
     // 关联的错题
     var relatedMistakes: [MistakeNote] {
@@ -283,6 +285,9 @@ struct ExamDetailView: View {
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
+            // MARK: - 考试复盘
+            examReviewSection
+
             // MARK: - 预测入口
             Section {
                 Button {
@@ -342,6 +347,11 @@ struct ExamDetailView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             ExamDetailEditView(exam: currentExam)
+                .environmentObject(dataManager)
+                .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingReviewSheet) {
+            ExamReviewView(exam: currentExam)
                 .environmentObject(dataManager)
                 .adaptiveSheet()
         }
@@ -421,6 +431,152 @@ struct ExamDetailView: View {
         lines.append("")
         lines.append("— from StudyPulse")
         return lines.joined(separator: "\n")
+    }
+
+    // MARK: - 复盘 Section
+    // Exam review section: shows 4-section rendered markdown, lets user
+    // fill/edit the review, and share the full review as Markdown.
+
+    /// 4 段复盘 Section(若有则展示 + 分享;若否则引导填写 + 24h 提醒说明)
+    @ViewBuilder
+    private var examReviewSection: some View {
+        if let review = currentExam.examReview {
+            Section {
+                // 顶部元信息行:复盘时间 + 操作按钮
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(Color(.systemGreen))
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reviewed On".localized())
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(review.reviewedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    Button {
+                        showingReviewSheet = true
+                    } label: {
+                        Text("Edit Review".localized())
+                            .font(.subheadline)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+                // 4 段折叠预览
+                ReviewSectionRow(
+                    title: "What Was Tested".localized(),
+                    icon: "doc.text.magnifyingglass",
+                    markdown: review.whatWasTested
+                )
+                ReviewSectionRow(
+                    title: "What Went Wrong".localized(),
+                    icon: "exclamationmark.triangle",
+                    markdown: review.whatWentWrong
+                )
+                ReviewSectionRow(
+                    title: "What I Learned".localized(),
+                    icon: "lightbulb",
+                    markdown: review.whatLearned
+                )
+                ReviewSectionRow(
+                    title: "Next Strategy".localized(),
+                    icon: "arrow.uturn.forward",
+                    markdown: review.nextStrategy
+                )
+
+                // 关联错题
+                if !review.linkedMistakeIds.isEmpty {
+                    NavigationLink {
+                        LinkedMistakesListView(
+                            mistakeIds: review.linkedMistakeIds,
+                            subject: currentExam.subject
+                        )
+                        .environmentObject(dataManager)
+                    } label: {
+                        HStack {
+                            Image(systemName: "link")
+                                .foregroundColor(.accentColor)
+                            Text("Linked Mistakes".localized())
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(String(format: "%d".localized(), review.linkedMistakeIds.count))
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                }
+
+                // 分享整段复盘
+                ShareLink(
+                    item: review.fullShareText,
+                    subject: Text("Exam Review · \(currentExam.name)"),
+                    message: Text("Post-Exam Review".localized())
+                ) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                        Text("Share Review".localized())
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            } header: {
+                Text("Exam Review".localized())
+                    .foregroundColor(Color(.secondaryLabel))
+            } footer: {
+                Text("A reflection filled in within 24h of the exam. Edit anytime to add new insights.".localized())
+                    .foregroundColor(.secondary)
+            }
+        } else {
+            Section {
+                Button {
+                    showingReviewSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "list.bullet.rectangle")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Fill Out Review".localized())
+                                .foregroundColor(.accentColor)
+                                .fontWeight(.medium)
+                            Text("4-section Markdown: tested / wrong / learned / strategy".localized())
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            } header: {
+                Text("Exam Review".localized())
+                    .foregroundColor(Color(.secondaryLabel))
+            } footer: {
+                Text(reviewReminderFooter)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    /// "复盘窗口说明" 页脚文案:考试已结束 24h 后改为"窗口已关闭"提示
+    private var reviewReminderFooter: String {
+        let baseDate = currentExam.examEndDate ?? currentExam.examDate
+        let elapsed = Date().timeIntervalSince(baseDate)
+        if elapsed > 24 * 3600 {
+            return "The 24h review window has closed. You can still fill it out now — useful as a delayed reflection.".localized()
+        } else {
+            return "We'll remind you to fill this out 24h after the exam ends.".localized()
+        }
     }
 
     // 根据掌握程度确定颜色
@@ -584,4 +740,106 @@ struct RelatedMistakeCard: View {
     return ExamDetailView(exam: testExam)
         .environmentObject(dm)
         .preferredColorScheme(.dark)
+}
+
+// MARK: - 复盘 4 段行(折叠预览)
+
+/// 复盘单段折叠行:点击展开渲染后的 Markdown。
+/// Collapsible row showing a single review section's rendered markdown.
+struct ReviewSectionRow: View {
+    let title: String
+    let icon: String
+    let markdown: String
+
+    @State private var isExpanded: Bool = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Empty".localized())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            } else {
+                MarkdownPreviewView(text: markdown)
+                    .frame(minHeight: 80)
+                    .frame(maxHeight: 240)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 22)
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Spacer()
+                if markdown.isEmpty {
+                    Text("Empty".localized())
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .listRowBackground(Color(.secondarySystemGroupedBackground))
+    }
+}
+
+// MARK: - 关联错题列表(从复盘跳进去看)
+
+/// 复盘"关联错题"行点击进入的子页面:列出复盘里勾选的所有错题。
+/// Sub-page shown when tapping "Linked Mistakes" on the review — lists
+/// the mistakes the user ticked in the review editor.
+struct LinkedMistakesListView: View {
+    let mistakeIds: [UUID]
+    let subject: String
+
+    @EnvironmentObject var dataManager: DataManager
+
+    /// 实际能查到的错题(过滤掉已删除的 id)
+    private var resolved: [MistakeNote] {
+        dataManager.mistakeSets.filter { mistakeIds.contains($0.id) }
+    }
+
+    var body: some View {
+        Form {
+            if resolved.isEmpty {
+                Section {
+                    HStack {
+                        Image(systemName: "tray")
+                            .foregroundColor(.secondary)
+                        Text("No related mistakes for this subject".localized())
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } else {
+                Section {
+                    ForEach(resolved) { mistake in
+                        NavigationLink {
+                            MistakeSetDetailView(mistakeSet: mistake)
+                                .environmentObject(dataManager)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(mistake.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                if !mistake.subject.isEmpty {
+                                    Text(mistake.subject.localized())
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Linked Mistakes".localized())
+                } footer: {
+                    Text(String(format: "%d mistakes".localized(), resolved.count))
+                }
+            }
+        }
+        .navigationTitle("Linked Mistakes".localized())
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }

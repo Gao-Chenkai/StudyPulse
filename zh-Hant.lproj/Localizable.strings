@@ -1249,3 +1249,32 @@
 "Will add an all-day event to your system calendar with a 1-day advance reminder." = "會在系統日曆新增一個全天事件,並設定提前 1 天提醒。";
 "Comprehensive" = "綜合";
 "No related mistakes across these subjects" = "這些科目暫無關聯錯題";
+
+// MARK: - Exam Review (復盤)
+"Exam Review" = "復盤";
+"Fill Out Review" = "填寫復盤";
+"Edit Review" = "編輯復盤";
+"Reviewed On" = "復盤於";
+"Review Reminder" = "復盤提醒";
+"Review Window Closed" = "24h 復盤窗口已關閉。但仍可現在填寫,適合作為延遲復盤。";
+"What Was Tested" = "考了什麼";
+"What Went Wrong" = "錯什麼";
+"What I Learned" = "學到什麼";
+"Next Strategy" = "下次策略";
+"Linked Mistakes" = "關聯的錯題";
+"Generate Mistake Note" = "生成錯題";
+"Share Review" = "分享復盤";
+"Post-Exam Review" = "考後復盤";
+"Template" = "模板";
+"Empty" = "空白";
+"Mistake Note Added" = "已添加錯題";
+"%d selected" = "已選 %d 項";
+"%d mistakes" = "%d 道錯題";
+"Weekly review for this exam is here. Fill in: tested / wrong / learned / next strategy." = "這場考試的復盤時間到了,請填寫:考了什麼 / 錯什麼 / 學到什麼 / 下次策略。";
+"4-section Markdown: tested / wrong / learned / strategy" = "4 段 Markdown 模板:考了什麼 / 錯什麼 / 學到什麼 / 下次策略";
+"A reflection filled in within 24h of the exam. Edit anytime to add new insights." = "考試結束 24h 內填寫的復盤,任何時候都能編輯以補充新感悟。";
+"Tick mistakes you made on this exam. They'll be linked to the review but won't change the original mistake notes." = "勾選本次考試中做錯的題,這些錯題會被關聯到復盤,但不會修改錯題本身。";
+"Creates a new mistake note from this review, auto-enrolled in SRS." = "基於本復盤建立一張錯題,並自動加入 SRS 複習佇列。";
+"Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "適合希望把本次復盤歸檔到錯題本,納入間隔複習的場景。";
+"%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ 的復盤時間到了,請填寫:考了什麼 / 錯什麼 / 學到什麼 / 下次策略。";
+"已创建错题 \"%@\",并加入 SRS 复习队列。" = "已建立錯題「%@」,並加入 SRS 複習佇列。";

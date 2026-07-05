@@ -1249,3 +1249,32 @@
 "Will add an all-day event to your system calendar with a 1-day advance reminder." = "시스템 캘린더에 종일 일정을 추가하고 1일 전 알림을 설정합니다.";
 "Comprehensive" = "종합";
 "No related mistakes across these subjects" = "이 과목들과 관련된 오답이 없습니다";
+
+// MARK: - Exam Review (회고)
+"Exam Review" = "회고";
+"Fill Out Review" = "회고 작성";
+"Edit Review" = "회고 수정";
+"Reviewed On" = "회고일";
+"Review Reminder" = "회고 알림";
+"Review Window Closed" = "24시간 회고 시간이 종료되었습니다. 지금 작성해도 늦지 않습니다.";
+"What Was Tested" = "시험 범위";
+"What Went Wrong" = "틀린 부분";
+"What I Learned" = "배운 점";
+"Next Strategy" = "다음 전략";
+"Linked Mistakes" = "관련 오답";
+"Generate Mistake Note" = "오답 노트 생성";
+"Share Review" = "회고 공유";
+"Post-Exam Review" = "시험 후 회고";
+"Template" = "템플릿";
+"Empty" = "비어있음";
+"Mistake Note Added" = "오답 노트 추가됨";
+"%d selected" = "%d개 선택됨";
+"%d mistakes" = "오답 %d개";
+"Weekly review for this exam is here. Fill in: tested / wrong / learned / next strategy." = "이 시험의 회고 시간입니다. 시험 범위 / 틀린 부분 / 배운 점 / 다음 전략을 작성해 주세요.";
+"4-section Markdown: tested / wrong / learned / strategy" = "4개 섹션 Markdown: 시험 범위 / 틀린 부분 / 배운 점 / 다음 전략";
+"A reflection filled in within 24h of the exam. Edit anytime to add new insights." = "시험 종료 후 24시간 이내에 작성하는 회고입니다. 언제든지 편집 가능.";
+"Tick mistakes you made on this exam. They'll be linked to the review but won't change the original mistake notes." = "이번 시험에서 틀린 오답을 선택하세요. 회고에 링크되지만 원본 오답은 변경되지 않습니다.";
+"Creates a new mistake note from this review, auto-enrolled in SRS." = "이 회고로 오답 노트를 생성하고 SRS 복습 큐에 자동 등록합니다.";
+"Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "이 회고를 오답 노트에 첨부하여 간격 반복 복습에 활용할 때 유용합니다.";
+"%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ 회고 시간입니다. 시험 범위 / 틀린 부분 / 배운 점 / 다음 전략을 작성해 주세요.";
+"已创建错题 \"%@\",并加入 SRS 复习队列。" = "오답 노트「%@」를 생성하고 SRS 복습 큐에 추가했습니다.";
