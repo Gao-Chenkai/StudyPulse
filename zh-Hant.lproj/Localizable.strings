@@ -1226,6 +1226,8 @@
 "Linear Regression" = "線性回歸";
 "Core ML (Beta)" = "Core ML (Beta)";
 "Local regression, no network required." = "本地回歸,無需連線。";
+"EWMA-weighted regression, no network required." = "EWMA 加權回歸,無需連線。";
+"EWMA + mistake exposure bivariate regression, no network required." = "EWMA + 錯題曝光二元回歸,無需連線。";
 "On-device ML model, currently disabled." = "本地機器學習模型,暫未啟用。";
 "Last %d" = "最近 %d";
 "Last %@" = "最近 %@";
@@ -1238,6 +1240,26 @@
 "Total" = "總分";
 "95%% Confidence Interval (Sum)" = "95%% 置信區間(合計)";
 "n = %d" = "樣本 n = %d";
+"95%% Confidence Interval (Sum), ±%.1f pts" = "95%% 置信區間(合計),±%.1f 分";
+"n = %d, ±%.1f pts" = "樣本 n = %d,±%.1f 分";
+// v1.4:二元回歸(錯題曝光貢獻 + mastery 縮窄 CI)
+"Exposure Lift" = "錯題曝光貢獻";
+"Avg Mastery" = "平均掌握度";
+"每 10 次復習 → %@ %@" = "每 10 次複習 → %@ %@";
+"%d%% (CI −%d%%)" = "%d%% (CI 縮窄 −%d%%)";
+"γ×10 = %@ %@" = "γ×10 = %@ %@";
+"M=%d%%" = "掌握度 %d%%";
+// EWMA + outlier (v1.3)
+"Prediction Range" = "預測範圍";
+"Based on %d exams, ±%.1f pts" = "基於 %d 次考試,誤差約 ±%.1f 分";
+"Window" = "視窗";
+"%dd / EWMA %dd" = "%d 天 / EWMA %d 天";
+"Outlier Detected" = "偵測到離群點";
+"z = %+.1fσ" = "z = %+.1fσ";
+"Last exam may have been affected by special factors (illness, bad day, etc.). Treat the prediction with extra caution." = "最近一次考試可能受特殊因素影響(身體不適、當天狀態不佳等),預測結果僅供參考,請謹慎對待。";
+"Grades Used" = "使用的成績";
+"%@ – %@" = "%@ – %@";
+"Score %@, fitted %@, |residual| %@" = "得分 %@,擬合 %@,|殘差| %@";
 "Predict Next Score" = "預測下次成績";
 "Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "基於最近 5 次該科目成績,預測下次考試的 95%% 置信區間。";
 "Predict Total Score" = "預測總分";

@@ -27,15 +27,27 @@ struct ScorePredictionSheet: View {
     /// 退出回调
     let onDismiss: () -> Void
 
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingDetail = false
     @State private var didLog = false
 
     private let predictor: ScorePredictor = ScorePredictorFactory.active
 
+    /// 同科目错题(已过滤);用于驱动 v1.4 二元回归 + mastery 缩窄 CI
+    private var subjectMistakes: [MistakeNote] {
+        container.mistakeRepo.filteredMistakeSets
+            .filter { $0.subject == exam.subject }
+    }
+
     private var predictionResult: ScorePredictionResult? {
-        predictor.predict(history: history, examDate: exam.examDate, fullScore: fullScore)
+        let context = MistakeContext.build(from: subjectMistakes)
+        return predictor.predict(
+            history: history,
+            mistakeContext: context,
+            examDate: exam.examDate,
+            fullScore: fullScore
+        )
     }
 
     var body: some View {
@@ -87,6 +99,11 @@ struct ScorePredictionSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 // 头部：考试信息 + 引擎名
                 headerCard(result: result)
+
+                // 离群点警告(若最近一次考试残差 > 3σ)
+                if let warning = result.outlierWarning {
+                    outlierWarningCard(warning: warning)
+                }
 
                 // 95% CI 柱状图
                 ciBarChartCard(result: result)
@@ -151,11 +168,13 @@ struct ScorePredictionSheet: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                if let r2 = result.rSquared {
-                    Text("R² = \(String(format: "%.2f", r2))")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(String(
+                    format: "±%.1f %@".localized(),
+                    result.halfWidth,
+                    "pts".localized()
+                ))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(envManager.effectiveAccentColor)
             }
 
             // 主柱状图
@@ -243,10 +262,55 @@ struct ScorePredictionSheet: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
+            // 主指标:基于 N 次考试,误差约 ±X 分(替代旧的 Strong/Moderate/Weak 标签)
             statsRow(
-                title: "Sample Size".localized(),
-                value: "\(result.usedSampleSize)"
+                title: "Prediction Range".localized(),
+                value: String(
+                    format: "Based on %d exams, ±%.1f pts".localized(),
+                    result.usedSampleSize,
+                    result.halfWidth
+                )
             )
+
+            // v1.4:错题曝光贡献 γ(每 10 次复习 → +X.X 分)
+            if let gamma = result.exposureLift {
+                let perTenReviews = gamma * 10
+                let formattedPerTen = String(format: "%+0.1f", perTenReviews)
+                statsRow(
+                    title: "Exposure Lift".localized(),
+                    value: String(
+                        format: "每 10 次复习 → %@ %@".localized(),
+                        formattedPerTen,
+                        "pts".localized()
+                    ),
+                    valueColor: gamma >= 0 ? Color(.systemGreen) : Color(.systemRed)
+                )
+            }
+
+            // v1.4:mastery 缩窄 CI(原始 ±X 分 → 缩窄后 ±Y 分)
+            if result.avgMastery > 0 {
+                let shrunkPct = Int((1.0 - result.masteryCIMultiplier) * 100)
+                statsRow(
+                    title: "Avg Mastery".localized(),
+                    value: String(
+                        format: "%d%% (CI −%d%%)".localized(),
+                        Int(result.avgMastery * 100),
+                        shrunkPct
+                    ),
+                    valueColor: Color(.systemBlue)
+                )
+            }
+
+            // 窗口 + EWMA 上下文(供懂统计的用户看)
+            statsRow(
+                title: "Window".localized(),
+                value: String(
+                    format: "%dd / EWMA %dd".localized(),
+                    Int(result.windowDays),
+                    Int(result.halfLifeDays)
+                )
+            )
+
             if let slope = result.slope {
                 let perWeek = slope * 7
                 let trendKey: String = (abs(perWeek) < 0.05) ? "Flat" : (perWeek > 0 ? "Rising" : "Falling")
@@ -255,14 +319,6 @@ struct ScorePredictionSheet: View {
                 statsRow(
                     title: "Trend (per week)".localized(),
                     value: String(format: "%@ pts (%@)".localized(), formatted, trend)
-                )
-            }
-            if let r2 = result.rSquared {
-                let qualityKey: String = (r2 >= 0.8) ? "Strong" : (r2 >= 0.4 ? "Moderate" : "Weak")
-                let quality = qualityKey.localized()
-                statsRow(
-                    title: "Fit Quality".localized(),
-                    value: String(format: "%@ (%@)".localized(), quality, String(format: "%.2f", r2))
                 )
             }
             if let delta = result.delta {
@@ -283,6 +339,49 @@ struct ScorePredictionSheet: View {
         )
     }
 
+    /// 离群点警告卡:最近一次考试残差 > 3σ 时展示
+    @ViewBuilder
+    private func outlierWarningCard(warning: OutlierWarning) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(Color(.systemOrange))
+                Text("Outlier Detected".localized())
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(String(format: "z = %+.1fσ".localized(), warning.zScore))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(Color(.systemOrange))
+            }
+            Text("Last exam may have been affected by special factors (illness, bad day, etc.). Treat the prediction with extra caution.".localized())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                Text(String(format: "%@ %@".localized(), warning.date.formatted(date: .abbreviated, time: .omitted), "·"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text(String(format: "Score %@, fitted %@, |residual| %@".localized(),
+                            String(format: "%.1f", warning.score),
+                            String(format: "%.1f", warning.fittedValue),
+                            String(format: "%.1f", abs(warning.residual))))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.systemOrange).opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color(.systemOrange).opacity(0.35), lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     private func statsRow(title: String, value: String, valueColor: Color = .primary) -> some View {
         HStack {
@@ -296,16 +395,32 @@ struct ScorePredictionSheet: View {
         }
     }
 
-    /// 历史样本列表（最近 N 条）
+    /// 历史样本列表(EWMA 窗口内的所有成绩)
     @ViewBuilder
     private func historyCard(result: ScorePredictionResult) -> some View {
-        let recent = history.sorted(by: { $0.date > $1.date }).prefix(result.usedSampleSize)
-        if !recent.isEmpty {
+        // 用 result.dataRange(参与回归的实际范围)排序,不再硬切 N 条
+        let recent = result.dataRange.map { range in
+            history.filter { range.contains($0.date) }
+        } ?? []
+        let sorted = recent.sorted(by: { $0.date > $1.date })
+        if !sorted.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Recent Grades Used".localized())
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                ForEach(Array(recent), id: \.id) { g in
+                HStack {
+                    Text("Grades Used".localized())
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if let range = result.dataRange {
+                        Text(String(
+                            format: "%@ – %@".localized(),
+                            range.lowerBound.formatted(date: .abbreviated, time: .omitted),
+                            range.upperBound.formatted(date: .abbreviated, time: .omitted)
+                        ))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                ForEach(sorted, id: \.id) { g in
                     HStack {
                         Text(g.date, format: .dateTime.month().day())
                             .font(.caption)
@@ -390,7 +505,7 @@ struct ScorePredictionDetailView: View {
     let result: ScorePredictionResult
     let fullScore: Double
 
-    @EnvironmentObject var dataManager: DataManager
+    @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
     @State private var targetScoreText: String = ""
@@ -399,7 +514,7 @@ struct ScorePredictionDetailView: View {
 
     /// 候选错题：同科目的所有错题（按 active phase 过滤）。
     private var candidateMistakes: [MistakeNote] {
-        dataManager.filteredMistakeSets
+        container.mistakeRepo.filteredMistakeSets
             .filter { $0.subject == exam.subject && !$0.title.isEmpty }
             .sorted { $0.date > $1.date }
     }
@@ -659,7 +774,7 @@ struct ScorePredictionDetailView: View {
         fullScore: 150,
         onDismiss: {}
     )
-    .environmentObject(DataManager())
+    .environment(RepositoryContainer())
     .environmentObject(AppEnvironmentManager.shared)
 }
 
@@ -719,6 +834,7 @@ struct ComprehensiveScorePredictionSheet: View {
     /// 总分卡
     @ViewBuilder
     private var totalCard: some View {
+        let totalHalfWidth = (target.totalUpper - target.totalLower) / 2.0
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Total".localized())
@@ -744,7 +860,11 @@ struct ComprehensiveScorePredictionSheet: View {
                     .font(.title2.weight(.bold))
                     .foregroundColor(.secondary)
             }
-            Text("95% Confidence Interval (Sum)".localized())
+            Text(String(
+                format: "95%% Confidence Interval (Sum), ±%.1f %@".localized(),
+                totalHalfWidth,
+                "pts".localized()
+            ))
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -786,9 +906,33 @@ struct ComprehensiveScorePredictionSheet: View {
                     .font(.callout.weight(.bold))
                     .foregroundColor(.secondary)
             }
-            Text(String(format: "n = %d".localized(), r.usedSampleSize))
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                Text(String(format: "n = %d, ±%.1f %@".localized(),
+                            r.usedSampleSize,
+                            r.halfWidth,
+                            "pts".localized()))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                if r.outlierWarning != nil {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(Color(.systemOrange))
+                }
+                if let gamma = r.exposureLift {
+                    let perTen = String(format: "%+.1f", gamma * 10)
+                    Text(String(format: "γ×10 = %@ %@".localized(),
+                                perTen,
+                                "pts".localized()))
+                        .font(.caption2)
+                        .foregroundColor(gamma >= 0 ? Color(.systemGreen) : Color(.systemRed))
+                }
+                if r.avgMastery > 0 {
+                    Text(String(format: "M=%d%%".localized(),
+                                Int(r.avgMastery * 100)))
+                        .font(.caption2)
+                        .foregroundColor(Color(.systemBlue))
+                }
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

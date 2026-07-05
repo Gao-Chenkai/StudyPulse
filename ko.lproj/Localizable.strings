@@ -1226,6 +1226,8 @@
 "Linear Regression" = "선형 회귀";
 "Core ML (Beta)" = "Core ML (Beta)";
 "Local regression, no network required." = "로컬 회귀, 네트워크 불필요.";
+"EWMA-weighted regression, no network required." = "EWMA 가중 회귀, 네트워크 불필요.";
+"EWMA + mistake exposure bivariate regression, no network required." = "EWMA + 오답 노출 이변량 회귀, 네트워크 불필요.";
 "On-device ML model, currently disabled." = "온디바이스 ML 모델, 현재 비활성화.";
 "Last %d" = "최근 %d";
 "Last %@" = "최근 %@";
@@ -1235,9 +1237,29 @@
 "%@ (%@)" = "%@ (%@)";
 "%@ pts" = "%@ 점";
 "%@ %@" = "%@ %@";
-"Total" = "합계";
+"Total" = "총점";
 "95%% Confidence Interval (Sum)" = "95%% 신뢰 구간(합계)";
-"n = %d" = "샘플 수 n = %d";
+"n = %d" = "샘플 n = %d";
+"95%% Confidence Interval (Sum), ±%.1f pts" = "95%% 신뢰 구간(합계), ±%.1f 점";
+"n = %d, ±%.1f pts" = "샘플 n = %d, ±%.1f 점";
+// v1.4:이변량 회귀(오답 노출 기여 + mastery 축소 CI)
+"Exposure Lift" = "오답 노출 기여";
+"Avg Mastery" = "평균 숙지도";
+"每 10 次复习 → %@ %@" = "복습 10회당 → %@ %@";
+"%d%% (CI −%d%%)" = "%d%% (CI −%d%%)";
+"γ×10 = %@ %@" = "γ×10 = %@ %@";
+"M=%d%%" = "숙지도 %d%%";
+// EWMA + outlier (v1.3)
+"Prediction Range" = "예측 범위";
+"Based on %d exams, ±%.1f pts" = "%d회 시험 기반, 오차 약 ±%.1f 점";
+"Window" = "윈도우";
+"%dd / EWMA %dd" = "%d일 / EWMA %d일";
+"Outlier Detected" = "이상치 감지";
+"z = %+.1fσ" = "z = %+.1fσ";
+"Last exam may have been affected by special factors (illness, bad day, etc.). Treat the prediction with extra caution." = "최근 시험은 특수한 요인(몸살, 컨디션 저하 등)의 영향을 받았을 수 있습니다. 예측 결과는 참고용으로만 보세요.";
+"Grades Used" = "사용된 성적";
+"%@ – %@" = "%@ – %@";
+"Score %@, fitted %@, |residual| %@" = "점수 %@, 예측 %@, |잔차| %@";
 "Predict Next Score" = "다음 성적 예측";
 "Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "최근 5회 동일 과목 성적으로 다음 시험의 95%% 신뢰 구간을 예측합니다.";
 "Predict Total Score" = "총점 예측";

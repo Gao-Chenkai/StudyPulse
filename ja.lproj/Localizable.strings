@@ -1226,6 +1226,8 @@
 "Linear Regression" = "線形回帰";
 "Core ML (Beta)" = "Core ML (Beta)";
 "Local regression, no network required." = "ローカル回帰、ネットワーク不要。";
+"EWMA-weighted regression, no network required." = "EWMA 重み付き回帰、ネットワーク不要。";
+"EWMA + mistake exposure bivariate regression, no network required." = "EWMA + 間違い問題露出の二変量回帰、ネットワーク不要。";
 "On-device ML model, currently disabled." = "オンデバイス ML モデル、現在未有効。";
 "Last %d" = "前回 %d";
 "Last %@" = "前回 %@";
@@ -1237,7 +1239,27 @@
 "%@ %@" = "%@ %@";
 "Total" = "合計";
 "95%% Confidence Interval (Sum)" = "95%% 信頼区間(合計)";
-"n = %d" = "サンプル数 n = %d";
+"n = %d" = "サンプル n = %d";
+"95%% Confidence Interval (Sum), ±%.1f pts" = "95%% 信頼区間(合計)、±%.1f 点";
+"n = %d, ±%.1f pts" = "サンプル n = %d、±%.1f 点";
+// v1.4:二変量回帰(間違い問題露出 + mastery 縮小 CI)
+"Exposure Lift" = "間違い問題露出の寄与";
+"Avg Mastery" = "平均習得度";
+"每 10 次复习 → %@ %@" = "10 回の復習ごと → %@ %@";
+"%d%% (CI −%d%%)" = "%d%% (CI −%d%%)";
+"γ×10 = %@ %@" = "γ×10 = %@ %@";
+"M=%d%%" = "習得度 %d%%";
+// EWMA + outlier (v1.3)
+"Prediction Range" = "予測範囲";
+"Based on %d exams, ±%.1f pts" = "%d 回の試験に基づく、誤差約 ±%.1f 点";
+"Window" = "ウィンドウ";
+"%dd / EWMA %dd" = "%d 日 / EWMA %d 日";
+"Outlier Detected" = "外れ値を検出";
+"z = %+.1fσ" = "z = %+.1fσ";
+"Last exam may have been affected by special factors (illness, bad day, etc.). Treat the prediction with extra caution." = "前回の試験は特別な要因(体調不良や当日の調子など)の影響を受けた可能性があります。予測結果は参考程度にご覧ください。";
+"Grades Used" = "使用された成績";
+"%@ – %@" = "%@ – %@";
+"Score %@, fitted %@, |residual| %@" = "得点 %@、予測 %@、|残差| %@";
 "Predict Next Score" = "次のスコアを予測";
 "Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam." = "直近 5 回の同科目成績から次回の 95%% 信頼区間を予測します。";
 "Predict Total Score" = "合計スコアを予測";
