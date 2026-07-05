@@ -11,10 +11,10 @@ import os
 struct ExamDetailEditView: View {
     @EnvironmentObject var dataManager: DataManager
     @Environment(\.presentationMode) var presentationMode
-    
+
     // 接收要编辑的原始对象
     let originalExam: Exam
-    
+
     // 绑定到表单的状态变量 (初始化为原始值)
     @State private var name: String
     @State private var selectedSubject: String
@@ -24,7 +24,18 @@ struct ExamDetailEditView: View {
     @State private var examNote: String
     @State private var subjectStartTime: Date
     @State private var subjectEndTime: Date
-    
+    // 考前待办 / 考场 / 倒计时通知
+    @State private var checklist: [ExamChecklistItem]
+    @State private var locationSchool: String
+    @State private var locationClassroom: String
+    @State private var locationSeat: String
+    @State private var notifyDays: Set<Int>
+    @State private var newChecklistText: String = ""
+
+    /// 考前 N 天倒计时通知的候选天数
+    /// Candidate day options for the pre-exam countdown.
+    private static let candidateDays: [Int] = [1, 2, 3, 5, 7, 10, 14, 21, 30]
+
     init(exam: Exam) {
         self.originalExam = exam
         // 初始化状态
@@ -37,8 +48,14 @@ struct ExamDetailEditView: View {
         let slot = exam.timeSlot
         _subjectStartTime = State(initialValue: slot?.startTime ?? exam.examDate)
         _subjectEndTime = State(initialValue: slot?.endTime ?? Calendar.current.date(byAdding: .hour, value: 2, to: slot?.startTime ?? exam.examDate) ?? exam.examDate)
+        _checklist = State(initialValue: exam.checklist)
+        _locationSchool = State(initialValue: exam.locationSchool)
+        _locationClassroom = State(initialValue: exam.locationClassroom)
+        _locationSeat = State(initialValue: exam.locationSeat)
+        // 默认使用 [1, 3, 5, 10, 30] —— 跟 ExamDetailView / ExamPrepareNotifications 默认值保持一致
+        _notifyDays = State(initialValue: Set(exam.countdownNotifyDays ?? [1, 3, 5, 10, 30]))
     }
-    
+
     private var availableSubjects: [String] {
         dataManager.subjects.filter { $0.enabled }.map { $0.name }
     }
@@ -101,6 +118,92 @@ struct ExamDetailEditView: View {
                 Section(header: Text("Notes".localized())) {
                     TextField("Specific Exam Title or Notes".localized(), text: $examNote)
                 }
+
+                // MARK: - 考场信息
+                Section(header: Text("Exam Location".localized()),
+                        footer: Text("Fill in the school / classroom / seat number so you can find it on exam day.".localized())) {
+                    TextField("School".localized(), text: $locationSchool)
+                    TextField("Classroom".localized(), text: $locationClassroom)
+                    TextField("Seat".localized(), text: $locationSeat)
+                }
+
+                // MARK: - 考前待办清单
+                Section(header: Text("Pre-Exam Checklist".localized()),
+                        footer: Text("Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list.".localized())) {
+                    if checklist.isEmpty {
+                        HStack {
+                            Image(systemName: "checklist")
+                                .foregroundColor(.secondary)
+                            Text("No items yet".localized())
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                    } else {
+                        ForEach(checklist.sorted(by: { $0.sortOrder < $1.sortOrder })) { item in
+                            HStack {
+                                Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(item.isChecked ? Color(.systemGreen) : Color(.tertiaryLabel))
+                                TextField("Item".localized(), text: Binding(
+                                    get: { item.title },
+                                    set: { newValue in
+                                        if let idx = checklist.firstIndex(where: { $0.id == item.id }) {
+                                            checklist[idx].title = newValue
+                                        }
+                                    }
+                                ))
+                                .strikethrough(item.isChecked, color: .secondary)
+                                .foregroundColor(item.isChecked ? Color(.secondaryLabel) : Color(.label))
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    checklist.removeAll { $0.id == item.id }
+                                } label: {
+                                    Label("Delete".localized(), systemImage: "trash")
+                                }
+                            }
+                            .onTapGesture {
+                                if let idx = checklist.firstIndex(where: { $0.id == item.id }) {
+                                    checklist[idx].isChecked.toggle()
+                                }
+                            }
+                        }
+                        .onMove { source, destination in
+                            var sorted = checklist.sorted(by: { $0.sortOrder < $1.sortOrder })
+                            sorted.move(fromOffsets: source, toOffset: destination)
+                            for (i, _) in sorted.enumerated() {
+                                sorted[i].sortOrder = i
+                            }
+                            checklist = sorted
+                        }
+                    }
+                    HStack {
+                        TextField("Add item (e.g. 身份证, 2B 铅笔, 复习清单)".localized(), text: $newChecklistText)
+                            .submitLabel(.done)
+                            .onSubmit { addChecklistItem() }
+                        Button {
+                            addChecklistItem()
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.accentColor)
+                        }
+                        .disabled(newChecklistText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+
+                // MARK: - 倒计时通知
+                Section(header: Text("Countdown Notifications".localized()),
+                        footer: Text("Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule.".localized())) {
+                    ForEach(Self.candidateDays, id: \.self) { day in
+                        Toggle(isOn: Binding(
+                            get: { notifyDays.contains(day) },
+                            set: { isOn in
+                                if isOn { notifyDays.insert(day) } else { notifyDays.remove(day) }
+                            }
+                        )) {
+                            Text(String(format: "%d day(s) before".localized(), day))
+                        }
+                    }
+                }
             }
             .adaptiveForm()
             .navigationTitle("Edit Exam".localized())
@@ -121,40 +224,71 @@ struct ExamDetailEditView: View {
             }
         }
     }
-    
+
+    private func addChecklistItem() {
+        let trimmed = newChecklistText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let nextOrder = (checklist.map(\.sortOrder).max() ?? -1) + 1
+        checklist.append(ExamChecklistItem(title: trimmed, sortOrder: nextOrder))
+        newChecklistText = ""
+    }
+
     private func updateExam() {
-        // 创建一个新的 Exam 对象，但保留原始的 ID
+        // 构造新的 Exam
         let updatedExam = Exam(
+            id: originalExam.id,
             name: name.trimmingCharacters(in: .whitespaces),
             date: examDate,
             importance: importance,
             subject: selectedSubject,
             examName: examNote.trimmingCharacters(in: .whitespaces),
             masteryDegree: masteryDegree,
-            timeSlot: ExamTimeSlot(startTime: subjectStartTime, endTime: subjectEndTime)
+            timeSlot: ExamTimeSlot(startTime: subjectStartTime, endTime: subjectEndTime),
+            examEndDate: originalExam.examEndDate,
+            phaseId: originalExam.phaseId,
+            checklist: checklist,
+            locationSchool: locationSchool.trimmingCharacters(in: .whitespaces),
+            locationClassroom: locationClassroom.trimmingCharacters(in: .whitespaces),
+            locationSeat: locationSeat.trimmingCharacters(in: .whitespaces),
+            countdownNotifyDays: Array(notifyDays).sorted()
         )
-        
-        // 关键：保留原始 ID，这样才能在数组中找到它
-        // 由于 Exam 是 struct，我们需要手动替换数组中的元素
-        if let index = dataManager.examSets.firstIndex(where: { $0.id == originalExam.id }) {
-            var examToUpdate = updatedExam
-            examToUpdate.id = originalExam.id // 强制保持 ID 不变 / Force keep the same ID
 
-            dataManager.examSets[index] = examToUpdate
-            dataManager.saveExamSets()
-            Log.data.info("考试编辑成功 / Exam updated: name=\(examToUpdate.name, privacy: .public) id=\(originalExam.id.uuidString, privacy: .public)")
-            presentationMode.wrappedValue.dismiss()
-        } else {
-            Log.data.error("考试编辑失败：未找到要更新的考试 / Exam update failed: could not find exam id=\(originalExam.id.uuidString, privacy: .public)")
+        // 通知：先取消旧的，再用新的天数列表重排
+        ExamPrepareNotifications.shared.cancelNotifications(for: originalExam.name)
+        if !notifyDays.isEmpty {
+            ExamPrepareNotifications.shared.scheduleNotifications(
+                for: updatedExam.name,
+                date: updatedExam.examDate,
+                days: Array(notifyDays).sorted()
+            )
         }
+
+        // 写回 DataManager（同时落盘 SwiftData）
+        dataManager.updateExam(updatedExam)
+        Log.data.info("考试编辑成功 / Exam updated: name=\(updatedExam.name, privacy: .public) id=\(originalExam.id.uuidString, privacy: .public) checklist=\(updatedExam.checklist.count, privacy: .public) notifyDays=\(Array(notifyDays).sorted(), privacy: .public)")
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
 #Preview {
     let dm = DataManager()
-    let testExam = Exam(name: "Final Physics", date: Date().addingTimeInterval(86400*20), importance: 5, subject: "Physics", examName: "Mechanics", masteryDegree: 40)
+    let testExam = Exam(
+        name: "Final Physics",
+        date: Date().addingTimeInterval(86400 * 20),
+        importance: 5,
+        subject: "Physics",
+        examName: "Mechanics",
+        masteryDegree: 40,
+        checklist: [
+            ExamChecklistItem(title: "身份证", sortOrder: 0),
+            ExamChecklistItem(title: "2B 铅笔", sortOrder: 1)
+        ],
+        locationSchool: "市一中",
+        locationClassroom: "305",
+        locationSeat: "23"
+    )
     dm.examSets = [testExam]
-    
+
     return ExamDetailEditView(exam: testExam)
         .environmentObject(dm)
 }

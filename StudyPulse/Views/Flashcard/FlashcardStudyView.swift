@@ -314,6 +314,9 @@ struct FlashcardStudyView: View {
             }
         }
 
+        // 记录曝光 / 掌握度：自评后曝光 +1，按 quality 调整 masteryScore 并追加 history
+        dataManager.recordMistakeReview(current.id, quality: quality)
+
         // 「Again」立即重插入队尾（确保至少复习一次）
         if quality == .again && filter == .dueQueue {
             reinsertQueue.append(current)

@@ -202,12 +202,23 @@ nonisolated struct MistakeNote: Identifiable, Codable {
     var reviewState: ReviewState?
     /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
     var phaseId: UUID? = nil
+    /// 曝光次数：被翻看（详情页）或复习（闪卡）的累计次数
+    /// Total times this mistake has been viewed (detail) or reviewed (flashcard).
+    var exposureCount: Int = 0
+    /// 当前掌握度（0-1）。每次答对/答错/评分后由 EMA 算法动态调整。
+    /// Current mastery score (0-1), updated by EMA after each review.
+    var masteryScore: Double = 0.0
+    /// 掌握度历史轨迹：每次复习后追加一个点，画折线图用
+    /// Mastery history (timestamp + score + quality). Drives the line chart.
+    var masteryHistory: [MasteryHistoryEntry] = []
 
     init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
          questionImages: [Data] = [], reasonImages: [Data] = [],
          wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = [],
-         reviewState: ReviewState? = nil, phaseId: UUID? = nil) {
+         reviewState: ReviewState? = nil, phaseId: UUID? = nil,
+         exposureCount: Int = 0, masteryScore: Double = 0.0,
+         masteryHistory: [MasteryHistoryEntry] = []) {
         self.id = id
         self.title = title
         self.subject = subject
@@ -223,6 +234,139 @@ nonisolated struct MistakeNote: Identifiable, Codable {
         self.correctSolutionImages = correctSolutionImages
         self.reviewState = reviewState
         self.phaseId = phaseId
+        self.exposureCount = exposureCount
+        self.masteryScore = masteryScore
+        self.masteryHistory = masteryHistory
+    }
+
+    // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
+    // Custom decoder: fall back to defaults so older serialized mistakes
+    // (without exposureCount / masteryScore / masteryHistory) still decode.
+    enum CodingKeys: String, CodingKey {
+        case id, title, subject, originalQuestion, source, date
+        case errorReason, wrongSolution, correctSolution
+        case questionImages, reasonImages, wrongSolutionImages, correctSolutionImages
+        case reviewState, phaseId
+        case exposureCount, masteryScore, masteryHistory
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.title = try c.decode(String.self, forKey: .title)
+        self.subject = try c.decodeIfPresent(String.self, forKey: .subject) ?? ""
+        self.originalQuestion = try c.decode(String.self, forKey: .originalQuestion)
+        self.source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
+        self.date = try c.decodeIfPresent(Date.self, forKey: .date) ?? Date()
+        self.errorReason = try c.decode(String.self, forKey: .errorReason)
+        self.wrongSolution = try c.decode(String.self, forKey: .wrongSolution)
+        self.correctSolution = try c.decode(String.self, forKey: .correctSolution)
+        self.questionImages = try c.decodeIfPresent([Data].self, forKey: .questionImages) ?? []
+        self.reasonImages = try c.decodeIfPresent([Data].self, forKey: .reasonImages) ?? []
+        self.wrongSolutionImages = try c.decodeIfPresent([Data].self, forKey: .wrongSolutionImages) ?? []
+        self.correctSolutionImages = try c.decodeIfPresent([Data].self, forKey: .correctSolutionImages) ?? []
+        self.reviewState = try c.decodeIfPresent(ReviewState.self, forKey: .reviewState)
+        self.phaseId = try c.decodeIfPresent(UUID.self, forKey: .phaseId)
+        self.exposureCount = try c.decodeIfPresent(Int.self, forKey: .exposureCount) ?? 0
+        self.masteryScore = try c.decodeIfPresent(Double.self, forKey: .masteryScore) ?? 0.0
+        self.masteryHistory = try c.decodeIfPresent([MasteryHistoryEntry].self, forKey: .masteryHistory) ?? []
+    }
+}
+
+// MARK: - Mastery History Entry (掌握度历史)
+
+/// 掌握度历史的一个点：某次复习后记录的 (时间, 掌握度, 自评档位)。
+/// One point in the mastery history: (timestamp, score, quality) recorded after each review.
+nonisolated struct MasteryHistoryEntry: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 记录时间
+    var timestamp: Date
+    /// 当时点的掌握度（0-1）
+    var score: Double
+    /// 自评档位（ReviewQuality.rawValue：1 / 3 / 4 / 5）
+    /// 0 = 仅查看详情（不评分）
+    var quality: Int
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), score: Double, quality: Int) {
+        self.id = id
+        self.timestamp = timestamp
+        self.score = score
+        self.quality = quality
+    }
+
+    /// 自评档位的人类可读名（用于 chart tooltip）
+    /// Human-readable label for the review quality.
+    var qualityLabel: String {
+        switch quality {
+        case 0:  return "View".localized()
+        case 1:  return "Again".localized()
+        case 3:  return "Hard".localized()
+        case 4:  return "Good".localized()
+        case 5:  return "Easy".localized()
+        default: return "\(quality)"
+        }
+    }
+}
+
+// MARK: - Mastery Algorithm (掌握度算法)
+
+/// 掌握度动态调整算法（pure Swift，nonisolated）。
+/// Mastery score update algorithm.
+///
+/// 用 EMA（指数移动平均）做平滑更新：
+///   newScore = oldScore * (1 - α) + target * α
+///   α = 基础学习率 / (1 + 复习次数 × 0.15)
+///
+/// 含义：前几次复习影响大（α 接近 0.3），之后学习率衰减，
+/// 防止一次失误把已经很稳的掌握度拉垮；也防止一次蒙对就误判已掌握。
+enum MasteryAlgorithm {
+    /// 基础学习率（首次复习时的权重）
+    static let baseLearningRate: Double = 0.30
+    /// 学习率衰减系数
+    static let learningRateDecay: Double = 0.15
+
+    /// 把 4 档自评映射为 0-1 之间的「目标掌握度」
+    /// Map the 4 review qualities to a 0-1 target mastery.
+    /// - again=0.05（基本不会）
+    /// - hard=0.40（勉强）
+    /// - good=0.70（掌握）
+    /// - easy=0.95（精通）
+    static func targetScore(for quality: ReviewQuality) -> Double {
+        switch quality {
+        case .again: return 0.05
+        case .hard:  return 0.40
+        case .good:  return 0.70
+        case .easy:  return 0.95
+        }
+    }
+
+    /// 计算当前学习率 α。
+    /// Learning rate shrinks as exposure count grows so the curve stabilizes.
+    static func learningRate(exposureCount: Int) -> Double {
+        let n = max(0, exposureCount)
+        let alpha = baseLearningRate / (1.0 + Double(n) * learningRateDecay)
+        return min(baseLearningRate, max(0.05, alpha))
+    }
+
+    /// 一次性算出新的 (score, historyEntry) 元组。
+    /// Compute the new score and the history entry to append in one pass.
+    /// - Parameters:
+    ///   - oldScore: 当前掌握度
+    ///   - exposureCount: 当前曝光次数（review 前）
+    ///   - quality: 这次的自评档位
+    ///   - now: 时间戳
+    /// - Returns: (newScore, historyEntry)
+    static func apply(
+        oldScore: Double,
+        exposureCount: Int,
+        quality: ReviewQuality,
+        now: Date = Date()
+    ) -> (score: Double, entry: MasteryHistoryEntry) {
+        let target = targetScore(for: quality)
+        let alpha = learningRate(exposureCount: exposureCount)
+        let newScore = max(0.0, min(1.0, oldScore * (1.0 - alpha) + target * alpha))
+        let entry = MasteryHistoryEntry(timestamp: now, score: newScore, quality: quality.rawValue)
+        return (newScore, entry)
     }
 }
 
@@ -399,6 +543,27 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+// MARK: - Exam Checklist Item (考前待办)
+
+/// 考前待办条目:身份证 / 准考证 / 文具 / 复习清单等,可勾选。
+/// Pre-exam checklist item (ID, admission ticket, stationery, review list, etc).
+nonisolated struct ExamChecklistItem: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 待办标题（如 "身份证"、"2B 铅笔"）
+    var title: String
+    /// 是否已勾选
+    var isChecked: Bool
+    /// 排序顺序,值越小越靠前
+    var sortOrder: Int
+
+    init(id: UUID = UUID(), title: String, isChecked: Bool = false, sortOrder: Int = 0) {
+        self.id = id
+        self.title = title
+        self.isChecked = isChecked
+        self.sortOrder = sortOrder
+    }
+}
+
 // MARK: - Exam Models (考试)
 
 /// 单科目考试
@@ -423,8 +588,20 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 	var timeSlot: ExamTimeSlot?
     /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
     var phaseId: UUID? = nil
+    /// 考前待办清单（身份证、准考证、文具、复习清单等）
+    /// Pre-exam checklist (ID, admission ticket, stationery, review list...)
+    var checklist: [ExamChecklistItem] = []
+    /// 考场学校
+    var locationSchool: String = ""
+    /// 教室 / 考场号
+    var locationClassroom: String = ""
+    /// 座位号
+    var locationSeat: String = ""
+    /// 考前 N 天倒计时通知；nil = 使用默认 [1, 3, 5, 10, 30]
+    /// 空数组 = 关闭通知
+    var countdownNotifyDays: [Int]? = nil
 
-    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil, phaseId: UUID? = nil) {
+    init(id: UUID = UUID(), name: String, date: Date, importance: Int, subject: String, examName: String, masteryDegree: Int, timeSlot: ExamTimeSlot? = nil, examEndDate: Date? = nil, phaseId: UUID? = nil, checklist: [ExamChecklistItem] = [], locationSchool: String = "", locationClassroom: String = "", locationSeat: String = "", countdownNotifyDays: [Int]? = nil) {
         self.id = id
         self.name = name
         self.examDate = date
@@ -435,6 +612,38 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 		self.timeSlot = timeSlot
         self.examEndDate = examEndDate
         self.phaseId = phaseId
+        self.checklist = checklist
+        self.locationSchool = locationSchool
+        self.locationClassroom = locationClassroom
+        self.locationSeat = locationSeat
+        self.countdownNotifyDays = countdownNotifyDays
+    }
+
+    // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
+    // Custom decoder: fall back to defaults for missing fields so older
+    // serialized exams (without checklist / location / countdownNotifyDays)
+    // continue to decode instead of throwing.
+    enum CodingKeys: String, CodingKey {
+        case id, name, examDate, examEndDate, importance, subject, examName, masteryDegree, timeSlot, phaseId, checklist, locationSchool, locationClassroom, locationSeat, countdownNotifyDays
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.name = try c.decode(String.self, forKey: .name)
+        self.examDate = try c.decode(Date.self, forKey: .examDate)
+        self.examEndDate = try c.decodeIfPresent(Date.self, forKey: .examEndDate)
+        self.importance = try c.decodeIfPresent(Int.self, forKey: .importance) ?? 3
+        self.subject = try c.decodeIfPresent(String.self, forKey: .subject) ?? ""
+        self.examName = try c.decodeIfPresent(String.self, forKey: .examName) ?? ""
+        self.masteryDegree = try c.decodeIfPresent(Int.self, forKey: .masteryDegree) ?? 0
+        self.timeSlot = try c.decodeIfPresent(ExamTimeSlot.self, forKey: .timeSlot)
+        self.phaseId = try c.decodeIfPresent(UUID.self, forKey: .phaseId)
+        self.checklist = try c.decodeIfPresent([ExamChecklistItem].self, forKey: .checklist) ?? []
+        self.locationSchool = try c.decodeIfPresent(String.self, forKey: .locationSchool) ?? ""
+        self.locationClassroom = try c.decodeIfPresent(String.self, forKey: .locationClassroom) ?? ""
+        self.locationSeat = try c.decodeIfPresent(String.self, forKey: .locationSeat) ?? ""
+        self.countdownNotifyDays = try c.decodeIfPresent([Int].self, forKey: .countdownNotifyDays)
     }
 }
 

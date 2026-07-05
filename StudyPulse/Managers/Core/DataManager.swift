@@ -650,6 +650,51 @@ final class DataManager: ObservableObject {
         Log.data.info("更新错题 SRS 状态 / Updated mistake SRS state: id=\(mistakeId.uuidString, privacy: .public) enrolled=\(newState != nil, privacy: .public)")
     }
 
+    // MARK: - 曝光 / 掌握度
+
+    /// 仅增加曝光次数（不触发掌握度变化）。用户进入错题详情页时调用。
+    /// Increment exposure count only (no mastery change). Called when the
+    /// user opens the mistake detail view.
+    func recordMistakeExposure(_ mistakeId: UUID) {
+        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
+            return
+        }
+        mistakeSets[index].exposureCount += 1
+        updateMistakeEntity(mistakeSets[index])
+    }
+
+    /// 用户在闪卡里给出自评时调用：曝光 +1，按 quality 调整 masteryScore，并追加 history。
+    /// Called when the user rates a flashcard: bump exposure, apply EMA
+    /// mastery update, append a history entry.
+    /// - Parameters:
+    ///   - mistakeId: 错题 UUID
+    ///   - quality: 4 档自评
+    func recordMistakeReview(_ mistakeId: UUID, quality: ReviewQuality, now: Date = Date()) {
+        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
+            Log.data.warning("未找到要记录复习的错题 / Mistake to record review not found: id=\(mistakeId.uuidString, privacy: .public)")
+            return
+        }
+        var note = mistakeSets[index]
+        let oldExposure = note.exposureCount
+        let result = MasteryAlgorithm.apply(
+            oldScore: note.masteryScore,
+            exposureCount: oldExposure,
+            quality: quality,
+            now: now
+        )
+        note.exposureCount = oldExposure + 1
+        note.masteryScore = result.score
+        // 限制历史长度（最多 200 个点），避免 JSON 越来越大
+        let maxHistory = 200
+        note.masteryHistory.append(result.entry)
+        if note.masteryHistory.count > maxHistory {
+            note.masteryHistory.removeFirst(note.masteryHistory.count - maxHistory)
+        }
+        mistakeSets[index] = note
+        updateMistakeEntity(note)
+        Log.data.info("记录错题复习 / Recorded mistake review: id=\(mistakeId.uuidString, privacy: .public) quality=\(quality.rawValue, privacy: .public) oldScore=\(oldExposure, privacy: .public)->\(result.score, privacy: .public)")
+    }
+
     // 新增：保存考试集合 / Save exam sets
     func saveExamSets() {
         try? modelContext?.save()
@@ -660,6 +705,74 @@ final class DataManager: ObservableObject {
     // Load exam sets (ensure main-thread updates)
     func loadExamSets() {
         // 由 asyncInit 统一加载
+    }
+
+    /// 更新已有 Exam（按 id 匹配，持久化所有字段到 SwiftData）。
+    /// Update an existing Exam by id, persisting all fields to SwiftData.
+    func updateExam(_ updated: Exam) {
+        if let index = examSets.firstIndex(where: { $0.id == updated.id }) {
+            examSets[index] = updated
+        }
+        guard let context = modelContext else { return }
+        do {
+            if let entity = try context.fetch(
+                FetchDescriptor<ExamRecord>(predicate: #Predicate { $0.id == updated.id })
+            ).first {
+                entity.name = updated.name
+                entity.examDate = updated.examDate
+                entity.examEndDate = updated.examEndDate
+                entity.importance = updated.importance
+                entity.subject = updated.subject
+                entity.examName = updated.examName
+                entity.masteryDegree = updated.masteryDegree
+                entity.timeSlotStart = updated.timeSlot?.startTime
+                entity.timeSlotEnd = updated.timeSlot?.endTime
+                entity.phaseId = updated.phaseId
+                entity.checklistData = updated.checklist.isEmpty ? nil : (try? JSONEncoder().encode(updated.checklist))
+                entity.locationSchool = updated.locationSchool
+                entity.locationClassroom = updated.locationClassroom
+                entity.locationSeat = updated.locationSeat
+                entity.countdownNotifyDaysData = {
+                    if let days = updated.countdownNotifyDays {
+                        return (try? JSONEncoder().encode(days)) ?? nil
+                    }
+                    return nil
+                }()
+                try context.save()
+            } else {
+                // 没找到就插入新记录
+                context.insert(ExamRecord(from: updated))
+                try context.save()
+            }
+        } catch {
+            Log.data.error("更新 ExamRecord 失败 / Failed to update ExamRecord: \(error.localizedDescription, privacy: .public)")
+        }
+        Log.data.info("更新考试 / Updated exam: name=\(updated.name, privacy: .public) id=\(updated.id.uuidString, privacy: .public)")
+        Log.record(.info, category: "Data", message: "更新考试: \(updated.name) checklist=\(updated.checklist.count) location.school=\(updated.locationSchool)")
+    }
+
+    /// 切换某条 checklist item 的勾选状态，并落盘。
+    /// Toggle a checklist item's checked state and persist to SwiftData.
+    func toggleExamChecklistItem(_ examId: UUID, itemId: UUID) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else {
+            Log.data.warning("未找到要切换 checklist 的考试 / Exam not found for checklist toggle: id=\(examId.uuidString, privacy: .public)")
+            return
+        }
+        var exam = examSets[index]
+        guard let ci = exam.checklist.firstIndex(where: { $0.id == itemId }) else { return }
+        exam.checklist[ci].isChecked.toggle()
+        examSets[index] = exam
+        updateExam(exam)
+    }
+
+    /// 替换某场考试的 checklist 为新列表（保存后落盘）。
+    /// Replace an exam's checklist and persist.
+    func setExamChecklist(_ examId: UUID, items: [ExamChecklistItem]) {
+        guard let index = examSets.firstIndex(where: { $0.id == examId }) else { return }
+        var exam = examSets[index]
+        exam.checklist = items
+        examSets[index] = exam
+        updateExam(exam)
     }
 
     func saveComprehensiveExams() {
@@ -864,6 +977,12 @@ final class DataManager: ObservableObject {
                 entity.reasonImagesData = note.reasonImages
                 entity.wrongSolutionImagesData = note.wrongSolutionImages
                 entity.correctSolutionImagesData = note.correctSolutionImages
+                entity.phaseId = note.phaseId
+                entity.exposureCount = note.exposureCount
+                entity.masteryScore = note.masteryScore
+                entity.masteryHistoryData = note.masteryHistory.isEmpty
+                    ? nil
+                    : try? JSONEncoder().encode(note.masteryHistory)
                 try context.save()
             } else {
                 // 没找到就插入新记录
@@ -874,7 +993,6 @@ final class DataManager: ObservableObject {
             Log.data.error("更新 MistakeNoteRecord 失败 / Failed to update MistakeNoteRecord: \(error.localizedDescription, privacy: .public)")
         }
     }
-
     /// 把当前 grades 同步到 Trend Widget
     private func syncGradesToWidget() {
         Task {

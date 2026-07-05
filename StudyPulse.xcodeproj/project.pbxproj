@@ -8,23 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		2709FD172FEFB8F900FAB5CE /* docs/FAQ.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709FD152FEFB8D000FAB5CE /* docs/FAQ.json */; };
-		276CC9502FE6CEE7009F126C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 276CC94F2FE6CEE7009F126C /* README.md */; };
 		278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE132FE778660035AA84 /* WidgetKit.framework */; };
 		278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 278CBE152FE778660035AA84 /* SwiftUI.framework */; };
 		278CBE232FE778660035AA84 /* StudyPulseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		278D45EF2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45EE2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md */; };
 		278D45F22FE7BA3E0073EB87 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F12FE7BA3E0073EB87 /* AGENTS.md */; };
-		278D45F42FE7BA500073EB87 /* docs/CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F32FE7BA500073EB87 /* docs/CODE_WIKI.md */; };
 		278D45F62FE7BA560073EB87 /* docs/CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F52FE7BA560073EB87 /* docs/CODE_WIKI_CN.md */; };
 		278D45F82FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F72FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md */; };
-		278D45FA2FE7BA650073EB87 /* docs/DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45F92FE7BA650073EB87 /* docs/DESIGN.md */; };
-		278D45FC2FE7BA6A0073EB87 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FB2FE7BA6A0073EB87 /* README.md */; };
-		278D45FE2FE7BA750073EB87 /* docs/SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 278D45FD2FE7BA750073EB87 /* docs/SPEC.md */; };
 		27A00001FEFB900000FAB5C0 /* docs/CONTRIBUTING.json in Resources */ = {isa = PBXBuildFile; fileRef = 27A00002FEFB900100FAB5C0 /* docs/CONTRIBUTING.json */; };
 		27AB0003FE0000000000A003 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */; };
 		27BF505B2FE6D1E50038966E /* docs/SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505A2FE6D1E50038966E /* docs/SPEC.md */; };
 		27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505C2FE6D1F10038966E /* AGENTS.md */; };
-		27BF505F2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF505E2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md */; };
 		27BF50612FE6D2070038966E /* docs/CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */; };
 		27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50622FE6D2160038966E /* docs/DESIGN.md */; };
 		27BF50652FE6D2200038966E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50642FE6D2200038966E /* README.md */; };
@@ -258,7 +251,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2650;
-				LastUpgradeCheck = 2650;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					2743C83D2F6EAEA000CC1EED = {
 						CreatedOnToolsVersion = 26.3;
@@ -304,19 +297,12 @@
 				27BF50652FE6D2200038966E /* README.md in Resources */,
 				278D45F62FE7BA560073EB87 /* docs/CODE_WIKI_CN.md in Resources */,
 				27BF505B2FE6D1E50038966E /* docs/SPEC.md in Resources */,
-				278D45FC2FE7BA6A0073EB87 /* README.md in Resources */,
 				2709FD172FEFB8F900FAB5CE /* docs/FAQ.json in Resources */,
 				27A00001FEFB900000FAB5C0 /* docs/CONTRIBUTING.json in Resources */,
 				278D45F82FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md in Resources */,
-				278D45F42FE7BA500073EB87 /* docs/CODE_WIKI.md in Resources */,
 				27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */,
-				278D45FA2FE7BA650073EB87 /* docs/DESIGN.md in Resources */,
 				27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */,
-				278D45FE2FE7BA750073EB87 /* docs/SPEC.md in Resources */,
 				27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */,
-				27BF505F2FE6D1FE0038966E /* docs/CODE_WIKI_CN.md in Resources */,
-				278D45EF2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md in Resources */,
-				276CC9502FE6CEE7009F126C /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

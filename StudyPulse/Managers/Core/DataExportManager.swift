@@ -27,9 +27,12 @@ enum DataExportManager {
     ]
 
     /// 错题 CSV 表头
+    /// 旧版：10 列 (无曝光/掌握度)，向后兼容
+    /// 新版：13 列 (尾部追加 ExposureCount / MasteryScore / MasteryHistory)
     static let mistakesHeader = [
         "ID", "Title", "Subject", "OriginalQuestion", "Source",
-        "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled"
+        "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
+        "ExposureCount", "MasteryScore", "MasteryHistory"
     ]
 
     /// 考试 CSV 表头
@@ -78,6 +81,13 @@ enum DataExportManager {
         var csv = joinRow(mistakesHeader)
 
         for mistake in mistakes {
+            let masteryHistoryJSON: String = {
+                guard !mistake.masteryHistory.isEmpty,
+                      let data = try? JSONEncoder().encode(mistake.masteryHistory),
+                      let str = String(data: data, encoding: .utf8) else { return "" }
+                return escapeCSV(str)
+            }()
+
             let row: [String] = [
                 mistake.id.uuidString,
                 mistake.title,
@@ -88,7 +98,10 @@ enum DataExportManager {
                 mistake.errorReason,
                 mistake.wrongSolution,
                 mistake.correctSolution,
-                mistake.isInReviewQueue ? "true" : "false"
+                mistake.isInReviewQueue ? "true" : "false",
+                String(mistake.exposureCount),
+                String(format: "%.4f", mistake.masteryScore),
+                masteryHistoryJSON
             ]
             csv += joinRow(row)
         }
@@ -269,7 +282,10 @@ enum DataExportManager {
     }
 
     private static func parseMistakeRow(_ fields: [String]) -> MistakeNote? {
-        // 兼容 9 列旧格式（无 SRSEnabled），也支持 10 列新格式
+        // 兼容多种列数：
+        //  9 列：最旧版（无 SRSEnabled）
+        //  10 列：旧版（带 SRSEnabled）
+        //  13 列：新版（带 SRSEnabled + ExposureCount + MasteryScore + MasteryHistory）
         guard fields.count >= 9 else { return nil }
 
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -288,6 +304,28 @@ enum DataExportManager {
         let srsEnabled = srsEnabledRaw == "true" || srsEnabledRaw == "1" || srsEnabledRaw == "yes" || srsEnabledRaw == "是"
         let reviewState: ReviewState? = srsEnabled ? ReviewState.initial(now: date) : nil
 
+        // 新增字段（v2.0+）：曝光次数 / 掌握度 / 掌握度历史
+        // 旧版 CSV 没有这些列，按 0 / 0 / [] 处理
+        let exposureCount: Int = {
+            guard fields.count > 10 else { return 0 }
+            let raw = fields[10].trimmingCharacters(in: .whitespacesAndNewlines)
+            return Int(raw) ?? 0
+        }()
+        let masteryScore: Double = {
+            guard fields.count > 11 else { return 0.0 }
+            let raw = fields[11].trimmingCharacters(in: .whitespacesAndNewlines)
+            return Double(raw) ?? 0.0
+        }()
+        let masteryHistory: [MasteryHistoryEntry] = {
+            guard fields.count > 12 else { return [] }
+            let raw = fields[12].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !raw.isEmpty,
+                  let data = raw.data(using: .utf8),
+                  let decoded = try? JSONDecoder().decode([MasteryHistoryEntry].self, from: data)
+            else { return [] }
+            return decoded
+        }()
+
         return MistakeNote(
             title: title,
             subject: subject,
@@ -297,7 +335,10 @@ enum DataExportManager {
             errorReason: errorReason,
             wrongSolution: wrongSolution,
             correctSolution: correctSolution,
-            reviewState: reviewState
+            reviewState: reviewState,
+            exposureCount: exposureCount,
+            masteryScore: masteryScore,
+            masteryHistory: masteryHistory
         )
     }
 

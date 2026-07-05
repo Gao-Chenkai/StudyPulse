@@ -713,89 +713,109 @@ struct MistakeCardView: View {
 struct MistakeSetDetailView: View {
     let mistakeSet: MistakeNote
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingEditSheet = false
     @State private var showingQuickReview = false
-    
+
+    /// 始终从 dataManager 里取最新快照（错题标题/内容/掌握度等可能
+    /// 在闪卡复习后被异步更新），这样 MasteryCurveView 才会随 review 实时刷新。
+    private var liveMistake: MistakeNote {
+        dataManager.mistakeSets.first(where: { $0.id == mistakeSet.id }) ?? mistakeSet
+    }
+
     var body: some View {
         List {
+            // 掌握度曲线 / 曝光统计
+            Section {
+                MasteryCurveView(
+                    history: liveMistake.masteryHistory,
+                    currentScore: liveMistake.masteryScore,
+                    exposureCount: liveMistake.exposureCount,
+                    createdAt: liveMistake.date,
+                    tintColor: envManager.effectiveAccentColor
+                )
+                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                .listRowBackground(Color.clear)
+            }
+
             // Basic Info Section
             Section(header: Text("Details".localized())) {
                 HStack {
                     Text("Title".localized())
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(mistakeSet.title)
+                    Text(liveMistake.title)
                         .fontWeight(.medium)
                 }
-                
-                if !mistakeSet.subject.isEmpty {
+
+                if !liveMistake.subject.isEmpty {
                     HStack {
                         Text("Subject".localized())
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(mistakeSet.subject.localized())
+                        Text(liveMistake.subject.localized())
                             .fontWeight(.medium)
                     }
                 }
-                
-                if !mistakeSet.source.isEmpty {
+
+                if !liveMistake.source.isEmpty {
                     HStack {
                         Text("Source".localized())
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(mistakeSet.source)
+                        Text(liveMistake.source)
                     }
                 }
-                
+
                 HStack {
                     Text("Date".localized())
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(mistakeSet.date.formatted(date: .abbreviated, time: .omitted))
+                    Text(liveMistake.date.formatted(date: .abbreviated, time: .omitted))
                 }
             }
             
             // Question Section
-            if !mistakeSet.originalQuestion.isEmpty {
+            if !liveMistake.originalQuestion.isEmpty {
                 Section(header: Text("Original Question".localized())) {
                     MarkdownView(
-                        text: mistakeSet.originalQuestion.normalisingSingleDollarMath(),
+                        text: liveMistake.originalQuestion.normalisingSingleDollarMath(),
                         config: .previewConfig
                     )
                     .fixedSize(horizontal: false, vertical: true)
 
-                    if !mistakeSet.questionImages.isEmpty {
-                        imageScrollView(images: mistakeSet.questionImages)
+                    if !liveMistake.questionImages.isEmpty {
+                        imageScrollView(images: liveMistake.questionImages)
                     }
                 }
             }
 
             // Error Reason Section
-            if !mistakeSet.errorReason.isEmpty {
+            if !liveMistake.errorReason.isEmpty {
                 Section(header: Text("Error Reason".localized())) {
                     MarkdownView(
-                        text: mistakeSet.errorReason.normalisingSingleDollarMath(),
+                        text: liveMistake.errorReason.normalisingSingleDollarMath(),
                         config: .previewConfig
                     )
                     .fixedSize(horizontal: false, vertical: true)
 
-                    if !mistakeSet.reasonImages.isEmpty {
-                        imageScrollView(images: mistakeSet.reasonImages)
+                    if !liveMistake.reasonImages.isEmpty {
+                        imageScrollView(images: liveMistake.reasonImages)
                     }
                 }
             }
 
             // Wrong Solution Section
-            if !mistakeSet.wrongSolution.isEmpty {
+            if !liveMistake.wrongSolution.isEmpty {
                 Section {
                     MarkdownView(
-                        text: mistakeSet.wrongSolution.normalisingSingleDollarMath(),
+                        text: liveMistake.wrongSolution.normalisingSingleDollarMath(),
                         config: .previewConfig
                     )
                     .fixedSize(horizontal: false, vertical: true)
 
-                    if !mistakeSet.wrongSolutionImages.isEmpty {
-                        imageScrollView(images: mistakeSet.wrongSolutionImages)
+                    if !liveMistake.wrongSolutionImages.isEmpty {
+                        imageScrollView(images: liveMistake.wrongSolutionImages)
                     }
                 } header: {
                     HStack(spacing: 6) {
@@ -807,16 +827,16 @@ struct MistakeSetDetailView: View {
             }
 
             // Correct Solution Section
-            if !mistakeSet.correctSolution.isEmpty {
+            if !liveMistake.correctSolution.isEmpty {
                 Section {
                     MarkdownView(
-                        text: mistakeSet.correctSolution.normalisingSingleDollarMath(),
+                        text: liveMistake.correctSolution.normalisingSingleDollarMath(),
                         config: .previewConfig
                     )
                     .fixedSize(horizontal: false, vertical: true)
 
-                    if !mistakeSet.correctSolutionImages.isEmpty {
-                        imageScrollView(images: mistakeSet.correctSolutionImages)
+                    if !liveMistake.correctSolutionImages.isEmpty {
+                        imageScrollView(images: liveMistake.correctSolutionImages)
                     }
                 } header: {
                     HStack(spacing: 6) {
@@ -828,7 +848,7 @@ struct MistakeSetDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle(mistakeSet.title)
+        .navigationTitle(liveMistake.title)
         .navigationBarTitleDisplayMode(.inline)
         .adaptiveMaxWidth(820)
         .toolbar {
@@ -839,7 +859,7 @@ struct MistakeSetDetailView: View {
             }
         }
         .toolbar {
-            if mistakeSet.isInReviewQueue {
+            if liveMistake.isInReviewQueue {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingQuickReview = true
@@ -851,12 +871,12 @@ struct MistakeSetDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            MistakeDetailEditView(mistakeSet: mistakeSet)
+            MistakeDetailEditView(mistakeSet: liveMistake)
                 .adaptiveSheet()
         }
         .fullScreenCover(isPresented: $showingQuickReview) {
             NavigationStack {
-                FlashcardStudyView(filter: .single(mistakeSet))
+                FlashcardStudyView(filter: .single(liveMistake))
                     .environmentObject(dataManager)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
@@ -870,6 +890,10 @@ struct MistakeSetDetailView: View {
                         }
                     }
             }
+        }
+        .onAppear {
+            // 每次进入详情页曝光 +1
+            dataManager.recordMistakeExposure(mistakeSet.id)
         }
     }
     

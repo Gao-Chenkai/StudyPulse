@@ -31,50 +31,68 @@ class ExamPrepareNotifications {
     /// - Parameters:
     ///   - examName: Exam name
     ///   - date: Exam date
+    ///   - days: 考前 N 天倒计时通知；nil = 使用默认 [1, 3, 5, 10, 30]
+    ///          空数组 = 关闭通知
+    ///           传入新值会先取消该考试旧的通知再重排
     /// 为考试调度倒计时通知
-    func scheduleNotifications(for examName: String, date: Date) {
-        Log.notification.info("开始为考试调度通知 / Scheduling notifications for exam: name=\(examName, privacy: .public) date=\(date, privacy: .public)")
+    func scheduleNotifications(for examName: String, date: Date, days: [Int]? = nil) {
+        let effectiveDays = (days ?? [1, 3, 5, 10, 30]).sorted(by: >)
+        Log.notification.info("开始为考试调度通知 / Scheduling notifications for exam: name=\(examName, privacy: .public) date=\(date, privacy: .public) days=\(effectiveDays, privacy: .public)")
         let center = UNUserNotificationCenter.current()
 
-        let daysToNotify = [1, 3, 5, 10, 30]
-
-        var scheduled = 0
-        var skipped = 0
-        for day in daysToNotify {
-            guard let triggerDate = Calendar.current.date(byAdding: .day, value: -day, to: date) else {
-                Log.notification.warning("无法计算触发时间 / Cannot compute trigger date: exam=\(examName, privacy: .public) day=\(day, privacy: .public)")
-                continue
+        // 先把旧通知清掉,避免和新的重复
+        center.getPendingNotificationRequests { requests in
+            let toRemove = requests.filter { $0.identifier.contains("Exam_\(examName)_") }
+            let ids = toRemove.map { $0.identifier }
+            if !ids.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: ids)
+                Log.notification.debug("清理旧通知 / Removed old exam notifications: exam=\(examName, privacy: .public) count=\(ids.count, privacy: .public)")
             }
 
-            if triggerDate < Date() {
-                Log.notification.debug("跳过过期触发点 / Skipping past trigger: exam=\(examName, privacy: .public) day=\(day, privacy: .public) triggerDate=\(triggerDate, privacy: .public)")
-                skipped += 1
-                continue
+            // 如果 days 为空数组,表示关闭通知
+            if effectiveDays.isEmpty {
+                Log.notification.info("考试通知已关闭 / Notifications disabled for exam: \(examName, privacy: .public)")
+                return
             }
 
-            let content = UNMutableNotificationContent()
-            content.title = "Exam Countdown".localized()
-            content.body = String(format: "%@ - %d day(s) until the exam. Get ready!".localized(), examName, day)
-            content.sound = .default
-
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate),
-                repeats: false
-            )
-
-            let identifier = "Exam_\(examName)_\(day)Days"
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-            center.add(request) { error in
-                if let error = error {
-                    Log.notification.error("调度通知失败 / Failed to schedule \(day, privacy: .public) day before for \(examName, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                } else {
-                    Log.notification.info("通知调度成功 / Scheduled: exam=\(examName, privacy: .public) day=\(day, privacy: .public) triggerDate=\(triggerDate, privacy: .public)")
+            var scheduled = 0
+            var skipped = 0
+            for day in effectiveDays {
+                guard let triggerDate = Calendar.current.date(byAdding: .day, value: -day, to: date) else {
+                    Log.notification.warning("无法计算触发时间 / Cannot compute trigger date: exam=\(examName, privacy: .public) day=\(day, privacy: .public)")
+                    continue
                 }
+
+                if triggerDate < Date() {
+                    Log.notification.debug("跳过过期触发点 / Skipping past trigger: exam=\(examName, privacy: .public) day=\(day, privacy: .public) triggerDate=\(triggerDate, privacy: .public)")
+                    skipped += 1
+                    continue
+                }
+
+                let content = UNMutableNotificationContent()
+                content.title = "Exam Countdown".localized()
+                content.body = String(format: "%@ - %d day(s) until the exam. Get ready!".localized(), examName, day)
+                content.sound = .default
+
+                let trigger = UNCalendarNotificationTrigger(
+                    dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate),
+                    repeats: false
+                )
+
+                let identifier = "Exam_\(examName)_\(day)Days"
+                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+                center.add(request) { error in
+                    if let error = error {
+                        Log.notification.error("调度通知失败 / Failed to schedule \(day, privacy: .public) day before for \(examName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    } else {
+                        Log.notification.info("通知调度成功 / Scheduled: exam=\(examName, privacy: .public) day=\(day, privacy: .public) triggerDate=\(triggerDate, privacy: .public)")
+                    }
+                }
+                scheduled += 1
             }
-            scheduled += 1
+            Log.notification.info("考试通知调度完成 / Finished scheduling notifications for \(examName, privacy: .public): scheduled=\(scheduled, privacy: .public) skipped=\(skipped, privacy: .public)")
         }
-        Log.notification.info("考试通知调度完成 / Finished scheduling notifications for \(examName, privacy: .public): scheduled=\(scheduled, privacy: .public) skipped=\(skipped, privacy: .public)")
     }
 
     /// Cancel all notifications for a specific exam
