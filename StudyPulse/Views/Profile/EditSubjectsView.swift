@@ -55,11 +55,12 @@ struct EditSubjectsView: View {
                 }) {
                     HStack {
                         Image(systemName: "wand.and.stars")
+                            .appleIntelligenceForeground()
                         Text("Reset to Recommended Subjects".localized())
+                            .appleIntelligenceForeground()
                         Spacer()
                     }
                 }
-                .foregroundColor(.purple)
             }
         }
         .navigationTitle("Edit Subjects".localized())

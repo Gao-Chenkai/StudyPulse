@@ -158,10 +158,10 @@ struct ComprehensiveExamDetailView: View {
                 } label: {
                     HStack {
                         Image(systemName: "chart.line.uptrend.xyaxis")
-                            .foregroundColor(.accentColor)
                             .font(.title3)
+                            .appleIntelligenceForeground()
                         Text("Predict Total Score".localized())
-                            .foregroundColor(.accentColor)
+                            .appleIntelligenceForeground()
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.bold))

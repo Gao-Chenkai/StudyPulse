@@ -53,6 +53,11 @@ struct ScorePredictionSheet: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done".localized()) { onDismiss() }
                 }
+                ToolbarItem(placement: .principal) {
+                    Text("Score Prediction".localized())
+                        .appleIntelligenceForeground()
+                        .font(.headline)
+                }
             }
             .sheet(isPresented: $showingDetail) {
                 if let result = predictionResult {
@@ -701,6 +706,11 @@ struct ComprehensiveScorePredictionSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done".localized()) { onDismiss() }
+                }
+                ToolbarItem(placement: .principal) {
+                    Text("Score Prediction".localized())
+                        .appleIntelligenceForeground()
+                        .font(.headline)
                 }
             }
         }

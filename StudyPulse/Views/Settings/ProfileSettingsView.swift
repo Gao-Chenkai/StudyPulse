@@ -217,9 +217,9 @@ struct ProfileSettingsView: View {
                 Button(action: { showSmartRecommendation = true }) {
                     HStack {
                         Image(systemName: "wand.and.stars")
-                            .foregroundColor(.purple)
+                            .appleIntelligenceForeground()
                         Text("Apply Smart Subject Recommendation".localized())
-                            .foregroundColor(.purple)
+                            .appleIntelligenceForeground()
                         Spacer()
                         Image(systemName: "chevron.right")
                             .foregroundColor(.secondary)
