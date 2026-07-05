@@ -107,7 +107,7 @@ nonisolated struct Subject: Identifiable, Codable, Hashable {
 // MARK: - Grade Records (成绩记录)
 
 /// 单条成绩记录，包含科目、分数、排名等信息
-nonisolated struct Grade: Identifiable, Codable {
+nonisolated struct Grade: Identifiable, Codable, Hashable {
     var id = UUID()
     /// 科目名称
     var subject: String
@@ -171,7 +171,7 @@ nonisolated struct Grade: Identifiable, Codable {
 // MARK: - Mistake Notes (错题笔记)
 
 /// 错题笔记模型，支持四段式编辑（原题/错因/错误解法/正确解法）
-nonisolated struct MistakeNote: Identifiable, Codable {
+nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
     var id = UUID()
     /// 题目标题
     var title: String

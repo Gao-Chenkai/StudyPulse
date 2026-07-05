@@ -9,10 +9,18 @@
 
 import SwiftUI
 
-struct AchievementUnlockToast: View {
+struct AchievementUnlockToast: View, Equatable {
     @ObservedObject private var achievementManager = AchievementManager.shared
     @State private var currentProgress: AchievementProgress?
     @State private var isVisible = false
+
+    static func == (lhs: AchievementUnlockToast, rhs: AchievementUnlockToast) -> Bool {
+        // 仅当 toast 是否可见变化时才需要重渲(Equatable 用法)
+        // 通过 onChange 已经局部处理;这里返回 true 表示静态相等,
+        // 配合 .equatable() modifier 可以避免 SwiftUI 在父 view diff 时
+        // 重建整个 AchievementUnlockToast 实例
+        return true
+    }
 
     var body: some View {
         ZStack(alignment: .top) {

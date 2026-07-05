@@ -63,52 +63,76 @@ struct TodoView: View {
     // 已过期面板
     @State private var showingPastSheet: Bool = false
 
-    // MARK: - 派生数据
+    // MARK: - 派生数据缓存(避免 body 每次重新计算)
 
     /// 应用类型筛选 + 已完成筛选后的统一条目
-    private var allEntries: [TodoEntry] {
+    @State private var allEntriesCache: [TodoEntry] = []
+    /// 未过期条目(截止 / 考试时间 >= 今天 0 点)
+    @State private var upcomingEntriesCache: [TodoEntry] = []
+    /// 已过期条目
+    @State private var pastEntriesCache: [TodoEntry] = []
+    /// 把即将到来的条目按时间分组
+    @State private var groupedUpcomingCache: [(sectionTitle: String, entries: [TodoEntry])] = []
+
+    /// 集中重算 4 个缓存,O(n) 一次扫,O(1) 分桶
+    private func recomputeEntries() {
         let includeCompleted = showCompleted
         let all = dataManager.todoEntries(includeCompleted: includeCompleted)
-        guard typeFilter != .all else { return all }
-        return all.filter { entry in
-            switch typeFilter {
-            case .all: return true
-            case .exam: return entry.kind == .exam || entry.kind == .comprehensiveExam
-            case .homework: return entry.kind == .homework
-            case .reading: return entry.kind == .reading
+        let filtered: [TodoEntry]
+        if typeFilter == .all {
+            filtered = all
+        } else {
+            filtered = all.filter { entry in
+                switch typeFilter {
+                case .all: return true
+                case .exam: return entry.kind == .exam || entry.kind == .comprehensiveExam
+                case .homework: return entry.kind == .homework
+                case .reading: return entry.kind == .reading
+                }
             }
         }
-    }
+        allEntriesCache = filtered
 
-    /// 未过期条目（截止 / 考试时间 >= 今天 0 点）
-    private var upcomingEntries: [TodoEntry] {
+        // 单次遍历拆分 past / upcoming
         let todayStart = Calendar.current.startOfDay(for: Date())
-        return allEntries.filter { $0.date >= todayStart }
-    }
+        var upcoming: [TodoEntry] = []
+        var past: [TodoEntry] = []
+        upcoming.reserveCapacity(filtered.count)
+        for entry in filtered {
+            if entry.date >= todayStart {
+                upcoming.append(entry)
+            } else {
+                past.append(entry)
+            }
+        }
+        upcomingEntriesCache = upcoming
+        pastEntriesCache = past
 
-    /// 已过期条目
-    private var pastEntries: [TodoEntry] {
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        return allEntries.filter { $0.date < todayStart }
-    }
-
-    /// 把即将到来的条目按时间分组
-    private var groupedUpcoming: [(sectionTitle: String, entries: [TodoEntry])] {
+        // 单次遍历 upcomingEntriesCache 分桶
         let now = Date()
         guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
               let oneMonthLater = Calendar.current.date(byAdding: .month, value: 1, to: now) else {
-            return []
+            groupedUpcomingCache = []
+            return
         }
-
-        let week = upcomingEntries.filter { $0.date <= oneWeekLater }
-        let month = upcomingEntries.filter { $0.date > oneWeekLater && $0.date <= oneMonthLater }
-        let later = upcomingEntries.filter { $0.date > oneMonthLater }
-
+        var weekBucket: [TodoEntry] = []
+        var monthBucket: [TodoEntry] = []
+        var laterBucket: [TodoEntry] = []
+        weekBucket.reserveCapacity(upcoming.count)
+        for entry in upcoming {
+            if entry.date <= oneWeekLater {
+                weekBucket.append(entry)
+            } else if entry.date <= oneMonthLater {
+                monthBucket.append(entry)
+            } else {
+                laterBucket.append(entry)
+            }
+        }
         var result: [(String, [TodoEntry])] = []
-        if !week.isEmpty { result.append(("Within 1 Week".localized(), week)) }
-        if !month.isEmpty { result.append(("Within 1 Month".localized(), month)) }
-        if !later.isEmpty { result.append(("Later".localized(), later)) }
-        return result
+        if !weekBucket.isEmpty { result.append(("Within 1 Week".localized(), weekBucket)) }
+        if !monthBucket.isEmpty { result.append(("Within 1 Month".localized(), monthBucket)) }
+        if !laterBucket.isEmpty { result.append(("Later".localized(), laterBucket)) }
+        groupedUpcomingCache = result
     }
 
     // MARK: - 主体
@@ -116,7 +140,7 @@ struct TodoView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if allEntries.isEmpty && pastEntries.isEmpty {
+                if allEntriesCache.isEmpty && pastEntriesCache.isEmpty {
                     VStack(spacing: 0) {
                         filterChips
                         ContentUnavailableView {
@@ -172,13 +196,13 @@ struct TodoView: View {
             .frame(maxWidth: .infinity)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !pastEntries.isEmpty {
+                    if !pastEntriesCache.isEmpty {
                         Button {
                             showingPastSheet = true
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.arrow.circlepath")
-                                Text("\(pastEntries.count)")
+                                Text("\(pastEntriesCache.count)")
                                     .font(.caption2)
                                     .fontWeight(.semibold)
                             }
@@ -206,6 +230,13 @@ struct TodoView: View {
                     PhaseSelectorView()
                 }
             }
+            // 派生数据重算:仅在筛选条件/数据源变化时触发,避免 body 每次 re-render 全量重算
+            .onAppear { recomputeEntries() }
+            .onChange(of: typeFilter) { _, _ in recomputeEntries() }
+            .onChange(of: showCompleted) { _, _ in recomputeEntries() }
+            .onChange(of: dataManager.filteredExamSets) { _, _ in recomputeEntries() }
+            .onChange(of: dataManager.comprehensiveExamSets) { _, _ in recomputeEntries() }
+            .onChange(of: dataManager.taskItems) { _, _ in recomputeEntries() }
             .sheet(isPresented: $showingNewExam) {
                 NewExamSetView()
                     .adaptiveSheet()
@@ -217,7 +248,7 @@ struct TodoView: View {
             }
             .sheet(isPresented: $showingPastSheet) {
                 PastItemsSheet(
-                    pastEntries: pastEntries,
+                    pastEntries: pastEntriesCache,
                     onSelectExam: { exam in
                         showingPastSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -344,7 +375,7 @@ struct TodoView: View {
                 filterChips
                     .padding(.bottom, 16)
 
-                if upcomingEntries.isEmpty {
+                if upcomingEntriesCache.isEmpty {
                     HStack {
                         Spacer()
                         VStack(spacing: 6) {
@@ -360,7 +391,7 @@ struct TodoView: View {
                     }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 20) {
-                        ForEach(groupedUpcoming, id: \.0) { sectionTitle, entries in
+                        ForEach(groupedUpcomingCache, id: \.0) { sectionTitle, entries in
                             sectionHeader(sectionTitle)
                             LazyVStack(spacing: 12) {
                                 ForEach(entries) { entry in

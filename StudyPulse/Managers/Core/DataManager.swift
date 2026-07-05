@@ -87,8 +87,15 @@ final class DataManager: ObservableObject {
    @Published var comprehensiveExamSets: [comprehensiveExam] = []
     /// 作业 / 阅读材料任务列表（与考试日程统一展示在「待办」页）
     @Published var taskItems: [TaskItem] = []
-    /// 学习阶段列表（学期 / 假期 / 冲刺等用户自定义时间段）
+    /// 学习阶段列表(学期 / 假期 / 冲刺等用户自定义时间段)
     @Published var phases: [StudyPhase] = []
+
+    // MARK: - 内部缓存(性能优化)
+
+    /// SubjectRecord by name 缓存;在 loadAllFromSwiftData 后填充,
+    /// saveSubjects 时直接复用,避免每次都 fetch 全表。
+    /// 失效场景:仅当外部直接修改 SwiftData 时(本项目无此路径)。
+    private var subjectEntitiesByName: [String: SubjectRecord] = [:]
 
     /// Set by open-app App Intents to trigger pre-filled sheets in ContentView.
     @Published var pendingIntentAction: IntentAction? = nil
@@ -132,7 +139,21 @@ final class DataManager: ObservableObject {
     init() {
         // 故意不在这里读取任何磁盘 I/O；
         // 启动时由 asyncInit() 在后台 Task 中并行加载，避免阻塞主线程。
+        // 订阅 @Published 数组变化,自动重算 filteredXxx 缓存(避免每次访问重 filter)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // 合并 5 个 sink 到同一个计算
+            Publishers.CombineLatest4($grades, $mistakeSets, $examSets, $comprehensiveExamSets)
+                .combineLatest($taskItems)
+                .dropFirst() // 跳过 init 时空值的初始发射
+                .sink { [weak self] _ in
+                    self?.recomputeFilteredXxx()
+                }
+                .store(in: &cancellables)
+        }
     }
+
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - 异步初始化
 
@@ -189,53 +210,82 @@ final class DataManager: ObservableObject {
     }
 
     /// 从 SwiftData 一次性加载所有数据到 @Published 数组
+    /// 并行 fetch:虽然 ModelContext 是 main-actor bound、I/O 串行,
+    /// 但 `toSnapshot()` 转换(尤其是错题的 base64 图片解码)可放到后台并发执行。
+    /// 启动期 grades + mistakeSets 的 map 操作最重,后台跑可显著降低首帧时间。
     private func loadAllFromSwiftData(context: ModelContext) {
         do {
-            // Subjects
-            let subjectEntities = try context.fetch(FetchDescriptor<SubjectRecord>())
-            self.subjects = subjectEntities.map { $0.toSnapshot() }
-
-            // Grades
-            let gradeEntities = try context.fetch(
+            // 后台并发执行 4 个 toSnapshot 转换(grades/mistakeSets/examSets/comprehensiveExamSets)
+            // taskItems / subjects / phases / profile 量小,留在主线程
+            let gradesEntities = try context.fetch(
                 FetchDescriptor<GradeRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
             )
-            self.grades = gradeEntities.map { $0.toSnapshot() }
-
-            // MistakeNotes
             let mistakeEntities = try context.fetch(
                 FetchDescriptor<MistakeNoteRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
             )
-            self.mistakeSets = mistakeEntities.map { $0.toSnapshot() }
-
-            // Exams (single subject)
             let examEntities = try context.fetch(
                 FetchDescriptor<ExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
             )
-            self.examSets = examEntities.map { $0.toSnapshot() }
-
-            // Comprehensive exams
             let compEntities = try context.fetch(
                 FetchDescriptor<ComprehensiveExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
             )
-            self.comprehensiveExamSets = compEntities.map { $0.toSnapshot() }
 
-            // TaskItems (homework / reading material)
-            let taskEntities = try context.fetch(
+            // 同步阻塞 4 个并发转换(用 DispatchGroup 等齐)
+            // 同步阻塞在 asyncInit() 同步阶段,会阻塞主线程;
+            // 但每个 task 内部已经在后台 actor 运行,主线程只在 wait 处阻塞。
+            let group = DispatchGroup()
+            let concurrentQueue = DispatchQueue(label: "com.studypulse.snapshot", attributes: .concurrent)
+
+            var gradesSnap: [Grade] = []
+            var mistakesSnap: [MistakeNote] = []
+            var examsSnap: [Exam] = []
+            var compExamsSnap: [comprehensiveExam] = []
+
+            group.enter()
+            concurrentQueue.async {
+                gradesSnap = gradesEntities.map { $0.toSnapshot() }
+                group.leave()
+            }
+            group.enter()
+            concurrentQueue.async {
+                mistakesSnap = mistakeEntities.map { $0.toSnapshot() }
+                group.leave()
+            }
+            group.enter()
+            concurrentQueue.async {
+                examsSnap = examEntities.map { $0.toSnapshot() }
+                group.leave()
+            }
+            group.enter()
+            concurrentQueue.async {
+                compExamsSnap = compEntities.map { $0.toSnapshot() }
+                group.leave()
+            }
+            group.wait()
+
+            // 主线程串行回填
+            let subjectEntities = try context.fetch(FetchDescriptor<SubjectRecord>())
+            self.subjects = subjectEntities.map { $0.toSnapshot() }
+            // 填充 entities 缓存,saveSubjects 时直接复用
+            self.subjectEntitiesByName = Dictionary(uniqueKeysWithValues: subjectEntities.map { ($0.name, $0) })
+            self.grades = gradesSnap
+            self.mistakeSets = mistakesSnap
+            self.examSets = examsSnap
+            self.comprehensiveExamSets = compExamsSnap
+            self.taskItems = try context.fetch(
                 FetchDescriptor<TaskItemRecord>(sortBy: [SortDescriptor(\.dueDate, order: .forward)])
-            )
-            self.taskItems = taskEntities.map { $0.toSnapshot() }
-
-            // StudyPhases (semester / holiday / sprint phases)
-            let phaseEntities = try context.fetch(
+            ).map { $0.toSnapshot() }
+            self.phases = try context.fetch(
                 FetchDescriptor<StudyPhaseRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)])
-            )
-            self.phases = phaseEntities.map { $0.toSnapshot() }
+            ).map { $0.toSnapshot() }
 
-            // Profile (singleton)
             let profiles = try context.fetch(FetchDescriptor<UserProfileRecord>())
             if let entity = profiles.first {
                 self.profile = entity.toSnapshot()
             }
+
+            // 同步初始化 filteredXxx 缓存(避免 await 异步 Task 触发前的窗口期内访问得到空)
+            recomputeFilteredXxx()
 
             Log.data.debug("SwiftData 加载完成 / SwiftData load complete")
         } catch {
@@ -347,10 +397,21 @@ final class DataManager: ObservableObject {
 
     /// 异步加载 Grade 图片（在后台线程读取，避免阻塞 UI）
     func loadGradeImageAsync(filename: String) async -> Data? {
+        // 先查内存缓存:Data → Data 模式不直接命中(缓存的是 UIImage),
+        // 但可以快速判断是否已解码;实际命中靠 view 层
         let url = getImagesDirectory().appendingPathComponent(filename)
         return await Task.detached(priority: .userInitiated) {
             try? Data(contentsOf: url)
         }.value
+    }
+
+    /// 同步加载 Grade 图片 + 走 ImageCache
+    func loadGradeImageCached(filename: String) -> UIImage? {
+        if let cached = ImageCache.shared.getImageByFilename(filename) { return cached }
+        guard let data = try? Data(contentsOf: getImagesDirectory().appendingPathComponent(filename)),
+              let image = UIImage(data: data) else { return nil }
+        ImageCache.shared.putImageByFilename(image, filename)
+        return image
     }
 
     /// 删除 Grade 图片文件
@@ -887,13 +948,18 @@ final class DataManager: ObservableObject {
 
     func saveSubjects() {
         if let context = modelContext {
-            // 同步 subjects 到 SwiftData：增量 upsert（按 name 匹配）
+            // 同步 subjects 到 SwiftData:增量 upsert(按 name 匹配)
+            // 优先使用缓存的 subjectEntitiesByName,首次为空时回退到 fetch 全表
             do {
-                let existing = try context.fetch(FetchDescriptor<SubjectRecord>())
-                let existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
+                var existingByName = subjectEntitiesByName
+                if existingByName.isEmpty {
+                    let existing = try context.fetch(FetchDescriptor<SubjectRecord>())
+                    existingByName = Dictionary(uniqueKeysWithValues: existing.map { ($0.name, $0) })
+                    subjectEntitiesByName = existingByName
+                }
                 let newNames = Set(subjects.map(\.name))
                 // 删除已不存在的
-                for entity in existing where !newNames.contains(entity.name) {
+                for (name, entity) in existingByName where !newNames.contains(name) {
                     context.delete(entity)
                 }
                 // 新增 / 更新
@@ -903,10 +969,16 @@ final class DataManager: ObservableObject {
                         entity.fullScore = s.fullScore
                         entity.displayName = s.displayName
                     } else {
-                        context.insert(SubjectRecord(from: s))
+                        let newEntity = SubjectRecord(from: s)
+                        context.insert(newEntity)
+                        existingByName[s.name] = newEntity
                     }
                 }
                 try context.save()
+                // 同步缓存:删除已不存在的条目
+                for name in existingByName.keys where !newNames.contains(name) {
+                    existingByName.removeValue(forKey: name)
+                }
             } catch {
                 Log.data.error("保存 subjects 失败 / Error saving subjects: \(error.localizedDescription, privacy: .public)")
                 return
@@ -1472,34 +1544,31 @@ final class DataManager: ObservableObject {
         AppEnvironmentManager.shared.activePhaseId != nil
     }
 
-    /// 按 active phase 过滤后的成绩
-    var filteredGrades: [Grade] {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return grades }
-        return grades.filter { $0.phaseId == id }
-    }
+    // MARK: - 按 active phase 过滤后的视图(@Published 缓存,避免每次访问 filter)
 
-    /// 按 active phase 过滤后的错题
-    var filteredMistakeSets: [MistakeNote] {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return mistakeSets }
-        return mistakeSets.filter { $0.phaseId == id }
-    }
+    @Published var filteredGrades: [Grade] = []
+    @Published var filteredMistakeSets: [MistakeNote] = []
+    @Published var filteredExamSets: [Exam] = []
+    @Published var filteredComprehensiveExamSets: [comprehensiveExam] = []
+    @Published var filteredTaskItems: [TaskItem] = []
 
-    /// 按 active phase 过滤后的单科考试
-    var filteredExamSets: [Exam] {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return examSets }
-        return examSets.filter { $0.phaseId == id }
-    }
-
-    /// 按 active phase 过滤后的综合考试
-    var filteredComprehensiveExamSets: [comprehensiveExam] {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return comprehensiveExamSets }
-        return comprehensiveExamSets.filter { $0.phaseId == id }
-    }
-
-    /// 按 active phase 过滤后的任务
-    var filteredTaskItems: [TaskItem] {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return taskItems }
-        return taskItems.filter { $0.phaseId == id }
+    /// 重算 5 个 filteredXxx 缓存;在所有 grades/mistakeSets/examSets/comprehensiveExamSets/taskItems
+    /// 变更后调用,以及 activePhaseId 变化时调用。
+    func recomputeFilteredXxx() {
+        let activeId = AppEnvironmentManager.shared.activePhaseId
+        if let id = activeId {
+            filteredGrades = grades.filter { $0.phaseId == id }
+            filteredMistakeSets = mistakeSets.filter { $0.phaseId == id }
+            filteredExamSets = examSets.filter { $0.phaseId == id }
+            filteredComprehensiveExamSets = comprehensiveExamSets.filter { $0.phaseId == id }
+            filteredTaskItems = taskItems.filter { $0.phaseId == id }
+        } else {
+            filteredGrades = grades
+            filteredMistakeSets = mistakeSets
+            filteredExamSets = examSets
+            filteredComprehensiveExamSets = comprehensiveExamSets
+            filteredTaskItems = taskItems
+        }
     }
 
     /// 是否有未归类的数据(phaseId == nil)

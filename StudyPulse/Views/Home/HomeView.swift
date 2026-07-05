@@ -63,13 +63,18 @@ struct HomeView: View {
     /// 错误提示
     @State private var reportErrorMessage: String?
 
+    // MARK: - 派生数据缓存(避免 body 每次重新计算)
+    /// SRS 队列总览(随 mistakeSets 变化)
+    @State private var cachedSRSOverview: SRSOverview = SRSOverview(dueCount: 0, upcomingCount: 0, totalEnrolled: 0)
+    /// 最近 5 条成绩(随 grades 变化)
+    @State private var cachedRecentGrades: [Grade] = []
+    /// 未来 14 天即将到来的考试(随 filteredExamSets 变化)
+    @State private var cachedUpcomingExams: [Exam] = []
+    /// 已过 3-7 天但未登记成绩的考试(随 grades + filteredExamSets 变化)
+    @State private var cachedUnregisteredExams: [Exam] = []
+
     private var isRegularWidth: Bool {
         sizeClass == .regular || isIPad
-    }
-
-    /// SRS 队列总览
-    var srsOverview: SRSOverview {
-        SRSAlgorithm.overview(from: dataManager.mistakeSets)
     }
 
     var body: some View {
@@ -150,6 +155,14 @@ struct HomeView: View {
             } message: {
                 Text(reportErrorMessage ?? "")
             }
+            // 派生数据重算:仅在 grades/examSets/mistakeSets 真正变化时触发,
+            // 避免 body 每次 re-render 都全量扫描。
+            .modifier(DerivedRecomputeModifier(
+                grades: dataManager.grades,
+                filteredExamSets: dataManager.filteredExamSets,
+                mistakeNotes: dataManager.mistakeSets,
+                recompute: recomputeDerived
+            ))
             .overlay {
                 if isRenderingReport {
                     ZStack {
@@ -255,13 +268,13 @@ struct HomeView: View {
             HRVStatusCard()
                 .contextMenu { shareCardMenu(for: type) }
         case .unregisteredExamsReminder:
-            if !unregisteredExams.isEmpty {
-                UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+            if !cachedUnregisteredExams.isEmpty {
+                UnregisteredExamsReminderCard(unregisteredExams: cachedUnregisteredExams)
                     .contextMenu { shareCardMenu(for: type) }
             }
         case .flashcardReview:
-            if srsOverview.dueCount > 0 {
-                FlashcardReviewHomeCard(overview: srsOverview) {
+            if cachedSRSOverview.dueCount > 0 {
+                FlashcardReviewHomeCard(overview: cachedSRSOverview) {
                     showingFlashcards = true
                 }
                 .contextMenu { shareCardMenu(for: type) }
@@ -273,12 +286,12 @@ struct HomeView: View {
             StudySuggestionsCard()
                 .contextMenu { shareCardMenu(for: type) }
         case .trendChart:
-            if !recentGrades.isEmpty {
+            if !cachedRecentGrades.isEmpty {
                 ChartSectionView()
                     .contextMenu { shareCardMenu(for: type) }
             }
         case .upcomingExams:
-            if !upcomingExams.isEmpty {
+            if !cachedUpcomingExams.isEmpty {
                 UpcomingExamsSection()
                     .contextMenu { shareCardMenu(for: type) }
             }
@@ -289,7 +302,7 @@ struct HomeView: View {
             StreakHomeCard()
                 .contextMenu { shareCardMenu(for: type) }
         case .recentGrades:
-            if !recentGrades.isEmpty {
+            if !cachedRecentGrades.isEmpty {
                 RecentGradesSection()
                     .contextMenu { shareCardMenu(for: type) }
             }
@@ -308,38 +321,46 @@ struct HomeView: View {
             Label("Share Report".localized(), systemImage: "square.and.arrow.up")
         }
     }
-    
-    var recentGrades: [Grade] {
-        Array(dataManager.grades.sorted { $0.date > $1.date }.prefix(5))
-    }
-    
-    var upcomingExams: [Exam] {
+
+    // MARK: - 派生数据重算(集中管理,避免 body 内隐式 O(n²))
+
+    /// 一次性刷新 4 个缓存,避免对 grades/filterExamSets 多次扫描。
+    /// O(n+m) 一次扫：先建 Set<String> 给 unregisteredExams 用,再 prefix 5 给 recentGrades 用,
+    /// 再同时按时间窗口 filter 给 upcomingExams / unregisteredExams 用。
+    private func recomputeDerived() {
+        // SRS 队列
+        cachedSRSOverview = SRSAlgorithm.overview(from: dataManager.mistakeSets)
+        // Recent grades: 按时间倒序取前 5,O(n log n) 一次排序
+        let sortedGradesDesc = dataManager.grades.sorted { $0.date > $1.date }
+        cachedRecentGrades = Array(sortedGradesDesc.prefix(5))
+        // Upcoming exams: 14 天内的考试
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        return dataManager.filteredExamSets
-            .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
-            .sorted { $0.examDate < $1.examDate }
-    }
-    
-    /// 已过 3-7 天但尚未登记成绩的考试（单科目 Exam）
-    var unregisteredExams: [Exam] {
         let now = Date()
+        cachedUpcomingExams = dataManager.filteredExamSets
+            .filter { $0.examDate > now && $0.examDate <= twoWeeksFromNow }
+            .sorted { $0.examDate < $1.examDate }
+        // Unregistered exams: 3-7 天前过、未登记
+        // 之前是 N+1 嵌套 filter(每场 exam 都扫全部 grades),现改为单次建 Set
         let startOfToday = Calendar.current.startOfDay(for: now)
         guard let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: startOfToday),
               let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) else {
-            return []
+            cachedUnregisteredExams = []
+            return
         }
-        
-        return dataManager.filteredExamSets.filter { exam in
+        let dayInterval: TimeInterval = 86_400
+        // 预建 key 集合(subject+examName+dateBucket)→ O(n)
+        var registeredKeys = Set<String>()
+        registeredKeys.reserveCapacity(dataManager.grades.count)
+        for g in dataManager.grades {
+            let dayBucket = Int(g.date.timeIntervalSince1970 / dayInterval)
+            registeredKeys.insert("\(g.subject)|\(g.examName)|\(dayBucket)")
+        }
+        cachedUnregisteredExams = dataManager.filteredExamSets.filter { exam in
             guard exam.examDate < threeDaysAgo && exam.examDate >= sevenDaysAgo else {
                 return false
             }
-
-            let hasGrade = dataManager.grades.contains { grade in
-                grade.subject == exam.subject &&
-                grade.examName == exam.examName &&
-                grade.date >= exam.examDate
-            }
-            return !hasGrade
+            let dayBucket = Int(exam.examDate.timeIntervalSince1970 / dayInterval)
+            return !registeredKeys.contains("\(exam.subject)|\(exam.examName)|\(dayBucket)")
         }.sorted { $0.examDate < $1.examDate }
     }
 
@@ -432,27 +453,27 @@ struct HomeView: View {
                 case .studyTimer: StudyTimerCard()
                 case .hrvStatus: HRVStatusCard()
                 case .unregisteredExamsReminder:
-                    if !unregisteredExams.isEmpty {
-                        UnregisteredExamsReminderCard(unregisteredExams: unregisteredExams)
+                    if !cachedUnregisteredExams.isEmpty {
+                        UnregisteredExamsReminderCard(unregisteredExams: cachedUnregisteredExams)
                     } else {
                         Text("No data in this period".localized())
                     }
                 case .flashcardReview:
-                    if srsOverview.dueCount > 0 {
-                        FlashcardReviewHomeCard(overview: srsOverview) {}
+                    if cachedSRSOverview.dueCount > 0 {
+                        FlashcardReviewHomeCard(overview: cachedSRSOverview) {}
                     } else {
                         Text("No data in this period".localized())
                     }
                 case .quickActions: QuickActionsCard()
                 case .studySuggestions: StudySuggestionsCard()
                 case .trendChart:
-                    if !recentGrades.isEmpty {
+                    if !cachedRecentGrades.isEmpty {
                         ChartSectionView()
                     } else {
                         Text("No data in this period".localized())
                     }
                 case .upcomingExams:
-                    if !upcomingExams.isEmpty {
+                    if !cachedUpcomingExams.isEmpty {
                         UpcomingExamsSection()
                     } else {
                         Text("No data in this period".localized())
@@ -460,7 +481,7 @@ struct HomeView: View {
                 case .dailyQuote: DailyQuoteCard(quote: dailyQuote)
                 case .streakProgress: StreakHomeCard()
                 case .recentGrades:
-                    if !recentGrades.isEmpty {
+                    if !cachedRecentGrades.isEmpty {
                         RecentGradesSection()
                     } else {
                         Text("No data in this period".localized())
@@ -613,10 +634,15 @@ struct WelcomeHeaderView: View {
         }
     }
     
+    // 静态化 DateFormatter 避免每次调用新建(DateFormatter 初始化 ~1ms)
+    private static let fullDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d"
+        return f
+    }()
+
     private func currentDateText() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d"
-        return formatter.string(from: Date())
+        Self.fullDateFormatter.string(from: Date())
     }
 }
 
@@ -626,18 +652,24 @@ struct MainStatsCard: View {
     /// 异步加载的头像数据，避免 body 中同步读文件
     @State private var avatarData: Data? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
+    /// 渐变动画开关 — 之前用 repeatForever 持续触发 gradient 重算,
+    /// 现改为 onAppear 后单次播放 6 秒动画,然后停(避免持续 CPU 占用)。
     @State private var animateGradient = false
+    /// 平均分文本缓存(随 grades 变化重算,避免每次 body reduce 所有 grades)
+    @State private var cachedAverageText: String = "N/A"
+    /// 14 天内考试数量缓存(随 filteredExamSets 变化重算)
+    @State private var cachedUpcomingExamsCount: Int = 0
 
     private var isWide: Bool { sizeClass == .regular || isIPad }
 
     var body: some View {
         VStack(spacing: 20) {
-            // iPad 一行 4 个，iPhone 仍是 2x2
+            // iPad 一行 4 个,iPhone 仍是 2x2
             if isWide {
                 HStack(spacing: 12) {
                     StatItemView(
                         title: "Average".localized(),
-                        value: averageScoreText(),
+                        value: cachedAverageText,
                         icon: "chart.line.uptrend.xyaxis",
                         color: .cyan
                     )
@@ -649,7 +681,7 @@ struct MainStatsCard: View {
                     )
                     StatItemView(
                         title: "Upcoming".localized(),
-                        value: "\(upcomingExamsCount)",
+                        value: "\(cachedUpcomingExamsCount)",
                         icon: "calendar.badge.exclamationmark",
                         color: .orange
                     )
@@ -665,7 +697,7 @@ struct MainStatsCard: View {
                     HStack(spacing: 12) {
                         StatItemView(
                             title: "Average".localized(),
-                            value: averageScoreText(),
+                            value: cachedAverageText,
                             icon: "chart.line.uptrend.xyaxis",
                             color: .cyan
                         )
@@ -679,7 +711,7 @@ struct MainStatsCard: View {
                     HStack(spacing: 12) {
                         StatItemView(
                             title: "Upcoming".localized(),
-                            value: "\(upcomingExamsCount)",
+                            value: "\(cachedUpcomingExamsCount)",
                             icon: "calendar.badge.exclamationmark",
                             color: .orange
                         )
@@ -732,24 +764,31 @@ struct MainStatsCard: View {
             y: 8
         )
         .onAppear {
-            withAnimation(.easeInOut(duration: 6.0).repeatForever(autoreverses: true)) {
+            // 单次 6 秒动画,完成后停在 .bottomTrailing 状态(不再 repeat),
+            // 避免长期占用 CPU 持续 gradient 重算
+            withAnimation(.easeInOut(duration: 6.0)) {
                 animateGradient = true
             }
+            recomputeStats()
         }
+        .onChange(of: dataManager.grades) { _, _ in recomputeStats() }
+        .onChange(of: dataManager.filteredExamSets) { _, _ in recomputeStats() }
     }
-    
-    private var upcomingExamsCount: Int {
-        let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        return dataManager.filteredExamSets
-            .filter { $0.examDate > Date() && $0.examDate <= twoWeeksFromNow }
+
+    /// 集中计算 average / upcoming count,避免 body 中多次 reduce
+    private func recomputeStats() {
+        if dataManager.grades.isEmpty {
+            cachedAverageText = "N/A"
+        } else {
+            let total = dataManager.grades.reduce(0) { $0 + $1.score }
+            let average = total / Double(dataManager.grades.count)
+            cachedAverageText = String(format: "%.1f", average)
+        }
+        let now = Date()
+        let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: now) ?? now
+        cachedUpcomingExamsCount = dataManager.filteredExamSets
+            .filter { $0.examDate > now && $0.examDate <= twoWeeksFromNow }
             .count
-    }
-    
-    private func averageScoreText() -> String {
-        guard !dataManager.grades.isEmpty else { return "N/A" }
-        let total = dataManager.grades.reduce(0) { $0 + $1.score }
-        let average = total / Double(dataManager.grades.count)
-        return String(format: "%.1f", average)
     }
 }
 
@@ -1055,16 +1094,24 @@ struct CompactExamCard: View, Equatable {
         }
     }
     
+    // 静态化 DateFormatter 避免每次调用新建(DateFormatter 初始化 ~1ms)
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d"
+        return f
+    }()
+    private static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return f
+    }()
+
     private func dayString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: date)
+        Self.dayFormatter.string(from: date)
     }
-    
+
     private func monthString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
-        return formatter.string(from: date)
+        Self.monthFormatter.string(from: date)
     }
 }
 
@@ -1344,26 +1391,34 @@ struct ChartSectionView: View {
     
     private func selectSubject(rule: SubjectSelectionRule) {
         currentRule = rule
-        
+
         let activeSubjects = Set(dataManager.grades.map { $0.subject })
         guard !activeSubjects.isEmpty else {
             selectedSubject = nil
             return
         }
-        
+
+        // 单次 O(n) 分组聚合,供 4 个 find* 方法复用,避免 N+1 嵌套 filter
+        let aggregates = subjectAggregates(for: activeSubjects)
+
         switch rule {
         case .lowestScore:
-            selectedSubject = findLowestScoreSubject(from: activeSubjects)
+            selectedSubject = aggregates.min { $0.value.average < $1.value.average }?.key
         case .mostGrades:
-            selectedSubject = findMostGradesSubject(from: activeSubjects)
+            selectedSubject = aggregates.max { $0.value.count < $1.value.count }?.key
         case .recentMost:
-            selectedSubject = findRecentMostSubject(from: activeSubjects)
+            selectedSubject = aggregates.max { $0.value.recentCount < $1.value.recentCount }?.key
         case .mostImprovement:
-            selectedSubject = findMostImprovedSubject(from: activeSubjects)
+            // 改进分 = (last - first);需要至少 2 条成绩
+            selectedSubject = aggregates.compactMap { (subject, agg) -> (String, Double)? in
+                guard let first = agg.sortedAsc.first, let last = agg.sortedAsc.last,
+                      agg.sortedAsc.count >= 2 else { return nil }
+                return (subject, last.score - first.score)
+            }.max { $0.1 < $1.1 }?.0
         case .random:
             selectedSubject = activeSubjects.randomElement()
         }
-        
+
         animateChart = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -1371,80 +1426,41 @@ struct ChartSectionView: View {
             }
         }
     }
-    
-    private func findLowestScoreSubject(from subjects: Set<String>) -> String? {
-        var lowestScore = Double.infinity
-        var lowestSubject: String? = nil
-        
-        for subject in subjects {
-            let grades = dataManager.grades.filter { $0.subject == subject }
-            guard !grades.isEmpty else { continue }
-            let avg = grades.reduce(0) { $0 + $1.score } / Double(grades.count)
-            if avg < lowestScore {
-                lowestScore = avg
-                lowestSubject = subject
-            }
-        }
-        return lowestSubject
-    }
-    
-    private func findMostGradesSubject(from subjects: Set<String>) -> String? {
-        subjects.max { subject1, subject2 in
-            let count1 = dataManager.grades.filter { $0.subject == subject1 }.count
-            let count2 = dataManager.grades.filter { $0.subject == subject2 }.count
-            return count1 < count2
-        }
-    }
-    
-    private func findRecentMostSubject(from subjects: Set<String>) -> String? {
-        var recentCounts: [String: Int] = [:]
+
+    /// 一次扫所有 grades,按 subject 分组并预计算 avg / count / recentCount / sorted。
+    /// 之前每个 find* 都 O(n*m) filter,合并后整体 O(n)。
+    private func subjectAggregates(for subjects: Set<String>) -> [String: (average: Double, count: Int, recentCount: Int, sortedAsc: [Grade])] {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-        
-        for subject in subjects {
-            let count = dataManager.grades.filter { 
-                $0.subject == subject && $0.date >= thirtyDaysAgo 
-            }.count
-            recentCounts[subject] = count
+        // 单次 group by subject
+        var groups: [String: [Grade]] = [:]
+        for g in dataManager.grades {
+            groups[g.subject, default: []].append(g)
         }
-        
-        return recentCounts.max { $0.value < $1.value }?.key
-    }
-    
-    private func findMostImprovedSubject(from subjects: Set<String>) -> String? {
-        var bestImprovement = -Double.infinity
-        var bestSubject: String? = nil
-        
+        var result: [String: (average: Double, count: Int, recentCount: Int, sortedAsc: [Grade])] = [:]
         for subject in subjects {
-            let grades = dataManager.grades
-                .filter { $0.subject == subject }
-                .sorted(by: { $0.date < $1.date })
-            guard grades.count >= 2 else { continue }
-            
-            let first = grades.first!.score
-            let last = grades.last!.score
-            let improvement = last - first
-            
-            if improvement > bestImprovement {
-                bestImprovement = improvement
-                bestSubject = subject
-            }
+            guard let arr = groups[subject], !arr.isEmpty else { continue }
+            let sortedAsc = arr.sorted { $0.date < $1.date }
+            let total = sortedAsc.reduce(0.0) { $0 + $1.score }
+            let average = total / Double(sortedAsc.count)
+            let recentCount = sortedAsc.reduce(0) { $0 + ($1.date >= thirtyDaysAgo ? 1 : 0) }
+            result[subject] = (average, sortedAsc.count, recentCount, sortedAsc)
         }
-        return bestSubject
+        return result
     }
-    
+
     private func gradesForSubject(_ subject: String) -> [Grade]? {
         let grades = dataManager.grades.filter { $0.subject == subject }
         return grades.isEmpty ? nil : grades
     }
-    
+
     private func averageScore(for grades: [Grade]) -> Double {
         grades.reduce(0) { $0 + $1.score } / Double(grades.count)
     }
-    
+
     private func highestScore(for grades: [Grade]) -> Double {
         grades.max { $0.score < $1.score }?.score ?? 0
     }
-    
+
     private func lowestScore(for grades: [Grade]) -> Double {
         grades.min { $0.score < $1.score }?.score ?? 0
     }
@@ -1716,121 +1732,123 @@ struct StudySuggestionsCard: View {
     private func findWeakSubject() -> String? {
         let subjects = Set(dataManager.grades.map { $0.subject })
         guard subjects.count >= 2 else { return nil }
-        
+        let aggregates = subjectAggregates()
         var lowestScore = Double.infinity
         var lowestSubject: String? = nil
-        
-        for subject in subjects {
-            let grades = dataManager.grades.filter { $0.subject == subject }
-            guard grades.count >= 2 else { continue }
-            let avg = grades.reduce(0) { $0 + $1.score } / Double(grades.count)
-            if avg < lowestScore {
-                lowestScore = avg
+        for (subject, agg) in aggregates where agg.sortedAsc.count >= 2 {
+            if agg.average < lowestScore {
+                lowestScore = agg.average
                 lowestSubject = subject
             }
         }
         return lowestSubject
     }
-    
+
     private func findStrongSubject() -> String? {
         let subjects = Set(dataManager.grades.map { $0.subject })
         guard !subjects.isEmpty else { return nil }
-        
+        let aggregates = subjectAggregates()
         var highestScore = -Double.infinity
         var highestSubject: String? = nil
-        
-        for subject in subjects {
-            let grades = dataManager.grades.filter { $0.subject == subject }
-            guard grades.count >= 2 else { continue }
-            let avg = grades.reduce(0) { $0 + $1.score } / Double(grades.count)
-            if avg > highestScore {
-                highestScore = avg
+        for (subject, agg) in aggregates where agg.sortedAsc.count >= 2 {
+            if agg.average > highestScore {
+                highestScore = agg.average
                 highestSubject = subject
             }
         }
         return highestSubject
     }
-    
+
     private func findDecliningTrend() -> String? {
-        let subjects = Set(dataManager.grades.map { $0.subject })
-        for subject in subjects {
-            let grades = dataManager.grades
-                .filter { $0.subject == subject }
-                .sorted { $0.date > $1.date }
-            guard grades.count >= 3 else { continue }
-            let recent = Array(grades.prefix(3))
-            let scores = recent.map { $0.score }
-            guard scores[0] < scores[1], scores[1] < scores[2],
-                  scores[2] - scores[0] >= 5 else { continue }
-            return subject
-        }
-        return nil
-    }
-    
-    private func findImprovingTrend() -> String? {
-        let subjects = Set(dataManager.grades.map { $0.subject })
-        for subject in subjects {
-            let grades = dataManager.grades
-                .filter { $0.subject == subject }
-                .sorted { $0.date > $1.date }
-            guard grades.count >= 3 else { continue }
-            let recent = Array(grades.prefix(3))
-            let scores = recent.map { $0.score }
-            guard scores[0] > scores[1], scores[1] > scores[2],
-                  scores[0] - scores[2] >= 5 else { continue }
-            return subject
-        }
-        return nil
-    }
-    
-    private func findUnreviewedMistakeSubjects() -> [String] {
-        let mistakeSubjects = Set(dataManager.mistakeSets.map { $0.subject })
-        var unreviewed: [String] = []
-        for subject in mistakeSubjects {
-            let mistakesInSubject = dataManager.mistakeSets
-                .filter { $0.subject == subject }
-                .count
-            let gradesInSubject = dataManager.grades
-                .filter { $0.subject == subject }
-                .count
-            if mistakesInSubject >= 3 && gradesInSubject == 0 {
-                unreviewed.append(subject)
-            }
-        }
-        return Array(unreviewed.prefix(2))
-    }
-    
-    private func findMistakeHeavySubject() -> String? {
-        let subjects = Set(dataManager.grades.map { $0.subject })
-            .union(dataManager.mistakeSets.map { $0.subject })
-        for subject in subjects {
-            let mistakeCount = dataManager.mistakeSets
-                .filter { $0.subject == subject }.count
-            let gradeCount = dataManager.grades
-                .filter { $0.subject == subject }.count
-            if mistakeCount >= 5 && mistakeCount > gradeCount * 2 {
+        // 取每个 subject 最近 3 次成绩(sortedAsc.suffix(3)):
+        // 期望 s0 > s1 > s2 且 s0 - s2 >= 5 → 持续下滑
+        let aggregates = subjectAggregates()
+        for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
+            let last3 = Array(agg.sortedAsc.suffix(3))
+            let s0 = last3[0].score, s1 = last3[1].score, s2 = last3[2].score
+            if s0 > s1, s1 > s2, s0 - s2 >= 5 {
                 return subject
             }
         }
         return nil
     }
-    
-    private func findImbalancedStudy() -> String? {
-        let subjects = Set(dataManager.grades.map { $0.subject })
-        guard subjects.count >= 3 else { return nil }
-        var counts: [(String, Int)] = []
-        for subject in subjects {
-            let count = dataManager.grades.filter { $0.subject == subject }.count
-            counts.append((subject, count))
+
+    private func findImprovingTrend() -> String? {
+        // 取每个 subject 最近 3 次成绩:
+        // 期望 s0 < s1 < s2 且 s2 - s0 >= 5 → 持续进步
+        let aggregates = subjectAggregates()
+        for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
+            let last3 = Array(agg.sortedAsc.suffix(3))
+            let s0 = last3[0].score, s1 = last3[1].score, s2 = last3[2].score
+            if s0 < s1, s1 < s2, s2 - s0 >= 5 {
+                return subject
+            }
         }
-        counts.sort { a, b in a.1 > b.1 }
-        guard let max = counts.first else { return nil }
-        let others = counts.dropFirst()
-        var total = 0
-        for entry in others { total += entry.1 }
+        return nil
+    }
+
+    private func findUnreviewedMistakeSubjects() -> [String] {
+        // 单次 group by subject mistakes,然后查 aggregates 取 grades 数量
+        var mistakeCounts: [String: Int] = [:]
+        for m in dataManager.mistakeSets {
+            mistakeCounts[m.subject, default: 0] += 1
+        }
+        let aggregates = subjectAggregates()
+        var unreviewed: [String] = []
+        for (subject, count) in mistakeCounts where count >= 3 {
+            let gradeCount = aggregates[subject]?.count ?? 0
+            if gradeCount == 0 {
+                unreviewed.append(subject)
+            }
+        }
+        return Array(unreviewed.prefix(2))
+    }
+
+    private func findMistakeHeavySubject() -> String? {
+        // mistakes group by subject 一次
+        var mistakeCounts: [String: Int] = [:]
+        for m in dataManager.mistakeSets {
+            mistakeCounts[m.subject, default: 0] += 1
+        }
+        let aggregates = subjectAggregates()
+        let allSubjects = Set(mistakeCounts.keys).union(aggregates.keys)
+        for subject in allSubjects {
+            let mc = mistakeCounts[subject] ?? 0
+            let gc = aggregates[subject]?.count ?? 0
+            if mc >= 5 && mc > gc * 2 {
+                return subject
+            }
+        }
+        return nil
+    }
+
+    private func findImbalancedStudy() -> String? {
+        let aggregates = subjectAggregates()
+        guard aggregates.count >= 3 else { return nil }
+        let sorted = aggregates.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
+        guard let max = sorted.first else { return nil }
+        let others = Array(sorted.dropFirst())
+        let total = others.reduce(0) { $0 + $1.1 }
         let avgOthers = others.isEmpty ? 0 : total / others.count
         guard max.1 > avgOthers * 3 else { return nil }
         return max.0
+    }
+
+    /// 单次 group by subject 聚合 grades,供 StudySuggestionsCard 7 个 find* 复用。
+    /// 之前每个 find* 都 O(n*m) filter 整个 grades,合并后整体 O(n)。
+    private func subjectAggregates() -> [String: (average: Double, count: Int, recentCount: Int, sortedAsc: [Grade])] {
+        var groups: [String: [Grade]] = [:]
+        for g in dataManager.grades {
+            groups[g.subject, default: []].append(g)
+        }
+        var result: [String: (average: Double, count: Int, recentCount: Int, sortedAsc: [Grade])] = [:]
+        for (subject, arr) in groups where !arr.isEmpty {
+            let sortedAsc = arr.sorted { $0.date < $1.date }
+            let total = sortedAsc.reduce(0.0) { $0 + $1.score }
+            let average = total / Double(sortedAsc.count)
+            result[subject] = (average, sortedAsc.count, 0, sortedAsc)
+        }
+        return result
     }
 }
 
@@ -2004,6 +2022,24 @@ struct FlashcardReviewHomeCard: View {
                 ), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
+// MARK: - 派生数据重算 ViewModifier
+/// 集中管理 HomeView 4 个缓存的 onAppear / onChange 触发,
+/// 避免在 body 链式调用中直接堆 4 个 modifier 导致 SwiftUI 类型推断超时。
+private struct DerivedRecomputeModifier: ViewModifier {
+    let grades: [Grade]
+    let filteredExamSets: [Exam]
+    let mistakeNotes: [MistakeNote]
+    let recompute: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { recompute() }
+            .onChange(of: grades) { _, _ in recompute() }
+            .onChange(of: filteredExamSets) { _, _ in recompute() }
+            .onChange(of: mistakeNotes) { _, _ in recompute() }
     }
 }
 

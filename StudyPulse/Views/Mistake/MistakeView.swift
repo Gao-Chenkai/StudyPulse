@@ -25,44 +25,51 @@ struct MistakeView: View {
     @State private var pdfDocument: MistakePDFDocument?
     @State private var pdfErrorMessage: String?
 
-    // 按科目分组错题
-    var subjectGroups: [String: [MistakeNote]] {
-        Dictionary(grouping: dataManager.filteredMistakeSets) { $0.subject.isEmpty ? "Uncategorized" : $0.subject }
-    }
+    // 按科目分组错题(缓存)
+    @State private var subjectGroupsCache: [String: [MistakeNote]] = [:]
+    // 科目列表(按错题数降序排列)(缓存)
+    @State private var sortedSubjectsCache: [String] = []
+    // 搜索过滤后的科目列表(缓存)
+    @State private var filteredSubjectsCache: [String] = []
+    // 错题总数(缓存)
+    @State private var totalMistakeCountCache: Int = 0
+    // SRS 队列总览(缓存)
+    @State private var srsOverviewCache: SRSOverview = SRSOverview(dueCount: 0, upcomingCount: 0, totalEnrolled: 0)
 
-    // 科目列表（按错题数降序排列）
-    var sortedSubjects: [String] {
-        subjectGroups.keys.sorted { a, b in
-            let countA = subjectGroups[a]?.count ?? 0
-            let countB = subjectGroups[b]?.count ?? 0
-            if countA != countB {
-                return countA > countB
-            }
+    /// 集中重算 5 个缓存,O(n) 一次扫,避免 body 每次重建字典
+    private func recomputeAll() {
+        // 1. 按 subject 分组
+        var groups: [String: [MistakeNote]] = [:]
+        for m in dataManager.filteredMistakeSets {
+            let key = m.subject.isEmpty ? "Uncategorized" : m.subject
+            groups[key, default: []].append(m)
+        }
+        subjectGroupsCache = groups
+
+        // 2. 排序:按错题数降序,同数按字母升序
+        sortedSubjectsCache = groups.keys.sorted { a, b in
+            let ca = groups[a]?.count ?? 0
+            let cb = groups[b]?.count ?? 0
+            if ca != cb { return ca > cb }
             return a.localizedCompare(b) == .orderedAscending
         }
-    }
 
-    // 搜索过滤
-    var filteredSubjects: [String] {
+        // 3. 搜索过滤
         if searchText.isEmpty {
-            return sortedSubjects
+            filteredSubjectsCache = sortedSubjectsCache
+        } else {
+            filteredSubjectsCache = sortedSubjectsCache.filter { subject in
+                if subject.localizedCaseInsensitiveContains(searchText) { return true }
+                return groups[subject]?.contains {
+                    $0.title.localizedCaseInsensitiveContains(searchText) ||
+                    $0.originalQuestion.localizedCaseInsensitiveContains(searchText)
+                } ?? false
+            }
         }
-        return sortedSubjects.filter { subject in
-            subject.localizedCaseInsensitiveContains(searchText) ||
-            (subjectGroups[subject]?.contains {
-                $0.title.localizedCaseInsensitiveContains(searchText) ||
-                $0.originalQuestion.localizedCaseInsensitiveContains(searchText)
-            } ?? false)
-        }
-    }
 
-    var totalMistakeCount: Int {
-        dataManager.filteredMistakeSets.count
-    }
-
-    /// SRS 队列总览
-    var srsOverview: SRSOverview {
-        SRSAlgorithm.overview(from: dataManager.filteredMistakeSets)
+        // 4. 总数 + SRS
+        totalMistakeCountCache = dataManager.filteredMistakeSets.count
+        srsOverviewCache = SRSAlgorithm.overview(from: dataManager.filteredMistakeSets)
     }
 
     var body: some View {
@@ -85,13 +92,13 @@ struct MistakeView: View {
                         VStack(spacing: 24) {
                             // 待复习横幅（搜索时不显示）
                             if searchText.isEmpty {
-                                OverviewStatsCard(totalCount: totalMistakeCount, subjectCount: sortedSubjects.count)
+                                OverviewStatsCard(totalCount: totalMistakeCountCache, subjectCount: sortedSubjectsCache.count)
                                     .padding(.horizontal)
                             }
 
                             // SRS 待复习入口
-                            if searchText.isEmpty && srsOverview.dueCount > 0 {
-                                DueReviewBanner(overview: srsOverview) {
+                            if searchText.isEmpty && srsOverviewCache.dueCount > 0 {
+                                DueReviewBanner(overview: srsOverviewCache) {
                                     showingFlashcards = true
                                 }
                                 .padding(.horizontal)
@@ -104,9 +111,9 @@ struct MistakeView: View {
                                     .padding(.horizontal)
 
                                 LazyVStack(spacing: 12) {
-                                    ForEach(filteredSubjects, id: \.self) { subject in
-                                        NavigationLink(destination: SubjectMistakesView(subject: subject, mistakes: subjectGroups[subject] ?? [])) {
-                                            SubjectCardView(subject: subject, mistakes: subjectGroups[subject] ?? [])
+                                    ForEach(filteredSubjectsCache, id: \.self) { subject in
+                                        NavigationLink(destination: SubjectMistakesView(subject: subject, mistakes: subjectGroupsCache[subject] ?? [])) {
+                                            SubjectCardView(subject: subject, mistakes: subjectGroupsCache[subject] ?? [])
                                         }
                                         .buttonStyle(.plain)
                                     }
@@ -123,16 +130,20 @@ struct MistakeView: View {
             }
             .navigationTitle("Mistakes".localized())
             .searchable(text: $searchText, prompt: "Search subjects or mistakes...".localized())
+            // 派生数据重算:搜索/数据源变化时触发
+            .onAppear { recomputeAll() }
+            .onChange(of: searchText) { _, _ in recomputeAll() }
+            .onChange(of: dataManager.filteredMistakeSets) { _, _ in recomputeAll() }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if srsOverview.totalEnrolled > 0 {
+                    if srsOverviewCache.totalEnrolled > 0 {
                         Button {
                             showingFlashcards = true
                         } label: {
                             ZStack(alignment: .topTrailing) {
                                 Image(systemName: "rectangle.stack")
-                                if srsOverview.dueCount > 0 {
-                                    Text("\(srsOverview.dueCount)")
+                                if srsOverviewCache.dueCount > 0 {
+                                    Text("\(srsOverviewCache.dueCount)")
                                         .font(.system(size: 10).weight(.bold))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 5)

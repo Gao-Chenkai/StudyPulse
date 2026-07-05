@@ -13,42 +13,55 @@ struct TrendsView: View {
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingAddGrade = false
-    
-    // score = ranking = 
+
+    // score = ranking =
     @State var trendsShowingMode = "score"
-    
-    // 
-    var activeSubjects: [String] {
-        dataManager.subjects
-            .filter { $0.enabled }
-            .map { $0.name }
-            .filter { hasGrades(for: $0) }
-    }
-    
-    // 
-    var subjectsNeedingAttention: [String] {
-        activeSubjects.filter { subject in
-            let grades = getGradeHistory(for: subject)
-            guard grades.count >= 2 else { return false }
-            
-            let recentGrades = Array(grades.suffix(3))
-            let avgScore = recentGrades.map { $0.score }.reduce(0, +) / Double(recentGrades.count)
-            
-            // 70
-            if avgScore < 70 {
-                return true
+
+    // 派生数据缓存(避免 body 每次 re-render 全量重算)
+    /// 按 subject 分组的已排序成绩(asc),供 getLatestGrade/getGradeHistory 复用
+    @State private var gradesBySubjectCache: [String: [Grade]] = [:]
+    /// 启用的有成绩的科目列表
+    @State private var activeSubjectsCache: [String] = []
+    /// 需要关注的科目(平均分 < 70 或近期下滑 > 15)
+    @State private var subjectsNeedingAttentionCache: [String] = []
+
+    /// 集中重算 3 个缓存,O(n) 一次扫
+    private func recomputeAll() {
+        // 1. 单次 group by subject + sort
+        var groups: [String: [Grade]] = [:]
+        for g in dataManager.filteredGrades {
+            groups[g.subject, default: []].append(g)
+        }
+        // 排序 + 缓存
+        var sorted: [String: [Grade]] = [:]
+        for (subject, arr) in groups {
+            sorted[subject] = arr.sorted { $0.date < $1.date }
+        }
+        gradesBySubjectCache = sorted
+
+        // 2. 启用的 + 有成绩的科目
+        let enabledNames = dataManager.subjects.filter { $0.enabled }.map { $0.name }
+        activeSubjectsCache = enabledNames.filter { !(sorted[$0]?.isEmpty ?? true) }
+
+        // 3. 需要关注的:平均分 < 70 或最近下滑 > 15
+        var needAttention: [String] = []
+        for subject in activeSubjectsCache {
+            guard let arr = sorted[subject], arr.count >= 2 else { continue }
+            let recent = Array(arr.suffix(3))
+            let avg = recent.reduce(0.0) { $0 + $1.score } / Double(recent.count)
+            if avg < 70 {
+                needAttention.append(subject)
+                continue
             }
-            
-            if recentGrades.count >= 2 {
-                let first = recentGrades.first!.score
-                let last = recentGrades.last!.score
+            if recent.count >= 2 {
+                let first = recent.first!.score
+                let last = recent.last!.score
                 if last < first - 15 {
-                    return true
+                    needAttention.append(subject)
                 }
             }
-            
-            return false
         }
+        subjectsNeedingAttentionCache = needAttention
     }
     
     var body: some View {
@@ -61,7 +74,7 @@ struct TrendsView: View {
                             .padding(.horizontal)
                     }
 
-                    if activeSubjects.isEmpty {
+                    if activeSubjectsCache.isEmpty {
                         // 空状态
                         ContentUnavailableView(
                             "No Grades Yet".localized(),
@@ -70,7 +83,7 @@ struct TrendsView: View {
                         )
                         .padding(.top, 100)
                     } else {
-                        if !subjectsNeedingAttention.isEmpty {
+                        if !subjectsNeedingAttentionCache.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -82,7 +95,7 @@ struct TrendsView: View {
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
-                                        ForEach(subjectsNeedingAttention, id: \.self) { subjectName in
+                                        ForEach(subjectsNeedingAttentionCache, id: \.self) { subjectName in
                                             NavigationLink(value: subjectName) {
                                                 AttentionSubjectCard(subjectName: subjectName, grades: getGradeHistory(for: subjectName))
                                             }
@@ -95,7 +108,7 @@ struct TrendsView: View {
                         }
 
                         LazyVGrid(columns: AdaptiveGridColumns().columns, spacing: 20) {
-                            ForEach(activeSubjects, id: \.self) { subjectName in
+                            ForEach(activeSubjectsCache, id: \.self) { subjectName in
                                 NavigationLink(value: subjectName) {
                                     SubjectScoreCard(
                                         subject: subjectName,
@@ -174,27 +187,25 @@ struct TrendsView: View {
                 AddGradeView()
                     .adaptiveSheet()
             }
+            // 派生数据重算:仅在 grades/subjects 变化时触发
+            .onAppear { recomputeAll() }
+            .onChange(of: dataManager.filteredGrades) { _, _ in recomputeAll() }
+            .onChange(of: dataManager.subjects) { _, _ in recomputeAll() }
         }
     }
-    
-    // 
+
     private func hasGrades(for subject: String) -> Bool {
-        dataManager.filteredGrades.contains { $0.subject == subject }
+        !(gradesBySubjectCache[subject]?.isEmpty ?? true)
     }
-    
-    // 
+
+    /// O(1) 字典查表(已在 recomputeAll 排序)
     private func getLatestGrade(for subject: String) -> Grade? {
-        dataManager.filteredGrades
-            .filter { $0.subject == subject }
-            .sorted { $0.date < $1.date }
-            .last
+        gradesBySubjectCache[subject]?.last
     }
-    
-    // 
+
+    /// O(1) 字典查表
     private func getGradeHistory(for subject: String) -> [Grade] {
-        dataManager.filteredGrades
-            .filter { $0.subject == subject }
-            .sorted { $0.date < $1.date }
+        gradesBySubjectCache[subject] ?? []
     }
 }
 

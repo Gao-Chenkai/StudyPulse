@@ -28,19 +28,38 @@ nonisolated final class ImageCache {
     private func makeKey(_ data: Data) -> NSString {
         NSString(string: String(data.hashValue, radix: 16))
     }
-    
-    /// 从缓存获取图片
+
+    /// 按文件名缓存的 Key(头像 / 成绩图片,文件名稳定)
+    private func makeFilenameKey(_ filename: String) -> NSString {
+        NSString(string: "f:\(filename)")
+    }
+
+    /// 从 Data 缓存获取
     func getImage(_ data: Data) -> UIImage? {
         lock.lock()
         defer { lock.unlock() }
         return cache.object(forKey: makeKey(data))
     }
-    
-    /// 存入图片到缓存
+
+    /// 存入 Data 缓存
     func putImage(_ image: UIImage, _ data: Data) {
         lock.lock()
         defer { lock.unlock() }
         cache.setObject(image, forKey: makeKey(data))
+    }
+
+    /// 按文件名获取
+    func getImageByFilename(_ filename: String) -> UIImage? {
+        lock.lock()
+        defer { lock.unlock() }
+        return cache.object(forKey: makeFilenameKey(filename))
+    }
+
+    /// 按文件名存入
+    func putImageByFilename(_ image: UIImage, _ filename: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        cache.setObject(image, forKey: makeFilenameKey(filename))
     }
     
     /// 生成缩略图（固定最大尺寸，减少内存占用）

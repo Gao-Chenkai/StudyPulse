@@ -14,7 +14,7 @@ import SwiftUI
 /// 嵌套在 `MistakeNote.reviewState` 中，`nil` 表示未加入复习队列。
 /// SM-2 算法使用的核心字段：repetitions（连续答对次数）、easeFactor（难度系数）、
 /// intervalDays（下一次复习间隔天数）、nextReviewDate（下次复习日期）。
-nonisolated struct ReviewState: Codable, Equatable {
+nonisolated struct ReviewState: Codable, Equatable, Hashable {
     /// 连续答对次数（Again 会重置为 0）
     var repetitions: Int
     /// 难度系数 SM-2 EF，初始 2.5，最小 1.3

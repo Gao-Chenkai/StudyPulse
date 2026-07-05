@@ -66,6 +66,10 @@ final class SubjectRecord {
 
 @Model
 final class GradeRecord {
+    // 索引: 业务高频过滤字段;SwiftData 编译器会为这些字段建 B-Tree
+    // 让 SortDescriptor(\.date, order: .reverse) / subject == X 等谓词走索引
+    #Index<GradeRecord>([\.subject, \.date], [\.phaseId], [\.date])
+
     @Attribute(.unique) var id: UUID
     var subject: String
     var score: Double
@@ -148,6 +152,9 @@ final class GradeRecord {
 
 @Model
 final class MistakeNoteRecord {
+    // 索引: SRS 队列 / 科目过滤 / 日期排序
+    #Index<MistakeNoteRecord>([\.subject], [\.date], [\.phaseId], [\.srsNextReviewDate])
+
     @Attribute(.unique) var id: UUID
     var title: String
     var subject: String
@@ -307,6 +314,9 @@ final class MistakeNoteRecord {
 
 @Model
 final class ExamRecord {
+    // 索引: examDate 用于"未来 N 天的考试"查询排序
+    #Index<ExamRecord>([\.examDate], [\.phaseId])
+
     @Attribute(.unique) var id: UUID
     var name: String
     var examDate: Date
@@ -435,6 +445,9 @@ final class ExamRecord {
 
 @Model
 final class ComprehensiveExamRecord {
+    // 索引: examDate 用于"未来 N 天的综合考试"查询排序
+    #Index<ComprehensiveExamRecord>([\.examDate], [\.phaseId])
+
     @Attribute(.unique) var id: UUID
     var name: String
     var examDate: Date
@@ -519,6 +532,9 @@ final class ComprehensiveExamRecord {
 
 @Model
 final class TaskItemRecord {
+    // 索引: dueDate 用于按时间排序;isCompleted 用于过滤未完成任务
+    #Index<TaskItemRecord>([\.dueDate], [\.phaseId], [\.isCompleted])
+
     @Attribute(.unique) var id: UUID
     /// 任务标题
     var title: String
