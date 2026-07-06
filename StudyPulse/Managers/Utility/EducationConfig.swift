@@ -72,6 +72,20 @@ nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
     let subjects: [SubjectConfig]
     /// 体系备注说明
     let notes: String
+
+    /// 极端兜底:配置被清空时(availableRegions 返空)用这个最小 region 防止
+    /// `defaultRegion`/`availableRegions[0]` 之类调用崩溃。
+    static func fallback(for stage: EducationStage) -> EducationRegion {
+        EducationRegion(
+            name: "fallback_\(stage.rawValue)",
+            displayName: "Default",
+            category: .domestic,
+            stage: stage,
+            systemCode: "FALLBACK",
+            subjects: [],
+            notes: ""
+        )
+    }
 }
 
 // MARK: - Subject Config (科目配置)
@@ -565,7 +579,9 @@ nonisolated enum EducationConfig {
     
     // MARK: - 默认地区
     nonisolated static func defaultRegion(for stage: EducationStage) -> EducationRegion {
-        return availableRegions(for: stage).first ?? availableRegions(for: stage)[0]
+        // availableRegions 应至少返回一个内置 region;极端情况(配置被清空)使用静态兜底
+        // 避免 [0] 强解崩溃。
+        return availableRegions(for: stage).first ?? EducationRegion.fallback(for: stage)
     }
     
     // MARK: - 根据 systemCode 获取

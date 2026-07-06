@@ -245,8 +245,9 @@ nonisolated struct AchievementProgress: Codable, Equatable, Identifiable {
     var isUnlocked: Bool { unlockedAt != nil }
 
     /// 从 catalog 反向查找定义（便于视图层取 icon / tier / title）。
-    var definition: AchievementDefinition {
-        AchievementCatalog.all.first(where: { $0.id == definitionId })!
+    /// 找不到时(老 JSON 中有 catalog 已删除的 id)返回 nil 兜底,避免崩溃。
+    var definition: AchievementDefinition? {
+        AchievementCatalog.all.first(where: { $0.id == definitionId })
     }
 
 }

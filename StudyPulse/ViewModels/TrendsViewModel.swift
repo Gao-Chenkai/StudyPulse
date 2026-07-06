@@ -71,8 +71,7 @@ final class TrendsViewModel: ObservableObject {
                 continue
             }
             if recent.count >= 2 {
-                let first = recent.first!.score
-                let last = recent.last!.score
+                guard let first = recent.first?.score, let last = recent.last?.score else { continue }
                 if last < first - 15 {
                     needAttention.append(subject)
                 }

@@ -447,8 +447,8 @@ struct TrendChartView: View {
                     let avg = scores.reduce(0, +) / Double(scores.count)
                     let intensity = (avg - minScore) / span
                     let label: String
-                    if scores.count == 1 {
-                        label = String(format: "%.0f", scores[0])
+                    if scores.count == 1, let first = scores.first {
+                        label = String(format: "%.0f", first)
                     } else {
                         label = String(format: "%.0f×%d", avg, scores.count)
                     }
@@ -780,8 +780,9 @@ private struct ChartCalloutCard: View {
 }
 
 #Preview {
-    let sample: [Grade] = (0..<20).map { i in
-        Grade(
+    let sample: [Grade] = (0..<20).compactMap { i in
+        guard let date = Calendar.current.date(byAdding: .day, value: -i * 3, to: Date()) else { return nil }
+        return Grade(
             subject: "Math",
             score: 70 + Double.random(in: -15...20),
             rawScore: nil,
@@ -789,7 +790,7 @@ private struct ChartCalloutCard: View {
             importance: 3,
             image: nil,
             imageFileName: nil,
-            date: Calendar.current.date(byAdding: .day, value: -i * 3, to: Date())!,
+            date: date,
             examName: "Exam \(i)",
             fullScore: 100
         )

@@ -250,7 +250,10 @@ enum SuggestionEngine {
     static func findDecliningTrend(aggregates: [String: SubjectAggregate]) -> String? {
         for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
             let last3 = Array(agg.sortedAsc.suffix(3))
-            let s0 = last3[0].score, s1 = last3[1].score, s2 = last3[2].score
+            // last3.count 已知 == 3(外层 guard 保证),仍用 guard 防御未来改逻辑时退化
+            guard let s0 = last3.dropFirst(0).first?.score,
+                  let s1 = last3.dropFirst(1).first?.score,
+                  let s2 = last3.dropFirst(2).first?.score else { continue }
             if s0 > s1, s1 > s2, s0 - s2 >= 5 {
                 return subject
             }
@@ -262,7 +265,9 @@ enum SuggestionEngine {
     static func findImprovingTrend(aggregates: [String: SubjectAggregate]) -> String? {
         for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
             let last3 = Array(agg.sortedAsc.suffix(3))
-            let s0 = last3[0].score, s1 = last3[1].score, s2 = last3[2].score
+            guard let s0 = last3.dropFirst(0).first?.score,
+                  let s1 = last3.dropFirst(1).first?.score,
+                  let s2 = last3.dropFirst(2).first?.score else { continue }
             if s0 < s1, s1 < s2, s2 - s0 >= 5 {
                 return subject
             }

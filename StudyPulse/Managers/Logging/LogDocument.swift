@@ -28,7 +28,8 @@ struct LogDocument: FileDocument {
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = content.data(using: .utf8)!
+        // String → UTF-8 转换理论上不会失败(都是合法 Unicode 标量),但保留 fallback 避免崩溃。
+        let data = content.data(using: .utf8) ?? Data(content.utf8)
         return FileWrapper(regularFileWithContents: data)
     }
 }

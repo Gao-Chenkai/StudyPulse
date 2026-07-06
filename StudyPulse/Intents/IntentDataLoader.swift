@@ -5,28 +5,31 @@ import Foundation
 /// avoiding any dependency on the @MainActor DataManager singleton.
 nonisolated enum IntentDataLoader {
 
-    static func getDocsDir() -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    static func getDocsDir() -> URL? {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
     // MARK: - Subjects
 
     static func loadSubjects() -> [Subject] {
-        let url = getDocsDir().appendingPathComponent("subjects.json")
+        guard let docs = getDocsDir() else { return [] }
+        let url = docs.appendingPathComponent("subjects.json")
         return DataFileIO.load(url: url) ?? []
     }
 
     // MARK: - Exams
 
     static func loadExams() -> [Exam] {
-        let url = getDocsDir().appendingPathComponent("exams.json")
+        guard let docs = getDocsDir() else { return [] }
+        let url = docs.appendingPathComponent("exams.json")
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return DataFileIO.load(url: url, decoder: decoder) ?? []
     }
 
     static func loadComprehensiveExams() -> [comprehensiveExam] {
-        let url = getDocsDir().appendingPathComponent("comprehensiveExams.json")
+        guard let docs = getDocsDir() else { return [] }
+        let url = docs.appendingPathComponent("comprehensiveExams.json")
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return DataFileIO.load(url: url, decoder: decoder) ?? []
@@ -35,14 +38,16 @@ nonisolated enum IntentDataLoader {
     // MARK: - Grades
 
     static func loadGrades() -> [Grade] {
-        let url = getDocsDir().appendingPathComponent("grades.json")
+        guard let docs = getDocsDir() else { return [] }
+        let url = docs.appendingPathComponent("grades.json")
         return DataFileIO.load(url: url) ?? []
     }
 
     // MARK: - Health Cache
 
     static func loadHealthCache() -> IntentHealthCache? {
-        let url = getDocsDir().appendingPathComponent("readiness_cache.json")
+        guard let docs = getDocsDir() else { return nil }
+        let url = docs.appendingPathComponent("readiness_cache.json")
         return DataFileIO.load(url: url)
     }
 }

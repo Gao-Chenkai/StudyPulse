@@ -148,6 +148,8 @@ private struct ZoomableScrollView: UIViewRepresentable {
 
 #if DEBUG
 #Preview {
-    ZoomableImageView(image: UIImage(systemName: "photo.fill")!)
+    if let image = UIImage(systemName: "photo.fill") {
+        ZoomableImageView(image: image)
+    }
 }
 #endif

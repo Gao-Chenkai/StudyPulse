@@ -447,16 +447,18 @@ private struct ReportPreview: View {
         profile.username = "陈同学"
         profile.schoolName = "实验中学"
         profile.grade = "高二"
+        let startDate = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         let report = StudyReport(
             generatedAt: Date(),
-            startDate: Calendar.current.date(byAdding: .day, value: -30, to: Date())!,
+            startDate: startDate,
             endDate: Date(),
             profile: profile,
-            grades: (0..<12).map { i in
-                Grade(
+            grades: (0..<12).compactMap { i in
+                guard let date = Calendar.current.date(byAdding: .day, value: -i * 2, to: Date()) else { return nil }
+                return Grade(
                     subject: ["Math", "English", "Physics"][i % 3],
                     score: 70 + Double.random(in: -10...25),
-                    date: Calendar.current.date(byAdding: .day, value: -i * 2, to: Date())!,
+                    date: date,
                     examName: "Mock \(i)"
                 )
             },

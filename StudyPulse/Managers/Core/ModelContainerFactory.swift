@@ -112,7 +112,10 @@ enum ModelContainerFactory {
         guard needsJSONMigration else { return }
 
         Log.data.info("开始 JSON → SwiftData 迁移 / Starting JSON → SwiftData migration")
-        let docs = DataFileIO.getDocsDir()
+        guard let docs = DataFileIO.getDocsDir() else {
+            Log.data.error("JSON 迁移跳过(无法解析 Documents 目录) / Migration skipped: no Documents dir")
+            return
+        }
 
         var counts: [(String, Int)] = []
 

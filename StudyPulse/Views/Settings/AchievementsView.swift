@@ -19,7 +19,7 @@ struct AchievementsView: View {
         let tiers: [AchievementDefinition.Tier] = [.onboarding, .volume, .streak, .mastery]
         var result: [(tier: AchievementDefinition.Tier, items: [AchievementProgress])] = []
         for tier in tiers {
-            let items = progressList.filter { $0.definition.tier == tier }
+            let items = progressList.filter { $0.definition?.tier == tier }
             if !items.isEmpty {
                 result.append((tier: tier, items: items))
             }
@@ -106,39 +106,46 @@ struct AchievementsView: View {
 
     @ViewBuilder
     private func badgeView(for progress: AchievementProgress) -> some View {
-        let def = progress.definition
-        let isUnlocked = progress.isUnlocked
+        // catalog 中找不到定义时(老数据 / 已废弃成就)直接不渲染,避免崩溃
+        if let def = progress.definition {
+            let isUnlocked = progress.isUnlocked
 
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(isUnlocked ? tierColor(for: def.tier).opacity(0.18) : Color(.tertiarySystemFill))
-                    .frame(width: 56, height: 56)
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(isUnlocked ? tierColor(for: def.tier).opacity(0.18) : Color(.tertiarySystemFill))
+                        .frame(width: 56, height: 56)
 
-                Image(systemName: def.icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(isUnlocked ? tierColor(for: def.tier) : .gray.opacity(0.5))
+                    Image(systemName: def.icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(isUnlocked ? tierColor(for: def.tier) : .gray.opacity(0.5))
+                }
+
+                Text("achievement.\(def.id).title".localized())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(isUnlocked ? .primary : .secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !isUnlocked {
+                    Text("\(min(progress.currentValue, def.targetValue))/\(def.targetValue)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundColor(.secondary)
+                } else if let unlockedDate = progress.unlockedAt {
+                    Text(unlockedDate.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
-
-            Text("achievement.\(def.id).title".localized())
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(isUnlocked ? .primary : .secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !isUnlocked {
-                Text("\(min(progress.currentValue, def.targetValue))/\(def.targetValue)")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundColor(.secondary)
-            } else if let unlockedDate = progress.unlockedAt {
-                Text(unlockedDate.formatted(.dateTime.month(.abbreviated).day()))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+        } else {
+            // 兜底:占位空 badge 保持网格对齐,避免后续 .frame() 调用歧义
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
     }
 
     // MARK: - Helpers

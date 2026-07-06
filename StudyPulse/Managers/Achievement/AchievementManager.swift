@@ -399,13 +399,15 @@ final class AchievementManager: ObservableObject {
         var streak = StreakState()
         var prevDay: Date? = nil
         for day in sortedDays {
+            // 防御:byDay 是按 day 聚合的,key 必然在 dict 中,但仍用 guard 替代 ! 强解
+            guard let activity = byDay[day] else { continue }
             if let prev = prevDay {
-                let expected = cal.date(byAdding: .day, value: -1, to: prev)!
+                guard let expected = cal.date(byAdding: .day, value: -1, to: prev) else { break }
                 if day != expected {
                     break
                 }
             }
-            if config.isActiveDay(byDay[day]!) {
+            if config.isActiveDay(activity) {
                 streak.current += 1
                 streak.longest = max(streak.longest, streak.current)
                 streak.totalActiveDays += 1

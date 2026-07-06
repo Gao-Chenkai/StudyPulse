@@ -749,20 +749,21 @@ struct ScorePredictionDetailView: View {
 
 #Preview("Linear Regression") {
     let now = Date()
-    let sampleHistory: [Grade] = (0..<5).map { i in
-        Grade(
+    let sampleHistory: [Grade] = (0..<5).compactMap { i in
+        guard let date = Calendar.current.date(byAdding: .day, value: -(30 - i * 7), to: now) else { return nil }
+        return Grade(
             subject: "Math",
             score: 95.0 + Double(i) * 3 + Double.random(in: -3...3),
             ranking: 50 - i * 5,
             importance: 3,
-            date: Calendar.current.date(byAdding: .day, value: -(30 - i * 7), to: now)!,
+            date: date,
             examName: "Mock Exam #\(i + 1)",
             fullScore: 150
         )
     }
     let exam = Exam(
         name: "Midterm Math",
-        date: Calendar.current.date(byAdding: .day, value: 21, to: now)!,
+        date: Calendar.current.date(byAdding: .day, value: 21, to: now) ?? now.addingTimeInterval(86400 * 21),
         importance: 5,
         subject: "Math",
         examName: "Midterm",

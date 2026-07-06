@@ -407,7 +407,7 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         let weightSum = weights.reduce(0, +)
 
         // 3. 日期 → 距首条成绩的天数,x = Double(天数)
-        let t0 = recent.first!.date
+        guard let t0 = recent.first?.date else { return nil }
         let xs: [Double] = recent.map { $0.date.timeIntervalSince(t0) / 86400.0 }
         let ys: [Double] = recent.map { max(0, min($0.score, fullScore)) }
         let n = Double(recent.count)
@@ -554,8 +554,9 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         let lastActualEntry = history.max(by: { $0.date < $1.date })
 
         // 13. 数据范围
-        let firstDate = recent.first!.date
-        let lastDate = recent.last!.date
+        guard let firstDate = recent.first?.date, let lastDate = recent.last?.date else {
+            return nil
+        }
         let dataRange: ClosedRange<Date>? = firstDate <= lastDate ? (firstDate...lastDate) : nil
 
         let result = ScorePredictionResult(

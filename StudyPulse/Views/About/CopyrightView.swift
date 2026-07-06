@@ -158,9 +158,11 @@ struct LicenseDetailView: View {
                     .font(.body)
                     .foregroundColor(.primary)
 
-                    Link("Click to View Full Legal Code in Browser".localized(), destination: URL(string: "https://creativecommons.org/licenses/by-nc-sa/4.0/")!)
-                        .font(.body)
-                        .padding(.top, 10)
+                    if let ccURL = URL(string: "https://creativecommons.org/licenses/by-nc-sa/4.0/") {
+                        Link("Click to View Full Legal Code in Browser".localized(), destination: ccURL)
+                            .font(.body)
+                            .padding(.top, 10)
+                    }
 
                     Spacer()
                 }

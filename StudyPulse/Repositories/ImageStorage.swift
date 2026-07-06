@@ -18,12 +18,15 @@ nonisolated enum ImageStorage {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var _cachedImagesDir: URL?
 
-    /// Documents/images/ 目录(自动创建)。
-    nonisolated static func imagesDirectory() -> URL {
+    /// Documents/images/ 目录(自动创建)。返回 nil 表示沙盒异常(用户数据无法落盘)。
+    nonisolated static func imagesDirectory() -> URL? {
         lock.lock()
         defer { lock.unlock() }
         if let cached = _cachedImagesDir { return cached }
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            Log.data.error("ImageStorage 无法解析 Documents 目录 / Failed to resolve Documents directory")
+            return nil
+        }
         let url = docs.appendingPathComponent("images")
         if !FileManager.default.fileExists(atPath: url.path) {
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -32,10 +35,14 @@ nonisolated enum ImageStorage {
         return url
     }
 
-    /// 把二进制图片写入 images/<filename>。失败返回 false。
+    /// 把二进制图片写入 images/<filename>。失败(目录不可用 / 写盘失败)返回 false。
     @discardableResult
     nonisolated static func save(_ data: Data, filename: String) -> Bool {
-        let url = imagesDirectory().appendingPathComponent(filename)
+        guard let dir = imagesDirectory() else {
+            Log.data.error("ImageStorage save 跳过(目录不可用) / Skipped save (no dir): \(filename, privacy: .public)")
+            return false
+        }
+        let url = dir.appendingPathComponent(filename)
         do {
             try data.write(to: url)
             Log.data.debug("ImageStorage save OK / saved: \(filename, privacy: .public) bytes=\(data.count, privacy: .public)")
@@ -46,23 +53,26 @@ nonisolated enum ImageStorage {
         }
     }
 
-    /// 同步读取图片数据。
+    /// 同步读取图片数据。目录不可用或文件不存在时返回 nil。
     nonisolated static func load(filename: String) -> Data? {
-        let url = imagesDirectory().appendingPathComponent(filename)
+        guard let dir = imagesDirectory() else { return nil }
+        let url = dir.appendingPathComponent(filename)
         return try? Data(contentsOf: url)
     }
 
-    /// 异步读取图片数据(后台线程,避免阻塞 UI)。
+    /// 异步读取图片数据(后台线程,避免阻塞 UI)。目录不可用时返回 nil。
     nonisolated static func loadAsync(filename: String) async -> Data? {
-        let url = imagesDirectory().appendingPathComponent(filename)
+        guard let dir = imagesDirectory() else { return nil }
+        let url = dir.appendingPathComponent(filename)
         return await Task.detached(priority: .userInitiated) {
             try? Data(contentsOf: url)
         }.value
     }
 
-    /// 删除指定文件名的图片。文件不存在也视为成功。
+    /// 删除指定文件名的图片。文件不存在也视为成功;目录不可用时静默 no-op。
     nonisolated static func delete(filename: String) {
-        let url = imagesDirectory().appendingPathComponent(filename)
+        guard let dir = imagesDirectory() else { return }
+        let url = dir.appendingPathComponent(filename)
         try? FileManager.default.removeItem(at: url)
     }
 }
@@ -71,9 +81,9 @@ nonisolated enum ImageStorage {
 //
 // 线程安全的 JSON 文件读取 helper。避免受 @MainActor 限制。
 nonisolated enum DataFileIO {
-    /// Documents 目录
-    static func getDocsDir() -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    /// Documents 目录;沙盒异常时返回 nil(调用方需要兜底)。
+    static func getDocsDir() -> URL? {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
     /// 从指定 URL 加载并解码 JSON 数据。文件不存在返回 nil,解码失败返回 nil。

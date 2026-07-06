@@ -65,51 +65,54 @@ struct AchievementUnlockToast: View, Equatable {
 
     // MARK: - Toast View
 
+    @ViewBuilder
     private func toastView(for progress: AchievementProgress) -> some View {
-        let def = progress.definition
+        // 老快照中可能有 catalog 已删除的成就 id,definition 可能为 nil。
+        // Toast 跳过显示即可,等下一次刷新时自然淘汰。
+        if let def = progress.definition {
+            Button {
+                dismissCurrent()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(tierColor(for: def.tier).opacity(0.2))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: def.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(tierColor(for: def.tier))
+                    }
 
-        return Button {
-            dismissCurrent()
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(tierColor(for: def.tier).opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: def.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(tierColor(for: def.tier))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("toast.unlocked".localized())
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.secondary)
+                        Text("achievement.\(def.id).title".localized())
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.5))
                 }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("toast.unlocked".localized())
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.secondary)
-                    Text("achievement.\(def.id).title".localized())
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
-                }
-
-                Spacer()
-
-                Image(systemName: "xmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary.opacity(0.5))
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.regularMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.regularMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 
     private func tierColor(for tier: AchievementDefinition.Tier) -> Color {

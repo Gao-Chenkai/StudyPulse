@@ -193,16 +193,19 @@ struct SubjectDetailView: View {
         
         let now = Date()
         let calendar = Calendar.current
-        
+
         switch selectedRange {
         case .all:
             return base
         case .last3Months:
-            return base.filter { $0.date >= calendar.date(byAdding: .month, value: -3, to: now)! }
+            let cutoff = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+            return base.filter { $0.date >= cutoff }
         case .last6Months:
-            return base.filter { $0.date >= calendar.date(byAdding: .month, value: -6, to: now)! }
+            let cutoff = calendar.date(byAdding: .month, value: -6, to: now) ?? now
+            return base.filter { $0.date >= cutoff }
         case .lastYear:
-            return base.filter { $0.date >= calendar.date(byAdding: .year, value: -1, to: now)! }
+            let cutoff = calendar.date(byAdding: .year, value: -1, to: now) ?? now
+            return base.filter { $0.date >= cutoff }
         }
     }
     
@@ -464,8 +467,9 @@ struct AttentionSubjectCard: View {
     var trend: String {
         guard grades.count >= 2 else { return "N/A".localized() }
         let sorted = grades.sorted { $0.date < $1.date }
-        let oldScore = sorted.first!.score
-        let newScore = sorted.last!.score
+        guard let oldScore = sorted.first?.score, let newScore = sorted.last?.score else {
+            return "N/A".localized()
+        }
 
         if newScore > oldScore + 5 {
             return "Improving".localized()

@@ -715,7 +715,10 @@ final class HealthKitManager: ObservableObject {
         let mean = past.reduce(0, +) / Double(past.count)
         let variance = past.reduce(0) { $0 + pow($1 - mean, 2) } / Double(past.count)
         let stdDev = sqrt(variance)
-        let z: Double? = today != nil && stdDev > 0 ? (today! - mean) / stdDev : nil
+        let z: Double? = {
+            guard let today = today, stdDev > 0 else { return nil }
+            return (today - mean) / stdDev
+        }()
         let category: HRVReadiness.Category
         let suggestion: String
         if let z = z {
@@ -779,8 +782,11 @@ final class HealthKitManager: ObservableObject {
         )
 
         guard let data = try? JSONEncoder().encode(cache) else { return }
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            .appendingPathComponent("readiness_cache.json")
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            Log.healthKit.error("写入 readiness_cache 失败:无法解析 Documents 目录 / Failed to resolve Documents directory")
+            return
+        }
+        let url = docs.appendingPathComponent("readiness_cache.json")
         try? data.write(to: url)
     }
 }
