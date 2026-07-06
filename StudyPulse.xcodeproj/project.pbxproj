@@ -32,6 +32,13 @@
 			remoteGlobalIDString = 278CBE102FE778660035AA84;
 			remoteInfo = StudyPulseWidgetExtension;
 		};
+		C0FFEE000000000000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2743C8362F6EAEA000CC1EED /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2743C83D2F6EAEA000CC1EED;
+			remoteInfo = StudyPulse;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -78,6 +85,7 @@
 		27E4AFB02F824DC000D2D7C9 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		27E4AFB12F824DC000D2D7C9 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		27E4AFB22F824DC000D2D7C9 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0FFEE000000000000000002 /* StudyPulseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudyPulseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -114,6 +122,11 @@
 			path = StudyPulseWidget;
 			sourceTree = "<group>";
 		};
+		C0FFEE000000000000000003 /* StudyPulseTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StudyPulseTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +144,13 @@
 			files = (
 				278CBE162FE778660035AA84 /* SwiftUI.framework in Frameworks */,
 				278CBE142FE778660035AA84 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0FFEE000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +172,7 @@
 				27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */,
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
 				278CBE172FE778660035AA84 /* StudyPulseWidget */,
+				C0FFEE000000000000000003 /* StudyPulseTests */,
 				278CBE122FE778660035AA84 /* Frameworks */,
 				278D45FD2FE7BA750073EB87 /* docs/SPEC.md */,
 				2709FD152FEFB8D000FAB5CE /* docs/FAQ.json */,
@@ -170,10 +191,11 @@
 			isa = PBXGroup;
 			children = (
 				2743C83E2F6EAEA000CC1EED /* StudyPulse.app */,
+				278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */,
+				C0FFEE000000000000000002 /* StudyPulseTests.xctest */,
 				276CC9512FE6CEF3009F126C /* docs/SPEC.md */,
 				276CC94F2FE6CEE7009F126C /* README.md */,
 				27BF505A2FE6D1E50038966E /* docs/SPEC.md */,
-				278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */,
 				27BF50642FE6D2200038966E /* README.md */,
 				278D45EE2FE7B9950073EB87 /* docs/AlgorithmIntroduction.md */,
 				27BF505C2FE6D1F10038966E /* AGENTS.md */,
@@ -243,6 +265,29 @@
 			productReference = 278CBE112FE778660035AA84 /* StudyPulseWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C0FFEE000000000000000001 /* StudyPulseTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0FFEE00000000000000000B /* Build configuration list for PBXNativeTarget "StudyPulseTests" */;
+			buildPhases = (
+				C0FFEE000000000000000004 /* Sources */,
+				C0FFEE000000000000000005 /* Frameworks */,
+				C0FFEE000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0FFEE000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C0FFEE000000000000000003 /* StudyPulseTests */,
+			);
+			name = StudyPulseTests;
+			packageProductDependencies = (
+			);
+			productName = StudyPulseTests;
+			productReference = C0FFEE000000000000000002 /* StudyPulseTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -284,6 +329,7 @@
 			targets = (
 				2743C83D2F6EAEA000CC1EED /* StudyPulse */,
 				278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */,
+				C0FFEE000000000000000001 /* StudyPulseTests */,
 			);
 		};
 /* End PBXProject section */
@@ -314,6 +360,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0FFEE000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -331,6 +384,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0FFEE000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -338,6 +398,11 @@
 			isa = PBXTargetDependency;
 			target = 278CBE102FE778660035AA84 /* StudyPulseWidgetExtension */;
 			targetProxy = 278CBE212FE778660035AA84 /* PBXContainerItemProxy */;
+		};
+		C0FFEE000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2743C83D2F6EAEA000CC1EED /* StudyPulse */;
+			targetProxy = C0FFEE000000000000000007 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -645,6 +710,46 @@
 			};
 			name = Release;
 		};
+		C0FFEE000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.142.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulseTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StudyPulse.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StudyPulse";
+			};
+			name = Debug;
+		};
+		C0FFEE00000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.142.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulseTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StudyPulse.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StudyPulse";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -671,6 +776,15 @@
 			buildConfigurations = (
 				278CBE252FE778660035AA84 /* Debug */,
 				278CBE262FE778660035AA84 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0FFEE00000000000000000B /* Build configuration list for PBXNativeTarget "StudyPulseTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0FFEE000000000000000009 /* Debug */,
+				C0FFEE00000000000000000A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
