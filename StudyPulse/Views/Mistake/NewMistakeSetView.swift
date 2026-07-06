@@ -127,6 +127,9 @@ struct NewMistakeSetView: View {
                         .shadow(radius: 10)
                 }
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
         }
     }
 }

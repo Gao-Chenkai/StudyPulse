@@ -84,6 +84,7 @@ struct SubjectScoreCard: View {
                                 Text(String(format: "%.1f", g.score))
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .foregroundStyle(scoreColor(g.score, fullScore: fullScore))
+                                    .debugInspectAuto(g.score, label: "score")
                                 Text("/ \(Int(fullScore))")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -92,12 +93,14 @@ struct SubjectScoreCard: View {
                                 Text(String(format: "Rank: %d".localized(), rank))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
+                                    .debugInspectAuto(rank, label: "rank")
                             }
                         } else {
                             if let rank = g.ranking, rank > 0 {
                                 Text("\(rank)")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .foregroundStyle(scoreColor(g.score, fullScore: fullScore))
+                                    .debugInspectAuto(rank, label: "rank")
                                 Text(String(format: "%.1f", g.score))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -158,6 +161,7 @@ struct SubjectScoreCard: View {
                 animateIn = true
             }
         }
+        .debugLayoutBoundsAuto()
     }
     
     private func subjectIcon(_ subject: String) -> String {

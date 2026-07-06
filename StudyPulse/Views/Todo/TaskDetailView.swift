@@ -47,6 +47,9 @@ struct TaskDetailView: View {
         } message: {
             Text(reminderAlertMessage)
         }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 
     @ViewBuilder

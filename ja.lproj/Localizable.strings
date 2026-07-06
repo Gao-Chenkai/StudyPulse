@@ -1300,3 +1300,34 @@
 "Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "この振り返りをミスノートに添付し、間隔反復復習したい場合に便利。";
 "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ の振り返り時間です。試験範囲 / 間違えた所 / 学んだこと / 次回対策を記入してください。";
 "已创建错题 \"%@\",并加入 SRS 复习队列。" = "ミスノート「%@」を作成し、SRS 復習キューに追加しました。";
+
+// MARK: - Debug モード（イースターエッグ → Debug パネル）
+"debug.title" = "Debug";
+"debug.logViewer" = "ログビューア";
+"debug.performancePanel" = "パフォーマンスパネル";
+"debug.stateAndCache" = "状態とキャッシュ";
+"debug.buildInfo" = "ビルド情報";
+"debug.diagnostics" = "診断";
+"debug.maintenance" = "メンテナンス";
+"debug.clearLogs" = "メモリログを消去";
+"debug.clearLogsConfirm" = "5000 件のメモリログをすべて消去しますか？既にエクスポートされたログは影響を受けません。";
+"debug.recomputeAchievements" = "実績を再計算";
+"debug.forceWidgetReload" = "ウィジェットを強制更新";
+"debug.rescheduleNotifications" = "すべての通知を再スケジュール";
+"debug.fps" = "FPS";
+"debug.memory" = "メモリ";
+"debug.lagCount5min" = "5 分間のカクつき";
+"debug.lastLag" = "直近のカクつき";
+"debug.entityCounts" = "エンティティ件数";
+
+// MARK: - Debug モード（モード化 — banner / オーバーレイ / モディファイア）
+"debug.masterToggle" = "Debug モードを有効化";
+"debug.masterToggleDesc" = "黄色いバナーを表示し、下のサブトグルを解放します。";
+"debug.verboseLogging" = "Verbose ログ";
+"debug.fpsOverlay" = "FPS / メモリ オーバーレイ";
+"debug.layoutBounds" = "Layout Bounds デバッグ";
+"debug.longPressInspect" = "長押しで値を検査";
+"debug.openConsole" = "Debug コンソールを開く";
+"debug.sectionTitle" = "Debug モード";
+"debug.sectionFooter" = "下のサブトグルはマスター开关がオンの時のみ動作します。設定は即時保存され、すべてのページに反映されます。リリースビルドでも利用可能。";
+"debug.inspect.title" = "検査";

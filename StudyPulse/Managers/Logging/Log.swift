@@ -9,6 +9,7 @@
 
 import Foundation
 import os
+import Combine
 
 /// 日志级别。
 /// Log level for in-app log entries.
@@ -19,6 +20,30 @@ enum LogLevel: String, Sendable, Codable {
     case warning
     case error
     case fault
+}
+
+extension LogLevel {
+    /// 是否为严重级别（warning 及以上）。供 Debug 面板筛选卡顿事件用。
+    /// Whether this is a severe level (warning or above). Used by Debug panel filters.
+    nonisolated var isSevere: Bool {
+        switch self {
+        case .warning, .error, .fault: return true
+        case .debug, .info, .notice: return false
+        }
+    }
+
+    /// 严重程度数值（用于 log level 过滤；越大越严重）
+    /// Severity rank (higher = more severe). Used for min-level filtering.
+    nonisolated var ordinal: Int {
+        switch self {
+        case .debug: return 0
+        case .info: return 1
+        case .notice: return 2
+        case .warning: return 3
+        case .error: return 4
+        case .fault: return 5
+        }
+    }
 }
 
 /// 单条日志条目，保存在内存中以供导出。
@@ -44,10 +69,42 @@ nonisolated final class LogStore: @unchecked Sendable {
     private let maxEntries = 5_000
     private let lock = NSLock()
 
+    /// 内存中最低记录级别。Debug 模式 verbose 开启时会被设为 .debug,默认 .info。
+    /// Minimum level captured into the in-memory buffer.
+    /// Set to .debug when Debug → verbose logging is on; defaults to .info.
+    private var _minCaptureLevel: LogLevel = .info
+
+    /// 实时日志条目 publisher,供 LogToasterView 订阅实现屏幕实时弹窗。
+    /// Real-time entry publisher, consumed by LogToasterView for on-screen toasts.
+    /// `nonisolated(unsafe)` is safe because `PassthroughSubject` is itself thread-safe.
+    nonisolated(unsafe) let entryPublisher = PassthroughSubject<LogEntry, Never>()
+
+    var minCaptureLevel: LogLevel {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _minCaptureLevel
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            _minCaptureLevel = newValue
+        }
+    }
+
     private init() {}
 
     /// 记录一条日志到内存存储。
     func record(category: String, level: LogLevel, message: String) {
+        // 低于 minCaptureLevel 的条目不入内存(但 os.Logger 仍会写)
+        let minLevel: LogLevel
+        lock.lock()
+        minLevel = _minCaptureLevel
+        lock.unlock()
+        if !shouldCapture(level: level, minLevel: minLevel) {
+            return
+        }
+
         let entry = LogEntry(
             id: UUID(),
             timestamp: Date(),
@@ -62,6 +119,16 @@ nonisolated final class LogStore: @unchecked Sendable {
             entries.removeFirst(entries.count - maxEntries)
         }
         lock.unlock()
+
+        // 发出给实时订阅者
+        // Fire-and-forget publish; Combine buffers if no subscriber.
+        entryPublisher.send(entry)
+    }
+
+    /// 是否记录该 level
+    /// Whether a given level should be captured into the buffer.
+    nonisolated private func shouldCapture(level: LogLevel, minLevel: LogLevel) -> Bool {
+        level.ordinal >= minLevel.ordinal
     }
 
     /// 当前所有日志条目。
@@ -98,6 +165,43 @@ nonisolated final class LogStore: @unchecked Sendable {
         }
 
         return output
+    }
+
+    // MARK: - Debug Panel Helpers
+
+    /// 最近一次卡顿事件（category == "Performance" 且 level >= .warning）
+    /// Most recent main-thread lag event for the Debug → Performance Panel.
+    var lastLagEvent: LogEntry? {
+        let entries = allEntries
+        for entry in entries.reversed() where entry.category == "Performance" && entry.level.isSevere {
+            return entry
+        }
+        return nil
+    }
+
+    /// 指定时间窗口内的卡顿次数
+    /// Number of lag events within a time window (used by the Debug → Performance Panel).
+    func recentLagCount(within interval: TimeInterval) -> Int {
+        let cutoff = Date().addingTimeInterval(-interval)
+        return allEntries.reduce(into: 0) { acc, entry in
+            guard entry.category == "Performance",
+                  entry.level.isSevere,
+                  entry.timestamp >= cutoff else { return }
+            acc += 1
+        }
+    }
+
+    /// 当前在内存中的所有 category 列表（去重，按出现顺序）
+    /// Unique list of categories currently in the buffer (insertion order).
+    var knownCategories: [String] {
+        var seen: Set<String> = []
+        var ordered: [String] = []
+        for entry in allEntries {
+            if seen.insert(entry.category).inserted {
+                ordered.append(entry.category)
+            }
+        }
+        return ordered
     }
 }
 
@@ -169,7 +273,7 @@ nonisolated enum Log {
         case .debug:   logger.debug("\(message, privacy: .public)")
         case .info:    logger.info("\(message, privacy: .public)")
         case .notice:  logger.notice("\(message, privacy: .public)")
-        case .warning: logger.notice("\(message, privacy: .public)")
+        case .warning: logger.warning("\(message, privacy: .public)")
         case .error:   logger.error("\(message, privacy: .public)")
         case .fault:   logger.fault("\(message, privacy: .public)")
         }

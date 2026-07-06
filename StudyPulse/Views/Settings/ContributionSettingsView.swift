@@ -101,6 +101,9 @@ struct ContributionSettingsView: View {
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .navigationTitle("Contribution".localized())
         .navigationBarTitleDisplayMode(.inline)
         .searchable(

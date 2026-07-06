@@ -144,6 +144,9 @@ struct NewTaskView: View {
             } message: {
                 Text(resultAlertMessage)
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
         }
     }
 

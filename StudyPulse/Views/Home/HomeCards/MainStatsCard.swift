@@ -17,6 +17,7 @@ import SwiftUI
 struct MainStatsCard: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     /// 渐变动画开关 — 之前用 repeatForever 持续触发 gradient 重算,
     /// 现改为 onAppear 后单次播放 6 秒动画,然后停(避免持续 CPU 占用)。
     @State private var animateGradient = false
@@ -138,6 +139,7 @@ struct MainStatsCard: View {
         }
         .onChange(of: container.gradeRepo.grades) { _, _ in recomputeStats() }
         .onChange(of: container.examRepo.filteredExamSets) { _, _ in recomputeStats() }
+        .debugLayoutBounds(envManager.debugLayoutBounds)
     }
 
     /// 集中计算 average / upcoming count,避免 body 中多次 reduce
@@ -165,6 +167,7 @@ struct StatItemView: View {
     let value: String
     let icon: String
     let color: Color
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     var body: some View {
         VStack(spacing: 12) {
@@ -186,10 +189,13 @@ struct StatItemView: View {
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
+                    .debugInspect(value, label: "\(title) value")
+                    .debugLayoutBounds(envManager.debugLayoutBounds)
 
                 Text(title)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
+                    .debugInspect(title, label: "\(title) label")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

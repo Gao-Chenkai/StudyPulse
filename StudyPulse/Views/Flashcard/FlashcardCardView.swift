@@ -52,6 +52,7 @@ struct FlashcardCardView: View {
                 isFlipped.toggle()
             }
         }
+        .debugLayoutBoundsAuto()
     }
 
     /// 玻璃风背景（iOS 26 升级为 glassEffect；当前用 regularMaterial 兼容老版本）

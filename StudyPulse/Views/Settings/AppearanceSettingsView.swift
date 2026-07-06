@@ -53,6 +53,9 @@ struct AppearanceSettingsView: View {
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .navigationTitle("Appearance & Layout".localized())
         .navigationBarTitleDisplayMode(.inline)
     }

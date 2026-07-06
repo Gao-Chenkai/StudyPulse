@@ -1294,3 +1294,34 @@
 "Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "Useful when you want to attach this review to your mistake notebook for spaced-repetition review.";
 "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy.";
 "已创建错题 \"%@\",并加入 SRS 复习队列。" = "Created mistake note \"%@\" and added it to the SRS review queue.";
+
+// MARK: - Debug Mode (彩蛋入口 → Debug 面板)
+"debug.title" = "Debug";
+"debug.logViewer" = "Log Viewer";
+"debug.performancePanel" = "Performance Panel";
+"debug.stateAndCache" = "State & Cache";
+"debug.buildInfo" = "Build Info";
+"debug.diagnostics" = "Diagnostics";
+"debug.maintenance" = "Maintenance";
+"debug.clearLogs" = "Clear In-Memory Logs";
+"debug.clearLogsConfirm" = "Clear all 5000 in-memory log entries? Already-exported logs are not affected.";
+"debug.recomputeAchievements" = "Recompute Achievements";
+"debug.forceWidgetReload" = "Force Widget Reload";
+"debug.rescheduleNotifications" = "Reschedule All Notifications";
+"debug.fps" = "FPS";
+"debug.memory" = "Memory";
+"debug.lagCount5min" = "Lags (5 min)";
+"debug.lastLag" = "Last Lag";
+"debug.entityCounts" = "Entity Counts";
+
+// MARK: - Debug Mode (模式化 — banner / 浮窗 / 修饰符)
+"debug.masterToggle" = "Enable Debug Mode";
+"debug.masterToggleDesc" = "Show the yellow banner and unlock the sub-toggles below.";
+"debug.verboseLogging" = "Verbose Logging";
+"debug.fpsOverlay" = "FPS / Memory Overlay";
+"debug.layoutBounds" = "Layout Bounds";
+"debug.longPressInspect" = "Long-press Inspect";
+"debug.openConsole" = "Open Debug Console";
+"debug.sectionTitle" = "Debug Mode";
+"debug.sectionFooter" = "Toggles below require the master switch above. Changes are saved instantly and take effect on every page. Available in all builds, including App Store release.";
+"debug.inspect.title" = "Inspect";

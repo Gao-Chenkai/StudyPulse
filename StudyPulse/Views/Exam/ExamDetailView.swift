@@ -353,6 +353,9 @@ struct ExamDetailView: View {
             ExamReviewView(exam: currentExam)
                 .adaptiveSheet()
         }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .alert("Calendar".localized(), isPresented: $showingCalendarAlert) {
             Button("OK".localized()) { }
         } message: {

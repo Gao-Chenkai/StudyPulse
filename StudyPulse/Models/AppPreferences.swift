@@ -31,12 +31,36 @@ nonisolated struct AppPreferences: Codable {
     /// Current active study phase id. nil = show all data (no filtering).
     var activePhaseId: UUID? = nil
 
+    // MARK: - Debug Mode (调试模式)
+
+    /// Debug 模式总开关（默认关闭）。开启后顶部显示黄色 banner，FPS 浮窗、长按检视、Layout Bounds 等子开关才生效。
+    /// Master switch for Debug mode. When on, a yellow banner shows at the top of every page,
+    /// and the four sub-toggles below become active.
+    var debugModeEnabled: Bool = false
+
+    /// 子开关:开启后 LogStore 记录所有 .debug 级别（默认 .info 及以上）。
+    /// Sub-toggle: capture .debug level entries in LogStore.
+    var debugVerboseLogging: Bool = false
+
+    /// 子开关:在所有主页面右上角显示实时 FPS / 内存 / 日志条数浮窗。
+    /// Sub-toggle: show a live FPS / memory / log count overlay on every main page.
+    var debugFPSOverlay: Bool = false
+
+    /// 子开关:对应用了 .debugLayoutBounds() 修饰符的 view 显示 1px 随机色边框 + 5% 底色，方便排查布局问题。
+    /// Sub-toggle: render a 1px random-color border + 5% tinted background on views marked with .debugLayoutBounds().
+    var debugLayoutBounds: Bool = false
+
+    /// 子开关:对应用了 .debugInspect() 修饰符的 view 长按弹 alert 显示原始值与类型。
+    /// Sub-toggle: long-press any view marked with .debugInspect() to see its raw value and type.
+    var debugLongPressInspect: Bool = false
+
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
         case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, activePhaseId
+        case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
     }
 
     init() {}
@@ -50,6 +74,11 @@ nonisolated struct AppPreferences: Codable {
         self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
         self.learningHeatmapOnTrends = try c.decodeIfPresent(Bool.self, forKey: .learningHeatmapOnTrends) ?? true
         self.activePhaseId = try c.decodeIfPresent(UUID.self, forKey: .activePhaseId)
+        self.debugModeEnabled = try c.decodeIfPresent(Bool.self, forKey: .debugModeEnabled) ?? false
+        self.debugVerboseLogging = try c.decodeIfPresent(Bool.self, forKey: .debugVerboseLogging) ?? false
+        self.debugFPSOverlay = try c.decodeIfPresent(Bool.self, forKey: .debugFPSOverlay) ?? false
+        self.debugLayoutBounds = try c.decodeIfPresent(Bool.self, forKey: .debugLayoutBounds) ?? false
+        self.debugLongPressInspect = try c.decodeIfPresent(Bool.self, forKey: .debugLongPressInspect) ?? false
     }
     
     // MARK: - 语言常量

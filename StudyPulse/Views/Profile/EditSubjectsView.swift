@@ -73,6 +73,9 @@ struct EditSubjectsView: View {
             container.profileRepo.saveProfile()
             container.subjectRepo.saveSubjects()
         }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 }
 

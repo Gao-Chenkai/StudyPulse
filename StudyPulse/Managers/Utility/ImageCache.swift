@@ -61,6 +61,14 @@ nonisolated final class ImageCache {
         defer { lock.unlock() }
         cache.setObject(image, forKey: makeFilenameKey(filename))
     }
+
+    /// 清空内存缓存（Debug 模式手动触发）
+    /// Drops all cached images from the in-memory NSCache. Used by Debug → State & Cache.
+    func clear() {
+        lock.lock()
+        defer { lock.unlock() }
+        cache.removeAllObjects()
+    }
     
     /// 生成缩略图（固定最大尺寸，减少内存占用）
     /// - Parameters:

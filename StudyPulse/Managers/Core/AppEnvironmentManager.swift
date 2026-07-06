@@ -18,7 +18,11 @@ class AppEnvironmentManager: ObservableObject {
     private let defaultsKey = "appPreferences"
     
     @Published var preferences: AppPreferences {
-        didSet { save() }
+        didSet {
+            save()
+            // 任何偏好变更都可能影响 debug 子开关 → 同步到 LogStore
+            applyDebugStateToLogStore()
+        }
     }
     
     /// 当前有效的 SwiftUI ColorScheme（nil = 跟随系统）
@@ -51,6 +55,49 @@ class AppEnvironmentManager: ObservableObject {
         preferences.activePhaseId
     }
 
+    // MARK: - Debug Mode 透传属性
+
+    /// Debug 模式总开关
+    var debugModeEnabled: Bool {
+        get { preferences.debugModeEnabled }
+        set {
+            Log.preferences.info("切换 Debug 总开关 / Debug mode: -> \(newValue, privacy: .public)")
+            preferences.debugModeEnabled = newValue
+        }
+    }
+
+    /// 是否处于 verbose 日志收集模式
+    var debugVerboseLogging: Bool {
+        preferences.debugVerboseLogging
+    }
+
+    /// 是否在主页面右上角显示 FPS / 内存浮窗
+    var debugFPSOverlay: Bool {
+        preferences.debugFPSOverlay
+    }
+
+    /// 是否对 .debugLayoutBounds() 修饰的 view 显示边界
+    var debugLayoutBounds: Bool {
+        preferences.debugLayoutBounds
+    }
+
+    /// 是否对 .debugInspect() 修饰的 view 启用长按检视
+    var debugLongPressInspect: Bool {
+        preferences.debugLongPressInspect
+    }
+
+    /// 是否启用 Debug 模式（仅看 master 总开关）。banner 出现条件。
+    /// Whether Debug mode is on (master toggle only). Drives the banner.
+    var isDebugModeActive: Bool {
+        debugModeEnabled
+    }
+
+    /// 是否启用任意 Debug 子行为（用于决定右上角浮窗 / 修饰符是否生效）
+    /// Whether any debug sub-behavior is currently active.
+    var anyDebugSubToggleOn: Bool {
+        debugVerboseLogging || debugFPSOverlay || debugLayoutBounds || debugLongPressInspect
+    }
+
     /// 切换主色预设
     func setAccentPalette(_ accent: ThemeAccent) {
         Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
@@ -79,6 +126,26 @@ class AppEnvironmentManager: ObservableObject {
             self.preferences = AppPreferences()
             Log.preferences.info("使用默认偏好初始化 / Using default preferences")
         }
+
+        // 同步 verbose 日志开关到 LogStore
+        // Sync the verbose logging flag into the in-memory LogStore.
+        applyDebugStateToLogStore()
+    }
+
+    /// 把 Debug 子开关同步到 LogStore（verbose 日志级别）
+    /// Push the current Debug sub-toggles into LogStore.
+    private func applyDebugStateToLogStore() {
+        let minLevel: LogLevel = preferences.debugVerboseLogging ? .debug : .info
+        LogStore.shared.minCaptureLevel = minLevel
+        Log.preferences.info("LogStore minCaptureLevel = \(minLevel.rawValue, privacy: .public)")
+    }
+
+    /// 切换 verbose 日志模式（同时改 preferences 和 LogStore）
+    /// Toggle verbose logging (updates both preferences and LogStore).
+    func setDebugVerboseLogging(_ enabled: Bool) {
+        Log.preferences.info("切换 verbose 日志 / Verbose logging: -> \(enabled, privacy: .public)")
+        preferences.debugVerboseLogging = enabled
+        applyDebugStateToLogStore()
     }
 
     /// 保存偏好到 UserDefaults / Save preferences to UserDefaults

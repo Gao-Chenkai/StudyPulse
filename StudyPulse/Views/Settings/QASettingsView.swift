@@ -100,6 +100,9 @@ struct QASettingsView: View {
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .navigationTitle("FAQ".localized())
         .navigationBarTitleDisplayMode(.inline)
         .searchable(

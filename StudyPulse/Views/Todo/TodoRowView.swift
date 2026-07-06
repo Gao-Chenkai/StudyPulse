@@ -54,11 +54,13 @@ struct TodoRowView: View {
                         .strikethrough(entry.isCompleted, color: Color(.secondaryLabel))
                         .foregroundColor(entry.isCompleted ? Color(.secondaryLabel) : Color(.label))
                         .lineLimit(2)
+                        .debugInspectAuto(entry.title, label: "title")
                     if !entry.subject.isEmpty {
                         Text(entry.subject.localized())
                             .font(.caption)
                             .foregroundColor(Color(.secondaryLabel))
                             .lineLimit(1)
+                            .debugInspectAuto(entry.subject, label: "subject")
                     }
                 }
 
@@ -131,6 +133,7 @@ struct TodoRowView: View {
                 animateIn = true
             }
         }
+        .debugLayoutBoundsAuto()
     }
 
     // MARK: - 子组件

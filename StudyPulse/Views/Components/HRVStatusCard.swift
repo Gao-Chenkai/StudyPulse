@@ -62,6 +62,7 @@ struct HRVStatusCard: View {
                     animateIn = true
                 }
             }
+            .debugLayoutBoundsAuto()
         }
     }
 

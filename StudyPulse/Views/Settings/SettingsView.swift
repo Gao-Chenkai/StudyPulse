@@ -20,6 +20,7 @@ struct SettingsView: View {
                     NavigationLink(destination: ProfileSettingsView()) {
                         profileRow
                     }
+                    .debugLayoutBoundsAuto()
                 }
 
                 // Settings categories
@@ -28,6 +29,7 @@ struct SettingsView: View {
                         NavigationLink(destination: category.destination) {
                             SettingsCategoryRow(category: category)
                         }
+                        .debugLayoutBoundsAuto()
                     }
                 }
             }
@@ -35,6 +37,9 @@ struct SettingsView: View {
             avatarData = await container.loadAvatarAsync()
         }
   .listStyle(.insetGrouped)
+  .containerBackground(.clear, for: .navigation)
+  .debugModeContainer()
+  .debugLayoutBoundsAuto()
   .navigationTitle("Settings".localized())
         }
     }

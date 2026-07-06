@@ -51,6 +51,7 @@ struct StudyTimerCard: View {
         .onChange(of: hrv.bodyStatus) { _, _ in
             refreshRecommendation()
         }
+        .debugLayoutBoundsAuto()
     }
 
     // MARK: - Recommendation (idle)

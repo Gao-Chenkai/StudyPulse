@@ -79,6 +79,9 @@ struct PhaseEditView: View {
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
         }
     }
 

@@ -64,6 +64,7 @@ struct StudySuggestionsCard: View {
             y: 4
         )
         .onAppear { reload() }
+        .debugLayoutBoundsAuto()
         .onChange(of: healthManager.bodyStatus) { _, _ in reload() }
     }
 

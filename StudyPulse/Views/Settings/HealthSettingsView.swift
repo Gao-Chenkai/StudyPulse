@@ -69,6 +69,9 @@ struct HealthSettingsView: View {
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .navigationTitle("Health & Readiness".localized())
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingHRVOnboarding) {

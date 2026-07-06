@@ -163,6 +163,9 @@ struct DataManagementSettingsView: View {
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .navigationTitle("Data Management".localized())
         .navigationBarTitleDisplayMode(.inline)
         .fileExporter(

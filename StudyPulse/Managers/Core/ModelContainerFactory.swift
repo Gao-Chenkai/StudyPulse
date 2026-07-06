@@ -81,6 +81,52 @@ enum ModelContainerFactory {
 
     nonisolated(unsafe) private static var _sharedContainer: ModelContainer?
 
+    // MARK: - Debug Helpers
+
+    /// 返回各 @Model 实体的当前记录数（供 Debug → State & Cache 展示）
+    /// Record count per registered @Model type, used by Debug → State & Cache.
+    @MainActor
+    static func entityCounts(context: ModelContext) -> [(name: String, count: Int)] {
+        var results: [(name: String, count: Int)] = []
+        for type in modelTypes {
+            let count: Int
+            do {
+                count = try entityCount(for: type, in: context)
+            } catch {
+                Log.data.error("entityCounts 取数失败 / fetchCount failed for \(String(describing: type), privacy: .public): \(error.localizedDescription, privacy: .public)")
+                count = -1
+            }
+            results.append((String(describing: type), count))
+        }
+        return results
+    }
+
+    /// 通用实体计数（通过类型分发到具体 PersistentModel 子类）
+    /// Type-erased entity count dispatcher.
+    private static func entityCount(for type: any PersistentModel.Type, in context: ModelContext) throws -> Int {
+        switch type {
+        case let t as SubjectRecord.Type:
+            return try context.fetchCount(FetchDescriptor<SubjectRecord>())
+        case let t as GradeRecord.Type:
+            return try context.fetchCount(FetchDescriptor<GradeRecord>())
+        case let t as MistakeNoteRecord.Type:
+            return try context.fetchCount(FetchDescriptor<MistakeNoteRecord>())
+        case let t as ExamRecord.Type:
+            return try context.fetchCount(FetchDescriptor<ExamRecord>())
+        case let t as ComprehensiveExamRecord.Type:
+            return try context.fetchCount(FetchDescriptor<ComprehensiveExamRecord>())
+        case let t as TaskItemRecord.Type:
+            return try context.fetchCount(FetchDescriptor<TaskItemRecord>())
+        case let t as UserProfileRecord.Type:
+            return try context.fetchCount(FetchDescriptor<UserProfileRecord>())
+        case let t as StudyPhaseRecord.Type:
+            return try context.fetchCount(FetchDescriptor<StudyPhaseRecord>())
+        default:
+            // 兜底：返回 -1 提示未实现
+            return -1
+        }
+    }
+
     // MARK: - Migration
 
     /// 是否已经完成 JSON → SwiftData 迁移

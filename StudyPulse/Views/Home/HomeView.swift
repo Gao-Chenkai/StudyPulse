@@ -72,6 +72,8 @@ struct HomeView: View {
             }
             .background(Color(.systemGroupedBackground).opacity(0.4))
             .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .navigationTitle("Dashboard".localized())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

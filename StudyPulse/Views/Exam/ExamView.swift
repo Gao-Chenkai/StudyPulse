@@ -90,6 +90,9 @@ struct ExamView: View {
                     listContent
                 }
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .navigationTitle("Exams".localized())
             .background(Color(.systemGroupedBackground))
             // iPad 上撑满 detail 区宽度
@@ -488,6 +491,7 @@ struct ExamRowView: View {
                 Text(exam.name)
                     .font(.headline)
                     .foregroundColor(Color(.label))
+                    .debugInspectAuto(exam.name, label: "exam name")
                 Spacer()
                 Text(exam.subject.localized())
                     .font(.caption)
@@ -599,8 +603,9 @@ struct ExamRowView: View {
                 animateIn = true
             }
         }
+        .debugLayoutBoundsAuto()
     }
-    
+
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)
@@ -649,6 +654,7 @@ struct ComprehensiveExamRowView: View {
                 Text(exam.name.localized())
                     .font(.headline)
                     .foregroundColor(Color(.label))
+                    .debugInspectAuto(exam.name, label: "comprehensive exam name")
                 Spacer()
                 Text(subjectText.localized())
                     .font(.caption)
@@ -760,8 +766,9 @@ struct ComprehensiveExamRowView: View {
                 animateIn = true
             }
         }
+        .debugLayoutBoundsAuto()
     }
-    
+
     private var timeLeftColor: Color {
         if daysRemaining <= 3 {
             return Color(.systemRed)

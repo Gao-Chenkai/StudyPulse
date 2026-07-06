@@ -37,6 +37,9 @@ struct ChartTypeSettingsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Chart Type".localized())
         .navigationBarTitleDisplayMode(.inline)
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 }
 

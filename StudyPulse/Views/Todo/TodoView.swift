@@ -129,6 +129,9 @@ struct TodoView: View {
             // 胶囊现在是 List 的一行（filterChipsListRow），不会干扰 iOS 对主滚动内容的检测。
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemGroupedBackground))
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .frame(maxWidth: .infinity)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

@@ -66,6 +66,9 @@ struct MistakeDetailEditView: View {
             } message: {
                 Text(ocrErrorMessage)
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .overlay {
                 if isProcessingOCR {
                     ProgressView("Recognizing text...".localized())

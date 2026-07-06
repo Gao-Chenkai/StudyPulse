@@ -3,8 +3,17 @@
 //  StudyPulse
 
 import SwiftUI
+import UIKit
 
 struct AboutView: View {
+    /// Debug 模式彩蛋:连点版本号 7 次解锁
+    @State private var versionTapCount: Int = 0
+    @State private var lastVersionTapTime: Date = .distantPast
+    @State private var showDebug: Bool = false
+
+    private let requiredTaps = 7
+    private let tapWindowSeconds: TimeInterval = 5.0
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,6 +34,10 @@ struct AboutView: View {
                     }
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            handleVersionTap()
+                        }
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("About StudyPulse".localized())
@@ -49,6 +62,27 @@ struct AboutView: View {
             .adaptiveMaxWidth(640)
             .navigationTitle("About".localized())
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showDebug) {
+                DebugView()
+                    .environmentObject(AppEnvironmentManager.shared)
+            }
+        }
+    }
+
+    /// 版本号连点解锁彩蛋
+    /// Tap the version label `requiredTaps` times within `tapWindowSeconds` to unlock Debug.
+    private func handleVersionTap() {
+        let now = Date()
+        if now.timeIntervalSince(lastVersionTapTime) > tapWindowSeconds {
+            versionTapCount = 0
+        }
+        versionTapCount += 1
+        lastVersionTapTime = now
+
+        if versionTapCount >= requiredTaps {
+            versionTapCount = 0
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showDebug = true
         }
     }
 }

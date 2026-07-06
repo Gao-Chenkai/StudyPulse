@@ -52,6 +52,7 @@ struct WelcomeHeaderCard: View {
         .task {
             avatarData = await container.loadAvatarAsync()
         }
+        .debugLayoutBoundsAuto()
     }
 
     private func greetingText() -> String {

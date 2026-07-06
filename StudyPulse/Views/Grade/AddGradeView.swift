@@ -86,6 +86,9 @@ struct AddGradeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
             .onAppear { syncSubjectScores() }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
         }
     }
 }

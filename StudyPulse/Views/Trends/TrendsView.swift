@@ -85,6 +85,9 @@ struct TrendsView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .navigationTitle("Trends".localized())
             // iPad 上撑满 detail 区宽度
             .frame(maxWidth: .infinity)

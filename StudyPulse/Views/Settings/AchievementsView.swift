@@ -42,6 +42,9 @@ struct AchievementsView: View {
         .navigationTitle("Achievements".localized())
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.systemGroupedBackground))
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 
     // MARK: - Streak Header

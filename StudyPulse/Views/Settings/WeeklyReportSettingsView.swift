@@ -67,6 +67,9 @@ struct WeeklyReportSettingsView: View {
         }
         .navigationTitle("Learning Reports".localized())
         .navigationBarTitleDisplayMode(.inline)
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .sheet(isPresented: $showingShareSheet) {
             if let image = reportImage {
                 ReportShareSheet(items: [image], subject: "StudyPulse Report")

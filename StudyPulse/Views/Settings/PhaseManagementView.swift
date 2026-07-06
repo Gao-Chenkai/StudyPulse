@@ -34,6 +34,9 @@ struct PhaseManagementView: View {
                 }
             }
         }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
         .sheet(isPresented: $showingNewPhase) {
             PhaseEditView(phase: nil) { newPhase, assignExisting in
                 handleNewPhase(newPhase, assignExisting: assignExisting)

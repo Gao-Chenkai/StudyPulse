@@ -87,6 +87,9 @@ struct MistakeView: View {
                     .background(Color(.systemGroupedBackground))
                 }
             }
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .navigationTitle("Mistakes".localized())
             .searchable(text: $viewModel.searchText, prompt: "Search subjects or mistakes...".localized())
             // 派生数据重算:搜索/数据源变化时触发
@@ -295,6 +298,7 @@ struct DueReviewBanner: View {
             )
         }
         .buttonStyle(.plain)
+        .debugLayoutBoundsAuto()
     }
 }
 
@@ -376,6 +380,7 @@ struct SubjectMistakesView: View {
         .navigationTitle(subject.localized())
         .searchable(text: $searchText, prompt: "Search mistakes...".localized())
         .background(Color(.systemGroupedBackground))
+        .debugLayoutBoundsAuto()
     }
 }
 

@@ -1300,3 +1300,34 @@
 "Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "이 회고를 오답 노트에 첨부하여 간격 반복 복습에 활용할 때 유용합니다.";
 "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ 회고 시간입니다. 시험 범위 / 틀린 부분 / 배운 점 / 다음 전략을 작성해 주세요.";
 "已创建错题 \"%@\",并加入 SRS 复习队列。" = "오답 노트「%@」를 생성하고 SRS 복습 큐에 추가했습니다.";
+
+// MARK: - Debug 모드(이스터에그 → Debug 패널)
+"debug.title" = "Debug";
+"debug.logViewer" = "로그 뷰어";
+"debug.performancePanel" = "성능 패널";
+"debug.stateAndCache" = "상태 및 캐시";
+"debug.buildInfo" = "빌드 정보";
+"debug.diagnostics" = "진단";
+"debug.maintenance" = "유지보수";
+"debug.clearLogs" = "메모리 로그 지우기";
+"debug.clearLogsConfirm" = "5000개의 메모리 로그를 모두 지우시겠습니까? 이미 내보낸 로그는 영향을 받지 않습니다.";
+"debug.recomputeAchievements" = "업적 다시 계산";
+"debug.forceWidgetReload" = "위젯 강제 새로 고침";
+"debug.rescheduleNotifications" = "모든 알림 다시 예약";
+"debug.fps" = "FPS";
+"debug.memory" = "메모리";
+"debug.lagCount5min" = "5분 지연";
+"debug.lastLag" = "최근 지연";
+"debug.entityCounts" = "엔티티 수";
+
+// MARK: - Debug 모드(모드화 — banner / 오버레이 / 수정자)
+"debug.masterToggle" = "Debug 모드 활성화";
+"debug.masterToggleDesc" = "노란색 배너를 표시하고 아래 하위 토글을 해제합니다.";
+"debug.verboseLogging" = "Verbose 로깅";
+"debug.fpsOverlay" = "FPS / 메모리 오버레이";
+"debug.layoutBounds" = "Layout Bounds 디버그";
+"debug.longPressInspect" = "길게 눌러 원시 값 검사";
+"debug.openConsole" = "Debug 콘솔 열기";
+"debug.sectionTitle" = "Debug 모드";
+"debug.sectionFooter" = "아래 하위 토글은 마스터 스위치가 켜져 있을 때만 작동합니다. 설정은 즉시 저장되며 모든 페이지에 적용됩니다. 릴리스 빌드에서도 사용 가능.";
+"debug.inspect.title" = "검사";

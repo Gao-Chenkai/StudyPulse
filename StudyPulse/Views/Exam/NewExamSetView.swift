@@ -227,6 +227,9 @@ struct NewExamSetView: View {
         } message: {
             Text(calendarAlertMessage)
         }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 
     private func syncSubjectTimeEntries() {

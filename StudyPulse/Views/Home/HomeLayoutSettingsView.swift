@@ -51,6 +51,9 @@ struct HomeLayoutSettingsView: View {
             }
             .listStyle(.insetGrouped)
             .environment(\.editMode, .constant(.active))
+            .containerBackground(.clear, for: .navigation)
+            .debugModeContainer()
+            .debugLayoutBoundsAuto()
             .navigationTitle("Home Layout".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

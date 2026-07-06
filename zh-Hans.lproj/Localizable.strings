@@ -1300,3 +1300,34 @@
 "Useful when you want to attach this review to your mistake notebook for spaced-repetition review." = "适合希望把本次复盘归档到错题本,纳入间隔复习的场景。";
 "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy." = "%@ 的复盘时间到了,填写:考了什么 / 错什么 / 学到什么 / 下次策略。";
 "已创建错题 \"%@\",并加入 SRS 复习队列。" = "已创建错题「%@」,并加入 SRS 复习队列。";
+
+// MARK: - Debug 模式（彩蛋入口 → Debug 面板）
+"debug.title" = "Debug";
+"debug.logViewer" = "日志查看器";
+"debug.performancePanel" = "性能面板";
+"debug.stateAndCache" = "状态与缓存";
+"debug.buildInfo" = "构建信息";
+"debug.diagnostics" = "诊断";
+"debug.maintenance" = "维护";
+"debug.clearLogs" = "清空内存日志";
+"debug.clearLogsConfirm" = "清空全部 5000 条内存日志？已导出的日志不受影响。";
+"debug.recomputeAchievements" = "重算成就";
+"debug.forceWidgetReload" = "强制刷新小组件";
+"debug.rescheduleNotifications" = "重新调度全部通知";
+"debug.fps" = "FPS";
+"debug.memory" = "内存";
+"debug.lagCount5min" = "5 分钟卡顿";
+"debug.lastLag" = "最近卡顿";
+"debug.entityCounts" = "实体记录数";
+
+// MARK: - Debug 模式（模式化 — banner / 浮窗 / 修饰符）
+"debug.masterToggle" = "启用 Debug 模式";
+"debug.masterToggleDesc" = "显示黄色 banner 并解锁下方子开关。";
+"debug.verboseLogging" = "Verbose 日志";
+"debug.fpsOverlay" = "FPS / 内存浮窗";
+"debug.layoutBounds" = "Layout Bounds 调试";
+"debug.longPressInspect" = "长按检视原始值";
+"debug.openConsole" = "打开 Debug 控制台";
+"debug.sectionTitle" = "Debug 模式";
+"debug.sectionFooter" = "下方子开关需先开启总开关。设置即时保存,对所有页面生效。Release 构建同样可用。";
+"debug.inspect.title" = "检视";

@@ -125,6 +125,7 @@ struct TrendChartCard: View {
             x: 0,
             y: 4
         )
+        .debugLayoutBoundsAuto()
         .onAppear {
             viewModel.selectChartSubject(rule: viewModel.chartRule)
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {

@@ -69,6 +69,7 @@ struct QuickActionsCard: View {
                 .environment(container)
                 .adaptiveSheet()
         }
+        .debugLayoutBoundsAuto()
     }
 }
 

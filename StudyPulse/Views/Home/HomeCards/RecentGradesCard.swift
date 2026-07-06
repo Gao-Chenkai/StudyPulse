@@ -40,6 +40,7 @@ struct RecentGradesCard: View {
             x: 0,
             y: 4
         )
+        .debugLayoutBoundsAuto()
     }
 }
 
@@ -61,6 +62,7 @@ struct CompactGradeRow: View {
                 Text("\(Int(grade.score))")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(scoreColor)
+                    .debugInspectAuto(grade.score, label: "score")
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -84,6 +86,7 @@ struct CompactGradeRow: View {
         .padding(12)
         .background(Color(.systemBackground).opacity(0.6))
         .cornerRadius(12)
+        .debugLayoutBoundsAuto()
     }
 
     private var scoreColor: Color {
