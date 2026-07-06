@@ -1252,6 +1252,9 @@
 "Avg Mastery" = "Avg Mastery";
 "每 10 次复习 → %@ %@" = "Every 10 reviews → %@ %@";
 "%d%% (CI −%d%%)" = "%d%% (CI −%d%%)";
+// v1.5: insufficient mistake data hint
+"Mistake Review" = "Mistake Review";
+"复习过少,未纳入计算" = "Too few reviews, not used in calculation";
 "γ×10 = %@ %@" = "γ×10 = %@ %@";
 "M=%d%%" = "M=%d%%";
 "Predict Next Score" = "Predict Next Score";

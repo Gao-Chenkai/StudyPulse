@@ -180,12 +180,10 @@ struct AvatarEditView: View {
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
         let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
 
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        image.draw(in: rect)
-        let newImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return newImage
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: rect)
+        }
     }
 
     private func saveAvatar() {

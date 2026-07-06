@@ -22,6 +22,11 @@ struct DebugCacheView: View {
     @State private var isLoadingCounts: Bool = false
     @State private var lastRefresh: Date? = nil
 
+    // Grade anomaly scan
+    @State private var gradeAnomalies: [GradeAnomaly] = []
+    @State private var isLoadingAnomalies: Bool = false
+    @State private var lastAnomalyRefresh: Date? = nil
+
     // Pending action feedback
     @State private var statusMessage: String? = nil
     @State private var statusIsError: Bool = false
@@ -51,6 +56,7 @@ struct DebugCacheView: View {
         List {
             diagnosticsSection
             stateSection
+            anomalyScanSection
             maintenanceSection
             dangerousSection
         }
@@ -59,9 +65,11 @@ struct DebugCacheView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await refreshEntityCounts()
+            await refreshGradeAnomalies()
         }
         .refreshable {
             await refreshEntityCounts()
+            await refreshGradeAnomalies()
         }
         .confirmationDialog(
             dialogTitle(for: pendingAction),
@@ -196,6 +204,64 @@ struct DebugCacheView: View {
         } footer: {
             Text("These actions are non-destructive and can be undone by app behavior.".localized())
                 .font(.caption2)
+        }
+    }
+
+    /// 成绩异常扫描:列出明显不在合理范围内的成绩(score 越界 / 重复日期 / 0 分等),
+    /// 方便用户清掉脏数据。Debug 专用,不做任何写操作。
+    @ViewBuilder
+    private var anomalyScanSection: some View {
+        Section {
+            if isLoadingAnomalies {
+                HStack {
+                    ProgressView()
+                    Text("Scanning…".localized())
+                        .foregroundStyle(.secondary)
+                }
+            } else if gradeAnomalies.isEmpty {
+                Label("No anomalies found.".localized(), systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+            } else {
+                ForEach(gradeAnomalies) { anomaly in
+                    anomalyRow(anomaly)
+                }
+            }
+        } header: {
+            HStack {
+                Text("Grade Anomalies".localized())
+                Spacer()
+                Button {
+                    Task { await refreshGradeAnomalies() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
+            }
+        } footer: {
+            if let last = lastAnomalyRefresh {
+                Text("Updated \(last.formatted(date: .omitted, time: .standard)) · 不会自动修复,仅列出供手动清理。")
+                    .font(.caption2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func anomalyRow(_ a: GradeAnomaly) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: a.severity.iconName)
+                .foregroundStyle(a.severity.tint)
+                .font(.caption)
+                .frame(width: 18)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(a.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Text(a.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
         }
     }
 
@@ -368,6 +434,88 @@ struct DebugCacheView: View {
         statusIsError = false
     }
 
+    /// 扫描所有成绩中的异常条目(score 越界 / 重复日期 / 0 分)。
+    /// Debug 专用,只读不写。
+    @MainActor
+    private func refreshGradeAnomalies() async {
+        isLoadingAnomalies = true
+        defer {
+            isLoadingAnomalies = false
+            lastAnomalyRefresh = Date()
+        }
+        let grades = container.gradeRepo.filteredGrades
+        var anomalies: [GradeAnomaly] = []
+
+        // 1) score < 0 或 > fullScore(若 record 自带 fullScore 则用它,否则用科目默认)
+        for g in grades {
+            let recordFull = g.fullScore
+            let subjectFull = container.fullScore(for: g.subject)
+            let effectiveFull = recordFull ?? subjectFull
+            if g.score < 0 {
+                anomalies.append(.init(
+                    severity: .error,
+                    title: "\(g.subject) · 负分",
+                    detail: String(
+                        format: "score=%.1f (date=%@, examName=%@)",
+                        g.score,
+                        g.date.formatted(date: .abbreviated, time: .omitted),
+                        g.examName.isEmpty ? "—" : g.examName
+                    )
+                ))
+            } else if g.score > effectiveFull + 0.5 {
+                anomalies.append(.init(
+                    severity: .error,
+                    title: "\(g.subject) · score 超过 fullScore",
+                    detail: String(
+                        format: "score=%.1f > fullScore=%.1f (date=%@, examName=%@)",
+                        g.score, effectiveFull,
+                        g.date.formatted(date: .abbreviated, time: .omitted),
+                        g.examName.isEmpty ? "—" : g.examName
+                    )
+                ))
+            } else if g.score == 0 {
+                anomalies.append(.init(
+                    severity: .warning,
+                    title: "\(g.subject) · score=0",
+                    detail: String(
+                        format: "date=%@, examName=%@, ranking=%@",
+                        g.date.formatted(date: .abbreviated, time: .omitted),
+                        g.examName.isEmpty ? "—" : g.examName,
+                        g.ranking.map(String.init) ?? "—"
+                    )
+                ))
+            }
+        }
+
+        // 2) 同一科目在同一日期出现 >= 2 条(可能是重复导入 / 手抖录了两次)
+        let grouped = Dictionary(grouping: grades) { g -> String in
+            "\(g.subject)|\(g.date.formatted(date: .abbreviated, time: .omitted))"
+        }
+        for (key, items) in grouped where items.count >= 2 {
+            let parts = key.split(separator: "|", maxSplits: 1)
+            guard parts.count == 2 else { continue }
+            let subject = String(parts[0])
+            let dateStr = String(parts[1])
+            let scores = items.map { String(format: "%.1f", $0.score) }.joined(separator: ", ")
+            anomalies.append(.init(
+                severity: .warning,
+                title: "\(subject) · 重复日期",
+                detail: String(
+                    format: "%@ 共有 %d 条记录: %@",
+                    dateStr, items.count, scores
+                )
+            ))
+        }
+
+        // 按严重度 + 科目排序
+        anomalies.sort { a, b in
+            if a.severity != b.severity { return a.severity < b.severity }
+            return a.title < b.title
+        }
+
+        gradeAnomalies = anomalies
+    }
+
     // MARK: - Dialog Strings
 
     private func dialogTitle(for action: PendingAction?) -> String {
@@ -396,4 +544,38 @@ struct DebugCacheView: View {
             return "Force re-derive the streak and achievement snapshot from stored activity logs.".localized()
         }
     }
+}
+
+// MARK: - 成绩异常条目(Debug 专用)
+
+/// 一条成绩异常的描述(Debug 视图用)。
+/// A single grade anomaly entry shown in the Debug → State & Cache screen.
+struct GradeAnomaly: Identifiable {
+    enum Severity: Int, Comparable {
+        case warning = 0
+        case error = 1
+
+        static func < (lhs: Severity, rhs: Severity) -> Bool {
+            lhs.rawValue < rhs.rawValue
+        }
+
+        var iconName: String {
+            switch self {
+            case .warning: return "exclamationmark.triangle.fill"
+            case .error:   return "xmark.octagon.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .warning: return Color(.systemOrange)
+            case .error:   return Color(.systemRed)
+            }
+        }
+    }
+
+    let id = UUID()
+    let severity: Severity
+    let title: String
+    let detail: String
 }

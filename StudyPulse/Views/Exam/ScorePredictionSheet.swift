@@ -105,6 +105,11 @@ struct ScorePredictionSheet: View {
                     outlierWarningCard(warning: warning)
                 }
 
+                // v1.5:数据不足横幅(n<3 / yHat 撞边界 / CI 撑满)
+                if result.isLowConfidence {
+                    lowConfidenceCard(result: result)
+                }
+
                 // 95% CI 柱状图
                 ciBarChartCard(result: result)
 
@@ -120,6 +125,39 @@ struct ScorePredictionSheet: View {
             .padding(.horizontal)
             .padding(.vertical, 16)
         }
+    }
+
+    /// v1.5:数据不足横幅——明确告诉用户 CI 不可信,数字只是"参考"。
+    @ViewBuilder
+    private func lowConfidenceCard(result: ScorePredictionResult) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(Color(.systemOrange))
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Data Insufficient for Reliable Prediction".localized())
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text(String(
+                    format: "仅基于 %d 条成绩,置信区间过宽,以下数字仅作参考。".localized(),
+                    result.usedSampleSize
+                ))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.systemOrange).opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color(.systemOrange).opacity(0.35), lineWidth: 1)
+        )
     }
 
     /// 头部小卡：考试 + 引擎信息
@@ -225,19 +263,19 @@ struct ScorePredictionSheet: View {
             HStack(spacing: 6) {
                 Text("\(Int(result.lowerBound.rounded()))")
                     .font(.title3.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
                 Text("→")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
                 Text("\(Int(result.predicted.rounded()))")
                     .font(.title3.weight(.heavy))
                     .foregroundColor(envManager.effectiveAccentColor)
                 Text("→")
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
                 Text("\(Int(result.upperBound.rounded()))")
                     .font(.title3.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -273,7 +311,8 @@ struct ScorePredictionSheet: View {
             )
 
             // v1.4:错题曝光贡献 γ(每 10 次复习 → +X.X 分)
-            if let gamma = result.exposureLift {
+            // v1.5:错题数据过少时不显示(避免基于 1-2 次复习的 γ 误导)
+            if result.shouldShowMistakeEffects, let gamma = result.exposureLift {
                 let perTenReviews = gamma * 10
                 let formattedPerTen = String(format: "%+0.1f", perTenReviews)
                 statsRow(
@@ -288,7 +327,8 @@ struct ScorePredictionSheet: View {
             }
 
             // v1.4:mastery 缩窄 CI(原始 ±X 分 → 缩窄后 ±Y 分)
-            if result.avgMastery > 0 {
+            // v1.5:错题数据过少时不显示(此时 mastery=0 不缩窄,显示出来反而误导)
+            if result.shouldShowMistakeEffects, result.avgMastery > 0 {
                 let shrunkPct = Int((1.0 - result.masteryCIMultiplier) * 100)
                 statsRow(
                     title: "Avg Mastery".localized(),
@@ -298,6 +338,13 @@ struct ScorePredictionSheet: View {
                         shrunkPct
                     ),
                     valueColor: Color(.systemBlue)
+                )
+            } else if !result.shouldShowMistakeEffects {
+                // v1.5:错题数据不足 → 给出小提示,让用户知道 γ / mastery 为何缺席
+                statsRow(
+                    title: "Mistake Review".localized(),
+                    value: "复习过少,未纳入计算".localized(),
+                    valueColor: Color(.systemGray)
                 )
             }
 
@@ -836,11 +883,21 @@ struct ComprehensiveScorePredictionSheet: View {
     @ViewBuilder
     private var totalCard: some View {
         let totalHalfWidth = (target.totalUpper - target.totalLower) / 2.0
+        let ciSpanRatio = target.totalFull > 0
+            ? (target.totalUpper - target.totalLower) / target.totalFull
+            : 0
+        let totalLowConfidence = ciSpanRatio >= 0.8
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Total".localized())
                     .font(.subheadline)
                     .fontWeight(.semibold)
+                if totalLowConfidence {
+                    Label("Data Insufficient".localized(), systemImage: "exclamationmark.triangle.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.caption2)
+                        .foregroundColor(Color(.systemOrange))
+                }
                 Spacer()
                 Text(String(format: "/ %d".localized(), Int(target.totalFull.rounded())))
                     .font(.caption)
@@ -849,25 +906,32 @@ struct ComprehensiveScorePredictionSheet: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(Int(target.totalLower.rounded()))")
                     .font(.title2.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.systemPurple).opacity(0.45))
                 Text("→")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.systemPurple).opacity(0.45))
                 Text("\(Int(target.totalPredicted.rounded()))")
                     .font(.title.weight(.heavy))
                     .foregroundColor(Color(.systemPurple))
                 Text("→")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.systemPurple).opacity(0.45))
                 Text("\(Int(target.totalUpper.rounded()))")
                     .font(.title2.weight(.bold))
+                    .foregroundColor(Color(.systemPurple).opacity(0.45))
+            }
+            if totalLowConfidence {
+                Text("Confidence interval is too wide — too few recent grades to predict reliably.".localized())
+                    .font(.caption2)
+                    .foregroundColor(Color(.systemOrange))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(String(
+                    format: "95%% Confidence Interval (Sum), ±%.1f %@".localized(),
+                    totalHalfWidth,
+                    "pts".localized()
+                ))
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            Text(String(
-                format: "95%% Confidence Interval (Sum), ±%.1f %@".localized(),
-                totalHalfWidth,
-                "pts".localized()
-            ))
-                .font(.caption2)
-                .foregroundColor(.secondary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -885,6 +949,12 @@ struct ComprehensiveScorePredictionSheet: View {
             HStack {
                 Text(item.subject.localized())
                     .font(.subheadline.weight(.semibold))
+                if r.isLowConfidence {
+                    Label("Data Insufficient".localized(), systemImage: "exclamationmark.triangle.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.caption2)
+                        .foregroundColor(Color(.systemOrange))
+                }
                 Spacer()
                 Text(String(format: "/ %d".localized(), Int(r.fullScore.rounded())))
                     .font(.caption2)
@@ -893,33 +963,51 @@ struct ComprehensiveScorePredictionSheet: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(Int(r.lowerBound.rounded()))")
                     .font(.callout.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(r.isLowConfidence
+                                     ? Color(.systemOrange).opacity(0.6)
+                                     : Color(.systemPurple).opacity(0.45))
                 Text("→")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(r.isLowConfidence
+                                     ? Color(.systemOrange).opacity(0.6)
+                                     : Color(.systemPurple).opacity(0.45))
                 Text("\(Int(r.predicted.rounded()))")
                     .font(.title3.weight(.heavy))
-                    .foregroundColor(Color(.systemPurple))
+                    .foregroundColor(r.isLowConfidence ? Color(.systemOrange) : Color(.systemPurple))
                 Text("→")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(r.isLowConfidence
+                                     ? Color(.systemOrange).opacity(0.6)
+                                     : Color(.systemPurple).opacity(0.45))
                 Text("\(Int(r.upperBound.rounded()))")
                     .font(.callout.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(r.isLowConfidence
+                                     ? Color(.systemOrange).opacity(0.6)
+                                     : Color(.systemPurple).opacity(0.45))
             }
             HStack(spacing: 6) {
-                Text(String(format: "n = %d, ±%.1f %@".localized(),
-                            r.usedSampleSize,
-                            r.halfWidth,
-                            "pts".localized()))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if r.isLowConfidence {
+                    Text(String(
+                        format: "n = %d · 区间过宽,数据不足".localized(),
+                        r.usedSampleSize
+                    ))
+                        .font(.caption2)
+                        .foregroundColor(Color(.systemOrange))
+                } else {
+                    Text(String(format: "n = %d, ±%.1f %@".localized(),
+                                r.usedSampleSize,
+                                r.halfWidth,
+                                "pts".localized()))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
                 if r.outlierWarning != nil {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
                         .foregroundColor(Color(.systemOrange))
                 }
-                if let gamma = r.exposureLift {
+                // v1.5:错题数据过少时不显示 γ 和 mastery(避免误导)
+                if r.shouldShowMistakeEffects, let gamma = r.exposureLift {
                     let perTen = String(format: "%+.1f", gamma * 10)
                     Text(String(format: "γ×10 = %@ %@".localized(),
                                 perTen,
@@ -927,7 +1015,7 @@ struct ComprehensiveScorePredictionSheet: View {
                         .font(.caption2)
                         .foregroundColor(gamma >= 0 ? Color(.systemGreen) : Color(.systemRed))
                 }
-                if r.avgMastery > 0 {
+                if r.shouldShowMistakeEffects, r.avgMastery > 0 {
                     Text(String(format: "M=%d%%".localized(),
                                 Int(r.avgMastery * 100)))
                         .font(.caption2)

@@ -60,15 +60,18 @@ private struct ZoomableScrollView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
+        scrollView.backgroundColor = .black
         scrollView.delegate = context.coordinator
         scrollView.maximumZoomScale = 5.0
         scrollView.minimumZoomScale = 1.0
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.showsVerticalScrollIndicator = false
         scrollView.bouncesZoom = true
+        scrollView.contentSize = image.size
 
         let imageView = UIImageView(image: image)
         imageView.contentMode = .scaleAspectFit
+        imageView.frame = CGRect(origin: .zero, size: image.size)
         imageView.isUserInteractionEnabled = true
         scrollView.addSubview(imageView)
 
@@ -83,6 +86,8 @@ private struct ZoomableScrollView: UIViewRepresentable {
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         if let imageView = scrollView.subviews.first as? UIImageView {
             imageView.image = image
+            imageView.frame = CGRect(origin: .zero, size: image.size)
+            scrollView.contentSize = image.size
             updateZoomScale(for: scrollView)
         }
     }

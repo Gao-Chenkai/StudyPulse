@@ -128,6 +128,21 @@ struct ScorePredictionResult: Equatable {
     let eNew: Double                  // v1.4:预测时点累计曝光
     let outlierWarning: OutlierWarning?
 
+    /// v1.5:数据是否不足以给出可靠的置信区间
+    /// (n<3 / CI 占满 fullScore / yHat 撞到边界)
+    /// UI 应当显式提示用户"数据不足",避免误把 0/7/41 这种下界当成分数。
+    let isLowConfidence: Bool
+
+    /// 错题数据是否充足(totalExposureCount >= minimumMistakeSamples)。
+    /// 不足时二元回归退化、mastery 不参与 CI 缩窄。
+    /// True if total mistake exposure >= minimumMistakeSamples (else the engine
+    /// falls back to 2-variable WLS and skips mastery-shrink).
+    let hasEnoughMistakeData: Bool
+
+    /// 错题数据是否充足到能影响 CI 缩窄
+    /// (UI 用:错题过少时不显示 mastery% / γ)
+    var shouldShowMistakeEffects: Bool { hasEnoughMistakeData }
+
     /// 是否数据足以给出置信区间(n >= 3 且非退化样本)
     var hasConfidenceInterval: Bool {
         usedSampleSize >= 3 && (upperBound - lowerBound).isFinite && upperBound > lowerBound
@@ -367,18 +382,27 @@ struct LinearRegressionScorePredictor: ScorePredictor {
     /// 0.4 意味着:mastery = 1.0 时 CI 半宽变为 60%(缩窄 40%)。
     let masteryMaxShrink: Double
 
+    /// 错题数据过少时的门槛(总复习次数)。低于此值时:
+    ///   - 二元回归(3 变量 WLS,带 γ·曝光)退化为 2 变量 WLS(γ=0)
+    ///   - mastery 缩窄也跳过(避免基于 1-2 次复习的 mastery 高估确定度)
+    /// 总复习 = 0 视为无错题数据;总复习 = 1-2 视为数据不足。
+    /// 默认 3,即"至少复习过 3 次"才允许把错题数据纳入计算。
+    let minimumMistakeSamples: Int
+
     init(
         halfLifeDays: Double = 30,
         maxWindowDays: Double = 60,
         minimumSampleSize: Int = 2,
         outlierSigma: Double = 3.0,
-        masteryMaxShrink: Double = 0.4
+        masteryMaxShrink: Double = 0.4,
+        minimumMistakeSamples: Int = 3
     ) {
         self.halfLifeDays = max(7, halfLifeDays)
         self.maxWindowDays = max(self.halfLifeDays * 2, maxWindowDays)
         self.minimumSampleSize = max(2, minimumSampleSize)
         self.outlierSigma = max(1.0, outlierSigma)
         self.masteryMaxShrink = max(0.0, min(0.8, masteryMaxShrink))
+        self.minimumMistakeSamples = max(0, minimumMistakeSamples)
     }
 
     func predict(
@@ -415,15 +439,19 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         // 4. 错题累计曝光 e_i(截至第 i 条成绩的日期)
         let ctx = mistakeContext ?? .empty
         let hasExposureData = !ctx.reviewTimestamps.isEmpty
+        // v1.5:错题数据过少(总复习 < minimumMistakeSamples)时,
+        // 把 mastery 视作 0、es 全置 0,避免基于 1-2 次复习的"伪高 mastery"
+        // 把 CI 缩得过窄、或让二元回归把噪声当信号。
+        let hasEnoughMistakeData = ctx.totalExposureCount >= minimumMistakeSamples
         let es: [Double] = recent.map { g in
-            hasExposureData ? ctx.cumulativeExposure(at: g.date) : 0
+            (hasExposureData && hasEnoughMistakeData) ? ctx.cumulativeExposure(at: g.date) : 0
         }
         let eAllZero = es.allSatisfy { $0 == 0 }
 
         // 5. 决定用 3 变量还是 2 变量 WLS
-        //    3 变量: n >= 3 && 有错题数据 && 设计矩阵非退化
+        //    3 变量: n >= 3 && 错题数据充足 && 设计矩阵非退化
         //    2 变量: 其它情况(fallback,γ = 0)
-        let useBivariate = recent.count >= 3 && hasExposureData && !eAllZero
+        let useBivariate = recent.count >= 3 && hasExposureData && hasEnoughMistakeData && !eAllZero
 
         // 6. 解 WLS
         let xNew = max(0, examDate.timeIntervalSince(t0) / 86400.0)
@@ -479,8 +507,24 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         // 7. 点估计 ŷ = α + β·xNew + γ·eNew
         let slope: Double? = beta.isFinite ? beta : nil
         let exposureLift: Double? = gamma
-        var yHat = alpha + beta * xNew + (gamma ?? 0) * eNew
-        yHat = max(0, min(yHat, fullScore))
+        let yHatRaw = alpha + beta * xNew + (gamma ?? 0) * eNew
+        // yHat 是否被边界夹紧(>0.5 分视为撞边界)
+        let yHatClampedUp = yHatRaw > fullScore + 0.5
+        let yHatClampedDown = yHatRaw < -0.5
+
+        // v1.5:EWMA 加权均值,作为 yHat 撞边界或样本不足时的 fallback。
+        // 不再硬夹 yHat 到 [0, fullScore] —— 硬夹会让"接近 100 的外推"
+        // 变成"100 分",被用户当成瞎编。
+        let weightedMean: Double = zip(ys, weights).map(*).reduce(0, +) / weightSum
+
+        // 决定最终点估计:
+        //   - n >= 3 且没撞边界 → 用回归外推(yHatRaw)
+        //   - n < 3  → 一律退到加权均值(n=2 时 df=0,CI 用数据范围,点估计也必须落进数据范围,否则 99 → [60,83] 自相矛盾)
+        //   - 撞边界 → 退到加权均值
+        let useRegressionForPoint = recent.count >= 3 && !yHatClampedUp && !yHatClampedDown
+        let yHat = useRegressionForPoint
+            ? max(0, min(yHatRaw, fullScore))
+            : max(0, min(weightedMean, fullScore))
 
         // 8. 残差 + 决定系数 R²(未加权残差平方和,便于跨样本解释)
         var sse: Double = 0
@@ -505,14 +549,32 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         var upper = yHat
         var rawHalfWidth: Double = 0
 
-        if df > 0, sse.isFinite {
+        // v1.5:n<3 或 yHat 撞边界(此时点估计已退到加权均值)时,
+        // 不要再用回归 CI —— 否则会出现"点估计 75、CI [0,100]"这种自相矛盾。
+        // 直接用 EWMA 窗口内真实分数的极差作为 CI,反映"数据本身的范围"。
+        let useDataRangeCI = recent.count < 3 || !useRegressionForPoint
+
+        if useDataRangeCI {
+            let lo = (ys.min() ?? yHat)
+            let hi = (ys.max() ?? yHat)
+            lower = max(0, lo)
+            upper = min(fullScore, hi)
+            // 若所有点都相同,lo == hi == yHat,半宽 0,合理
+            rawHalfWidth = (upper - lower) / 2.0
+        } else if df > 0, sse.isFinite {
             let s = (sse / Double(df)).squareRoot()
             if s.isFinite {
                 let se = s * (1.0 + leverageNew).squareRoot()
                 let h = tCrit * se
                 lower = max(0, yHat - h)
                 upper = min(fullScore, yHat + h)
-                rawHalfWidth = h
+                // yHat 已夹紧到 [0, fullScore];若 h 超过 yHat 距任一边界的距离,
+                // 未截断的 h 会高估"实际可用的半宽":
+                //   - UI 报告的 "±X 分" 与柱状图宽度严重不符(±180 但柱只到 [0,100])
+                //   - mastery 缩放基准虚高
+                // 用"撞边界后的实际区间半宽"作为 rawHalfWidth,让 mastery 缩放和
+                // UI 展示都跟柱状图实际宽度一致。
+                rawHalfWidth = (upper - lower) / 2.0
             }
         } else if df <= 0 {
             // df <= 0:无法计算标准误差,退化为仅点估计
@@ -523,11 +585,14 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         // 10. mastery 缩窄 CI(v1.4 新增)
         //     halfWidth *= (1 - masteryMaxShrink · avgMastery)
         //     mastery 越高 → CI 越窄(更确定);mastery 0 → 不缩窄
-        let clampedMastery = max(0.0, min(1.0, ctx.averageMastery))
+        // v1.5:错题数据不足时,clampedMastery 强制为 0(不缩窄)
+        let rawMastery = hasEnoughMistakeData ? ctx.averageMastery : 0
+        let clampedMastery = max(0.0, min(1.0, rawMastery))
         let ciMultiplier = 1.0 - masteryMaxShrink * clampedMastery
         let masteryHalfWidth = rawHalfWidth * ciMultiplier
         // 重新计算 lower/upper(以 masteryHalfWidth 为半宽,以 yHat 为中心)
-        if rawHalfWidth > 0, df > 0 {
+        // v1.5:data range 模式下不缩窄(避免 mastery 收缩到 < 半样本差)
+        if rawHalfWidth > 0, df > 0, !useDataRangeCI {
             lower = max(0, yHat - masteryHalfWidth)
             upper = min(fullScore, yHat + masteryHalfWidth)
         }
@@ -559,6 +624,14 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         }
         let dataRange: ClosedRange<Date>? = firstDate <= lastDate ? (firstDate...lastDate) : nil
 
+        // 14. 数据可信度判定(v1.5):
+        //   任何一项为真都视为"低可信",UI 应显式提示数据不足:
+        //   - df <= 0:没有 CI,只有点估计(n<3)
+        //   - yHat 撞到 0 或 fullScore:回归外推到无效区间,数字基本没有解释力
+        //   - CI 区间占满 fullScore 的 80%+:实质上没有信息量(±40+)
+        let ciSpanRatio = fullScore > 0 ? (upper - lower) / fullScore : 0
+        let isLowConfidence = df <= 0 || yHatClampedUp || yHatClampedDown || ciSpanRatio >= 0.8
+
         let result = ScorePredictionResult(
             subject: recent.first?.subject ?? "",
             fullScore: fullScore,
@@ -581,7 +654,9 @@ struct LinearRegressionScorePredictor: ScorePredictor {
             masteryCIMultiplier: ciMultiplier,
             avgMastery: clampedMastery,
             eNew: eNew,
-            outlierWarning: outlierWarning
+            outlierWarning: outlierWarning,
+            isLowConfidence: isLowConfidence,
+            hasEnoughMistakeData: hasEnoughMistakeData
         )
         Log.prediction.info(
             "EWMA predict v1.4: n=\(result.usedSampleSize, privacy: .public), params=\(paramCount, privacy: .public), γ=\(String(format: "%.3f", exposureLift ?? 0), privacy: .public), mastery=\(String(format: "%.2f", clampedMastery), privacy: .public), rawHW=\(String(format: "%.1f", rawHalfWidth), privacy: .public), finalHW=\(String(format: "%.1f", masteryHalfWidth), privacy: .public), outlier=\(outlierWarning != nil, privacy: .public)"
