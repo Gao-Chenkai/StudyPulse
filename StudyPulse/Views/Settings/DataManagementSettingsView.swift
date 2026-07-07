@@ -29,6 +29,7 @@ struct DataManagementSettingsView: View {
     @State private var showingImportSuccess = false
     @State private var showingImportError = false
     @State private var importErrorMessage = ""
+    @State private var importErrorDetail = ""  // 详细诊断信息（code + 文件名 + 行数 + 第一条失败）
 
     // Test notification
     @State private var showingTestAlert = false
@@ -218,7 +219,8 @@ struct DataManagementSettingsView: View {
                     }
                 }
             case .failure(let error):
-                importErrorMessage = ": \(error.localizedDescription)"
+                importErrorMessage = String(format: "[E001] %@".localized(), error.localizedDescription)
+                importErrorDetail = "fileImporter cancelled or failed: \(error.localizedDescription)"
                 showingImportError = true
             }
         }
@@ -240,7 +242,14 @@ struct DataManagementSettingsView: View {
         .alert("Import Error".localized(), isPresented: $showingImportError) {
             Button("OK".localized()) { }
         } message: {
-            Text(importErrorMessage)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(importErrorMessage)
+                if !importErrorDetail.isEmpty {
+                    Text(importErrorDetail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .alert("Test Notification Sent".localized(), isPresented: $showingTestAlert) {
             Button("OK".localized()) { }
@@ -367,112 +376,195 @@ struct DataManagementSettingsView: View {
 
     // MARK: - Data Import
 
+    /// 显示导入错误（统一入口：写日志 + 弹 alert）
+    private func showImportError(_ diag: ImportDiagnostics) {
+        let code = diag.code?.rawValue ?? "E001"
+        importErrorMessage = String(format: "[%@] %@".localized(), code, diag.message)
+        importErrorDetail = diag.userVisibleDetail
+        Log.record(.error, category: "Import", message: "CSV 导入失败 / CSV import failed: \(diag.userVisibleDetail)")
+        showingImportError = true
+    }
+
+    private func showImportError(code: ImportErrorCode, message: String, detail: String) {
+        importErrorMessage = String(format: "[%@] %@".localized(), code.rawValue, message)
+        importErrorDetail = detail
+        Log.record(.error, category: "Import", message: "CSV 导入失败 / CSV import failed: code=\(code.rawValue) message=\(message) detail=\(detail)")
+        showingImportError = true
+    }
+
     private func importGrades(from fileURL: URL) {
-        var csvString: String?
-        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .windowsCP1252, .isoLatin1]
-        for encoding in encodings {
-            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
-                csvString = str
-                break
-            }
+        let fileName = fileURL.lastPathComponent
+        let readResult = DataExportManager.readCSV(from: fileURL)
+        switch readResult.result {
+        case .failure:
+            showImportError(
+                code: .E001,
+                message: "Cannot read file".localized(),
+                detail: "File: \(fileName) - no encoding matched (tried: utf-8, utf-16, utf-16le, utf-16be, windows-1252, iso-8859-1). File may be locked, missing or unsupported."
+            )
+            return
+        case .empty:
+            showImportError(
+                code: .E002,
+                message: "Empty CSV".localized(),
+                detail: "File: \(fileName) - content length is 0."
+            )
+            return
+        case .success:
+            break
         }
-        guard let content = csvString else {
-            importErrorMessage = ""
-            showingImportError = true
+        guard let content = readResult.content else {
+            showImportError(code: .E001, message: "Cannot read file".localized(), detail: "File: \(fileName) - no content")
             return
         }
-        let grades = DataExportManager.parseGrades(from: content, subjects: container.subjectRepo.subjects)
+        var cleanedContent = content
+        if content.hasPrefix("\u{FEFF}") {
+            cleanedContent = String(content.dropFirst())
+        }
+        let (grades, diag) = DataExportManager.parseGradesWithDiagnostics(
+            from: cleanedContent,
+            subjects: container.subjectRepo.subjects,
+            fileName: fileName
+        )
         if grades.isEmpty {
-            importErrorMessage = ""
-            showingImportError = true
+            showImportError(diag)
             return
+        }
+        // 部分跳过：E005 仍要提示用户
+        if let code = diag.code, code == .E005 {
+            Log.record(.warning, category: "Import", message: "CSV 部分行解析失败 / Some rows skipped: \(diag.userVisibleDetail)")
         }
         container.addGrades(grades)
-        importSuccessMessage = " \(grades.count) "
+        importSuccessMessage = " \(grades.count) " + "rows imported".localized()
+            + (diag.skippedRowCount > 0 ? " (skipped \(diag.skippedRowCount))".localized() : "")
         showingImportSuccess = true
     }
 
     private func importMistakes(from fileURL: URL) {
-        var csvString: String?
-        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .windowsCP1252, .isoLatin1]
-        for encoding in encodings {
-            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
-                csvString = str
-                break
-            }
+        let fileName = fileURL.lastPathComponent
+        let readResult = DataExportManager.readCSV(from: fileURL)
+        switch readResult.result {
+        case .failure:
+            showImportError(
+                code: .E001,
+                message: "Cannot read file".localized(),
+                detail: "File: \(fileName) - no encoding matched (tried: utf-8, utf-16, utf-16le, utf-16be, windows-1252, iso-8859-1). File may be locked, missing or unsupported."
+            )
+            return
+        case .empty:
+            showImportError(code: .E002, message: "Empty CSV".localized(), detail: "File: \(fileName) - content length is 0.")
+            return
+        case .success:
+            break
         }
-        guard let content = csvString else {
-            importErrorMessage = "Cannot read file: encoding not supported. Please make sure the file is a valid CSV file.".localized()
-            showingImportError = true
+        guard let content = readResult.content else {
+            showImportError(code: .E001, message: "Cannot read file".localized(), detail: "File: \(fileName) - no content")
             return
         }
         var cleanedContent = content
         if content.hasPrefix("\u{FEFF}") {
             cleanedContent = String(content.dropFirst())
         }
-        let mistakes = DataExportManager.parseMistakes(from: cleanedContent)
+        let (mistakes, diag) = DataExportManager.parseMistakesWithDiagnostics(
+            from: cleanedContent,
+            fileName: fileName
+        )
         if mistakes.isEmpty {
-            importErrorMessage = "CSV"
-            showingImportError = true
+            showImportError(diag)
             return
         }
+        if let code = diag.code, code == .E005 {
+            Log.record(.warning, category: "Import", message: "CSV 部分行解析失败 / Some rows skipped: \(diag.userVisibleDetail)")
+        }
         container.addMistakes(mistakes)
-        importSuccessMessage = " \(mistakes.count) "
+        importSuccessMessage = " \(mistakes.count) " + "rows imported".localized()
+            + (diag.skippedRowCount > 0 ? " (skipped \(diag.skippedRowCount))".localized() : "")
         showingImportSuccess = true
     }
 
     private func importExams(from fileURL: URL) {
-        var csvString: String?
-        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .windowsCP1252, .isoLatin1]
-        for encoding in encodings {
-            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
-                csvString = str
-                break
-            }
-        }
-        guard let content = csvString else {
-            importErrorMessage = ""
-            showingImportError = true
+        let fileName = fileURL.lastPathComponent
+        let readResult = DataExportManager.readCSV(from: fileURL)
+        switch readResult.result {
+        case .failure:
+            showImportError(
+                code: .E001,
+                message: "Cannot read file".localized(),
+                detail: "File: \(fileName) - no encoding matched (tried: utf-8, utf-16, utf-16le, utf-16be, windows-1252, iso-8859-1). File may be locked, missing or unsupported."
+            )
             return
-        }
-        let (single, comprehensive) = DataExportManager.parseExams(from: content)
-        if single.isEmpty && comprehensive.isEmpty {
-            importErrorMessage = ""
-            showingImportError = true
+        case .empty:
+            showImportError(code: .E002, message: "Empty CSV".localized(), detail: "File: \(fileName) - content length is 0.")
             return
+        case .success:
+            break
         }
-        container.addExams(single: single, comprehensive: comprehensive)
-        let total = single.count + comprehensive.count
-        importSuccessMessage = " \(total) "
-        showingImportSuccess = true
-    }
-
-    private func importTasks(from fileURL: URL) {
-        var csvString: String?
-        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .windowsCP1252, .isoLatin1]
-        for encoding in encodings {
-            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
-                csvString = str
-                break
-            }
-        }
-        guard let content = csvString else {
-            importErrorMessage = ""
-            showingImportError = true
+        guard let content = readResult.content else {
+            showImportError(code: .E001, message: "Cannot read file".localized(), detail: "File: \(fileName) - no content")
             return
         }
         var cleanedContent = content
         if content.hasPrefix("\u{FEFF}") {
             cleanedContent = String(content.dropFirst())
         }
-        let tasks = DataExportManager.parseTasks(from: cleanedContent)
-        if tasks.isEmpty {
-            importErrorMessage = ""
-            showingImportError = true
+        let (single, comprehensive, diag) = DataExportManager.parseExamsWithDiagnostics(
+            from: cleanedContent,
+            fileName: fileName
+        )
+        let total = single.count + comprehensive.count
+        if total == 0 {
+            showImportError(diag)
             return
         }
+        if let code = diag.code, code == .E005 {
+            Log.record(.warning, category: "Import", message: "CSV 部分行解析失败 / Some rows skipped: \(diag.userVisibleDetail)")
+        }
+        container.addExams(single: single, comprehensive: comprehensive)
+        importSuccessMessage = " \(total) " + "rows imported".localized()
+            + " (single \(single.count), comprehensive \(comprehensive.count))"
+            + (diag.skippedRowCount > 0 ? " (skipped \(diag.skippedRowCount))".localized() : "")
+        showingImportSuccess = true
+    }
+
+    private func importTasks(from fileURL: URL) {
+        let fileName = fileURL.lastPathComponent
+        let readResult = DataExportManager.readCSV(from: fileURL)
+        switch readResult.result {
+        case .failure:
+            showImportError(
+                code: .E001,
+                message: "Cannot read file".localized(),
+                detail: "File: \(fileName) - no encoding matched (tried: utf-8, utf-16, utf-16le, utf-16be, windows-1252, iso-8859-1). File may be locked, missing or unsupported."
+            )
+            return
+        case .empty:
+            showImportError(code: .E002, message: "Empty CSV".localized(), detail: "File: \(fileName) - content length is 0.")
+            return
+        case .success:
+            break
+        }
+        guard let content = readResult.content else {
+            showImportError(code: .E001, message: "Cannot read file".localized(), detail: "File: \(fileName) - no content")
+            return
+        }
+        var cleanedContent = content
+        if content.hasPrefix("\u{FEFF}") {
+            cleanedContent = String(content.dropFirst())
+        }
+        let (tasks, diag) = DataExportManager.parseTasksWithDiagnostics(
+            from: cleanedContent,
+            fileName: fileName
+        )
+        if tasks.isEmpty {
+            showImportError(diag)
+            return
+        }
+        if let code = diag.code, code == .E005 {
+            Log.record(.warning, category: "Import", message: "CSV 部分行解析失败 / Some rows skipped: \(diag.userVisibleDetail)")
+        }
         container.addTasks(tasks)
-        importSuccessMessage = " \(tasks.count) "
+        importSuccessMessage = " \(tasks.count) " + "rows imported".localized()
+            + (diag.skippedRowCount > 0 ? " (skipped \(diag.skippedRowCount))".localized() : "")
         showingImportSuccess = true
     }
 

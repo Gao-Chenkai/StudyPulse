@@ -186,6 +186,9 @@ final class MistakeNoteRecord {
     var masteryScore: Double = 0.0
     /// 掌握度历史（JSON 编码 [MasteryHistoryEntry]）
     var masteryHistoryData: Data?
+    /// 手写答题历史（JSON 编码 [HandwritingAnswerEntry]）
+    /// Handwriting history (JSON-encoded [HandwritingAnswerEntry]).
+    var handwritingHistoryData: Data?
 
     init(
         id: UUID,
@@ -210,7 +213,8 @@ final class MistakeNoteRecord {
         phaseId: UUID? = nil,
         exposureCount: Int = 0,
         masteryScore: Double = 0.0,
-        masteryHistoryData: Data? = nil
+        masteryHistoryData: Data? = nil,
+        handwritingHistoryData: Data? = nil
     ) {
         self.id = id
         self.title = title
@@ -235,6 +239,7 @@ final class MistakeNoteRecord {
         self.exposureCount = exposureCount
         self.masteryScore = masteryScore
         self.masteryHistoryData = masteryHistoryData
+        self.handwritingHistoryData = handwritingHistoryData
     }
 
     convenience init(from note: MistakeNote) {
@@ -242,6 +247,9 @@ final class MistakeNoteRecord {
         let historyData: Data? = note.masteryHistory.isEmpty
             ? nil
             : try? JSONEncoder().encode(note.masteryHistory)
+        let handwritingData: Data? = note.handwritingHistory.isEmpty
+            ? nil
+            : try? JSONEncoder().encode(note.handwritingHistory)
         self.init(
             id: note.id,
             title: note.title,
@@ -265,7 +273,8 @@ final class MistakeNoteRecord {
             phaseId: note.phaseId,
             exposureCount: note.exposureCount,
             masteryScore: note.masteryScore,
-            masteryHistoryData: historyData
+            masteryHistoryData: historyData,
+            handwritingHistoryData: handwritingData
         )
     }
 
@@ -287,6 +296,11 @@ final class MistakeNoteRecord {
             return (try? JSONDecoder().decode([MasteryHistoryEntry].self, from: data)) ?? []
         }()
 
+        let handwriting: [HandwritingAnswerEntry] = {
+            guard let data = handwritingHistoryData else { return [] }
+            return (try? JSONDecoder().decode([HandwritingAnswerEntry].self, from: data)) ?? []
+        }()
+
         return MistakeNote(
             id: id,
             title: title,
@@ -305,7 +319,8 @@ final class MistakeNoteRecord {
             phaseId: phaseId,
             exposureCount: exposureCount,
             masteryScore: masteryScore,
-            masteryHistory: history
+            masteryHistory: history,
+            handwritingHistory: handwriting
         )
     }
 }

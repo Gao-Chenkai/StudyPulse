@@ -208,26 +208,29 @@ struct MistakeAdminView: View {
                 Text("No mistakes".localized()).foregroundColor(.secondary)
             } else {
                 ForEach(container.mistakeRepo.mistakeSets) { mistake in
-                    Button {
-                        editingMistake = mistake
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(mistake.title)
-                                    .font(.system(size: 15, weight: .medium))
-                                if !mistake.subject.isEmpty {
-                                    Text(mistake.subject)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Text(mistake.date.formatted(date: .numeric, time: .omitted))
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                    // iPad 用 NavigationLink 推到 MistakeDetailEditView(传 false 让它别再包自己的 stack);
+                    // iPhone 继续走 Button + sheet。
+                    // iPad: NavigationLink to MistakeDetailEditView (pass false so it
+                    // doesn't double-wrap the stack); iPhone: Button + .sheet below.
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        NavigationLink {
+                            MistakeDetailEditView(
+                                mistakeSet: mistake,
+                                usesInternalNavigationStack: false
+                            )
+                            .adaptiveSheet()
+                        } label: {
+                            mistakeRow(mistake: mistake)
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            editingMistake = mistake
+                        } label: {
+                            mistakeRow(mistake: mistake)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
                 .onDelete { indexSet in
                     for i in indexSet.sorted(by: >) {
@@ -240,6 +243,27 @@ struct MistakeAdminView: View {
         .adaptiveMaxWidth(820)
         .sheet(item: $editingMistake) { mistake in
             MistakeDetailEditView(mistakeSet: mistake)
+        }
+    }
+
+    /// Shared row content for the mistake admin list (used by both iPad
+    /// NavigationLink and iPhone Button paths).
+    @ViewBuilder
+    private func mistakeRow(mistake: MistakeNote) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(mistake.title)
+                    .font(.system(size: 15, weight: .medium))
+                if !mistake.subject.isEmpty {
+                    Text(mistake.subject)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Text(mistake.date.formatted(date: .numeric, time: .omitted))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
         }
     }
 }

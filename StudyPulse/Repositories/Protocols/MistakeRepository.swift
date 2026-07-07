@@ -35,4 +35,8 @@ protocol MistakeRepository: AnyObject, Sendable {
     func recordExposure(_ mistakeId: UUID)
     /// 闪卡自评:exposure +1,EMA 调整 masteryScore,追加 history
     func recordReview(_ mistakeId: UUID, quality: ReviewQuality, now: Date)
+    /// 闪卡手写答题:追加一条 HandwritingAnswerEntry 到 handwritingHistory
+    /// Flashcard handwriting answer: append one `HandwritingAnswerEntry` to
+    /// `handwritingHistory`. `quality` is `nil` if the user wrote but skipped rating.
+    func recordHandwriting(_ mistakeId: UUID, pngData: Data, quality: ReviewQuality?, now: Date)
 }

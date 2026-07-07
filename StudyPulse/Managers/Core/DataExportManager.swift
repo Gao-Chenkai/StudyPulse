@@ -174,6 +174,282 @@ enum DataExportManager {
 
     // MARK: - Import
 
+    // MARK: - Import (with diagnostics)
+
+    /// 从 CSV 解析成绩，附带诊断信息
+    static func parseGradesWithDiagnostics(
+        from csvString: String,
+        subjects: [Subject],
+        fileName: String = "grades.csv"
+    ) -> (items: [Grade], diagnostics: ImportDiagnostics) {
+        let rows = parseCSVRows(csvString)
+        let encoding = rows.isEmpty ? "(empty)" : "utf-8"
+
+        guard rows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E002, message: "Empty CSV", fileName: fileName, encoding: nil
+            ))
+        }
+        let header = rows[0]
+        let dataRows = Array(rows.dropFirst())
+        guard dataRows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E003, message: "Header only, no data rows", fileName: fileName,
+                encoding: encoding, headerColumnCount: header.count
+            ))
+        }
+        if header.count < gradesHeader.count {
+            return ([], ImportDiagnostics.failure(
+                code: .E102, message: "Header columns < expected",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count,
+                firstFailure: "expected=\(gradesHeader.count) got=\(header.count) headers=\(header)"
+            ))
+        }
+        // 检查表头语义
+        let expectedHeader = Set(gradesHeader)
+        let actualHeader = Set(header)
+        if !expectedHeader.isSubset(of: actualHeader) && !Set(expectedHeader).isSubset(of: actualHeader) {
+            // 不阻止,只是警告
+        }
+
+        var grades: [Grade] = []
+        var firstFailure: String?
+        for (idx, row) in dataRows.enumerated() {
+            if let grade = parseGradeRow(row, subjects: subjects) {
+                grades.append(grade)
+            } else if firstFailure == nil {
+                firstFailure = "row #\(idx + 2) col=\(row.count) cells=\(row.prefix(5))"
+            }
+        }
+        if grades.isEmpty {
+            return ([], ImportDiagnostics.failure(
+                code: .E004, message: "All rows failed to parse",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, firstFailure: firstFailure
+            ))
+        }
+        let diag = ImportDiagnostics.success(
+            fileName: fileName, encoding: encoding,
+            headerColumnCount: header.count, dataRowCount: dataRows.count,
+            successfulRowCount: grades.count
+        )
+        if grades.count < dataRows.count {
+            return (grades, ImportDiagnostics(
+                code: .E005, message: "Some rows skipped",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, successfulRowCount: grades.count,
+                skippedRowCount: dataRows.count - grades.count,
+                firstFailure: firstFailure
+            ))
+        }
+        return (grades, diag)
+    }
+
+    /// 从 CSV 解析错题，附带诊断信息
+    static func parseMistakesWithDiagnostics(
+        from csvString: String,
+        fileName: String = "mistakes.csv"
+    ) -> (items: [MistakeNote], diagnostics: ImportDiagnostics) {
+        let rows = parseCSVRows(csvString)
+        let encoding = rows.isEmpty ? "(empty)" : "utf-8"
+
+        guard rows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E002, message: "Empty CSV", fileName: fileName, encoding: nil
+            ))
+        }
+        let header = rows[0]
+        let dataRows = Array(rows.dropFirst())
+        guard dataRows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E003, message: "Header only, no data rows", fileName: fileName,
+                encoding: encoding, headerColumnCount: header.count
+            ))
+        }
+
+        var mistakes: [MistakeNote] = []
+        var firstFailure: String?
+        for (idx, row) in dataRows.enumerated() {
+            if let mistake = parseMistakeRow(row) {
+                mistakes.append(mistake)
+            } else if firstFailure == nil {
+                firstFailure = "row #\(idx + 2) col=\(row.count) got=\(row.prefix(5))"
+            }
+        }
+        Log.export.info("错题 CSV 解析 / Mistakes CSV parsed: fileName=\(fileName, privacy: .public), dataRowCount=\(dataRows.count, privacy: .public), success=\(mistakes.count, privacy: .public)")
+        if mistakes.isEmpty {
+            return ([], ImportDiagnostics.failure(
+                code: .E004, message: "All rows failed to parse",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, firstFailure: firstFailure
+            ))
+        }
+        if mistakes.count < dataRows.count {
+            return (mistakes, ImportDiagnostics(
+                code: .E005, message: "Some rows skipped",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, successfulRowCount: mistakes.count,
+                skippedRowCount: dataRows.count - mistakes.count,
+                firstFailure: firstFailure
+            ))
+        }
+        return (mistakes, ImportDiagnostics.success(
+            fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+            dataRowCount: dataRows.count, successfulRowCount: mistakes.count
+        ))
+    }
+
+    /// 从 CSV 解析考试，附带诊断信息
+    static func parseExamsWithDiagnostics(
+        from csvString: String,
+        fileName: String = "exams.csv"
+    ) -> (single: [Exam], comprehensive: [comprehensiveExam], diagnostics: ImportDiagnostics) {
+        let rows = parseCSVRows(csvString)
+        let encoding = rows.isEmpty ? "(empty)" : "utf-8"
+
+        guard rows.count > 0 else {
+            return ([], [], ImportDiagnostics.failure(
+                code: .E002, message: "Empty CSV", fileName: fileName, encoding: nil
+            ))
+        }
+        let header = rows[0]
+        let dataRows = Array(rows.dropFirst())
+        guard dataRows.count > 0 else {
+            return ([], [], ImportDiagnostics.failure(
+                code: .E003, message: "Header only, no data rows", fileName: fileName,
+                encoding: encoding, headerColumnCount: header.count
+            ))
+        }
+
+        var singleExams: [Exam] = []
+        var compExams: [comprehensiveExam] = []
+        var firstFailure: String?
+        for (idx, row) in dataRows.enumerated() {
+            switch parseExamRow(row) {
+            case .single(let e): singleExams.append(e)
+            case .comprehensive(let e): compExams.append(e)
+            case .invalid:
+                if firstFailure == nil {
+                    firstFailure = "row #\(idx + 2) col=\(row.count) type=\(row.last ?? "?")"
+                }
+            }
+        }
+        if singleExams.isEmpty && compExams.isEmpty {
+            return ([], [], ImportDiagnostics.failure(
+                code: .E004, message: "All rows failed to parse",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, firstFailure: firstFailure
+            ))
+        }
+        let success = singleExams.count + compExams.count
+        if success < dataRows.count {
+            return (singleExams, compExams, ImportDiagnostics(
+                code: .E005, message: "Some rows skipped",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, successfulRowCount: success,
+                skippedRowCount: dataRows.count - success, firstFailure: firstFailure
+            ))
+        }
+        return (singleExams, compExams, ImportDiagnostics.success(
+            fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+            dataRowCount: dataRows.count, successfulRowCount: success
+        ))
+    }
+
+    /// 从 CSV 解析任务，附带诊断信息
+    static func parseTasksWithDiagnostics(
+        from csvString: String,
+        fileName: String = "tasks.csv"
+    ) -> (items: [TaskItem], diagnostics: ImportDiagnostics) {
+        let rows = parseCSVRows(csvString)
+        let encoding = rows.isEmpty ? "(empty)" : "utf-8"
+
+        guard rows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E002, message: "Empty CSV", fileName: fileName, encoding: nil
+            ))
+        }
+        let header = rows[0]
+        let dataRows = Array(rows.dropFirst())
+        guard dataRows.count > 0 else {
+            return ([], ImportDiagnostics.failure(
+                code: .E003, message: "Header only, no data rows", fileName: fileName,
+                encoding: encoding, headerColumnCount: header.count
+            ))
+        }
+        if header.count < tasksHeader.count {
+            return ([], ImportDiagnostics.failure(
+                code: .E102, message: "Header columns < expected",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count,
+                firstFailure: "expected=\(tasksHeader.count) got=\(header.count) headers=\(header)"
+            ))
+        }
+
+        var tasks: [TaskItem] = []
+        var firstFailure: String?
+        for (idx, row) in dataRows.enumerated() {
+            if let task = parseTaskRow(row) {
+                tasks.append(task)
+            } else if firstFailure == nil {
+                firstFailure = "row #\(idx + 2) col=\(row.count) type=\(row.count > 2 ? row[2] : "?")"
+            }
+        }
+        if tasks.isEmpty {
+            return ([], ImportDiagnostics.failure(
+                code: .E004, message: "All rows failed to parse",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, firstFailure: firstFailure
+            ))
+        }
+        if tasks.count < dataRows.count {
+            return (tasks, ImportDiagnostics(
+                code: .E005, message: "Some rows skipped",
+                fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+                dataRowCount: dataRows.count, successfulRowCount: tasks.count,
+                skippedRowCount: dataRows.count - tasks.count, firstFailure: firstFailure
+            ))
+        }
+        return (tasks, ImportDiagnostics.success(
+            fileName: fileName, encoding: encoding, headerColumnCount: header.count,
+            dataRowCount: dataRows.count, successfulRowCount: tasks.count
+        ))
+    }
+
+    /// 读取 CSV 文本，依次尝试多种编码。
+    /// 失败时返回 (.failure, nil)；成功时返回 (.success, encodingName, content)
+    static func readCSV(from fileURL: URL) -> (result: ReadResult, encoding: String?, content: String?) {
+        let encodings: [(String.Encoding, String)] = [
+            (.utf8, "utf-8"),
+            (.utf16, "utf-16"),
+            (.utf16LittleEndian, "utf-16le"),
+            (.utf16BigEndian, "utf-16be"),
+            (.windowsCP1252, "windows-1252"),
+            (.isoLatin1, "iso-8859-1")
+        ]
+        // iOS sandboxed fileImporter URL 需要先开 security scope
+        let needsScope = fileURL.startAccessingSecurityScopedResource()
+        defer {
+            if needsScope { fileURL.stopAccessingSecurityScopedResource() }
+        }
+        for (encoding, name) in encodings {
+            if let str = try? String(contentsOf: fileURL, encoding: encoding) {
+                if str.isEmpty {
+                    return (.empty, name, "")
+                }
+                return (.success, name, str)
+            }
+        }
+        return (.failure, nil, nil)
+    }
+
+    enum ReadResult {
+        case success
+        case empty
+        case failure
+    }
+
     /// 从 CSV 解析成绩
     static func parseGrades(from csvString: String, subjects: [Subject]) -> [Grade] {
         let rows = parseCSVRows(csvString)

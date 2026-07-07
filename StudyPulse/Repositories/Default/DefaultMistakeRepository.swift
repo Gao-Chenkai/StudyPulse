@@ -165,6 +165,23 @@ final class DefaultMistakeRepository: MistakeRepository {
         Log.data.info("MistakeRepository recordReview: id=\(mistakeId.uuidString, privacy: .public) quality=\(quality.rawValue, privacy: .public) oldScore=\(oldExposure, privacy: .public)->\(result.score, privacy: .public)")
     }
 
+    func recordHandwriting(_ mistakeId: UUID, pngData: Data, quality: ReviewQuality?, now: Date) {
+        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
+            Log.data.warning("MistakeRepository recordHandwriting: not found id=\(mistakeId.uuidString, privacy: .public)")
+            return
+        }
+        var note = mistakeSets[index]
+        let entry = HandwritingAnswerEntry(
+            timestamp: now,
+            imageData: pngData,
+            quality: quality?.rawValue ?? 0
+        )
+        note.handwritingHistory.append(entry)
+        mistakeSets[index] = note
+        updateRecord(note)
+        Log.data.info("MistakeRepository recordHandwriting: id=\(mistakeId.uuidString, privacy: .public) bytes=\(pngData.count, privacy: .public) quality=\(quality?.rawValue ?? 0, privacy: .public) total=\(note.handwritingHistory.count, privacy: .public)")
+    }
+
     // MARK: - Internals
 
     func recomputeFiltered() {
@@ -221,6 +238,9 @@ final class DefaultMistakeRepository: MistakeRepository {
                 entity.masteryHistoryData = note.masteryHistory.isEmpty
                     ? nil
                     : try? JSONEncoder().encode(note.masteryHistory)
+                entity.handwritingHistoryData = note.handwritingHistory.isEmpty
+                    ? nil
+                    : try? JSONEncoder().encode(note.handwritingHistory)
                 try context.save()
             } else {
                 context.insert(MistakeNoteRecord(from: note))

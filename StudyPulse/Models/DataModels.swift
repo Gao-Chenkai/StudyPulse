@@ -211,6 +211,10 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
     /// 掌握度历史轨迹：每次复习后追加一个点，画折线图用
     /// Mastery history (timestamp + score + quality). Drives the line chart.
     var masteryHistory: [MasteryHistoryEntry] = []
+    /// 手写答题历史：每次在闪卡里用 PencilKit 提交手写并自评时追加一项。
+    /// Handwriting history: appended each time the user submits a PencilKit
+    /// drawing + rating in the flashcard review flow.
+    var handwritingHistory: [HandwritingAnswerEntry] = []
 
     init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
@@ -218,7 +222,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
          wrongSolutionImages: [Data] = [], correctSolutionImages: [Data] = [],
          reviewState: ReviewState? = nil, phaseId: UUID? = nil,
          exposureCount: Int = 0, masteryScore: Double = 0.0,
-         masteryHistory: [MasteryHistoryEntry] = []) {
+         masteryHistory: [MasteryHistoryEntry] = [],
+         handwritingHistory: [HandwritingAnswerEntry] = []) {
         self.id = id
         self.title = title
         self.subject = subject
@@ -237,17 +242,19 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.exposureCount = exposureCount
         self.masteryScore = masteryScore
         self.masteryHistory = masteryHistory
+        self.handwritingHistory = handwritingHistory
     }
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
     // Custom decoder: fall back to defaults so older serialized mistakes
-    // (without exposureCount / masteryScore / masteryHistory) still decode.
+    // (without exposureCount / masteryScore / masteryHistory / handwritingHistory) still decode.
     enum CodingKeys: String, CodingKey {
         case id, title, subject, originalQuestion, source, date
         case errorReason, wrongSolution, correctSolution
         case questionImages, reasonImages, wrongSolutionImages, correctSolutionImages
         case reviewState, phaseId
         case exposureCount, masteryScore, masteryHistory
+        case handwritingHistory
     }
 
     init(from decoder: Decoder) throws {
@@ -270,6 +277,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.exposureCount = try c.decodeIfPresent(Int.self, forKey: .exposureCount) ?? 0
         self.masteryScore = try c.decodeIfPresent(Double.self, forKey: .masteryScore) ?? 0.0
         self.masteryHistory = try c.decodeIfPresent([MasteryHistoryEntry].self, forKey: .masteryHistory) ?? []
+        self.handwritingHistory = try c.decodeIfPresent([HandwritingAnswerEntry].self, forKey: .handwritingHistory) ?? []
     }
 }
 
@@ -295,6 +303,45 @@ nonisolated struct MasteryHistoryEntry: Identifiable, Codable, Hashable {
     }
 
     /// 自评档位的人类可读名（用于 chart tooltip）
+    /// Human-readable label for the review quality.
+    var qualityLabel: String {
+        switch quality {
+        case 0:  return "View".localized()
+        case 1:  return "Again".localized()
+        case 3:  return "Hard".localized()
+        case 4:  return "Good".localized()
+        case 5:  return "Easy".localized()
+        default: return "\(quality)"
+        }
+    }
+}
+
+// MARK: - Handwriting Answer Entry (手写答题历史)
+
+/// 闪卡手写答题的一条历史：每次用户提交手写 + 自评时追加一条。
+/// One handwriting answer: appended when the user submits their PKCanvasView
+/// drawing and rates the card. PNG snapshot of the PKDrawing + timestamp +
+/// quality (mirrors `MasteryHistoryEntry`).
+nonisolated struct HandwritingAnswerEntry: Identifiable, Codable, Hashable {
+    var id: UUID
+    /// 提交时间
+    /// Timestamp when the user submitted the drawing.
+    var timestamp: Date
+    /// PKDrawing 渲染出的 PNG Data
+    /// PNG snapshot of the PKDrawing.
+    var imageData: Data
+    /// 自评档位（ReviewQuality.rawValue：1/3/4/5；0 = 写了但跳过自评）
+    /// Review quality (ReviewQuality.rawValue: 1/3/4/5; 0 = wrote but skipped rating).
+    var quality: Int
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), imageData: Data, quality: Int) {
+        self.id = id
+        self.timestamp = timestamp
+        self.imageData = imageData
+        self.quality = quality
+    }
+
+    /// 自评档位的人类可读名（与 MasteryHistoryEntry 保持一致语义）
     /// Human-readable label for the review quality.
     var qualityLabel: String {
         switch quality {
