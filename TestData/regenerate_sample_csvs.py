@@ -27,9 +27,12 @@ GRADES_OLD_TO_NEW = {
     "考试名称": "ExamName", "考试名": "ExamName", "日期": "Date",
 }
 
+# 13 列(与 DataExportManager.mistakesHeader 完全对齐)
+# 新增 3 列:ExposureCount, MasteryScore, MasteryHistory
 MISTAKES_NEW_HEADER = [
     "ID", "Title", "Subject", "OriginalQuestion", "Source",
     "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
+    "ExposureCount", "MasteryScore", "MasteryHistory",
 ]
 MISTAKES_OLD_TO_NEW = {
     "ID": "ID", "标题": "Title", "科目": "Subject",
@@ -86,11 +89,22 @@ def convert_grades():
 
 
 def convert_mistakes():
+    """Convert mistakes_sample.csv.
+
+    旧版 10 列 -> 新版 13 列,在 SRSEnabled(= index 9)之后追加 3 个空白列:
+      ExposureCount / MasteryScore / MasteryHistory
+    """
     old_header, old_rows = read_legacy(ROOT / "mistakes_sample.csv")
     if not old_header:
         print("  [SKIP] mistakes_sample.csv not found")
         return
-    new_rows = [convert_row(row, MISTAKES_OLD_TO_NEW) for row in old_rows]
+    new_rows = []
+    for row in old_rows:
+        new_row = convert_row(row, MISTAKES_OLD_TO_NEW)
+        # SRSEnabled 在 new_row 的 index 9 之后追加 3 个空白列
+        for _ in range(3):
+            new_row.insert(10, "")
+        new_rows.append(new_row)
     write_new(ROOT / "mistakes_sample.csv", MISTAKES_NEW_HEADER, new_rows)
 
 

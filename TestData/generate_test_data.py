@@ -274,16 +274,21 @@ def generate_grades(count=200):
     return data
 
 def generate_mistakes(count=100):
-    """生成错题测试数据 - 每个科目都有"""
+    """生成错题测试数据 - 每个科目都有。
+
+    列定义（与 Swift 端 DataExportManager.mistakesHeader 完全对齐 / 13 列）：
+    ID, Title, Subject, OriginalQuestion, Source,
+    Date, ErrorReason, WrongSolution, CorrectSolution, SRSEnabled,
+    ExposureCount, MasteryScore, MasteryHistory
+    """
     data = []
     all_subjects = list(subject_names.keys())
-    
+
     # 彻底去除所有换行符的函数
     def clean(s):
         return s.replace("\n", " ").replace("\r", " ").strip()
-    
-    # 确保每个科目至少有1条错题
-    for subject_key in all_subjects:
+
+    def make_row(subject_key: str) -> list:
         title = random.choice(mistake_titles)
         prefix = random.choice(original_question_prefixes)
         original_question = prefix + title + "。这是一道典型的易错题，需要认真思考。"
@@ -294,8 +299,12 @@ def generate_mistakes(count=100):
         date = random_date_past(days_back=365)
         # SM-2 SRS 开关：测试数据全部开启
         srs_enabled = True
-
-        row = [
+        # 新增 v2.0+ 字段：曝光次数 / 掌握度 / 掌握度历史
+        exposure_count = random.randint(0, 8)
+        mastery_score = round(random.uniform(0.0, 0.95), 4)
+        # 掌握度历史:为空 JSON 数组(测试数据保持空,真实复习时由 EMA 算法填充)
+        mastery_history = "[]"
+        return [
             str(uuid.uuid4()),
             clean(title),
             clean(subject_key),
@@ -306,47 +315,36 @@ def generate_mistakes(count=100):
             clean(wrong_sol),
             clean(correct_sol),
             "true" if srs_enabled else "false",
+            str(exposure_count),
+            f"{mastery_score:.4f}",
+            mastery_history,
         ]
-        data.append(row)
 
-    # 补充剩余的错题，随机科目
-    remaining = count - len(all_subjects)
+    # 主体:主体目(前 9 个常用科目)每个保证至少 1 条
+    main_subjects = all_subjects[:9]
+    for subject_key in main_subjects:
+        data.append(make_row(subject_key))
+
+    # 补充剩余的错题,随机主体目
+    remaining = max(0, count - len(main_subjects))
     for _ in range(remaining):
-        subject_key = random.choice(all_subjects)
-        title = random.choice(mistake_titles)
-        prefix = random.choice(original_question_prefixes)
-        original_question = prefix + title + "。这是一道典型的易错题，需要认真思考。"
-        source = "来自：" + random.choice(exam_names)
-        error_reason = random.choice(error_reasons)
-        wrong_sol = random.choice(wrong_solutions)
-        correct_sol = random.choice(correct_solutions)
-        date = random_date_past(days_back=365)
-        # SM-2 SRS 开关：测试数据全部开启
-        srs_enabled = True
-
-        row = [
-            str(uuid.uuid4()),
-            clean(title),
-            clean(subject_key),
-            clean(original_question),
-            clean(source),
-            format_date(date),
-            clean(error_reason),
-            clean(wrong_sol),
-            clean(correct_sol),
-            "true" if srs_enabled else "false",
-        ]
-        data.append(row)
+        data.append(make_row(random.choice(main_subjects)))
 
     return data
 
 def generate_exams(single_count=50, comp_count=10):
-    """生成考试测试数据"""
+    """生成考试测试数据。
+
+    列定义（与 Swift 端 DataExportManager.examsHeader 完全对齐 / 8 列）：
+    ID, Name, Subject, Date, ExamEndDate, Importance, Mastery, Type
+
+    Type 列：single / comprehensive(同时兼容中文「单科」/「综合」)
+    """
     single_data = []
     comp_data = []
-    
+
     subjects = list(subject_names.keys())[:10]
-    
+
     # 单科考试
     for _ in range(single_count):
         subject_key = random.choice(subjects)
@@ -354,18 +352,24 @@ def generate_exams(single_count=50, comp_count=10):
         importance = random.randint(1, 5)
         mastery = random.randint(0, 100)
         date = random_date_future()
-        
+        # 80% 概率不设结束日期(= 单日考试)；20% 设为开始日期后 1-3 天(= 多日考试)
+        exam_end_date = ""
+        if random.random() < 0.20:
+            offset_days = random.randint(1, 3)
+            exam_end_date = format_date(date + timedelta(days=offset_days))
+
         row = [
             str(uuid.uuid4()),
             exam_name,
             subject_key,
             format_date(date),
+            exam_end_date,
             str(importance),
             str(mastery),
-            "单科"
+            "single",
         ]
         single_data.append(row)
-    
+
     # 综合考试
     comp_exam_names = ["期中考试", "期末考试", "模拟考试", "Final Exam", "Mid-Year Exam", "Mock Exam", "高三模考", "中考模拟"]
     for _ in range(comp_count):
@@ -376,18 +380,21 @@ def generate_exams(single_count=50, comp_count=10):
         importance = random.randint(3, 5)
         mastery = random.randint(20, 80)
         date = random_date_future(days_ahead=365)
-        
+        # 综合考试通常 2-3 天
+        exam_end_date = format_date(date + timedelta(days=random.randint(1, 2)))
+
         row = [
             str(uuid.uuid4()),
             exam_name,
             subject_list,
             format_date(date),
+            exam_end_date,
             str(importance),
             str(mastery),
-            "综合"
+            "comprehensive",
         ]
         comp_data.append(row)
-    
+
     return single_data, comp_data
 
 # MARK: - Tasks (作业 / 阅读材料)
@@ -559,52 +566,57 @@ def main():
     
     # 保存 CSV
     print("💾 正在保存文件...")
-    
+
     # 成绩
+    # 列定义（与 Swift 端 DataExportManager.gradesHeader 完全对齐 / 10 列）：
+    # ID, Subject, Score, FullScore, ScoreRate, RawScore, Ranking, Importance, ExamName, Date
     with open("grades_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "ID", "科目", "分数", "满分", "分数率", 
-            "原始分数", "排名", "重要性", "考试名称", "日期"
+            "ID", "Subject", "Score", "FullScore", "ScoreRate",
+            "RawScore", "Ranking", "Importance", "ExamName", "Date"
         ])
         writer.writerows(grades_data)
     print("  ✅ 成绩数据已保存: grades_sample.csv (200条)")
-    
+
     # 错题
+    # 列定义（与 Swift 端 DataExportManager.mistakesHeader 完全对齐 / 13 列）：
+    # ID, Title, Subject, OriginalQuestion, Source,
+    # Date, ErrorReason, WrongSolution, CorrectSolution, SRSEnabled,
+    # ExposureCount, MasteryScore, MasteryHistory
     with open("mistakes_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "ID", "标题", "科目", "原始问题", "来源",
-            "日期", "错误原因", "错误解法", "正确解法", "SRSEnabled"
+            "ID", "Title", "Subject", "OriginalQuestion", "Source",
+            "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
+            "ExposureCount", "MasteryScore", "MasteryHistory"
         ])
         writer.writerows(mistakes_data)
     print("  ✅ 错题数据已保存: mistakes_sample.csv (100条)")
-    
-    # 单科考试
+
+    # 考试（单科 / 综合 / 合并）—— 8 列
+    # ID, Name, Subject, Date, ExamEndDate, Importance, Mastery, Type
+    exam_header = [
+        "ID", "Name", "Subject", "Date", "ExamEndDate", "Importance", "Mastery", "Type"
+    ]
+
     with open("single_exams_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "ID", "名称", "科目", "日期", "重要性", "掌握程度", "类型"
-        ])
+        writer.writerow(exam_header)
         writer.writerows(single_exams_data)
     print("  ✅ 单科考试数据已保存: single_exams_sample.csv (50条)")
-    
-    # 综合考试
+
     with open("comprehensive_exams_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "ID", "名称", "科目", "日期", "重要性", "掌握程度", "类型"
-        ])
+        writer.writerow(exam_header)
         writer.writerows(comp_exams_data)
     print("  ✅ 综合考试数据已保存: comprehensive_exams_sample.csv (10条)")
-    
+
     # 合并考试数据
     all_exams_data = single_exams_data + comp_exams_data
     with open("exams_sample.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "ID", "名称", "科目", "日期", "重要性", "掌握程度", "类型"
-        ])
+        writer.writerow(exam_header)
         writer.writerows(all_exams_data)
     print("  ✅ 合并考试数据已保存: exams_sample.csv (60条)")
 

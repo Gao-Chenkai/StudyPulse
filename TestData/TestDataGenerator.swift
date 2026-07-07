@@ -148,20 +148,24 @@ struct TestDataGenerator {
         return "ID,Subject,Score,FullScore,ScoreRate,RawScore,Ranking,Importance,ExamName,Date\n" + grades.joined()
     }
     
-    // MARK: - 
+    // MARK: - 错题
     static func generateMistakes(count: Int = 80) -> String {
+        // 13 列:与 DataExportManager.mistakesHeader 完全对齐
+        // ID, Title, Subject, OriginalQuestion, Source,
+        // Date, ErrorReason, WrongSolution, CorrectSolution, SRSEnabled,
+        // ExposureCount, MasteryScore, MasteryHistory
         var mistakes: [String] = []
-        
+
         let now = Date()
         let calendar = Calendar.current
-        
+
         for _ in 0..<count {
             let days = Int.random(in: 1...365)
             let date = calendar.date(byAdding: .day, value: -days, to: now)!
-            
+
             let subjects = ["math", "chinese", "english", "physics", "chemistry", "biology", "history", "geography", "politics"]
             let subjectKey = subjects.randomElement()!
-            
+
             let title = mistakeTitles.randomElement()!
             let prefix = originalQuestionPrefixes.randomElement()!
             let originalQuestion = prefix + title + "\n\n"
@@ -169,61 +173,80 @@ struct TestDataGenerator {
             let errorReason = errorReasons.randomElement()!
             let wrongSolution = wrongSolutions.randomElement()!
             let correctSolution = correctSolutions.randomElement()!
-            // SM-2 SRS 开关：测试数据全部开启
+            // SM-2 SRS 开关:测试数据全部开启
             let srsEnabled = true
-            
-            let mistakeLine = "\(UUID().uuidString),\(escapeCSV(title)),\(subjectKey),\(escapeCSV(originalQuestion)),\(escapeCSV(source)),\(formatDate(date)),\(escapeCSV(errorReason)),\(escapeCSV(wrongSolution)),\(escapeCSV(correctSolution)),\(srsEnabled)\n"
+            // 新增 v2.0+ 字段:曝光次数 / 掌握度 / 掌握度历史
+            let exposureCount = Int.random(in: 0...8)
+            let masteryScore = Double.random(in: 0.0...0.95)
+            // 掌握度历史:空 JSON 数组(测试数据保持空,真实复习时由 EMA 算法填充)
+            let masteryHistory = "[]"
+
+            let mistakeLine = "\(UUID().uuidString),\(escapeCSV(title)),\(subjectKey),\(escapeCSV(originalQuestion)),\(escapeCSV(source)),\(formatDate(date)),\(escapeCSV(errorReason)),\(escapeCSV(wrongSolution)),\(escapeCSV(correctSolution)),\(srsEnabled),\(exposureCount),\(String(format: "%.4f", masteryScore)),\(masteryHistory)\n"
             mistakes.append(mistakeLine)
         }
-        
-        return "ID,Title,Subject,OriginalQuestion,Source,Date,ErrorReason,WrongSolution,CorrectSolution,SRSEnabled\n" + mistakes.joined()
+
+        return "ID,Title,Subject,OriginalQuestion,Source,Date,ErrorReason,WrongSolution,CorrectSolution,SRSEnabled,ExposureCount,MasteryScore,MasteryHistory\n" + mistakes.joined()
     }
-    
-    // MARK: - 
+
+    // MARK: - 考试
     static func generateExams(count: Int = 40) -> (single: String, comprehensive: String) {
+        // 8 列:与 DataExportManager.examsHeader 完全对齐
+        // ID, Name, Subject, Date, ExamEndDate, Importance, Mastery, Type
         var singleExams: [String] = []
         var comprehensiveExams: [String] = []
-        
+
         let now = Date()
         let calendar = Calendar.current
-        
-        // 
+
         let subjects = ["chinese", "math", "english", "physics", "chemistry", "biology", "history", "geography", "politics", "computer_science"]
-        
+
         for _ in 0..<count {
             let futureDays = Int.random(in: 1...180)
             let date = calendar.date(byAdding: .day, value: futureDays, to: now)!
-            
+
             let subjectKey = subjects.randomElement()!
             let examName = examNames.randomElement()!
             let importance = Int.random(in: 1...5)
             let mastery = Int.random(in: 0...100)
-            
-            let examLine = "\(UUID().uuidString),\(escapeCSV(examName)),\(subjectKey),\(formatDate(date)),\(importance),\(mastery),\n"
+            // 80% 概率不设结束日期(= 单日考试);20% 设为开始日期后 1-3 天(= 多日考试)
+            let examEndDate: String
+            if Int.random(in: 0..<100) < 20 {
+                let offset = Int.random(in: 1...3)
+                let endDate = calendar.date(byAdding: .day, value: offset, to: date)!
+                examEndDate = formatDate(endDate)
+            } else {
+                examEndDate = ""
+            }
+
+            let examLine = "\(UUID().uuidString),\(escapeCSV(examName)),\(subjectKey),\(formatDate(date)),\(examEndDate),\(importance),\(mastery),single\n"
             singleExams.append(examLine)
         }
-        
-        // 
+
+        // 综合考试
         for _ in 0..<10 {
             let futureDays = Int.random(in: 7...365)
             let date = calendar.date(byAdding: .day, value: futureDays, to: now)!
-            
+
             let subjectCount = Int.random(in: 3...6)
             let selectedSubjects = Array(subjects.shuffled().prefix(subjectCount))
             let subjectList = selectedSubjects.joined(separator: ";")
-            
+
             let compExamNames = ["", "", "", "Final Exam", "Mid-Year Exam", "Mock Exam", "", ""]
             let examName = compExamNames.randomElement()!
             let importance = Int.random(in: 3...5)
             let mastery = Int.random(in: 20...80)
-            
-            let examLine = "\(UUID().uuidString),\(escapeCSV(examName)),\(subjectList),\(formatDate(date)),\(importance),\(mastery),\n"
+            // 综合考试通常 2-3 天
+            let offset = Int.random(in: 1...2)
+            let endDate = calendar.date(byAdding: .day, value: offset, to: date)!
+            let examEndDate = formatDate(endDate)
+
+            let examLine = "\(UUID().uuidString),\(escapeCSV(examName)),\(subjectList),\(formatDate(date)),\(examEndDate),\(importance),\(mastery),comprehensive\n"
             comprehensiveExams.append(examLine)
         }
-        
-        let singleHeader = "ID,Name,Subject,Date,Importance,Mastery,Type\n"
-        let compHeader = "ID,Name,Subjects,Date,Importance,Mastery,Type\n"
-        
+
+        let singleHeader = "ID,Name,Subject,Date,ExamEndDate,Importance,Mastery,Type\n"
+        let compHeader = "ID,Name,Subject,Date,ExamEndDate,Importance,Mastery,Type\n"
+
         return (singleHeader + singleExams.joined(), compHeader + comprehensiveExams.joined())
     }
     

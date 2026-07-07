@@ -21,7 +21,8 @@ EXPECTED_HEADERS = {
     ],
     "mistakes_sample.csv": [
         "ID", "Title", "Subject", "OriginalQuestion", "Source",
-        "Date", "ErrorReason", "WrongSolution", "CorrectSolution",
+        "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
+        "ExposureCount", "MasteryScore", "MasteryHistory",
     ],
     "exams_sample.csv": [
         "ID", "Name", "Subject", "Date", "ExamEndDate", "Importance", "Mastery", "Type",

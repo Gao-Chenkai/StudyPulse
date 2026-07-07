@@ -1,11 +1,11 @@
-ID,名称,科目,日期,重要性,掌握程度,类型
-424ead46-9608-4f5c-9529-410f8ff2e860,期末考试,History;Biology;Geography;Politics;Chinese;English,2027-03-17 16:09:30,5,42,综合
-1696a03e-9dcc-4a6e-ad9e-6c43badc621a,Mid-Year Exam,History;Chinese;English;Biology,2026-12-13 16:09:30,5,79,综合
-0a9237c7-408d-4a26-a5b3-d2a6e27ff09b,期中考试,History;Physics;Politics;Chemistry,2026-11-16 16:09:30,5,77,综合
-4fa08195-d8d1-44b1-9a68-87af86c12482,Final Exam,Music;Politics;Chinese;Chemistry;Geography;Physics,2027-04-21 16:09:30,5,42,综合
-0ee56a28-12be-41c4-915b-6892a4b599fa,期末考试,Chemistry;Geography;Physics,2026-08-12 16:09:30,5,22,综合
-de21b635-34b2-4232-bc71-60f36d70199c,模拟考试,Politics;Geography;Music,2027-05-09 16:09:30,4,24,综合
-6a05e577-1732-4df3-be75-7e6ba3697273,中考模拟,Biology;English;History;Chinese;Music;Chemistry,2026-07-23 16:09:30,3,74,综合
-1077c6de-b4e8-4844-8afb-0a8dcfed159b,Mock Exam,English;Music;Politics;Biology;History;Chemistry,2027-02-21 16:09:30,3,77,综合
-8cd90c97-31f6-4720-be30-5c546eacb720,Mock Exam,Physics;Biology;Chinese;Geography;Chemistry,2027-03-28 16:09:30,4,71,综合
-c15e4f33-692e-46d5-80a8-5551ccea454a,高三模考,Physics;English;Mathematics;History;Biology;Politics,2026-11-08 16:09:30,4,49,综合
+ID,Name,Subject,Date,ExamEndDate,Importance,Mastery,Type
+d098bf61-05d2-4129-9834-3bcc8493928f,期末考试,English;Politics;Music,2027-03-08 23:02:56,2027-03-09 23:02:56,5,48,comprehensive
+449733f7-b0ac-4bf6-8774-b75d76b1a63a,期中考试,Biology;Music;English;History,2027-02-10 23:02:56,2027-02-11 23:02:56,4,30,comprehensive
+4c6046cf-bac8-4cbd-a6e8-6668d2a0dbca,期末考试,Music;Biology;English,2027-04-18 23:02:56,2027-04-20 23:02:56,5,66,comprehensive
+67aa7c08-4d02-486c-943e-6753af634fc9,Mid-Year Exam,Chemistry;Physics;Music;Mathematics,2026-09-09 23:02:56,2026-09-10 23:02:56,3,69,comprehensive
+44fb43cb-d887-4bac-adcc-08523ecc27c6,Mid-Year Exam,Chemistry;English;Music;Geography;Physics,2026-09-06 23:02:56,2026-09-07 23:02:56,5,50,comprehensive
+c09f3b09-c4d2-4944-a44e-e368a06e9431,高三模考,Geography;Mathematics;Chemistry,2026-08-29 23:02:56,2026-08-30 23:02:56,3,37,comprehensive
+466a9f1e-8963-462a-9927-e0ce2349fbe0,高三模考,Biology;Music;English,2026-10-23 23:02:56,2026-10-24 23:02:56,5,53,comprehensive
+a49a564f-0b31-40e5-99a1-c637bc70928d,Final Exam,Music;Physics;Mathematics;Chinese;Chemistry;English,2026-12-30 23:02:56,2026-12-31 23:02:56,3,58,comprehensive
+b1e7272a-44c2-4d53-8001-1ba7745f319c,中考模拟,Biology;Politics;Mathematics,2026-08-14 23:02:56,2026-08-15 23:02:56,3,67,comprehensive
+02d8b3ba-a004-4f77-82de-f030dbecf3c4,期中考试,Chemistry;English;Politics,2027-05-06 23:02:56,2027-05-07 23:02:56,3,71,comprehensive
