@@ -748,6 +748,30 @@
 "No question content" = "문제 내용 없음";
 "Calculator" = "계산기";
 
+// Flashcard Handwriting (플래시카드 손글씨 답안) — TODO: <#ko#>
+"Handwriting" = "<#ko#>";
+"Handwriting On" = "<#ko#>";
+"Handwriting Off" = "<#ko#>";
+"Submit Answer" = "<#ko#>";
+"Submit & Show Answer" = "<#ko#>";
+"Clear" = "<#ko#>";
+"Handwriting Required" = "<#ko#>";
+"Please write and submit your answer first" = "<#ko#>";
+"Submit when done" = "<#ko#>";
+"Your Handwriting" = "<#ko#>";
+"Handwriting History" = "<#ko#>";
+"No Handwriting Yet" = "<#ko#>";
+
+// Mistake Registration Handwriting (오답 등록 PencilKit) — TODO: <#ko#>
+"Drawing" = "<#ko#>";
+"Draw to add an image" = "<#ko#>";
+"Drag with 2 fingers to pan, pinch to zoom" = "<#ko#>";
+"Use This Drawing" = "<#ko#>";
+"Discard your drawing?" = "<#ko#>";
+"Discard" = "<#ko#>";
+"Keep Drawing" = "<#ko#>";
+"Your drawing will not be saved." = "<#ko#>";
+
 // Report (Learning Report image export)
 "Share Report" = "보고서 공유";
 "Generate Report" = "보고서 생성";
@@ -1334,3 +1358,41 @@
 "debug.sectionTitle" = "Debug 모드";
 "debug.sectionFooter" = "아래 하위 토글은 마스터 스위치가 켜져 있을 때만 작동합니다. 설정은 즉시 저장되며 모든 페이지에 적용됩니다. 릴리스 빌드에서도 사용 가능.";
 "debug.inspect.title" = "검사";
+
+"import.error.E001" = "파일을 읽을 수 없음";
+"import.error.E002" = "CSV 비어있음";
+"import.error.E003" = "데이터 행 없음(헤더만)";
+"import.error.E004" = "모든 행 파싱 실패";
+"import.error.E005" = "일부 행 건너뜀";
+"import.error.E101" = "헤더가 예상 스키마와 일치하지 않음";
+"import.error.E102" = "헤더 열 수가 기대값보다 적음";
+"import.error.E201" = "필수 필드 누락 또는 잘못됨";
+"import.error.E202" = "숫자 필드 형식이 잘못됨";
+"import.error.E203" = "Type 열거값이 잘못됨";
+"import.error.E301" = "데이터베이스 저장 실패";
+"rows imported" = "건 가져옴";
+"skipped" = "건너뜀";
+
+// MarkdownCommands.swift + MarkdownEditorView.swift
+"markdown.menu.format" = "서식";
+"markdown.menu.view" = "보기";
+"markdown.cmd.bold" = "굵게";
+"markdown.cmd.italic" = "기울임꼴";
+"markdown.cmd.h1" = "제목 1";
+"markdown.cmd.h2" = "제목 2";
+"markdown.cmd.h3" = "제목 3";
+"markdown.cmd.h4" = "제목 4";
+"markdown.cmd.h5" = "제목 5";
+"markdown.cmd.h6" = "제목 6";
+"markdown.cmd.bulletList" = "글머리 기호 목록";
+"markdown.cmd.numberedList" = "번호 매기기 목록";
+"markdown.cmd.checklist" = "체크리스트";
+"markdown.cmd.quote" = "인용";
+"markdown.cmd.inlineCode" = "인라인 코드";
+"markdown.cmd.codeBlock" = "코드 블록";
+"markdown.cmd.inlineMath" = "인라인 수식";
+"markdown.cmd.blockMath" = "블록 수식";
+"markdown.cmd.link" = "링크";
+"markdown.cmd.divider" = "구분선";
+"markdown.view.togglePreview" = "미리보기 전환";
+"markdown.view.toggleVertical" = "상하 분할";

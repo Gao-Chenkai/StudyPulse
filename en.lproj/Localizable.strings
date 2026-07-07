@@ -742,6 +742,30 @@
 "No question content" = "No question content";
 "Calculator" = "Calculator";
 
+// Flashcard Handwriting (闪卡手写答题)
+"Handwriting" = "Handwriting";
+"Handwriting On" = "Handwriting On";
+"Handwriting Off" = "Handwriting Off";
+"Submit Answer" = "Submit Answer";
+"Submit & Show Answer" = "Submit & Show Answer";
+"Clear" = "Clear";
+"Handwriting Required" = "Handwriting Required";
+"Please write and submit your answer first" = "Please write and submit your answer first";
+"Submit when done" = "Submit when done";
+"Your Handwriting" = "Your Handwriting";
+"Handwriting History" = "Handwriting History";
+"No Handwriting Yet" = "No Handwriting Yet";
+
+// Mistake Registration Handwriting (错题登记 PencilKit)
+"Drawing" = "Drawing";
+"Draw to add an image" = "Draw on the canvas — the result will be added to the current section";
+"Drag with 2 fingers to pan, pinch to zoom" = "Drag with 2 fingers to pan, pinch to zoom";
+"Use This Drawing" = "Use This Drawing";
+"Discard your drawing?" = "Discard your drawing?";
+"Discard" = "Discard";
+"Keep Drawing" = "Keep Drawing";
+"Your drawing will not be saved." = "Your drawing will not be saved.";
+
 // Report (Learning Report image export)
 "Share Report" = "Share Report";
 "Generate Report" = "Generate Report";
@@ -1328,3 +1352,41 @@
 "debug.sectionTitle" = "Debug Mode";
 "debug.sectionFooter" = "Toggles below require the master switch above. Changes are saved instantly and take effect on every page. Available in all builds, including App Store release.";
 "debug.inspect.title" = "Inspect";
+
+"import.error.E001" = "Cannot read file";
+"import.error.E002" = "Empty CSV";
+"import.error.E003" = "No data rows (header only)";
+"import.error.E004" = "All rows failed to parse";
+"import.error.E005" = "Some rows skipped";
+"import.error.E101" = "Header columns do not match expected schema";
+"import.error.E102" = "Header has fewer columns than expected";
+"import.error.E201" = "Required field missing or invalid";
+"import.error.E202" = "Numeric field has invalid format";
+"import.error.E203" = "Type enum value is invalid";
+"import.error.E301" = "Failed to save to database";
+"rows imported" = "rows imported";
+"skipped" = "skipped";
+
+// MarkdownCommands.swift + MarkdownEditorView.swift
+"markdown.menu.format" = "Format";
+"markdown.menu.view" = "View";
+"markdown.cmd.bold" = "Bold";
+"markdown.cmd.italic" = "Italic";
+"markdown.cmd.h1" = "Heading 1";
+"markdown.cmd.h2" = "Heading 2";
+"markdown.cmd.h3" = "Heading 3";
+"markdown.cmd.h4" = "Heading 4";
+"markdown.cmd.h5" = "Heading 5";
+"markdown.cmd.h6" = "Heading 6";
+"markdown.cmd.bulletList" = "Bulleted List";
+"markdown.cmd.numberedList" = "Numbered List";
+"markdown.cmd.checklist" = "Checklist";
+"markdown.cmd.quote" = "Quote";
+"markdown.cmd.inlineCode" = "Inline Code";
+"markdown.cmd.codeBlock" = "Code Block";
+"markdown.cmd.inlineMath" = "Inline Math";
+"markdown.cmd.blockMath" = "Block Math";
+"markdown.cmd.link" = "Link";
+"markdown.cmd.divider" = "Divider";
+"markdown.view.togglePreview" = "Toggle Preview";
+"markdown.view.toggleVertical" = "Vertical Layout";

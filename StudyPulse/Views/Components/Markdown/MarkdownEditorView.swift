@@ -2,13 +2,25 @@
 //  MarkdownEditorView.swift
 //  StudyPulse
 //
-//  Full Markdown editor with split layout:
-//    Top half: TextEditor for raw markdown input.
-//    Bottom half: Live-rendered preview via SwiftStreamingMarkdown's
-//    `MarkdownView`. The package does incremental parsing, so we no longer
-//    debounce a custom parser here — we just hand the bound text to the
-//    preview, which re-parses on each change.
-//    Draggable divider for height adjustment.
+//  Full Markdown editor with adaptive split layout:
+//    - iPhone / iPad compact: top = editor, bottom = preview,
+//      split by a draggable horizontal hairline.
+//    - iPad regular (landscape, no Split View): left = editor,
+//      right = preview, split by a draggable vertical hairline.
+//
+//  The split direction is determined by `horizontalSizeClass`:
+//    .regular → HStack (side-by-side)
+//    .compact → VStack (top/bottom)
+//
+//  In iPadOS 26 windowed mode the top menu bar exposes a
+//  `Format` menu (13 markdown formatting actions) and a
+//  `View` menu (toggle preview, force vertical layout) wired up
+//  in `MarkdownCommands`. The `MarkdownEditorView` publishes
+//  itself to those commands via `focusedSceneValue`.
+//
+//  Draggable divider in both orientations. The "force vertical
+//  layout" override lives in `@AppStorage` so it survives
+//  dismiss/reopen of the editor sheet.
 //
 
 import SwiftUI
@@ -16,43 +28,115 @@ import SwiftStreamingMarkdown
 
 // MARK: - Markdown Editor View
 
-/// A complete markdown editing experience: editor on top, preview on bottom.
+/// A complete markdown editing experience: editor + live preview,
+/// arranged side-by-side on iPad and stacked top/bottom on iPhone.
 struct MarkdownEditorView: View {
     /// The raw markdown text being edited.
     @Binding var text: String
     /// Placeholder text shown when editor is empty.
     var placeholder: String = "Write markdown..."
 
-    /// Current divider position as fraction of total height (0.2–0.8).
-    @State private var dividerFraction: CGFloat = 0.5
-    /// The height of the container, used to calculate split positions.
-    @State private var containerHeight: CGFloat = 600
+    /// Current split position as fraction of the primary axis
+    /// (height for vertical, width for horizontal). Clamped 0.2–0.8.
+    @State private var splitFraction: CGFloat = 0.5
+    /// The length of the container along the split axis, kept in
+    /// sync with `GeometryReader` so drag deltas are translated
+    /// into real fractions without a "snap on release" lag.
+    @State private var containerLength: CGFloat = 600
     /// The current cursor / selection in the editor, exposed as a
-    /// binding so the keyboard accessory toolbar can insert at the
-    /// cursor or wrap the selected text.
+    /// binding so the keyboard accessory toolbar (and the menu-bar
+    /// commands) can insert at the cursor or wrap the selection.
     @State private var selectedRange: NSRange = NSRange(location: 0, length: 0)
+
+    /// Whether the preview pane is currently shown. Flipped by the
+    /// `View → Toggle Preview` menu command (⌘\\).
+    @State private var isPreviewVisible: Bool = true
+    /// Force the editor into the top/bottom layout even on iPad.
+    /// Flipped by the `View → Vertical Layout` menu command (⌘⌥L)
+    /// and persisted across launches.
+    @AppStorage("markdown.forceVerticalLayout") private var forceVertical: Bool = false
+
+    /// The split direction is derived from the horizontal size class
+    /// so Split View / Stage Manager on iPad automatically falls
+    /// back to the compact (top/bottom) layout.
+    @Environment(\.horizontalSizeClass) private var hSize
+
+    /// True when the editor should lay out editor + preview
+    /// side-by-side. False = stack them top/bottom.
+    private var usesSideBySide: Bool {
+        hSize == .regular && !forceVertical
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Editor pane
-                editorPane
-                    .frame(height: max(120, editorHeight(in: geometry.size.height)))
-
-                // Draggable divider
-                divider
-
-                // Preview pane
-                previewPane
-                    .frame(height: max(120, previewHeight(in: geometry.size.height)))
+            Group {
+                if usesSideBySide {
+                    HStack(spacing: 0) {
+                        editorPane
+                            .frame(width: max(160, primaryLength(in: geometry.size)))
+                        verticalDivider
+                        previewPane
+                            .frame(width: max(160, secondaryLength(in: geometry.size)))
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        editorPane
+                            .frame(height: max(120, primaryLength(in: geometry.size)))
+                        horizontalDivider
+                        if isPreviewVisible {
+                            previewPane
+                                .frame(height: max(120, secondaryLength(in: geometry.size)))
+                        }
+                    }
+                }
             }
             .onAppear {
-                updateContainerHeight(geometry.size.height)
+                updateContainerLength(for: geometry.size)
             }
-            .onChange(of: geometry.size.height) { _, newHeight in
-                updateContainerHeight(newHeight)
+            .onChange(of: geometry.size) { _, newSize in
+                updateContainerLength(for: newSize)
+            }
+            .onChange(of: isPreviewVisible) { _, visible in
+                // When the preview is hidden in the vertical layout,
+                // give the editor the full height for the divider
+                // math to stay sensible.
+                if !usesSideBySide && !visible {
+                    splitFraction = 1.0
+                } else if splitFraction > 0.95 {
+                    splitFraction = 0.5
+                }
             }
         }
+        // Publish the editor's text + cursor to the scene-level
+        // menu commands (`MarkdownCommands`). When a different
+        // editor takes focus, SwiftUI re-evaluates this view, the
+        // focused value updates, and the menu commands point at
+        // the new editor automatically.
+        .focusedSceneValue(\.markdownFormatting, context)
+        // Listen for the `View` menu commands, which post these
+        // notifications because there is no binding to pass
+        // through `FocusedValue` for view-level state.
+        .onReceive(NotificationCenter.default.publisher(for: .markdownTogglePreview)) { _ in
+            isPreviewVisible.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .markdownToggleVerticalLayout)) { _ in
+            // The toggle is a no-op when the device is already
+            // compact — there is nothing to switch to on iPhone.
+            guard hSize == .regular else { return }
+            forceVertical.toggle()
+        }
+    }
+
+    // MARK: - Context for menu commands
+
+    /// Live bindings handed to the `Format` menu commands. Recomputed
+    /// on every render so the bindings always point at the current
+    /// `@State` storage.
+    private var context: MarkdownFormattingContext {
+        MarkdownFormattingContext(
+            text: $text,
+            selectedRange: $selectedRange
+        )
     }
 
     // MARK: - Editor Pane
@@ -79,47 +163,53 @@ struct MarkdownEditorView: View {
         // between them.
     }
 
-    // MARK: - Divider
+    // MARK: - Dividers
     //
-    // The only visible element is a 0.5pt hairline in `Color.primary`
-    // (auto light/dark). The strip itself is short (12pt) and the
-    // surrounding area has no extra padding, so nothing else draws a
-    // white block around the line. A 24pt invisible touch target
-    // overlaps the strip to make it easy to grab and drag.
-    //
-    // The drag updates `dividerFraction` directly in `onChanged`, so
-    // the editor and preview panes resize in real-time as the user
-    // drags — no "wait until release" lag.
+    // Two visually identical 0.5pt hairlines, one for each axis.
+    // Each is wrapped in a 12pt invisible touch target so the user
+    // has a generous grab zone. Drag updates `splitFraction` in
+    // `onChanged` so the panes follow the finger in real time.
 
-    private var divider: some View {
-        // The strip is exactly 12pt tall so the white "block" between
-        // the editor and the preview is as small as possible while
-        // still leaving a generous grab target. The only visible
-        // thing inside it is a 0.5pt hairline; the rest of the
-        // 12pt is the transparent drag-handle area.
+    private var horizontalDivider: some View {
         ZStack {
-            // The drag-handle area (transparent, 12pt tall)
             Rectangle()
                 .fill(Color.clear)
                 .contentShape(Rectangle())
+                .frame(height: 12)
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            // Update in real-time so the panes follow
-                            // the finger, not just snap on release.
-                            let total = containerHeight
+                            let total = containerLength
                             guard total > 0 else { return }
-                            let raw = dividerFraction + value.translation.height / total
-                            dividerFraction = min(0.8, max(0.2, raw))
+                            let raw = splitFraction + value.translation.height / total
+                            splitFraction = min(0.95, max(0.2, raw))
                         }
                 )
-
-            // The only visible thing: a 0.5pt hairline, centred.
             Rectangle()
                 .fill(Color.primary.opacity(0.18))
                 .frame(height: 0.5)
         }
-        .frame(height: 12)
+    }
+
+    private var verticalDivider: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color.clear)
+                .contentShape(Rectangle())
+                .frame(width: 12)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            let total = containerLength
+                            guard total > 0 else { return }
+                            let raw = splitFraction + value.translation.width / total
+                            splitFraction = min(0.8, max(0.2, raw))
+                        }
+                )
+            Rectangle()
+                .fill(Color.primary.opacity(0.18))
+                .frame(width: 0.5)
+        }
     }
 
     // MARK: - Preview Pane
@@ -136,19 +226,20 @@ struct MarkdownEditorView: View {
             }
     }
 
-    // MARK: - Height Calculations
+    // MARK: - Length Calculations
 
-    /// Guard against tiny sizes from Form/List parents.
-    private func updateContainerHeight(_ height: CGFloat) {
-        containerHeight = max(height, 200)
+    private func updateContainerLength(for size: CGSize) {
+        containerLength = max(usesSideBySide ? size.width : size.height, 200)
     }
 
-    private func editorHeight(in total: CGFloat) -> CGFloat {
-        total * dividerFraction
+    private func primaryLength(in size: CGSize) -> CGFloat {
+        let total = usesSideBySide ? size.width : size.height
+        return total * splitFraction
     }
 
-    private func previewHeight(in total: CGFloat) -> CGFloat {
-        total * (1 - dividerFraction)
+    private func secondaryLength(in size: CGSize) -> CGFloat {
+        let total = usesSideBySide ? size.width : size.height
+        return total * (1 - splitFraction)
     }
 }
 

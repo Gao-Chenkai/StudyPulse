@@ -748,6 +748,30 @@
 "No question content" = "暫無題目內容";
 "Calculator" = "計算機";
 
+// Flashcard Handwriting (閃卡手寫答題) — TODO: <#zh-Hant#>
+"Handwriting" = "<#zh-Hant#>";
+"Handwriting On" = "<#zh-Hant#>";
+"Handwriting Off" = "<#zh-Hant#>";
+"Submit Answer" = "<#zh-Hant#>";
+"Submit & Show Answer" = "<#zh-Hant#>";
+"Clear" = "<#zh-Hant#>";
+"Handwriting Required" = "<#zh-Hant#>";
+"Please write and submit your answer first" = "<#zh-Hant#>";
+"Submit when done" = "<#zh-Hant#>";
+"Your Handwriting" = "<#zh-Hant#>";
+"Handwriting History" = "<#zh-Hant#>";
+"No Handwriting Yet" = "<#zh-Hant#>";
+
+// Mistake Registration Handwriting (錯題登記 PencilKit) — TODO: <#zh-Hant#>
+"Drawing" = "<#zh-Hant#>";
+"Draw to add an image" = "<#zh-Hant#>";
+"Drag with 2 fingers to pan, pinch to zoom" = "<#zh-Hant#>";
+"Use This Drawing" = "<#zh-Hant#>";
+"Discard your drawing?" = "<#zh-Hant#>";
+"Discard" = "<#zh-Hant#>";
+"Keep Drawing" = "<#zh-Hant#>";
+"Your drawing will not be saved." = "<#zh-Hant#>";
+
 // Report (Learning Report image export)
 "Share Report" = "分享報告";
 "Generate Report" = "生成報告";
@@ -1334,3 +1358,41 @@
 "debug.sectionTitle" = "Debug 模式";
 "debug.sectionFooter" = "下方子開關需先開啟總開關。設定即時儲存,對所有頁面生效。Release 建置同樣可用。";
 "debug.inspect.title" = "檢視";
+
+"import.error.E001" = "無法讀取檔案";
+"import.error.E002" = "CSV 為空";
+"import.error.E003" = "無資料列(僅表頭)";
+"import.error.E004" = "全部列解析失敗";
+"import.error.E005" = "部分列解析失敗";
+"import.error.E101" = "表頭與期望 schema 不符";
+"import.error.E102" = "表頭欄位少於期望";
+"import.error.E201" = "必填欄位缺失或不合法";
+"import.error.E202" = "數值欄位格式不合法";
+"import.error.E203" = "類型列舉值不合法";
+"import.error.E301" = "寫入資料庫失敗";
+"rows imported" = "筆已匯入";
+"skipped" = "已略過";
+
+// MarkdownCommands.swift + MarkdownEditorView.swift
+"markdown.menu.format" = "格式";
+"markdown.menu.view" = "檢視";
+"markdown.cmd.bold" = "粗體";
+"markdown.cmd.italic" = "斜體";
+"markdown.cmd.h1" = "一級標題";
+"markdown.cmd.h2" = "二級標題";
+"markdown.cmd.h3" = "三級標題";
+"markdown.cmd.h4" = "四級標題";
+"markdown.cmd.h5" = "五級標題";
+"markdown.cmd.h6" = "六級標題";
+"markdown.cmd.bulletList" = "無序列表";
+"markdown.cmd.numberedList" = "有序列表";
+"markdown.cmd.checklist" = "待辦";
+"markdown.cmd.quote" = "引用";
+"markdown.cmd.inlineCode" = "行內程式碼";
+"markdown.cmd.codeBlock" = "程式碼區塊";
+"markdown.cmd.inlineMath" = "行內公式";
+"markdown.cmd.blockMath" = "行間公式";
+"markdown.cmd.link" = "連結";
+"markdown.cmd.divider" = "分隔線";
+"markdown.view.togglePreview" = "切換預覽";
+"markdown.view.toggleVertical" = "上下分欄";

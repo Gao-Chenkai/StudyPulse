@@ -748,6 +748,30 @@
 "No question content" = "暂无题目内容";
 "Calculator" = "计算器";
 
+// Flashcard Handwriting (闪卡手写答题)
+"Handwriting" = "手写";
+"Handwriting On" = "手写已开启";
+"Handwriting Off" = "手写已关闭";
+"Submit Answer" = "提交答案";
+"Submit & Show Answer" = "提交并显示答案";
+"Clear" = "清除";
+"Handwriting Required" = "请先完成手写";
+"Please write and submit your answer first" = "请先在画布上书写答案并提交";
+"Submit when done" = "完成后请提交";
+"Your Handwriting" = "你的手写";
+"Handwriting History" = "手写历史";
+"No Handwriting Yet" = "暂无手写记录";
+
+// Mistake Registration Handwriting (错题登记 PencilKit)
+"Drawing" = "绘制";
+"Draw to add an image" = "在画布上画图，提交后会追加到当前段";
+"Drag with 2 fingers to pan, pinch to zoom" = "两指拖动可平移，双指捏合可缩放";
+"Use This Drawing" = "使用此画稿";
+"Discard your drawing?" = "放弃你的画稿？";
+"Discard" = "放弃";
+"Keep Drawing" = "继续画";
+"Your drawing will not be saved." = "画稿将不会被保存。";
+
 // Report (Learning Report image export)
 "Share Report" = "分享报告";
 "Generate Report" = "生成报告";
@@ -1334,3 +1358,41 @@
 "debug.sectionTitle" = "Debug 模式";
 "debug.sectionFooter" = "下方子开关需先开启总开关。设置即时保存,对所有页面生效。Release 构建同样可用。";
 "debug.inspect.title" = "检视";
+
+"import.error.E001" = "无法读取文件";
+"import.error.E002" = "CSV 为空";
+"import.error.E003" = "无数据行(仅表头)";
+"import.error.E004" = "全部行解析失败";
+"import.error.E005" = "部分行解析失败";
+"import.error.E101" = "表头与期望 schema 不匹配";
+"import.error.E102" = "表头列数少于期望值";
+"import.error.E201" = "必填字段缺失或非法";
+"import.error.E202" = "数值字段格式非法";
+"import.error.E203" = "类型枚举值非法";
+"import.error.E301" = "写入数据库失败";
+"rows imported" = "条已导入";
+"skipped" = "已跳过";
+
+// MarkdownCommands.swift + MarkdownEditorView.swift
+"markdown.menu.format" = "格式";
+"markdown.menu.view" = "视图";
+"markdown.cmd.bold" = "粗体";
+"markdown.cmd.italic" = "斜体";
+"markdown.cmd.h1" = "一级标题";
+"markdown.cmd.h2" = "二级标题";
+"markdown.cmd.h3" = "三级标题";
+"markdown.cmd.h4" = "四级标题";
+"markdown.cmd.h5" = "五级标题";
+"markdown.cmd.h6" = "六级标题";
+"markdown.cmd.bulletList" = "无序列表";
+"markdown.cmd.numberedList" = "有序列表";
+"markdown.cmd.checklist" = "待办";
+"markdown.cmd.quote" = "引用";
+"markdown.cmd.inlineCode" = "行内代码";
+"markdown.cmd.codeBlock" = "代码块";
+"markdown.cmd.inlineMath" = "行内公式";
+"markdown.cmd.blockMath" = "行间公式";
+"markdown.cmd.link" = "链接";
+"markdown.cmd.divider" = "分隔线";
+"markdown.view.togglePreview" = "切换预览";
+"markdown.view.toggleVertical" = "上下分栏";

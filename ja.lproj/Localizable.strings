@@ -745,8 +745,32 @@
 "Quick Review" = "クイック復習";
 "Done" = "完了";
 "Close" = "閉じる";
-"No question content" = "問題内容がありません";
+"No question content" = "問題内容なし";
 "Calculator" = "電卓";
+
+// Flashcard Handwriting (フラッシュカード手書き回答) — TODO: <#ja#>
+"Handwriting" = "<#ja#>";
+"Handwriting On" = "<#ja#>";
+"Handwriting Off" = "<#ja#>";
+"Submit Answer" = "<#ja#>";
+"Submit & Show Answer" = "<#ja#>";
+"Clear" = "<#ja#>";
+"Handwriting Required" = "<#ja#>";
+"Please write and submit your answer first" = "<#ja#>";
+"Submit when done" = "<#ja#>";
+"Your Handwriting" = "<#ja#>";
+"Handwriting History" = "<#ja#>";
+"No Handwriting Yet" = "<#ja#>";
+
+// Mistake Registration Handwriting (ミス登録 PencilKit) — TODO: <#ja#>
+"Drawing" = "<#ja#>";
+"Draw to add an image" = "<#ja#>";
+"Drag with 2 fingers to pan, pinch to zoom" = "<#ja#>";
+"Use This Drawing" = "<#ja#>";
+"Discard your drawing?" = "<#ja#>";
+"Discard" = "<#ja#>";
+"Keep Drawing" = "<#ja#>";
+"Your drawing will not be saved." = "<#ja#>";
 
 // Report (Learning Report image export)
 "Share Report" = "レポートを共有";
@@ -1334,3 +1358,41 @@
 "debug.sectionTitle" = "Debug モード";
 "debug.sectionFooter" = "下のサブトグルはマスター开关がオンの時のみ動作します。設定は即時保存され、すべてのページに反映されます。リリースビルドでも利用可能。";
 "debug.inspect.title" = "検査";
+
+"import.error.E001" = "ファイルを読み込めません";
+"import.error.E002" = "CSV が空です";
+"import.error.E003" = "データ行がありません(ヘッダーのみ)";
+"import.error.E004" = "すべての行の解析に失敗";
+"import.error.E005" = "一部の行をスキップ";
+"import.error.E101" = "ヘッダーが期待スキーマと一致しません";
+"import.error.E102" = "ヘッダー列数が期待より少ない";
+"import.error.E201" = "必須フィールドが欠落または不正";
+"import.error.E202" = "数値フィールドの形式が不正";
+"import.error.E203" = "Type 列挙値が不正";
+"import.error.E301" = "データベースへの保存に失敗";
+"rows imported" = "件取り込み";
+"skipped" = "スキップ";
+
+// MarkdownCommands.swift + MarkdownEditorView.swift
+"markdown.menu.format" = "書式";
+"markdown.menu.view" = "表示";
+"markdown.cmd.bold" = "太字";
+"markdown.cmd.italic" = "斜体";
+"markdown.cmd.h1" = "見出し 1";
+"markdown.cmd.h2" = "見出し 2";
+"markdown.cmd.h3" = "見出し 3";
+"markdown.cmd.h4" = "見出し 4";
+"markdown.cmd.h5" = "見出し 5";
+"markdown.cmd.h6" = "見出し 6";
+"markdown.cmd.bulletList" = "箇条書き";
+"markdown.cmd.numberedList" = "番号付きリスト";
+"markdown.cmd.checklist" = "チェックリスト";
+"markdown.cmd.quote" = "引用";
+"markdown.cmd.inlineCode" = "インラインコード";
+"markdown.cmd.codeBlock" = "コードブロック";
+"markdown.cmd.inlineMath" = "インライン数式";
+"markdown.cmd.blockMath" = "ブロック数式";
+"markdown.cmd.link" = "リンク";
+"markdown.cmd.divider" = "区切り線";
+"markdown.view.togglePreview" = "プレビュー切替";
+"markdown.view.toggleVertical" = "上下分割";

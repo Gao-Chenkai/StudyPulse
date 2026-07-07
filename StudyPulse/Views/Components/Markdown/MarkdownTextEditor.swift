@@ -123,16 +123,16 @@ struct MarkdownKeyboardToolbar: View {
             // 玻璃底下的 12pt 留白让玻璃看起来像是浮在键盘上方。
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                toolbarButton("bold") { wrap(prefix: "**", suffix: "**", placeholder: "bold") }
-                toolbarButton("italic") { wrap(prefix: "*", suffix: "*", placeholder: "italic") }
-                toolbarButton("textformat.size") { insertLinePrefix("# ") }
+                toolbarButton("bold") { MarkdownFormatting.wrap(prefix: "**", suffix: "**", placeholder: "bold", into: &text, range: &selectedRange) }
+                toolbarButton("italic") { MarkdownFormatting.wrap(prefix: "*", suffix: "*", placeholder: "italic", into: &text, range: &selectedRange) }
+                toolbarButton("textformat.size") { MarkdownFormatting.insertLinePrefix("# ", into: &text, range: &selectedRange) }
                 listMenuButton
-                toolbarButton("text.quote") { insertLinePrefix("> ") }
-                toolbarButton("chevron.left.forwardslash.chevron.right") { wrap(prefix: "`", suffix: "`", placeholder: "code") }
-                toolbarButton("curlybraces") { insertBlock(prefix: "```\n", suffix: "\n```", placeholder: "code") }
+                toolbarButton("text.quote") { MarkdownFormatting.insertLinePrefix("> ", into: &text, range: &selectedRange) }
+                toolbarButton("chevron.left.forwardslash.chevron.right") { MarkdownFormatting.wrap(prefix: "`", suffix: "`", placeholder: "code", into: &text, range: &selectedRange) }
+                toolbarButton("curlybraces") { MarkdownFormatting.insertBlock(prefix: "```\n", suffix: "\n```", placeholder: "code", into: &text, range: &selectedRange) }
                 mathMenuButton
-                toolbarButton("link") { wrap(prefix: "[", suffix: "](url)", placeholder: "text") }
-                toolbarButton("minus") { insertAtCursor("\n---\n") }
+                toolbarButton("link") { MarkdownFormatting.wrap(prefix: "[", suffix: "](url)", placeholder: "text", into: &text, range: &selectedRange) }
+                toolbarButton("minus") { MarkdownFormatting.insertAtCursor("\n---\n", into: &text, range: &selectedRange) }
             }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
@@ -183,17 +183,17 @@ struct MarkdownKeyboardToolbar: View {
     private var listMenuButton: some View {
         Menu {
             Button {
-                insertLinePrefix("- ")
+                MarkdownFormatting.insertLinePrefix("- ", into: &text, range: &selectedRange)
             } label: {
                 Label("Bullet".localized(), systemImage: "list.bullet")
             }
             Button {
-                insertLinePrefix("1. ")
+                MarkdownFormatting.insertLinePrefix("1. ", into: &text, range: &selectedRange)
             } label: {
                 Label("Number".localized(), systemImage: "list.number")
             }
             Button {
-                insertLinePrefix("- [ ] ")
+                MarkdownFormatting.insertLinePrefix("- [ ] ", into: &text, range: &selectedRange)
             } label: {
                 Label("Checklist".localized(), systemImage: "checklist")
             }
@@ -213,12 +213,12 @@ struct MarkdownKeyboardToolbar: View {
     private var mathMenuButton: some View {
         Menu {
             Button {
-                wrap(prefix: "$", suffix: "$", placeholder: "x")
+                MarkdownFormatting.wrap(prefix: "$", suffix: "$", placeholder: "x", into: &text, range: &selectedRange)
             } label: {
                 Label("Inline Math".localized(), systemImage: "x.squareroot")
             }
             Button {
-                insertBlock(prefix: "$$\n", suffix: "\n$$", placeholder: "x")
+                MarkdownFormatting.insertBlock(prefix: "$$\n", suffix: "\n$$", placeholder: "x", into: &text, range: &selectedRange)
             } label: {
                 Label("Block Math".localized(), systemImage: "function")
             }
@@ -232,72 +232,9 @@ struct MarkdownKeyboardToolbar: View {
         .menuStyle(.button)
     }
 
-    // MARK: - Text manipulation helpers
-
-    /// Replace the current selection (or just the cursor) with the
-    /// given literal string, then move the cursor to the end of the
-    /// inserted text.
-    private func insertAtCursor(_ insertion: String) {
-        let nsText = text as NSString
-        let newText = nsText.replacingCharacters(in: selectedRange, with: insertion)
-        let newCursor = selectedRange.location + insertion.count
-        text = newText
-        selectedRange = NSRange(location: newCursor, length: 0)
-    }
-
-    /// If there is a selection, wrap it with `prefix`/`suffix`.
-    /// Otherwise, insert `prefix + placeholder + suffix` at the cursor
-    /// and place the cursor between the markers so the user can type
-    /// the wrapped text immediately.
-    private func wrap(prefix: String, suffix: String, placeholder: String) {
-        let nsText = text as NSString
-        if selectedRange.length == 0 {
-            let insertion = prefix + placeholder + suffix
-            let newText = nsText.replacingCharacters(in: selectedRange, with: insertion)
-            let newCursor = selectedRange.location + prefix.count + placeholder.count
-            text = newText
-            selectedRange = NSRange(location: newCursor, length: 0)
-        } else {
-            let selected = nsText.substring(with: selectedRange)
-            let insertion = prefix + selected + suffix
-            let newText = nsText.replacingCharacters(in: selectedRange, with: insertion)
-            let newCursor = selectedRange.location + insertion.count
-            text = newText
-            selectedRange = NSRange(location: newCursor, length: 0)
-        }
-    }
-
-    /// Insert `prefix` at the start of the line containing the cursor.
-    /// Useful for block-level syntax like `# `, `- `, `1. `, `> `.
-    private func insertLinePrefix(_ prefix: String) {
-        let nsText = text as NSString
-        var lineStart = selectedRange.location
-        let newline = UInt16(UnicodeScalar("\n").value)
-        while lineStart > 0 && nsText.character(at: lineStart - 1) != newline {
-            lineStart -= 1
-        }
-        let newText = nsText.replacingCharacters(
-            in: NSRange(location: lineStart, length: 0),
-            with: prefix
-        )
-        let newCursor = selectedRange.location + prefix.count
-        text = newText
-        selectedRange = NSRange(location: newCursor, length: 0)
-    }
-
-    /// Insert a multi-line block delimited by `prefix` / `suffix`. If
-    /// the cursor is not at the start of a line, prepend a newline so
-    /// the block opens on its own line.
-    private func insertBlock(prefix: String, suffix: String, placeholder: String) {
-        let nsText = text as NSString
-        let prevIndex = selectedRange.location - 1
-        let needsLeadingNewline = selectedRange.location > 0
-            && nsText.character(at: prevIndex) != UInt16(UnicodeScalar("\n").value)
-        let leading = needsLeadingNewline ? "\n" : ""
-        let insertion = leading + prefix + placeholder + suffix
-        let newText = nsText.replacingCharacters(in: selectedRange, with: insertion)
-        let newCursor = selectedRange.location + insertion.count
-        text = newText
-        selectedRange = NSRange(location: newCursor, length: 0)
-    }
+    // Text manipulation helpers used to live here as `private func`
+    // methods. They were extracted to `MarkdownFormatting` so the
+    // iPad menu-bar commands (`MarkdownCommands`) can call the same
+    // code path as the on-screen toolbar — keeping both inputs
+    // behaviourally identical.
 }

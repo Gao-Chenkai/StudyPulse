@@ -134,5 +134,14 @@ struct StudyPulseApp: App {
         // 注入 SwiftData 容器,与 RepositoryContainer.asyncInit 通过 ModelContainerFactory
         // 的进程内单例缓存共享同一 ModelContainer。
         .modelContainer(ModelContainerFactory.makeContainer())
+        // Markdown 编辑器的场景级菜单(iPadOS 26 窗口化模式顶部菜单栏
+        // + 外接键盘快捷键)。菜单项仅在 MarkdownEditorView 在屏时显示。
+        // Scene-level menu commands that surface the markdown editor's
+        // 13 formatting actions + 2 view toggles in the iPadOS 26
+        // windowed-mode menu bar and as keyboard shortcuts. The menus
+        // hide themselves when no `MarkdownEditorView` is on screen.
+        .commands {
+            MarkdownCommands()
+        }
     }
 }
