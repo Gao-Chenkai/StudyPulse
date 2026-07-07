@@ -8,6 +8,8 @@
 //
 
 import SwiftUI
+import PencilKit
+import os
 
 // MARK: - Session Stats
 
@@ -84,8 +86,16 @@ struct FlashcardStudyView: View {
     @State private var reinsertQueue: [MistakeNote] = []  // 「Again」的题目临时重插入
     @State private var showingCalculator: Bool = false  // 简易计算器浮层
 
-    init(filter: FlashcardFilter = .dueQueue) {
+    // 手写答题相关状态
+    @State private var handwritingEnabled: Bool = false
+    @State private var currentDrawing: PKDrawing = PKDrawing()
+    @State private var sessionHandwriting: [UUID: Data] = [:]   // mistakeId -> 提交时的 PNG
+    @State private var hasSubmittedCurrent: Bool = false
+    @State private var showHandwritingRequiredAlert: Bool = false
+
+    init(filter: FlashcardFilter = .dueQueue, handwritingEnabled: Bool = false) {
         self.filter = filter
+        self.handwritingEnabled = handwritingEnabled
     }
 
     // MARK: - Computed
@@ -151,6 +161,11 @@ struct FlashcardStudyView: View {
             }
         }
         .onAppear { loadQueue() }
+        .alert("Handwriting Required".localized(), isPresented: $showHandwritingRequiredAlert) {
+            Button("OK".localized(), role: .cancel) { }
+        } message: {
+            Text("Please write and submit your answer first".localized())
+        }
     }
 
     /// 浮于右上角的「计算器」开关按钮
@@ -230,11 +245,44 @@ struct FlashcardStudyView: View {
             .padding(.horizontal, 24)
             .padding(.top, 8)
 
-            // 主卡片
-            FlashcardCardView(mistake: mistake, isFlipped: $isFlipped)
-                .frame(maxWidth: 720)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 20)
+            // 主内容:ScrollView 内,卡片 + (手写时)画布
+            ScrollView {
+                VStack(spacing: 16) {
+                    // 主卡片
+                    FlashcardCardView(mistake: mistake, isFlipped: $isFlipped)
+                        .frame(maxWidth: 720)
+                        .overlay(alignment: .topTrailing) {
+                            // 反面时叠加手写笔迹(右上角小图)
+                            if isFlipped,
+                               let png = sessionHandwriting[mistake.id],
+                               let img = UIImage(data: png) {
+                                handwritingOverlay(img: img)
+                            }
+                        }
+
+                    // 手写画布(仅当启用手写且未翻面时显示)
+                    if handwritingEnabled && !isFlipped {
+                        FlashcardHandwritingCanvasView(
+                            drawing: $currentDrawing,
+                            hasContent: { !currentDrawing.strokes.isEmpty },
+                            onSubmit: { pngData in
+                                sessionHandwriting[mistake.id] = pngData
+                                hasSubmittedCurrent = true
+                                Log.view.info("FlashcardStudyView handwriting submitted: mistakeId=\(mistake.id.uuidString, privacy: .public) bytes=\(pngData.count, privacy: .public)")
+                            },
+                            onClear: {
+                                currentDrawing = PKDrawing()
+                                hasSubmittedCurrent = false
+                                sessionHandwriting.removeValue(forKey: mistake.id)
+                            }
+                        )
+                        .frame(maxWidth: 720)
+                        .padding(.horizontal, 20)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                    }
+                }
+                .padding(.vertical, 16)
+            }
 
             // 底部操作区
             if isFlipped {
@@ -246,22 +294,70 @@ struct FlashcardStudyView: View {
                 .padding(.bottom, 12)
             } else {
                 Button {
+                    // 启用手写但未提交:拦截
+                    if handwritingEnabled && !hasSubmittedCurrent {
+                        showHandwritingRequiredAlert = true
+                        return
+                    }
                     withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) {
                         isFlipped = true
                     }
                 } label: {
-                    Label("Show Answer".localized(), systemImage: "eye.fill")
-                        .font(.headline)
-                        .frame(maxWidth: 400)
-                        .padding(.vertical, 14)
+                    Label(
+                        (handwritingEnabled && hasSubmittedCurrent)
+                            ? "Show Answer".localized()
+                            : (handwritingEnabled
+                                ? "Submit & Show Answer".localized()
+                                : "Show Answer".localized()),
+                        systemImage: "eye.fill"
+                    )
+                    .font(.headline)
+                    .frame(maxWidth: 400)
+                    .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.purple)
+                .tint(handwritingEnabled && hasSubmittedCurrent ? .purple : .purple)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
                 .transition(.opacity)
             }
         }
+    }
+
+    /// 反面叠加的手写笔迹缩略图
+    @ViewBuilder
+    private func handwritingOverlay(img: UIImage) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: "pencil.tip")
+                    .font(.caption2)
+                Text("Your Handwriting".localized())
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule().fill(Color.purple.opacity(0.7))
+            )
+
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 180, maxHeight: 110)
+                .padding(6)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.ultraThinMaterial.opacity(0.85))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.purple.opacity(0.5), lineWidth: 1)
+                )
+                .opacity(0.92)
+        }
+        .padding(12)
+        .allowsHitTesting(false)
     }
 
     @ToolbarContentBuilder
@@ -274,6 +370,31 @@ struct FlashcardStudyView: View {
                     .font(.subheadline.weight(.semibold))
             }
             .accessibilityLabel("Close".localized())
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    handwritingEnabled.toggle()
+                    if !handwritingEnabled {
+                        // 关闭手写时清空当前画布与已提交缓存
+                        currentDrawing = PKDrawing()
+                        hasSubmittedCurrent = false
+                        if let id = currentMistake?.id {
+                            sessionHandwriting.removeValue(forKey: id)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: handwritingEnabled
+                      ? "pencil.tip.crop.circle.badge.minus"
+                      : "pencil.tip.crop.circle.badge.plus")
+                    .font(.subheadline.weight(.semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(handwritingEnabled ? Color.purple : .secondary)
+            }
+            .accessibilityLabel(handwritingEnabled
+                                ? "Handwriting Off".localized()
+                                : "Handwriting On".localized())
         }
     }
 
@@ -290,6 +411,10 @@ struct FlashcardStudyView: View {
         isFlipped = false
         stats = FlashcardSessionStats()
         reinsertQueue = []
+        handwritingEnabled = false
+        currentDrawing = PKDrawing()
+        hasSubmittedCurrent = false
+        sessionHandwriting = [:]
     }
 
     private func handleRating(_ quality: ReviewQuality) {
@@ -317,6 +442,11 @@ struct FlashcardStudyView: View {
         // 记录曝光 / 掌握度：自评后曝光 +1，按 quality 调整 masteryScore 并追加 history
         container.mistakeRepo.recordReview(current.id, quality: quality, now: Date())
 
+        // 记录手写答题：启用手写且本卡已提交笔迹时追加一条到 handwritingHistory
+        if handwritingEnabled, let png = sessionHandwriting[current.id] {
+            container.mistakeRepo.recordHandwriting(current.id, pngData: png, quality: quality, now: Date())
+        }
+
         // 「Again」立即重插入队尾（确保至少复习一次）
         if quality == .again && filter == .dueQueue {
             reinsertQueue.append(current)
@@ -329,6 +459,13 @@ struct FlashcardStudyView: View {
     private func advance() {
         withAnimation(.easeInOut(duration: 0.25)) {
             isFlipped = false
+        }
+        // 清理当前卡的手写状态(画布 + 已提交缓存)
+        let prevId = currentMistake?.id
+        currentDrawing = PKDrawing()
+        hasSubmittedCurrent = false
+        if let id = prevId {
+            sessionHandwriting.removeValue(forKey: id)
         }
         // 简单实现：移除当前并显示下一张
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {

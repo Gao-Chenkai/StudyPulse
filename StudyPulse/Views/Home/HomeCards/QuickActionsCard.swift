@@ -37,12 +37,29 @@ struct QuickActionsCard: View {
                     action: { showingNewExam = true }
                 )
 
-                QuickActionButton(
-                    title: "New Mistake".localized(),
-                    icon: "pencil.tip.crop.circle.badge.plus",
-                    color: .orange,
-                    action: { showingNewMistake = true }
-                )
+                // "New Mistake" 在 iPad 上走 NavigationLink 直接推到 HomeView 的 NavigationStack,
+                // 配合传 false 让 NewMistakeSetView 不再包自己的 stack;iPhone 继续走 sheet。
+                // On iPad, push NewMistakeSetView directly onto HomeView's stack
+                // (useInternalNavigationStack: false). iPhone still uses the sheet.
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    QuickActionButton(
+                        title: "New Mistake".localized(),
+                        icon: "pencil.tip.crop.circle.badge.plus",
+                        color: .orange,
+                        destination: {
+                            NewMistakeSetView(usesInternalNavigationStack: false)
+                                .environment(container)
+                                .adaptiveSheet()
+                        }
+                    )
+                } else {
+                    QuickActionButton(
+                        title: "New Mistake".localized(),
+                        icon: "pencil.tip.crop.circle.badge.plus",
+                        color: .orange,
+                        action: { showingNewMistake = true }
+                    )
+                }
             }
         }
         .padding(20)
@@ -76,40 +93,94 @@ struct QuickActionsCard: View {
 // MARK: - 快捷操作按钮
 
 /// QuickActionsCard 内的单个操作按钮(图标 + 标题 + 点击缩放反馈)。
-struct QuickActionButton: View {
+/// 在 iPad 上,如果提供 `navigationDestination`,按钮会渲染为 `NavigationLink`
+/// 直接推到父级 NavigationStack,这样能给用户"安全感",不会误触关掉整个表单页。
+struct QuickActionButton<Destination: View>: View {
     let title: String
     let icon: String
     let color: Color
     let action: () -> Void
+    @ViewBuilder let destination: (() -> Destination)?
+
+    /// 默认 action 模式(走 sheet / 自定义 action)。
+    init(
+        title: String,
+        icon: String,
+        color: Color,
+        action: @escaping () -> Void
+    ) where Destination == EmptyView {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.action = action
+        self.destination = nil
+    }
+
+    /// iPad 模式:提供 destination 后按钮渲染为 NavigationLink,直接推到父级 stack。
+    /// iPad mode: when `destination` is provided the button becomes a
+    /// `NavigationLink` pushed onto the parent stack, avoiding the sheet
+    /// dismissal and giving the user a sense of "groundedness" while editing.
+    init(
+        title: String,
+        icon: String,
+        color: Color,
+        destination: @escaping () -> Destination
+    ) {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.action = {}
+        self.destination = destination
+    }
 
     @State private var isPressed = false
 
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [color.opacity(0.2), color.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+    /// 共享的图标 + 标题 内容,被 Button 和 NavigationLink 共用。
+    @ViewBuilder
+    private var labelContent: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.2), color.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(height: 60)
+                    )
+                    .frame(height: 60)
 
-                    Image(systemName: icon)
-                        .font(.system(size: 28))
-                        .foregroundColor(color)
-                }
-
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+                    .foregroundColor(color)
             }
+
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
         }
-        .buttonStyle(ScaleButtonStyle())
-        .frame(maxWidth: .infinity)
+    }
+
+    var body: some View {
+        if let destination {
+            // iPad: NavigationLink 直接推到父级 NavigationStack
+            // iPad: push onto the parent stack via NavigationLink
+            NavigationLink {
+                destination()
+            } label: {
+                labelContent
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .frame(maxWidth: .infinity)
+        } else {
+            // iPhone / 无 destination: 走 Button + 自定义 action
+            // iPhone / no destination: regular Button + action
+            Button(action: action) {
+                labelContent
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .frame(maxWidth: .infinity)
+        }
     }
 }
 

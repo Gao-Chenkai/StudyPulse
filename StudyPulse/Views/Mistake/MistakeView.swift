@@ -130,8 +130,22 @@ struct MistakeView: View {
                             }
                             .accessibilityLabel("Export PDF".localized())
                         }
-                        Button(action: { showingNewMistakeSet = true }) {
-                            Image(systemName: "plus")
+                        // iPad 用 NavigationLink 推到 NewMistakeSetView(传 false 让它别再包自己的 stack);
+                        // iPhone 继续走 Button + sheet(sheet 仍然挂在下方 modifier)。
+                        // iPad: NavigationLink to NewMistakeSetView (pass false so it
+                        // doesn't double-wrap the stack); iPhone: Button + .sheet below.
+                        if UIDevice.current.userInterfaceIdiom == .pad {
+                            NavigationLink {
+                                NewMistakeSetView(usesInternalNavigationStack: false)
+                                    .environment(container)
+                                    .adaptiveSheet()
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                        } else {
+                            Button(action: { showingNewMistakeSet = true }) {
+                                Image(systemName: "plus")
+                            }
                         }
                     }
                 }
@@ -804,8 +818,24 @@ struct MistakeSetDetailView: View {
         .adaptiveMaxWidth(820)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit".localized()) {
-                    showingEditSheet = true
+                // iPad 用 NavigationLink 推到 MistakeDetailEditView(传 false 让它别再包自己的 stack);
+                // iPhone 继续走 Button + sheet。
+                // iPad: NavigationLink to MistakeDetailEditView (pass false so it
+                // doesn't double-wrap the stack); iPhone: Button + .sheet below.
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    NavigationLink {
+                        MistakeDetailEditView(
+                            mistakeSet: liveMistake,
+                            usesInternalNavigationStack: false
+                        )
+                        .adaptiveSheet()
+                    } label: {
+                        Text("Edit".localized())
+                    }
+                } else {
+                    Button("Edit".localized()) {
+                        showingEditSheet = true
+                    }
                 }
             }
         }

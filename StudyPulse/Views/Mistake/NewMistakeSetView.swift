@@ -39,6 +39,17 @@ struct NewMistakeSetView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
+    /// 是否在内部包一层 NavigationStack。
+    /// iPhone sheet 场景需要自己提供 stack(.navigationTitle / .toolbar 才能生效),
+    /// iPad 走 NavigationLink 推到父级 stack 时必须传 false,否则会出现双重 stack。
+    /// Whether to wrap the body in its own NavigationStack.
+    /// - `true` (default): used inside a `.sheet`, the view must provide its own
+    ///   `NavigationStack` so the title / toolbar / `.containerBackground` work.
+    /// - `false`: used as a `NavigationLink` destination on iPad; the parent
+    ///   `NavigationStack` already provides the navigation chrome, so we skip
+    ///   the inner one to avoid nested-stack glitches.
+    let usesInternalNavigationStack: Bool
+
     @State private var editedTitle = ""
     @State private var selectedSubject = ""
     @State private var editedOriginalQuestion = ""
@@ -57,8 +68,15 @@ struct NewMistakeSetView: View {
 
     @State private var showingImagePicker = false
     @State private var showingPhotoCapture = false
+    @State private var showingHandwritingSheet = false
 
     @State private var isProcessingOCR = false
+
+    /// iPad 检测:用 userInterfaceIdiom 匹配用户说的「iPad」
+    /// iPad detection via userInterfaceIdiom (matches the user's "iPad" wording).
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
     @State private var showingOCRAlert = false
     @State private var ocrErrorMessage = ""
 
@@ -67,10 +85,13 @@ struct NewMistakeSetView: View {
 
     /// Default empty-state initializer used by the app and previews that
     /// don't need to seed the form.
-   init() {}
+   init(usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
+   }
 
     /// Convenience init that seeds the form with Siri-provided values.
-    init(presetSubject: String, presetTitle: String) {
+    init(presetSubject: String, presetTitle: String, usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
         self._selectedSubject = State(initialValue: presetSubject)
         self._editedTitle = State(initialValue: presetTitle)
     }
@@ -78,7 +99,8 @@ struct NewMistakeSetView: View {
    /// Initialiser that seeds the editable fields with sample content.
     /// Used by the `#Preview` to demonstrate the editor + live preview
     /// without forcing the developer to type in the canvas first.
-    init(sampleMistake: SampleMistake) {
+    init(sampleMistake: SampleMistake, usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
         self._editedTitle = State(initialValue: sampleMistake.title)
         self._selectedSubject = State(initialValue: sampleMistake.subject)
         self._editedOriginalQuestion = State(initialValue: sampleMistake.originalQuestion)
@@ -89,48 +111,75 @@ struct NewMistakeSetView: View {
         self._editedDate = State(initialValue: sampleMistake.date)
         self._selectedSection = State(initialValue: sampleMistake.selectedSection)
     }
-    
+
     var body: some View {
-        NavigationStack {
-            Form {
-                basicInfoSection
-                contentEditorSection
-                imagesSection
+        // 根据调用场景决定是否包自己的 NavigationStack:
+        // - sheet 场景包一层,让 .navigationTitle / .toolbar 生效;
+        // - iPad NavigationLink 推到父级 stack 时不再包,避免双重 stack。
+        // Conditionally wrap in NavigationStack:
+        // - sheet → wrap (toolbar/title need a stack)
+        // - iPad NavigationLink destination → skip (parent stack is the chrome)
+        if usesInternalNavigationStack {
+            NavigationStack {
+                formContent
             }
-            .adaptiveForm()
-            .navigationTitle("New Mistake".localized())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbar }
-            .sheet(isPresented: $showingImagePicker) {
-                ImagePickerWithCompletion(onDismiss: { image in
-                    if let image = image { addImageToCurrentSection(image) }
-                })
-                .ignoresSafeArea()
-            }
-            .sheet(isPresented: $showingPhotoCapture) {
-                PhotoCaptureWithCompletion(onDismiss: { image in
-                    if let image = image { addImageToCurrentSection(image) }
-                })
-                .ignoresSafeArea()
-            }
-            .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
-                Button("OK".localized()) { }
-            } message: {
-                Text(ocrErrorMessage)
-            }
-            .overlay {
-                if isProcessingOCR {
-                    ProgressView("Recognizing text...".localized())
-                        .padding(20)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .shadow(radius: 10)
+        } else {
+            formContent
+        }
+    }
+
+    /// Form + toolbar + sheets + alerts,shared by sheet and push contexts.
+    /// All `.navigationTitle` / `.toolbar` / `.containerBackground` modifiers
+    /// below operate on the nearest enclosing `NavigationStack`, which is
+    /// either this view's own (sheet) or the parent's (NavigationLink).
+    @ViewBuilder
+    private var formContent: some View {
+        Form {
+            basicInfoSection
+            contentEditorSection
+            imagesSection
+        }
+        .adaptiveForm()
+        .navigationTitle("New Mistake".localized())
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePickerWithCompletion(onDismiss: { image in
+                if let image = image { addImageToCurrentSection(image) }
+            })
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showingPhotoCapture) {
+            PhotoCaptureWithCompletion(onDismiss: { image in
+                if let image = image { addImageToCurrentSection(image) }
+            })
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showingHandwritingSheet) {
+            HandwritingSheet { pngData in
+                if !pngData.isEmpty, let image = UIImage(data: pngData) {
+                    addImageToCurrentSection(image)
                 }
             }
-            .containerBackground(.clear, for: .navigation)
-            .debugModeContainer()
-            .debugLayoutBoundsAuto()
+            .ignoresSafeArea(edges: .bottom)
         }
+        .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
+            Button("OK".localized()) { }
+        } message: {
+            Text(ocrErrorMessage)
+        }
+        .overlay {
+            if isProcessingOCR {
+                ProgressView("Recognizing text...".localized())
+                    .padding(20)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(radius: 10)
+            }
+        }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
     }
 }
 
@@ -229,6 +278,26 @@ private extension NewMistakeSetView {
                     Label("OCR".localized(), systemImage: "text.viewfinder")
                 }
                 .disabled(currentSectionImages.wrappedValue.isEmpty)
+                Spacer()
+                // iPad 用 NavigationLink 推到 HandwritingView(自带「Back」确认);
+                // iPhone 仍走 sheet 弹出 HandwritingSheet(自带「Cancel」+ 滑动手势拦截)。
+                // iPad uses NavigationLink → HandwritingView (Back button + confirm);
+                // iPhone still uses sheet → HandwritingSheet (Cancel + swipe guard).
+                if isIPad {
+                    NavigationLink {
+                        HandwritingView { pngData in
+                            if !pngData.isEmpty, let image = UIImage(data: pngData) {
+                                addImageToCurrentSection(image)
+                            }
+                        }
+                    } label: {
+                        Label("Draw".localized(), systemImage: "pencil.tip")
+                    }
+                } else {
+                    Button(action: { showingHandwritingSheet = true }) {
+                        Label("Draw".localized(), systemImage: "pencil.tip")
+                    }
+                }
             }
             .buttonStyle(.borderless)
             
