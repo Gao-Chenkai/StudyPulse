@@ -31,6 +31,16 @@ nonisolated struct AppPreferences: Codable {
     /// Current active study phase id. nil = show all data (no filtering).
     var activePhaseId: UUID? = nil
 
+    // MARK: - Theme Shop (主题 / 皮肤商店)
+
+    /// 当前装备的卡片皮肤 id（nil = 使用系统默认 minimal_paper）。
+    /// Equipped card skin id; nil = use system default (`minimal_paper`).
+    var cardSkinId: String? = nil
+
+    /// 当前装备的计时器动画 id（nil = 使用系统默认 aurora）。
+    /// Equipped timer animation id; nil = use system default (`aurora`).
+    var timerAnimationId: String? = nil
+
     // MARK: - Debug Mode (调试模式)
 
     /// Debug 模式总开关（默认关闭）。开启后顶部显示黄色 banner，FPS 浮窗、长按检视、Layout Bounds 等子开关才生效。
@@ -60,6 +70,7 @@ nonisolated struct AppPreferences: Codable {
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
         case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, activePhaseId
+        case cardSkinId, timerAnimationId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
     }
 
@@ -74,6 +85,8 @@ nonisolated struct AppPreferences: Codable {
         self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
         self.learningHeatmapOnTrends = try c.decodeIfPresent(Bool.self, forKey: .learningHeatmapOnTrends) ?? true
         self.activePhaseId = try c.decodeIfPresent(UUID.self, forKey: .activePhaseId)
+        self.cardSkinId = try c.decodeIfPresent(String.self, forKey: .cardSkinId)
+        self.timerAnimationId = try c.decodeIfPresent(String.self, forKey: .timerAnimationId)
         self.debugModeEnabled = try c.decodeIfPresent(Bool.self, forKey: .debugModeEnabled) ?? false
         self.debugVerboseLogging = try c.decodeIfPresent(Bool.self, forKey: .debugVerboseLogging) ?? false
         self.debugFPSOverlay = try c.decodeIfPresent(Bool.self, forKey: .debugFPSOverlay) ?? false

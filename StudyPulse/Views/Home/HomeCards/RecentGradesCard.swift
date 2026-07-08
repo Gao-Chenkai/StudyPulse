@@ -13,6 +13,7 @@ import SwiftUI
 /// 之前直接读 `container.gradeRepo.grades` 现地 sort + prefix(5)。
 struct RecentGradesCard: View {
     @Environment(RepositoryContainer.self) private var container
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     var recentGrades: [Grade] {
         Array(container.gradeRepo.grades.sorted { $0.date > $1.date }.prefix(5))
@@ -32,14 +33,7 @@ struct RecentGradesCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(20)
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 10,
-            x: 0,
-            y: 4
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .debugLayoutBoundsAuto()
     }
 }

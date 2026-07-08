@@ -9,6 +9,7 @@ import SwiftUI
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case appearance
+    case themeShop
     case health
     case reports
     case data
@@ -21,6 +22,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .appearance: return "Appearance & Layout".localized()
+        case .themeShop: return "Theme Shop".localized()
         case .health: return "Health & Readiness".localized()
         case .reports: return "Learning Reports".localized()
         case .data: return "Data Management".localized()
@@ -34,6 +36,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var caption: String {
         switch self {
         case .appearance: return "Language · Theme · Home · Widget".localized()
+        case .themeShop: return "Primary · Cards · Timer".localized()
         case .health: return "HRV · Recovery · Focus".localized()
         case .reports: return "Weekly · Monthly · Auto Reports".localized()
         case .data: return "Import · Export · Backup".localized()
@@ -47,6 +50,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var detailDescription: String {
         switch self {
         case .appearance: return "Customize the look, language, home dashboard layout and widget data.".localized()
+        case .themeShop: return "Unlock primary colors, card skins and timer animations as you hit milestones.".localized()
         case .health: return "Connect Apple Health to read your HRV and get personalized study readiness suggestions.".localized()
         case .reports: return "Configure automatic weekly and monthly learning reports with charts and summaries.".localized()
         case .data: return "Import, export and manage your grades, mistakes and exams data.".localized()
@@ -59,6 +63,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .appearance: return "paintpalette.fill"
+        case .themeShop: return "sparkles.rectangle.stack.fill"
         case .health: return "heart.text.square.fill"
         case .reports: return "chart.bar.xaxis"
         case .data: return "externaldrive.fill"
@@ -71,6 +76,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .appearance: return .blue
+        case .themeShop: return .purple
         case .health: return .pink
         case .reports: return .indigo
         case .data: return .green
@@ -84,6 +90,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var destination: some View {
         switch self {
         case .appearance: AppearanceSettingsView()
+        case .themeShop: ThemeShopView()
         case .health: HealthSettingsView()
         case .reports: WeeklyReportSettingsView()
         case .data: DataManagementSettingsView()

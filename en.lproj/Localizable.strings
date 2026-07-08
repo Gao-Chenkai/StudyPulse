@@ -1390,3 +1390,89 @@
 "markdown.cmd.divider" = "Divider";
 "markdown.view.togglePreview" = "Toggle Preview";
 "markdown.view.toggleVertical" = "Vertical Layout";
+
+// MARK: - Theme Shop (主题 / 皮肤商店)
+"theme.shop.title" = "Theme Shop";
+"theme.shop.subtitle" = "Unlock primary colors, card skins and timer animations as you hit milestones.";
+"theme.shop.section.accent" = "Primary Colors";
+"theme.shop.section.skin" = "Card Skins";
+"theme.shop.section.animation" = "Timer Animations";
+"theme.shop.unlocked" = "Unlocked";
+"theme.shop.locked.unlockAt" = "Reach: %@";
+"theme.shop.preview.title" = "Live Preview";
+"theme.shop.debugBanner" = "Debug mode: all themes unlocked for preview";
+
+// Accent Palettes
+"theme.shop.item.system.name" = "System";
+"theme.shop.item.system.description" = "Follow system accent color.";
+"theme.shop.item.blue.name" = "Blue";
+"theme.shop.item.blue.description" = "Default ocean blue.";
+"theme.shop.item.cyan.name" = "Cyan";
+"theme.shop.item.cyan.description" = "Bright cyan.";
+"theme.shop.item.teal.name" = "Teal";
+"theme.shop.item.teal.description" = "Cool teal.";
+"theme.shop.item.green.name" = "Green";
+"theme.shop.item.green.description" = "Forest green.";
+"theme.shop.item.mint.name" = "Mint";
+"theme.shop.item.mint.description" = "Soft mint green.";
+"theme.shop.item.orange.name" = "Orange";
+"theme.shop.item.orange.description" = "Vibrant orange.";
+"theme.shop.item.red.name" = "Red";
+"theme.shop.item.red.description" = "Bold red.";
+"theme.shop.item.pink.name" = "Pink";
+"theme.shop.item.pink.description" = "Soft pink.";
+"theme.shop.item.purple.name" = "Purple";
+"theme.shop.item.purple.description" = "Royal purple.";
+"theme.shop.item.indigo.name" = "Indigo";
+"theme.shop.item.indigo.description" = "Deep indigo.";
+"theme.shop.item.sakura_pink.name" = "Sakura Pink";
+"theme.shop.item.sakura_pink.description" = "Soft cherry blossom pink.";
+"theme.shop.item.galaxy_violet.name" = "Galaxy Violet";
+"theme.shop.item.galaxy_violet.description" = "Deep cosmic purple.";
+"theme.shop.item.aurora_cyan.name" = "Aurora Cyan";
+"theme.shop.item.aurora_cyan.description" = "Bright aurora green-cyan.";
+"theme.shop.item.midnight_indigo.name" = "Midnight Indigo";
+"theme.shop.item.midnight_indigo.description" = "Deep blue midnight sky.";
+"theme.shop.item.sunset_orange.name" = "Sunset Orange";
+"theme.shop.item.sunset_orange.description" = "Warm sunset gradient.";
+
+// Card Skins
+"theme.shop.item.minimal_paper.name" = "Paper";
+"theme.shop.item.minimal_paper.description" = "Simple flat paper card.";
+"theme.shop.item.frosted_glass.name" = "Frosted Glass";
+"theme.shop.item.frosted_glass.description" = "iOS 26 liquid glass effect.";
+"theme.shop.item.aurora_mist.name" = "Aurora Mist";
+"theme.shop.item.aurora_mist.description" = "Soft multi-color glow.";
+"theme.shop.item.sakura_blossom.name" = "Sakura Blossom";
+"theme.shop.item.sakura_blossom.description" = "Cherry blossom petals with pink gradient.";
+"theme.shop.item.galaxy_nebula.name" = "Galaxy Nebula";
+"theme.shop.item.galaxy_nebula.description" = "Deep purple starry background.";
+"theme.shop.item.parchment.name" = "Parchment";
+"theme.shop.item.parchment.description" = "Warm brown aged paper texture.";
+
+// Timer Animations
+"theme.shop.item.aurora.name" = "Aurora";
+"theme.shop.item.aurora.description" = "Green-blue-violet flow with soft orbs.";
+"theme.shop.item.sunset.name" = "Sunset";
+"theme.shop.item.sunset.description" = "Orange-pink flow with warm orbs.";
+"theme.shop.item.ocean.name" = "Ocean";
+"theme.shop.item.ocean.description" = "Deep blue with rising bubbles.";
+"theme.shop.item.forest.name" = "Forest";
+"theme.shop.item.forest.description" = "Dark green with firefly orbs.";
+"theme.shop.item.lavender.name" = "Lavender";
+"theme.shop.item.lavender.description" = "Purple with falling petals.";
+"theme.shop.item.neon.name" = "Neon";
+"theme.shop.item.neon.description" = "Bright neon palette with orbs.";
+"theme.shop.item.polar.name" = "Polar";
+"theme.shop.item.polar.description" = "Falling snowflakes on icy blue.";
+"theme.shop.item.sakura.name" = "Sakura";
+"theme.shop.item.sakura.description" = "Falling cherry blossom petals on pink.";
+"theme.shop.item.galaxy.name" = "Galaxy";
+"theme.shop.item.galaxy.description" = "Starry night with twinkling stars.";
+"theme.shop.item.midnight.name" = "Midnight";
+"theme.shop.item.midnight.description" = "Deep blue starfield with star orbs.";
+"theme.shop.item.mint_fresh.name" = "Mint Fresh";
+"theme.shop.item.mint_fresh.description" = "Fresh mint with rising bubbles.";
+
+// Quick Theme Sheet
+"theme.shop.browseAll" = "Browse All Themes";

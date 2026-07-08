@@ -20,9 +20,9 @@ struct StudyTimerActiveCard: View {
     /// the landscape "ring + side controls" body.
     @Binding var immersiveLandscapeMode: Bool
 
-    /// Currently selected color theme. The card reads this for the
-    /// ring / glow / orb palette and the start state.
-    let selectedTheme: ColorTheme
+    /// Currently selected animation (drives ring / glow / orb palette and
+    /// background flow). Source of truth lives in `envManager.effectiveTimerAnimation`.
+    let animation: TimerAnimation
 
     /// Notifies the parent that the user wants to toggle immersive mode
     /// so the parent can lock / unlock device orientation.
@@ -53,8 +53,8 @@ struct StudyTimerActiveCard: View {
 
     private var isRunning: Bool { timer.timerState == .running }
 
-    private var themeColor: Color { selectedTheme.primaryColor }
-    private var flowColors: [Color] { selectedTheme.colors }
+    private var themeColor: Color { animation.primaryColor }
+    private var flowColors: [Color] { animation.colors }
 
     private var activePrimaryTextColor: Color {
         immersiveLandscapeMode ? .white : .primary
@@ -101,6 +101,10 @@ struct StudyTimerActiveCard: View {
             stopAmbientAnimations()
             stopIdleTimer()
         }
+        .onChange(of: animation.id) { _, _ in
+            // 切换动画风格时重新生成粒子,匹配新的 particleCount / style
+            generateOrbs()
+        }
         .onChange(of: timer.remainingSeconds) { _, newValue in
             guard timer.totalSeconds > 0 else { return }
             withAnimation(.easeInOut(duration: 0.5)) {
@@ -128,30 +132,16 @@ struct StudyTimerActiveCard: View {
                     landscapeFlowLayer(size: proxySize, time: t)
                 }
             } else {
-                // Flowing gradient background
+                // Flowing gradient background (default) or starfield / forest
                 TimelineView(.animation(minimumInterval: 1.0/30.0)) { timeline in
                     let t = timeline.date.timeIntervalSinceReferenceDate
-                    LinearGradient(
-                        colors: [
-                            flowColors[0].opacity(0.08 + 0.02 * sin(t * 0.3)),
-                            Color(.systemBackground),
-                            flowColors[1].opacity(0.04 + 0.02 * cos(t * 0.2))
-                        ],
-                        startPoint: UnitPoint(
-                            x: 0.5 + 0.3 * sin(t * 0.15),
-                            y: 0.5 + 0.3 * cos(t * 0.15)
-                        ),
-                        endPoint: UnitPoint(
-                            x: 0.5 - 0.3 * sin(t * 0.15),
-                            y: 0.5 - 0.3 * cos(t * 0.15)
-                        )
-                    )
+                    backgroundFlowLayer(time: t)
                 }
             }
 
             // Radial glow behind timer
             RadialGradient(
-                colors: [themeColor.opacity(glowOpacity), .clear],
+                colors: [animation.glowColor.opacity(glowOpacity), .clear],
                 center: .center,
                 startRadius: 20,
                 endRadius: 280
@@ -159,7 +149,7 @@ struct StudyTimerActiveCard: View {
             .blendMode(.plusLighter)
 
             // Floating orbs
-            if isRunning {
+            if isRunning && animation.particleStyle != .none {
                 TimelineView(.animation) { timeline in
                     let time = timeline.date.timeIntervalSinceReferenceDate
                     ZStack {
@@ -170,15 +160,55 @@ struct StudyTimerActiveCard: View {
                             let x = orb.xRatio * proxySize.width + sin(time * 0.5 + orb.phase * 10) * 20
                             let colorIndex = Int((time * 0.1 + orb.phase * 3).truncatingRemainder(dividingBy: Double(flowColors.count)))
                             let orbColor = flowColors[colorIndex]
-                            Circle()
-                                .fill(orbColor.opacity(orb.opacity * (1.0 - progress)))
+                            particleView(orb: orb, color: orbColor, progress: progress)
                                 .frame(width: orb.size, height: orb.size)
                                 .position(x: x, y: y)
-                                .blur(radius: 1.5)
+                                .opacity(orb.opacity * (1.0 - progress))
                         }
                     }
                 }
             }
+        }
+    }
+
+    /// 单个粒子的形状（按 `animation.particleStyle` 分支）。
+    @ViewBuilder
+    private func particleView(orb: FloatingOrb, color: Color, progress: Double) -> some View {
+        switch animation.particleStyle {
+        case .snowfall:
+            Image(systemName: "snowflake")
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(color)
+                .rotationEffect(.degrees(progress * 360))
+        case .petals:
+            Image(systemName: "leaf.fill")
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(color)
+                .rotationEffect(.degrees(orb.phase * 360 + progress * 90))
+        case .stars:
+            Image(systemName: "star.fill")
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(color)
+        case .fireflies:
+            Circle()
+                .fill(color)
+                .blur(radius: 1.0)
+        case .bubbles:
+            Circle()
+                .stroke(color, lineWidth: 1.0)
+        case .rain:
+            Capsule()
+                .fill(color)
+                .frame(width: orb.size * 0.3, height: orb.size * 2.5)
+        case .orbs:
+            Circle()
+                .fill(color)
+                .blur(radius: 1.5)
+        case .none:
+            EmptyView()
         }
     }
 
@@ -200,6 +230,67 @@ struct StudyTimerActiveCard: View {
             }
         }
         .compositingGroup()
+    }
+
+    /// 竖屏背景层：按 `animation.backgroundStyle` 分支。
+    @ViewBuilder
+    private func backgroundFlowLayer(time: TimeInterval) -> some View {
+        switch animation.backgroundStyle {
+        case .flowGradient:
+            LinearGradient(
+                colors: [
+                    flowColors[0].opacity(0.08 + 0.02 * sin(time * 0.3)),
+                    Color(.systemBackground),
+                    flowColors[1].opacity(0.04 + 0.02 * cos(time * 0.2))
+                ],
+                startPoint: UnitPoint(
+                    x: 0.5 + 0.3 * sin(time * 0.15),
+                    y: 0.5 + 0.3 * cos(time * 0.15)
+                ),
+                endPoint: UnitPoint(
+                    x: 0.5 - 0.3 * sin(time * 0.15),
+                    y: 0.5 - 0.3 * cos(time * 0.15)
+                )
+            )
+
+        case .starfield:
+            ZStack {
+                Color(red: 0.04, green: 0.04, blue: 0.12)
+                ForEach(0..<20, id: \.self) { i in
+                    Circle()
+                        .fill(Color.white.opacity(0.3 + 0.5 * sin(time * 0.5 + Double(i) * 0.7)))
+                        .frame(width: 2, height: 2)
+                        .offset(
+                            x: CGFloat((i * 37) % 360) - 180,
+                            y: CGFloat((i * 53) % 600) - 300
+                        )
+                }
+                // 颜色光晕
+                RadialGradient(
+                    colors: [flowColors[0].opacity(0.12), .clear],
+                    center: .center,
+                    startRadius: 20,
+                    endRadius: 350
+                )
+                .blendMode(.plusLighter)
+            }
+
+        case .forest:
+            ZStack {
+                Color(red: 0.05, green: 0.12, blue: 0.06)
+                LinearGradient(
+                    colors: [
+                        flowColors[0].opacity(0.18 + 0.04 * sin(time * 0.3)),
+                        flowColors[1].opacity(0.10 + 0.03 * cos(time * 0.2))
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+
+        case .none:
+            Color(.systemBackground)
+        }
     }
 
     // MARK: - Layouts
@@ -425,13 +516,15 @@ struct StudyTimerActiveCard: View {
     // MARK: - Ambient Animations
 
     private func generateOrbs() {
-        orbs = (0..<12).map { _ in
+        let count = max(0, min(animation.particleCount, 32))
+        let (sizeRange, speedRange, opacityRange) = animation.particleStyle.ranges
+        orbs = (0..<count).map { _ in
             FloatingOrb(
                 xRatio: CGFloat.random(in: 0.05...0.95),
-                size: CGFloat.random(in: 3...7),
-                speed: Double.random(in: 4.0...8.0),
+                size: CGFloat.random(in: sizeRange),
+                speed: Double.random(in: speedRange),
                 phase: Double.random(in: 0...1),
-                opacity: Double.random(in: 0.2...0.5)
+                opacity: Double.random(in: opacityRange)
             )
         }
     }

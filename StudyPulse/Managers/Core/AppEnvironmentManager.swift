@@ -45,6 +45,28 @@ class AppEnvironmentManager: ObservableObject {
         effectiveAccent.color
     }
 
+    // MARK: - Theme Shop (主题 / 皮肤商店)
+
+    /// 当前装备的主色预设（与 `effectiveAccent` 保持一致；后者保留以兼容旧调用点）。
+    var effectiveAccentPalette: AccentPalette {
+        ThemeShopCatalog.accentPalette(forId: preferences.accentPaletteId)
+    }
+
+    /// 当前装备的卡片皮肤。
+    var effectiveCardSkin: CardSkin {
+        ThemeShopCatalog.cardSkin(forId: preferences.cardSkinId)
+    }
+
+    /// 当前装备的计时器动画。
+    var effectiveTimerAnimation: TimerAnimation {
+        ThemeShopCatalog.timerAnimation(forId: preferences.timerAnimationId)
+    }
+
+    /// 主色对应的 `Color`（直接读 `effectiveAccentPalette.color`）。
+    var effectiveAccentPaletteColor: Color {
+        effectiveAccentPalette.color
+    }
+
     /// 全局是否启用 iOS 26 glassEffect 卡片
     var glassEffectEnabled: Bool {
         preferences.glassEffectEnabled
@@ -102,6 +124,24 @@ class AppEnvironmentManager: ObservableObject {
     func setAccentPalette(_ accent: ThemeAccent) {
         Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
         preferences.accentPaletteId = accent.rawValue
+    }
+
+    /// 通过主色预设 id 装备（主题商店入口；与 `setAccentPalette` 行为一致，写同一字段）。
+    func setAccentPaletteId(_ id: String) {
+        Log.preferences.info("切换主色 (商店) / Accent change (shop): -> \(id, privacy: .public)")
+        preferences.accentPaletteId = id
+    }
+
+    /// 装备卡片皮肤。
+    func setCardSkinId(_ id: String) {
+        Log.preferences.info("切换卡片皮肤 / Card skin change: -> \(id, privacy: .public)")
+        preferences.cardSkinId = id
+    }
+
+    /// 装备计时器动画。
+    func setTimerAnimationId(_ id: String) {
+        Log.preferences.info("切换计时器动画 / Timer animation change: -> \(id, privacy: .public)")
+        preferences.timerAnimationId = id
     }
 
     /// 切换玻璃效果开关

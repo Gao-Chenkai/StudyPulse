@@ -17,6 +17,7 @@ import os
 
 struct StudyTimerView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     @ObservedObject private var timer = StudyTimerManager.shared
     @ObservedObject private var hrv = HealthKitManager.shared
 
@@ -24,11 +25,14 @@ struct StudyTimerView: View {
     @State private var customMinutes: Double = 25
     @State private var selectedPreset: Int? = nil
     @State private var immersiveLandscapeMode = false
-    @State private var selectedTheme: ColorTheme = .aurora
     @State private var showThemePicker: Bool = false
 
     private var isActive: Bool {
         timer.timerState == .running || timer.timerState == .paused
+    }
+
+    private var activeAnimation: TimerAnimation {
+        envManager.effectiveTimerAnimation
     }
 
     var body: some View {
@@ -38,7 +42,7 @@ struct StudyTimerView: View {
                     StudyTimerActiveCard(
                         timer: timer,
                         immersiveLandscapeMode: $immersiveLandscapeMode,
-                        selectedTheme: selectedTheme,
+                        animation: activeAnimation,
                         onImmersiveToggle: toggleImmersiveLandscape,
                         onUserInteraction: {}
                     )
@@ -46,7 +50,7 @@ struct StudyTimerView: View {
                     StudyTimerSetupSheet(
                         timer: timer,
                         hrv: hrv,
-                        selectedTheme: selectedTheme,
+                        animation: activeAnimation,
                         customMinutes: $customMinutes,
                         selectedPreset: $selectedPreset,
                         onStart: startSession
@@ -78,7 +82,7 @@ struct StudyTimerView: View {
                             } label: {
                                 Image(systemName: "paintpalette.fill")
                                     .font(.subheadline)
-                                    .foregroundColor(selectedTheme.primaryColor)
+                                    .foregroundColor(activeAnimation.primaryColor)
                             }
                         }
                     }
@@ -87,7 +91,7 @@ struct StudyTimerView: View {
             .toolbar(immersiveLandscapeMode ? .hidden : .visible, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showThemePicker) {
-                StudyTimerThemePickerSheet(selectedTheme: $selectedTheme)
+                StudyTimerQuickThemeSheet()
             }
         }
         .statusBarHidden(immersiveLandscapeMode)

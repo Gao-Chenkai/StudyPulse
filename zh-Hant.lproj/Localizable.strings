@@ -1396,3 +1396,89 @@
 "markdown.cmd.divider" = "分隔線";
 "markdown.view.togglePreview" = "切換預覽";
 "markdown.view.toggleVertical" = "上下分欄";
+
+// MARK: - Theme Shop (主題 / 皮膚商店)
+"theme.shop.title" = "主題商店";
+"theme.shop.subtitle" = "隨著里程碑達成,逐步解鎖主色、卡片皮膚與計時器動畫。";
+"theme.shop.section.accent" = "主色預設";
+"theme.shop.section.skin" = "卡片皮膚";
+"theme.shop.section.animation" = "計時器動畫";
+"theme.shop.unlocked" = "已解鎖";
+"theme.shop.locked.unlockAt" = "達成:%@";
+"theme.shop.preview.title" = "即時預覽";
+"theme.shop.debugBanner" = "除錯模式:所有主題已解鎖,可自由預覽";
+
+// Accent Palettes
+"theme.shop.item.system.name" = "系統色";
+"theme.shop.item.system.description" = "跟隨系統主色。";
+"theme.shop.item.blue.name" = "海洋藍";
+"theme.shop.item.blue.description" = "預設海洋藍。";
+"theme.shop.item.cyan.name" = "青色";
+"theme.shop.item.cyan.description" = "明亮青色。";
+"theme.shop.item.teal.name" = "水鴨色";
+"theme.shop.item.teal.description" = "冷色水鴨。";
+"theme.shop.item.green.name" = "森林綠";
+"theme.shop.item.green.description" = "森林綠。";
+"theme.shop.item.mint.name" = "薄荷";
+"theme.shop.item.mint.description" = "柔和薄荷綠。";
+"theme.shop.item.orange.name" = "橙色";
+"theme.shop.item.orange.description" = "活力橙。";
+"theme.shop.item.red.name" = "紅色";
+"theme.shop.item.red.description" = "醒目紅。";
+"theme.shop.item.pink.name" = "粉色";
+"theme.shop.item.pink.description" = "柔粉。";
+"theme.shop.item.purple.name" = "紫色";
+"theme.shop.item.purple.description" = "皇家紫。";
+"theme.shop.item.indigo.name" = "靛藍";
+"theme.shop.item.indigo.description" = "深靛藍。";
+"theme.shop.item.sakura_pink.name" = "櫻花粉";
+"theme.shop.item.sakura_pink.description" = "柔和櫻花粉色。";
+"theme.shop.item.galaxy_violet.name" = "銀河紫";
+"theme.shop.item.galaxy_violet.description" = "深邃宇宙紫。";
+"theme.shop.item.aurora_cyan.name" = "極光青";
+"theme.shop.item.aurora_cyan.description" = "明亮極光綠青。";
+"theme.shop.item.midnight_indigo.name" = "午夜靛";
+"theme.shop.item.midnight_indigo.description" = "深藍夜空。";
+"theme.shop.item.sunset_orange.name" = "日落橙";
+"theme.shop.item.sunset_orange.description" = "暖日落漸層。";
+
+// Card Skins
+"theme.shop.item.minimal_paper.name" = "素紙";
+"theme.shop.item.minimal_paper.description" = "簡約素色紙卡片。";
+"theme.shop.item.frosted_glass.name" = "磨砂玻璃";
+"theme.shop.item.frosted_glass.description" = "iOS 26 液態玻璃。";
+"theme.shop.item.aurora_mist.name" = "極光霧";
+"theme.shop.item.aurora_mist.description" = "柔和多彩光暈。";
+"theme.shop.item.sakura_blossom.name" = "櫻花瓣";
+"theme.shop.item.sakura_blossom.description" = "櫻花瓣裝飾粉色漸層。";
+"theme.shop.item.galaxy_nebula.name" = "銀河星雲";
+"theme.shop.item.galaxy_nebula.description" = "深紫星空背景。";
+"theme.shop.item.parchment.name" = "羊皮紙";
+"theme.shop.item.parchment.description" = "暖棕舊紙紋理。";
+
+// Timer Animations
+"theme.shop.item.aurora.name" = "極光";
+"theme.shop.item.aurora.description" = "綠藍紫流動 + 柔和光球。";
+"theme.shop.item.sunset.name" = "日落";
+"theme.shop.item.sunset.description" = "橙粉流動 + 暖光球。";
+"theme.shop.item.ocean.name" = "海洋";
+"theme.shop.item.ocean.description" = "深藍 + 上升氣泡。";
+"theme.shop.item.forest.name" = "森林";
+"theme.shop.item.forest.description" = "深綠 + 螢火光點。";
+"theme.shop.item.lavender.name" = "薰衣草";
+"theme.shop.item.lavender.description" = "紫 + 飄落花瓣。";
+"theme.shop.item.neon.name" = "霓虹";
+"theme.shop.item.neon.description" = "明亮霓虹 + 光球。";
+"theme.shop.item.polar.name" = "極地";
+"theme.shop.item.polar.description" = "冰藍 + 飄落雪花。";
+"theme.shop.item.sakura.name" = "櫻花";
+"theme.shop.item.sakura.description" = "粉色 + 飄落櫻花瓣。";
+"theme.shop.item.galaxy.name" = "銀河";
+"theme.shop.item.galaxy.description" = "深紫星空 + 閃爍星點。";
+"theme.shop.item.midnight.name" = "午夜";
+"theme.shop.item.midnight.description" = "深藍星海 + 星點。";
+"theme.shop.item.mint_fresh.name" = "清新薄荷";
+"theme.shop.item.mint_fresh.description" = "清新薄荷 + 上升氣泡。";
+
+// Quick Theme Sheet
+"theme.shop.browseAll" = "瀏覽全部主題";

@@ -18,9 +18,6 @@ struct MainStatsCard: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject private var envManager: AppEnvironmentManager
-    /// 渐变动画开关 — 之前用 repeatForever 持续触发 gradient 重算,
-    /// 现改为 onAppear 后单次播放 6 秒动画,然后停(避免持续 CPU 占用)。
-    @State private var animateGradient = false
     /// 平均分文本缓存(随 grades 变化重算,避免每次 body reduce 所有 grades)
     @State private var cachedAverageText: String = "N/A"
     /// 14 天内考试数量缓存(随 filteredExamSets 变化重算)
@@ -93,48 +90,8 @@ struct MainStatsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(.secondarySystemGroupedBackground))
-
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemBlue).opacity(0.06),
-                        Color(.cyan).opacity(0.03)
-                    ]),
-                    startPoint: animateGradient ? .topLeading : .bottomTrailing,
-                    endPoint: animateGradient ? .bottomTrailing : .topLeading
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 24))
-            }
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color(.systemBlue).opacity(0.3),
-                            Color(.cyan).opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(
-            color: Color.black.opacity(0.08),
-            radius: 16,
-            x: 0,
-            y: 8
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .onAppear {
-            // 单次 6 秒动画,完成后停在 .bottomTrailing 状态(不再 repeat),
-            // 避免长期占用 CPU 持续 gradient 重算
-            withAnimation(.easeInOut(duration: 6.0)) {
-                animateGradient = true
-            }
             recomputeStats()
         }
         .onChange(of: container.gradeRepo.grades) { _, _ in recomputeStats() }

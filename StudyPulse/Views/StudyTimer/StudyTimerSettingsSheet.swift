@@ -17,8 +17,8 @@ struct StudyTimerSetupSheet: View {
     @ObservedObject var timer: StudyTimerManager
     @ObservedObject var hrv: HealthKitManager
 
-    /// Currently selected color theme (drives the start button + presets).
-    let selectedTheme: ColorTheme
+    /// Currently selected animation (drives the start button + presets).
+    let animation: TimerAnimation
 
     /// Bindings so that presets and the start button can write into the
     /// parent's state without re-deriving from the recommendation.
@@ -29,7 +29,7 @@ struct StudyTimerSetupSheet: View {
     /// timer, animates the progress, and switches to the active body.
     let onStart: () -> Void
 
-    private var themeColor: Color { selectedTheme.primaryColor }
+    private var themeColor: Color { animation.primaryColor }
 
     var body: some View {
         ScrollView {
@@ -216,28 +216,58 @@ enum StudyTimerRecommendation {
     }
 }
 
-// MARK: - Color Theme Picker
+// MARK: - Quick Theme Sheet (Theme Shop lite)
 
-struct StudyTimerThemePickerSheet: View {
-    @Binding var selectedTheme: ColorTheme
+/// 计时器页内快速切换动效的 sheet。
+/// 不承担解锁选择 — 展示当前已装备的 + 已解锁的 + 一个跳主题商店的入口。
+/// Debug 模式下放行所有条目。
+struct StudyTimerQuickThemeSheet: View {
+    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var showThemeShop = false
 
-    private var themeColor: Color { selectedTheme.primaryColor }
-    private var flowColors: [Color] { selectedTheme.colors }
+    private var activeAnimation: TimerAnimation {
+        envManager.effectiveTimerAnimation
+    }
+
+    private var unlockedAnimations: [TimerAnimation] {
+        let ids = ThemeShopCatalog.timerAnimations
+        return ids.filter { anim in
+            ThemeShopCatalog.isUnlocked(
+                unlockAchievementId: anim.unlockAchievementId,
+                achievementIds: achievementSet,
+                isDebugMode: envManager.debugModeEnabled
+            )
+        }
+    }
+
+    private var achievementSet: Set<String> {
+        AchievementManager.shared.snapshot.achievements
+            .filter { $0.unlockedAt != nil }
+            .map { $0.definitionId }
+            .reduce(into: Set<String>()) { $0.insert($1) }
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 themePreview
+                Divider().padding(.vertical, 8)
                 themeGrid
+                Divider().padding(.vertical, 8)
+                shopEntry
             }
             .navigationTitle("Color Theme".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done".localized()) {
-                        // Dismissal is handled by the parent's `.sheet` binding.
+                        dismiss()
                     }
                 }
+            }
+            .navigationDestination(isPresented: $showThemeShop) {
+                ThemeShopView()
             }
         }
     }
@@ -245,7 +275,7 @@ struct StudyTimerThemePickerSheet: View {
     private var themePreview: some View {
         ZStack {
             LinearGradient(
-                colors: flowColors.map { $0.opacity(0.15) },
+                colors: activeAnimation.colors.map { $0.opacity(0.15) },
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -254,59 +284,84 @@ struct StudyTimerThemePickerSheet: View {
             Circle()
                 .stroke(
                     AngularGradient(
-                        colors: flowColors + [flowColors[0]],
+                        colors: activeAnimation.colors + [activeAnimation.colors[0]],
                         center: .center
                     ),
                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .frame(width: 120, height: 120)
-                .shadow(color: themeColor.opacity(0.5), radius: 12)
+                .shadow(color: activeAnimation.primaryColor.opacity(0.5), radius: 12)
         }
-        .frame(height: 200)
+        .frame(height: 180)
     }
 
     private var themeGrid: some View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                ForEach(ColorTheme.allCases) { theme in
+                ForEach(unlockedAnimations) { anim in
                     Button {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                            selectedTheme = theme
+                            envManager.setTimerAnimationId(anim.id)
                         }
                     } label: {
-                        themeTile(theme)
+                        themeTile(anim)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .padding(.vertical, 12)
         }
     }
 
+    private var shopEntry: some View {
+        Button {
+            showThemeShop = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "paintpalette.fill")
+                    .font(.system(size: 18, weight: .medium))
+                Text("Browse All Themes".localized())
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+        }
+        .buttonStyle(.plain)
+    }
+
     @ViewBuilder
-    private func themeTile(_ theme: ColorTheme) -> some View {
+    private func themeTile(_ anim: TimerAnimation) -> some View {
         VStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: theme.colors,
+                            colors: anim.colors,
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 56, height: 56)
-                    .shadow(color: theme.primaryColor.opacity(0.4), radius: 8)
+                    .shadow(color: anim.primaryColor.opacity(0.4), radius: 8)
 
-                if selectedTheme == theme {
+                if activeAnimation.id == anim.id {
                     Circle()
                         .stroke(Color.white, lineWidth: 3)
                         .frame(width: 56, height: 56)
                 }
             }
 
-            Text(theme.displayName)
+            Text(anim.localizedName)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.primary)
         }
@@ -314,7 +369,7 @@ struct StudyTimerThemePickerSheet: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(selectedTheme == theme ? theme.primaryColor.opacity(0.12) : Color(.tertiarySystemFill))
+                .fill(activeAnimation.id == anim.id ? anim.primaryColor.opacity(0.12) : Color(.tertiarySystemFill))
         )
     }
 }

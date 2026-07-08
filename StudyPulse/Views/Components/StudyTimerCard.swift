@@ -6,6 +6,7 @@ import SwiftUI
 struct StudyTimerCard: View {
     @ObservedObject private var timer = StudyTimerManager.shared
     @ObservedObject private var hrv = HealthKitManager.shared
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var showingTimer = false
 
     var body: some View {
@@ -39,9 +40,7 @@ struct StudyTimerCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .fullScreenCover(isPresented: $showingTimer) {
             StudyTimerView()
         }

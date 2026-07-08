@@ -520,6 +520,7 @@ struct UnregisteredExamsReminderCard: View {
 // MARK: - 每日励志卡片
 struct DailyQuoteCard: View {
     let quote: String
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -527,7 +528,7 @@ struct DailyQuoteCard: View {
             VStack(spacing: 16) {
                 Image(systemName: "quote.bubble.fill")
                     .font(.system(size: 28))
-                    .foregroundColor(Color(.systemIndigo).opacity(0.6))
+                    .foregroundColor(envManager.effectiveAccentPalette.color.opacity(0.6))
 
                 Text(quote)
                     .font(.system(size: 15, weight: .medium, design: .serif))
@@ -541,29 +542,7 @@ struct DailyQuoteCard: View {
         .frame(minHeight: 140)
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.secondarySystemGroupedBackground))
-
-                RadialGradient(
-                    colors: [
-                        Color(.systemIndigo).opacity(0.06),
-                        Color.clear
-                    ],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: 200
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-            }
-        )
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 10,
-            x: 0,
-            y: 4
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
     }
 }
 

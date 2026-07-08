@@ -73,7 +73,7 @@ struct StreakHomeCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 12)
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .debugLayoutBoundsAuto()
     }
 

@@ -1396,3 +1396,89 @@
 "markdown.cmd.divider" = "구분선";
 "markdown.view.togglePreview" = "미리보기 전환";
 "markdown.view.toggleVertical" = "상하 분할";
+
+// MARK: - Theme Shop (테마 / 스킨 상점)
+"theme.shop.title" = "테마 상점";
+"theme.shop.subtitle" = "마일스톤 달성으로 테마 색·카드 스킨·타이머 애니메이션을 잠금 해제하세요.";
+"theme.shop.section.accent" = "테마 색";
+"theme.shop.section.skin" = "카드 스킨";
+"theme.shop.section.animation" = "타이머 애니메이션";
+"theme.shop.unlocked" = "잠금 해제됨";
+"theme.shop.locked.unlockAt" = "달성 조건:%@";
+"theme.shop.preview.title" = "실시간 미리보기";
+"theme.shop.debugBanner" = "디버그 모드:모든 테마 잠금 해제됨(미리보기 가능)";
+
+// Accent Palettes
+"theme.shop.item.system.name" = "시스템";
+"theme.shop.item.system.description" = "시스템 강조 색상 사용.";
+"theme.shop.item.blue.name" = "블루";
+"theme.shop.item.blue.description" = "기본 오션 블루.";
+"theme.shop.item.cyan.name" = "시안";
+"theme.shop.item.cyan.description" = "밝은 시안.";
+"theme.shop.item.teal.name" = "틸";
+"theme.shop.item.teal.description" = "쿨 틸.";
+"theme.shop.item.green.name" = "그린";
+"theme.shop.item.green.description" = "포레스트 그린.";
+"theme.shop.item.mint.name" = "민트";
+"theme.shop.item.mint.description" = "부드러운 민트 그린.";
+"theme.shop.item.orange.name" = "오렌지";
+"theme.shop.item.orange.description" = "비비드 오렌지.";
+"theme.shop.item.red.name" = "레드";
+"theme.shop.item.red.description" = "비비드 레드.";
+"theme.shop.item.pink.name" = "핑크";
+"theme.shop.item.pink.description" = "소프트 핑크.";
+"theme.shop.item.purple.name" = "퍼플";
+"theme.shop.item.purple.description" = "로얄 퍼플.";
+"theme.shop.item.indigo.name" = "인디고";
+"theme.shop.item.indigo.description" = "딥 인디고.";
+"theme.shop.item.sakura_pink.name" = "사쿠라 핑크";
+"theme.shop.item.sakura_pink.description" = "부드러운 벚꽃 핑크.";
+"theme.shop.item.galaxy_violet.name" = "갤럭시 바이올렛";
+"theme.shop.item.galaxy_violet.description" = "깊은 우주 보라.";
+"theme.shop.item.aurora_cyan.name" = "오로라 시안";
+"theme.shop.item.aurora_cyan.description" = "밝은 오로라 그린 시안.";
+"theme.shop.item.midnight_indigo.name" = "미드나잇";
+"theme.shop.item.midnight_indigo.description" = "깊은 파란 밤하늘.";
+"theme.shop.item.sunset_orange.name" = "선셋 오렌지";
+"theme.shop.item.sunset_orange.description" = "따뜻한 노을 그라데이션.";
+
+// Card Skins
+"theme.shop.item.minimal_paper.name" = "페이퍼";
+"theme.shop.item.minimal_paper.description" = "심플 페이퍼 카드.";
+"theme.shop.item.frosted_glass.name" = "프로스티드 글래스";
+"theme.shop.item.frosted_glass.description" = "iOS 26 리퀴드 글래스.";
+"theme.shop.item.aurora_mist.name" = "오로라 미스트";
+"theme.shop.item.aurora_mist.description" = "부드러운 멀티 컬러 글로우.";
+"theme.shop.item.sakura_blossom.name" = "벚꽃";
+"theme.shop.item.sakura_blossom.description" = "벚꽃 장식 + 핑크 그라데이션.";
+"theme.shop.item.galaxy_nebula.name" = "갤럭시 성운";
+"theme.shop.item.galaxy_nebula.description" = "딥 퍼플 별 배경.";
+"theme.shop.item.parchment.name" = "양피지";
+"theme.shop.item.parchment.description" = "따뜻한 갈색 양피지.";
+
+// Timer Animations
+"theme.shop.item.aurora.name" = "오로라";
+"theme.shop.item.aurora.description" = "녹청보라 흐름 + 부드러운 오브.";
+"theme.shop.item.sunset.name" = "선셋";
+"theme.shop.item.sunset.description" = "오렌지 핑크 흐름 + 따뜻한 오브.";
+"theme.shop.item.ocean.name" = "오션";
+"theme.shop.item.ocean.description" = "딥 블루 + 떠오르는 버블.";
+"theme.shop.item.forest.name" = "포레스트";
+"theme.shop.item.forest.description" = "딥 그린 + 반딧불이.";
+"theme.shop.item.lavender.name" = "라벤더";
+"theme.shop.item.lavender.description" = "퍼플 + 떨어지는 꽃잎.";
+"theme.shop.item.neon.name" = "네온";
+"theme.shop.item.neon.description" = "밝은 네온 + 오브.";
+"theme.shop.item.polar.name" = "폴라";
+"theme.shop.item.polar.description" = "얼음 블루 + 눈송이.";
+"theme.shop.item.sakura.name" = "사쿠라";
+"theme.shop.item.sakura.description" = "핑크 + 떨어지는 꽃잎.";
+"theme.shop.item.galaxy.name" = "갤럭시";
+"theme.shop.item.galaxy.description" = "별이 빛나는 밤하늘.";
+"theme.shop.item.midnight.name" = "미드나잇";
+"theme.shop.item.midnight.description" = "딥 블루 별 + 오브.";
+"theme.shop.item.mint_fresh.name" = "프레시 민트";
+"theme.shop.item.mint_fresh.description" = "민트 + 떠오르는 버블.";
+
+// Quick Theme Sheet
+"theme.shop.browseAll" = "모든 테마 보기";

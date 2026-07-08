@@ -17,6 +17,7 @@ import SwiftUI
 struct StudySuggestionsCard: View {
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject private var healthManager = HealthKitManager.shared
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var suggestions: [StudySuggestion] = []
 
     var body: some View {
@@ -55,14 +56,7 @@ struct StudySuggestionsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(20)
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 10,
-            x: 0,
-            y: 4
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .onAppear { reload() }
         .debugLayoutBoundsAuto()
         .onChange(of: healthManager.bodyStatus) { _, _ in reload() }

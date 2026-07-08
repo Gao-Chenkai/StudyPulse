@@ -49,12 +49,11 @@ struct HRVStatusCard: View {
                 }
             }
             .padding(16)
-            .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 18)
+            .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
                     .stroke(accent.opacity(0.25), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             .opacity(animateIn ? 1 : 0)
             .offset(y: animateIn ? 0 : 10)
             .onAppear {

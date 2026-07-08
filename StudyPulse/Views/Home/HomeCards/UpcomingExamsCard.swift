@@ -14,6 +14,7 @@ import SwiftUI
 /// 之前直接读 `container.examRepo.filteredExamSets` 现地计算 14 天窗口。
 struct UpcomingExamsCard: View {
     @Environment(RepositoryContainer.self) private var container
+    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     var upcomingExams: [Exam] {
         let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
@@ -57,14 +58,7 @@ struct UpcomingExamsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(20)
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 10,
-            x: 0,
-            y: 4
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .debugLayoutBoundsAuto()
     }
 }

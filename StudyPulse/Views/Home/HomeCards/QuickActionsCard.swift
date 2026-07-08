@@ -12,6 +12,7 @@ import SwiftUI
 /// 主页"快捷操作"卡片:3 个常用入口。
 struct QuickActionsCard: View {
     @Environment(RepositoryContainer.self) private var container
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var showingAddGrade = false
     @State private var showingNewExam = false
     @State private var showingNewMistake = false
@@ -64,14 +65,7 @@ struct QuickActionsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(20)
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 10,
-            x: 0,
-            y: 4
-        )
+        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .sheet(isPresented: $showingAddGrade) {
             AddGradeView()
                 .environment(container)

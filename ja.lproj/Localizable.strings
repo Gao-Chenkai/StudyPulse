@@ -1396,3 +1396,89 @@
 "markdown.cmd.divider" = "区切り線";
 "markdown.view.togglePreview" = "プレビュー切替";
 "markdown.view.toggleVertical" = "上下分割";
+
+// MARK: - Theme Shop (テーマ / スキンのショップ)
+"theme.shop.title" = "テーマショップ";
+"theme.shop.subtitle" = "マイルストーン達成でテーマ色・カードスキン・タイマー演出をアンロック。";
+"theme.shop.section.accent" = "テーマ色";
+"theme.shop.section.skin" = "カードスキン";
+"theme.shop.section.animation" = "タイマー演出";
+"theme.shop.unlocked" = "解放済み";
+"theme.shop.locked.unlockAt" = "解放条件:%@";
+"theme.shop.preview.title" = "ライブプレビュー";
+"theme.shop.debugBanner" = "デバッグモード:全テーマ解放済み(プレビュー可)";
+
+// Accent Palettes
+"theme.shop.item.system.name" = "システム";
+"theme.shop.item.system.description" = "システムアクセントに従う。";
+"theme.shop.item.blue.name" = "ブルー";
+"theme.shop.item.blue.description" = "既定のオーシャンブルー。";
+"theme.shop.item.cyan.name" = "シアン";
+"theme.shop.item.cyan.description" = "明るいシアン。";
+"theme.shop.item.teal.name" = "ティール";
+"theme.shop.item.teal.description" = "クールなティール。";
+"theme.shop.item.green.name" = "グリーン";
+"theme.shop.item.green.description" = "フォレストグリーン。";
+"theme.shop.item.mint.name" = "ミント";
+"theme.shop.item.mint.description" = "柔らかなミントグリーン。";
+"theme.shop.item.orange.name" = "オレンジ";
+"theme.shop.item.orange.description" = "ビビッドオレンジ。";
+"theme.shop.item.red.name" = "レッド";
+"theme.shop.item.red.description" = "ビビッドレッド。";
+"theme.shop.item.pink.name" = "ピンク";
+"theme.shop.item.pink.description" = "ソフトピンク。";
+"theme.shop.item.purple.name" = "パープル";
+"theme.shop.item.purple.description" = "ロイヤルパープル。";
+"theme.shop.item.indigo.name" = "インディゴ";
+"theme.shop.item.indigo.description" = "ディープインディゴ。";
+"theme.shop.item.sakura_pink.name" = "桜ピンク";
+"theme.shop.item.sakura_pink.description" = "柔らかな桜色。";
+"theme.shop.item.galaxy_violet.name" = "ギャラクシーバイオレット";
+"theme.shop.item.galaxy_violet.description" = "深い宇宙の紫。";
+"theme.shop.item.aurora_cyan.name" = "オーロラシアン";
+"theme.shop.item.aurora_cyan.description" = "明るいオーロラグリーンシアン。";
+"theme.shop.item.midnight_indigo.name" = "ミッドナイト";
+"theme.shop.item.midnight_indigo.description" = "深い青の夜空。";
+"theme.shop.item.sunset_orange.name" = "サンセットオレンジ";
+"theme.shop.item.sunset_orange.description" = "暖色のサンセット。";
+
+// Card Skins
+"theme.shop.item.minimal_paper.name" = "ペーパー";
+"theme.shop.item.minimal_paper.description" = "シンプルな用紙風カード。";
+"theme.shop.item.frosted_glass.name" = "フロステッドガラス";
+"theme.shop.item.frosted_glass.description" = "iOS 26 リキッドガラス。";
+"theme.shop.item.aurora_mist.name" = "オーロラミスト";
+"theme.shop.item.aurora_mist.description" = "柔らかな多色グロー。";
+"theme.shop.item.sakura_blossom.name" = "桜の花びら";
+"theme.shop.item.sakura_blossom.description" = "桜の花びらとピンクのグラデ。";
+"theme.shop.item.galaxy_nebula.name" = "ギャラクシー星雲";
+"theme.shop.item.galaxy_nebula.description" = "深紫の星空背景。";
+"theme.shop.item.parchment.name" = "羊皮紙";
+"theme.shop.item.parchment.description" = "茶色のアンティーク紙。";
+
+// Timer Animations
+"theme.shop.item.aurora.name" = "オーロラ";
+"theme.shop.item.aurora.description" = "緑青紫の流れ + 柔光球。";
+"theme.shop.item.sunset.name" = "サンセット";
+"theme.shop.item.sunset.description" = "橙ピンクの流れ + 暖光球。";
+"theme.shop.item.ocean.name" = "オーシャン";
+"theme.shop.item.ocean.description" = "深い青 + 浮かぶ泡。";
+"theme.shop.item.forest.name" = "フォレスト";
+"theme.shop.item.forest.description" = "深緑 + 蛍の光。";
+"theme.shop.item.lavender.name" = "ラベンダー";
+"theme.shop.item.lavender.description" = "紫 + 舞う花びら。";
+"theme.shop.item.neon.name" = "ネオン";
+"theme.shop.item.neon.description" = "明るいネオン + 光球。";
+"theme.shop.item.polar.name" = "ポーラー";
+"theme.shop.item.polar.description" = "氷の青 + 舞い落ちる雪。";
+"theme.shop.item.sakura.name" = "桜";
+"theme.shop.item.sakura.description" = "ピンク + 舞い落ちる桜。";
+"theme.shop.item.galaxy.name" = "ギャラクシー";
+"theme.shop.item.galaxy.description" = "星空 + 瞬く星。";
+"theme.shop.item.midnight.name" = "ミッドナイト";
+"theme.shop.item.midnight.description" = "深い青の星空 + 星。";
+"theme.shop.item.mint_fresh.name" = "フレッシュミント";
+"theme.shop.item.mint_fresh.description" = "ミント + 浮かぶ泡。";
+
+// Quick Theme Sheet
+"theme.shop.browseAll" = "全テーマを見る";
