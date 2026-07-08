@@ -215,6 +215,12 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
     /// Handwriting history: appended each time the user submits a PencilKit
     /// drawing + rating in the flashcard review flow.
     var handwritingHistory: [HandwritingAnswerEntry] = []
+    /// 用户自评难度 1-5 星;0 = 未评。SRS 调权用。
+    /// User-rated difficulty 1-5; 0 = unrated. Used by SRS weighting.
+    var difficulty: Int = 0
+    /// 自由标签,例如 ["函数", "导数"];匹配时大小写不敏感。
+    /// Free-form tags (e.g. ["functions", "derivatives"]); case-insensitive match.
+    var tags: [String] = []
 
     init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
@@ -223,7 +229,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
          reviewState: ReviewState? = nil, phaseId: UUID? = nil,
          exposureCount: Int = 0, masteryScore: Double = 0.0,
          masteryHistory: [MasteryHistoryEntry] = [],
-         handwritingHistory: [HandwritingAnswerEntry] = []) {
+         handwritingHistory: [HandwritingAnswerEntry] = [],
+         difficulty: Int = 0, tags: [String] = []) {
         self.id = id
         self.title = title
         self.subject = subject
@@ -243,6 +250,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.masteryScore = masteryScore
         self.masteryHistory = masteryHistory
         self.handwritingHistory = handwritingHistory
+        self.difficulty = difficulty
+        self.tags = tags
     }
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
@@ -255,6 +264,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         case reviewState, phaseId
         case exposureCount, masteryScore, masteryHistory
         case handwritingHistory
+        case difficulty, tags
     }
 
     init(from decoder: Decoder) throws {
@@ -278,6 +288,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.masteryScore = try c.decodeIfPresent(Double.self, forKey: .masteryScore) ?? 0.0
         self.masteryHistory = try c.decodeIfPresent([MasteryHistoryEntry].self, forKey: .masteryHistory) ?? []
         self.handwritingHistory = try c.decodeIfPresent([HandwritingAnswerEntry].self, forKey: .handwritingHistory) ?? []
+        self.difficulty = try c.decodeIfPresent(Int.self, forKey: .difficulty) ?? 0
+        self.tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
     }
 }
 

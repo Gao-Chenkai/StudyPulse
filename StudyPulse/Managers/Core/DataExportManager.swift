@@ -28,11 +28,13 @@ enum DataExportManager {
 
     /// 错题 CSV 表头
     /// 旧版：10 列 (无曝光/掌握度)，向后兼容
-    /// 新版：13 列 (尾部追加 ExposureCount / MasteryScore / MasteryHistory)
+    /// 13 列版：尾部追加 ExposureCount / MasteryScore / MasteryHistory
+    /// 15 列版：尾部再追加 Difficulty / Tags
     static let mistakesHeader = [
         "ID", "Title", "Subject", "OriginalQuestion", "Source",
         "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
-        "ExposureCount", "MasteryScore", "MasteryHistory"
+        "ExposureCount", "MasteryScore", "MasteryHistory",
+        "Difficulty", "Tags"
     ]
 
     /// 考试 CSV 表头
@@ -88,6 +90,12 @@ enum DataExportManager {
                 return escapeCSV(str)
             }()
 
+            // tags 用 `;` 分隔(避开逗号);escapeCSV 仍会把含特殊字符的 tag 包进双引号
+            let tagsJoined = mistake.tags
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: ";")
+
             let row: [String] = [
                 mistake.id.uuidString,
                 mistake.title,
@@ -101,7 +109,9 @@ enum DataExportManager {
                 mistake.isInReviewQueue ? "true" : "false",
                 String(mistake.exposureCount),
                 String(format: "%.4f", mistake.masteryScore),
-                masteryHistoryJSON
+                masteryHistoryJSON,
+                String(mistake.difficulty),
+                tagsJoined
             ]
             csv += joinRow(row)
         }
@@ -561,7 +571,8 @@ enum DataExportManager {
         // 兼容多种列数：
         //  9 列：最旧版（无 SRSEnabled）
         //  10 列：旧版（带 SRSEnabled）
-        //  13 列：新版（带 SRSEnabled + ExposureCount + MasteryScore + MasteryHistory）
+        //  13 列：带 SRSEnabled + ExposureCount + MasteryScore + MasteryHistory
+        //  15 列：再追加 Difficulty / Tags
         guard fields.count >= 9 else { return nil }
 
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -602,6 +613,23 @@ enum DataExportManager {
             return decoded
         }()
 
+        // 15 列：Difficulty / Tags
+        let difficulty: Int = {
+            guard fields.count > 13 else { return 0 }
+            let raw = fields[13].trimmingCharacters(in: .whitespacesAndNewlines)
+            let v = Int(raw) ?? 0
+            return max(0, min(5, v))
+        }()
+        let tags: [String] = {
+            guard fields.count > 14 else { return [] }
+            let raw = fields[14].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !raw.isEmpty else { return [] }
+            return raw
+                .split(separator: ";")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }()
+
         return MistakeNote(
             title: title,
             subject: subject,
@@ -614,7 +642,9 @@ enum DataExportManager {
             reviewState: reviewState,
             exposureCount: exposureCount,
             masteryScore: masteryScore,
-            masteryHistory: masteryHistory
+            masteryHistory: masteryHistory,
+            difficulty: difficulty,
+            tags: tags
         )
     }
 

@@ -17,6 +17,10 @@ struct MistakeView: View {
     @StateObject private var viewModel: MistakeViewModel
     @State private var showingNewMistakeSet = false
     @State private var showingFlashcards = false
+    /// 闪卡过滤模式（默认 .dueQueue，复习入口按钮 / 工具栏切换可改）
+    @State private var flashcardFilter: FlashcardFilter = .dueQueue
+    /// 标签图谱 full-screen
+    @State private var showingTagGraph = false
 
     // PDF 导出状态
     @State private var showingPDFExportSheet = false
@@ -58,7 +62,60 @@ struct MistakeView: View {
                             // SRS 待复习入口
                             if viewModel.searchText.isEmpty && viewModel.srsOverview.dueCount > 0 {
                                 DueReviewBanner(overview: viewModel.srsOverview) {
+                                    flashcardFilter = .dueQueue
                                     showingFlashcards = true
+                                }
+                                .padding(.horizontal)
+                            }
+
+                            // 标签横向 chip section(顶部)
+                            // 出现在非搜索场景下。点击 chip 把搜索词设为 #tag,
+                            // 复用已有搜索过滤逻辑(由 MistakeFilter + searchInSubject 识别)
+                            let allTags = MistakeFilter.allTags(container.mistakeRepo.filteredMistakeSets)
+                            if !allTags.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "tag.fill")
+                                            .foregroundColor(.purple)
+                                        Text("Tags".localized())
+                                            .font(.headline)
+                                        Spacer()
+                                        if allTags.count > 0 {
+                                            Button {
+                                                showingTagGraph = true
+                                            } label: {
+                                                Label("Tag Graph".localized(), systemImage: "circle.hexagongrid")
+                                                    .font(.caption.weight(.medium))
+                                                    .foregroundStyle(Color.purple)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(Array(allTags.enumerated()), id: \.element) { _, tag in
+                                                Button {
+                                                    viewModel.searchText = "#\(tag)"
+                                                } label: {
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "number")
+                                                            .font(.caption2)
+                                                        Text(tag)
+                                                            .font(.caption.weight(.medium))
+                                                    }
+                                                    .foregroundStyle(.white)
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 5)
+                                                    .background(
+                                                        Capsule().fill(Color.purple.opacity(0.85))
+                                                    )
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                        .padding(.horizontal)
+                                    }
                                 }
                                 .padding(.horizontal)
                             }
@@ -99,8 +156,29 @@ struct MistakeView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if viewModel.srsOverview.totalEnrolled > 0 {
-                        Button {
-                            showingFlashcards = true
+                        Menu {
+                            Button {
+                                flashcardFilter = .dueQueue
+                                showingFlashcards = true
+                            } label: {
+                                Label("Review All Due".localized(), systemImage: "rectangle.stack")
+                            }
+                            let dueByTag = topTagsDue(tagFilter: { tag in
+                                let due = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
+                                return MistakeFilter.tagged(due, tag: tag)
+                            })
+                            if !dueByTag.isEmpty {
+                                Divider()
+                                Text("Review by Tag".localized())
+                                ForEach(Array(dueByTag.prefix(5)), id: \.tag) { entry in
+                                    Button {
+                                        flashcardFilter = .tag(entry.tag)
+                                        showingFlashcards = true
+                                    } label: {
+                                        Label("#\(entry.tag) (\(entry.count))", systemImage: "tag")
+                                    }
+                                }
+                            }
                         } label: {
                             ZStack(alignment: .topTrailing) {
                                 Image(systemName: "rectangle.stack")
@@ -122,6 +200,14 @@ struct MistakeView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
+                        if !MistakeFilter.allTags(container.mistakeRepo.filteredMistakeSets).isEmpty {
+                            Button {
+                                showingTagGraph = true
+                            } label: {
+                                Image(systemName: "circle.hexagongrid")
+                            }
+                            .accessibilityLabel("Tag Graph".localized())
+                        }
                         if !container.mistakeRepo.filteredMistakeSets.isEmpty {
                             Button {
                                 showingPDFExportSheet = true
@@ -201,7 +287,7 @@ struct MistakeView: View {
             }
             .fullScreenCover(isPresented: $showingFlashcards) {
                 NavigationStack {
-                    FlashcardStudyView()
+                    FlashcardStudyView(filter: flashcardFilter)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
                                 Button {
@@ -215,8 +301,37 @@ struct MistakeView: View {
                         }
                 }
             }
+            .fullScreenCover(isPresented: $showingTagGraph) {
+                TagGraphView(
+                    mistakes: container.mistakeRepo.filteredMistakeSets,
+                    onSelectTag: { tag in
+                        viewModel.searchText = "#\(tag)"
+                        showingTagGraph = false
+                    }
+                )
+            }
             .background(Color(.systemGroupedBackground))
         }
+    }
+
+    // MARK: - Tag helpers
+
+    /// 顶 5 个有 due 错题的标签 + 数量
+    private struct TagDueEntry {
+        let tag: String
+        let count: Int
+    }
+
+    private func topTagsDue(tagFilter: (String) -> [MistakeNote]) -> [TagDueEntry] {
+        let tags = MistakeFilter.allTags(container.mistakeRepo.filteredMistakeSets)
+        var entries: [TagDueEntry] = []
+        for tag in tags {
+            let count = tagFilter(tag).count
+            if count > 0 {
+                entries.append(TagDueEntry(tag: tag, count: count))
+            }
+        }
+        return entries.sorted { $0.count > $1.count }
     }
 
     // MARK: - PDF Export flow
@@ -344,6 +459,47 @@ struct SubjectMistakesView: View {
                 // 科目统计卡片
                 SubjectOverviewCard(subject: subject, mistakes: sortedMistakes)
                     .padding(.horizontal)
+
+                // 科目下所有 tag 横向 chip section(未搜索时显示)
+                // 点击 chip → 把搜索词设为 #tag
+                let allTags = MistakeFilter.allTags(mistakes)
+                if !allTags.isEmpty && searchText.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "tag.fill")
+                                .foregroundColor(.purple)
+                            Text("Tags".localized())
+                                .font(.headline)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(allTags.enumerated()), id: \.element) { _, tag in
+                                    Button {
+                                        searchText = "#\(tag)"
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "number")
+                                                .font(.caption2)
+                                            Text(tag)
+                                                .font(.caption.weight(.medium))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(
+                                            Capsule().fill(Color.purple.opacity(0.85))
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
 
                 // 建议复习的题目
                 if !suggestedForReview.isEmpty && searchText.isEmpty {
@@ -613,7 +769,7 @@ struct MistakeCardView: View {
                     Text(mistake.title)
                         .font(.headline)
                         .lineLimit(1)
-                    
+
                     if !mistake.subject.isEmpty {
                         Text(mistake.subject.localized())
                             .font(.caption)
@@ -625,23 +781,39 @@ struct MistakeCardView: View {
                             )
                             .foregroundColor(Color(.systemPurple))
                     }
+
+                    // 标签胶囊(列表紧凑模式,最多 3 个)
+                    if !mistake.tags.isEmpty {
+                        TagChipsView(tags: mistake.tags, compact: true, maxVisible: 3)
+                    }
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(mistake.date.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     if totalImageCount > 0 {
                         Label("\(totalImageCount)", systemImage: "photo.fill")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
+
+                    // 难度小星条(右上角,5 颗)
+                    if mistake.difficulty > 0 {
+                        HStack(spacing: 1) {
+                            ForEach(1...5, id: \.self) { i in
+                                Image(systemName: i <= mistake.difficulty ? "star.fill" : "star")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(i <= mistake.difficulty ? Color.orange : Color.gray.opacity(0.3))
+                            }
+                        }
+                    }
                 }
             }
-            
+
             // Preview of original question
             if !mistake.originalQuestion.isEmpty {
                 Text(mistake.originalQuestion)
@@ -650,7 +822,7 @@ struct MistakeCardView: View {
                     .lineLimit(2)
                     .padding(.top, 2)
             }
-            
+
             // Source
             if !mistake.source.isEmpty {
                 Text(String(format: "Source: %@".localized(), mistake.source))
@@ -737,6 +909,33 @@ struct MistakeSetDetailView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(liveMistake.date.formatted(date: .abbreviated, time: .omitted))
+                }
+
+                // 难度自评
+                if liveMistake.difficulty > 0 {
+                    HStack {
+                        Text("Difficulty".localized())
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        HStack(spacing: 2) {
+                            ForEach(1...5, id: \.self) { i in
+                                Image(systemName: i <= liveMistake.difficulty ? "star.fill" : "star")
+                                    .font(.caption2)
+                                    .foregroundStyle(i <= liveMistake.difficulty ? Color.orange : Color.gray.opacity(0.4))
+                            }
+                        }
+                    }
+                }
+
+                // 标签(只读)
+                if !liveMistake.tags.isEmpty {
+                    HStack(alignment: .top) {
+                        Text("Tags".localized())
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        TagChipsView(tags: liveMistake.tags, compact: true)
+                            .frame(maxWidth: 240, alignment: .trailing)
+                    }
                 }
             }
             
@@ -968,20 +1167,31 @@ struct SuggestedMistakeCard: View {
             HStack {
                 Image(systemName: "lightbulb.fill")
                     .foregroundColor(.yellow)
-                
+
                 Text(reviewPriority)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
+
+                // 难度小星条
+                if mistake.difficulty > 0 {
+                    HStack(spacing: 1) {
+                        ForEach(1...5, id: \.self) { i in
+                            Image(systemName: i <= mistake.difficulty ? "star.fill" : "star")
+                                .font(.system(size: 9))
+                                .foregroundStyle(i <= mistake.difficulty ? Color.orange : Color.gray.opacity(0.3))
+                        }
+                    }
+                }
             }
-            
+
             Text(mistake.title)
                 .font(.headline)
                 .foregroundColor(.primary)
                 .lineLimit(1)
-            
+
             if !mistake.subject.isEmpty {
                 Text(mistake.subject.localized())
                     .font(.caption)
@@ -991,21 +1201,26 @@ struct SuggestedMistakeCard: View {
                     .foregroundColor(Color(.systemPurple))
                     .cornerRadius(4)
             }
-            
+
+            // 标签胶囊(紧凑)
+            if !mistake.tags.isEmpty {
+                TagChipsView(tags: mistake.tags, compact: true, maxVisible: 2)
+            }
+
             if !mistake.originalQuestion.isEmpty {
                 Text(mistake.originalQuestion)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             }
-            
+
             HStack {
                 Text(daysSinceAdded)
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundColor(.secondary)

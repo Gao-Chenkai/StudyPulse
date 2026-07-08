@@ -1481,4 +1481,24 @@
 "theme.shop.item.mint_fresh.description" = "ミント + 浮かぶ泡。";
 
 // Quick Theme Sheet
-"theme.shop.browseAll" = "全テーマを見る";
+"theme.shop.browseAll" = "すべてのテーマを見る";
+
+// MARK: - 難易度 & タグ (added 2026-07-08)
+"Difficulty" = "難易度";
+"Unrated" = "未評価";
+"Easy" = "簡単";
+"Basic" = "基礎";
+"Medium" = "普通";
+"Hard" = "難しい";
+"Extreme" = "非常に難しい";
+"Tags" = "タグ";
+"Add Tag" = "タグを追加";
+"Tag suggestions" = "タグ候補";
+"Review by Tag" = "タグ別に復習";
+"Review All Due" = "全て復習";
+"Tag Graph" = "タググラフ";
+"No tags yet" = "タグがありません";
+"No tags yet — add tags to your mistakes to see the graph" = "タグがありません — ミスにタグを追加するとグラフが表示されます";
+"Recenter" = "再配置";
+"Too many tags" = "タグが多すぎます";
+"Too many tags — try removing some to view the graph" = "タグが60個を超えています。一部削除してから再度表示してください";

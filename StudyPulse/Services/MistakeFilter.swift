@@ -28,7 +28,7 @@ enum MistakeFilter {
     /// 一次性产出 5 个聚合结果(分组 + 排序 + 搜索过滤 + 总数)。
     /// - Parameters:
     ///   - mistakes: 输入错题
-    ///   - searchText: 搜索词(空 = 不过滤)
+    ///   - searchText: 搜索词,支持 `#tag1 #tag2` 多标签 AND + 自由文本子串匹配
     ///   - uncategorizedKey: 空 subject 归到哪个桶(默认 "Uncategorized")
     static func group(
         mistakes: [MistakeNote],
@@ -50,19 +50,20 @@ enum MistakeFilter {
             return a.localizedCompare(b) == .orderedAscending
         }
 
-        // 3. 搜索过滤
-        let filteredSubjects: [String]
-        if searchText.isEmpty {
-            filteredSubjects = sortedSubjects
-        } else {
-            filteredSubjects = sortedSubjects.filter { subject in
-                if subject.localizedCaseInsensitiveContains(searchText) { return true }
-                return groups[subject]?.contains {
-                    $0.title.localizedCaseInsensitiveContains(searchText) ||
-                    $0.originalQuestion.localizedCaseInsensitiveContains(searchText)
-                } ?? false
+        // 3. 搜索过滤:复用 parser
+        let parsed = parseSearchQuery(searchText)
+        let filteredSubjects: [String] = (parsed.tags.isEmpty && parsed.text.isEmpty)
+            ? sortedSubjects
+            : sortedSubjects.filter { subject in
+                // subject 命中 OR 该组下任一错题命中
+                if parsed.tags.isEmpty && parsed.text.isEmpty { return true }
+                // subject 名称本身命中(仅在自由文本模式下)
+                if parsed.tags.isEmpty,
+                   subject.localizedCaseInsensitiveContains(parsed.text) {
+                    return true
+                }
+                return (groups[subject] ?? []).contains { matches($0, parsed: parsed) }
             }
-        }
 
         return MistakeGroups(
             bySubject: groups,
@@ -74,19 +75,129 @@ enum MistakeFilter {
 
     // MARK: - 单科目内的搜索/排序/复习建议
 
+    // MARK: - 搜索词解析
+
+    /// 把搜索词拆成 (1) 标签过滤(精确大小写不敏感,AND 多标签) + (2) 自由文本(子串匹配)。
+    /// 约定:
+    ///   - `#tag` 视为标签精确过滤(忽略大小写、忽略前后空白)
+    ///   - 多个 `#tag` token → AND(必须全部命中)
+    ///   - 标签之间允许用空格 / `,` / `, ` 分隔
+    ///   - 剩余非 `#` 文本走 title / subject / originalQuestion / source / tags 子串匹配
+    static func parseSearchQuery(_ searchText: String) -> (tags: [String], text: String) {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return ([], "") }
+
+        // 提取所有 #tag 标记(支持中英文 tag)
+        let pattern = #"#([^\s#,]+)"#
+        var tagFilters: [String] = []
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            let range = NSRange(trimmed.startIndex..., in: trimmed)
+            for match in regex.matches(in: trimmed, range: range) {
+                guard match.numberOfRanges >= 2,
+                      let r = Range(match.range(at: 1), in: trimmed) else { continue }
+                let tag = String(trimmed[r]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !tag.isEmpty { tagFilters.append(tag.lowercased()) }
+            }
+        }
+
+        // 去掉所有 #tag 标记 → 剩余自由文本
+        let remaining = trimmed
+            .replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            // 顺手把 , 改成空格(避免误把","当子串匹配)
+            .replacingOccurrences(of: ",", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (tagFilters, remaining)
+    }
+
+    /// 判定某错题是否命中解析后的搜索条件
+    static func matches(_ mistake: MistakeNote, parsed: (tags: [String], text: String)) -> Bool {
+        let (tags, text) = parsed
+        // 1) 标签必须全部命中(AND)
+        let mistakeTagsLower = Set(mistake.tags.map { $0.lowercased() })
+        for t in tags {
+            if !mistakeTagsLower.contains(t) { return false }
+        }
+        // 2) 自由文本子串匹配(空就跳过)
+        guard !text.isEmpty else { return true }
+        let lower = text.lowercased()
+        if mistake.subject.localized().lowercased().contains(lower) { return true }
+        if mistake.title.localized().lowercased().contains(lower) { return true }
+        if mistake.originalQuestion.localizedCaseInsensitiveContains(text) { return true }
+        if mistake.source.localizedCaseInsensitiveContains(text) { return true }
+        if mistake.tags.contains(where: { $0.lowercased().contains(lower) }) { return true }
+        return false
+    }
+}
+
+extension MistakeFilter {
+
     /// 在指定 subject 的错题上做搜索过滤 + 按日期降序排序。
+    /// 多标签:用空格或逗号分隔的 `#tag1 #tag2` 视为 AND 过滤。
+    /// Plain 文本(无 `#`)走 title / originalQuestion / source / tags 子串匹配(向后兼容)。
     static func searchInSubject(
         _ mistakes: [MistakeNote],
         searchText: String
     ) -> [MistakeNote] {
-        if searchText.isEmpty {
+        let parsed = parseSearchQuery(searchText)
+        // 搜索词为空 → 全部返回(原行为)
+        if parsed.tags.isEmpty && parsed.text.isEmpty {
             return mistakes.sorted { $0.date > $1.date }
         }
-        return mistakes.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.originalQuestion.localizedCaseInsensitiveContains(searchText) ||
-            $0.source.localizedCaseInsensitiveContains(searchText)
-        }.sorted { $0.date > $1.date }
+        return mistakes
+            .filter { matches($0, parsed: parsed) }
+            .sorted { $0.date > $1.date }
+    }
+
+    /// 按标签过滤(大小写不敏感,任一 tag 完全匹配)
+    static func tagged(_ mistakes: [MistakeNote], tag: String) -> [MistakeNote] {
+        let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return mistakes }
+        let lower = trimmed.lowercased()
+        return mistakes.filter { m in
+            m.tags.contains { $0.lowercased() == lower }
+        }
+    }
+
+    /// 收集所有错题中出现过的 tag(去重 + 保持首次出现顺序,过滤空字符串)
+    static func allTags(_ mistakes: [MistakeNote]) -> [String] {
+        var seenLower: Set<String> = []
+        var ordered: [String] = []
+        for m in mistakes {
+            for tag in m.tags {
+                let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                let lower = trimmed.lowercased()
+                if seenLower.insert(lower).inserted {
+                    ordered.append(trimmed)
+                }
+            }
+        }
+        return ordered
+    }
+
+    /// 按标签计数(返回 [(tag, count)],已按 count desc 排序;平局按字母升序)
+    static func tagCounts(_ mistakes: [MistakeNote]) -> [(tag: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        var firstAppearance: [String: String] = [:]
+        for m in mistakes {
+            for raw in m.tags {
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                let key = trimmed.lowercased()
+                counts[key, default: 0] += 1
+                if firstAppearance[key] == nil {
+                    firstAppearance[key] = trimmed
+                }
+            }
+        }
+        return counts
+            .map { (key, c) in (tag: firstAppearance[key] ?? key, count: c) }
+            .sorted { lhs, rhs in
+                if lhs.count != rhs.count { return lhs.count > rhs.count }
+                return lhs.tag.localizedCaseInsensitiveCompare(rhs.tag) == .orderedAscending
+            }
     }
 
     /// 取最近一段时间录入的错题 + 按"复习紧急度"排序。

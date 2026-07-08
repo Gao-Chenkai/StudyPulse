@@ -120,14 +120,40 @@ nonisolated enum SRSAlgorithm {
     static let defaultEaseFactor: Double = 2.5
     /// 「未来 7 天」窗口，用于 upcoming 统计
     static let upcomingWindowDays: Int = 7
+    /// 难度乘子表（1-5 星 → intervalDays 乘子）。
+    /// 用户自评难度在 SM-2 算完 intervalDays 之后再次缩放:
+    /// - 1 星(简单)→ 0.5×:更频繁复习
+    /// - 3 星(中等)→ 1.0×:无影响
+    /// - 5 星(困难)→ 1.6×:拉长间隔
+    /// 0 / 缺省视为 1.0。
+    /// Difficulty multipliers (1-5 stars → intervalDays multiplier).
+    /// Applied AFTER SM-2 computes intervalDays:
+    /// - 1★ (easy) → 0.5×: review more often
+    /// - 3★ (medium) → 1.0×: no change
+    /// - 5★ (hard) → 1.6×: stretch intervals
+    /// 0 / missing treated as 1.0.
+    static let difficultyMultipliers: [Int: Double] = [
+        1: 0.5,
+        2: 0.75,
+        3: 1.0,
+        4: 1.3,
+        5: 1.6
+    ]
+
+    /// 取难度乘子（未评 / 越界 → 1.0）
+    /// Multiplier for a given difficulty (0 / out-of-range → 1.0).
+    static func difficultyMultiplier(for difficulty: Int) -> Double {
+        difficultyMultipliers[difficulty] ?? 1.0
+    }
 
     /// 根据自评档位计算下一状态
     /// - Parameters:
     ///   - quality: 自评档位
     ///   - state: 当前状态
+    ///   - difficulty: 用户自评难度 1-5;0 = 未评(乘子 1.0)
     ///   - now: 评估时间（默认 Date()，便于测试）
     /// - Returns: 更新后的状态
-    static func apply(quality: ReviewQuality, to state: ReviewState, now: Date = Date()) -> ReviewState {
+    static func apply(quality: ReviewQuality, to state: ReviewState, difficulty: Int = 0, now: Date = Date()) -> ReviewState {
         var newState = state
         newState.lastReviewDate = now
 
@@ -180,6 +206,14 @@ nonisolated enum SRSAlgorithm {
                 newState.intervalDays = Int(bonus.rounded())
             }
             newState.easeFactor = min(3.0, state.easeFactor + 0.15)
+        }
+
+        // 难度后置调权:在 SM-2 算完 intervalDays 之后按用户难度乘子再次缩放。
+        // Post-SM-2 difficulty scaling: rescale intervalDays by the user's
+        // self-rated difficulty multiplier. 0 (unrated) → 1.0 (no change).
+        let multiplier = difficultyMultiplier(for: difficulty)
+        if multiplier != 1.0 {
+            newState.intervalDays = max(1, Int((Double(newState.intervalDays) * multiplier).rounded()))
         }
 
         // 计算下次复习日期（基于今天的 09:00，避免深夜推送）

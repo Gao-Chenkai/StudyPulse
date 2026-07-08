@@ -1476,3 +1476,23 @@
 
 // Quick Theme Sheet
 "theme.shop.browseAll" = "Browse All Themes";
+
+// MARK: - Difficulty & Tags (added 2026-07-08)
+"Difficulty" = "Difficulty";
+"Unrated" = "Unrated";
+"Easy" = "Easy";
+"Basic" = "Basic";
+"Medium" = "Medium";
+"Hard" = "Hard";
+"Extreme" = "Extreme";
+"Tags" = "Tags";
+"Add Tag" = "Add Tag";
+"Tag suggestions" = "Tag suggestions";
+"Review by Tag" = "Review by Tag";
+"Review All Due" = "Review All Due";
+"Tag Graph" = "Tag Graph";
+"No tags yet" = "No tags yet";
+"No tags yet — add tags to your mistakes to see the graph" = "No tags yet — add tags to your mistakes to see the graph";
+"Recenter" = "Recenter";
+"Too many tags" = "Too many tags";
+"Too many tags — try removing some to view the graph" = "You have more than 60 tags. Try removing some to view the graph.";

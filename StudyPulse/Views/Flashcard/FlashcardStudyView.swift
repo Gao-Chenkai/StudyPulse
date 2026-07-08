@@ -55,6 +55,8 @@ enum FlashcardFilter: Equatable {
     case dueQueue
     /// 临时复习单张（不计 SM-2，仅标记）
     case single(MistakeNote)
+    /// 仅复习打了某 tag 的 due 错题
+    case tag(String)
 
     static func == (lhs: FlashcardFilter, rhs: FlashcardFilter) -> Bool {
         switch (lhs, rhs) {
@@ -62,9 +64,26 @@ enum FlashcardFilter: Equatable {
             return true
         case (.single(let a), .single(let b)):
             return a.id == b.id
+        case (.tag(let a), .tag(let b)):
+            return a == b
         default:
             return false
         }
+    }
+
+    /// 简短标签（顶部状态条 / Debug 展示用）
+    var shortLabel: String {
+        switch self {
+        case .dueQueue:     return "Due".localized()
+        case .single:       return "Single".localized()
+        case .tag(let t):   return "#\(t)"
+        }
+    }
+
+    /// 是否为「单题模式」（不计 SM-2 完整流程,只推到 1 天后）
+    var isSingleMode: Bool {
+        if case .single = self { return true }
+        return false
     }
 }
 
@@ -406,6 +425,9 @@ struct FlashcardStudyView: View {
             queue = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
         case .single(let note):
             queue = [note]
+        case .tag(let tag):
+            let due = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
+            queue = MistakeFilter.tagged(due, tag: tag)
         }
         currentIndex = 0
         isFlipped = false
@@ -421,11 +443,13 @@ struct FlashcardStudyView: View {
         guard let current = currentMistake else { return }
         stats.record(quality)
 
-        // 应用 SM-2（仅在 .dueQueue 模式下计入，单题模式只标记已复习）
+        // 应用 SM-2（.dueQueue / .tag 计入,单题模式只标记已复习）
+        // 难度后置调权:把错题自评难度 1-5 传给 SRSAlgorithm,SRS 会再乘一个乘子
+        // (1→0.5, 3→1.0, 5→1.6),让难的题间隔更久、简单的更频繁。
         switch filter {
-        case .dueQueue:
+        case .dueQueue, .tag:
             if var state = current.reviewState {
-                state = SRSAlgorithm.apply(quality: quality, to: state)
+                state = SRSAlgorithm.apply(quality: quality, to: state, difficulty: current.difficulty)
                 container.mistakeRepo.updateReviewState(current.id, newState: state)
             }
         case .single:
@@ -447,8 +471,8 @@ struct FlashcardStudyView: View {
             container.mistakeRepo.recordHandwriting(current.id, pngData: png, quality: quality, now: Date())
         }
 
-        // 「Again」立即重插入队尾（确保至少复习一次）
-        if quality == .again && filter == .dueQueue {
+        // 「Again」立即重插入队尾（确保至少复习一次）。单题模式不重插。
+        if quality == .again, !filter.isSingleMode {
             reinsertQueue.append(current)
         }
 

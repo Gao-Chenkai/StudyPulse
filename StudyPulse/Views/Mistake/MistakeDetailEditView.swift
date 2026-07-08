@@ -34,6 +34,10 @@ struct MistakeDetailEditView: View {
     @State private var editedWrongSolution = ""
     @State private var editedCorrectSolution = ""
     @State private var editedDate = Date()
+    /// 难度自评 0-5
+    @State private var editedDifficulty: Int = 0
+    /// 自由标签
+    @State private var editedTags: [String] = []
     
     @State private var questionImages: [UIImage] = []
     @State private var reasonImages: [UIImage] = []
@@ -151,6 +155,15 @@ private extension MistakeDetailEditView {
                 TextField("Source".localized(), text: $editedSource)
                     .multilineTextAlignment(.trailing)
             }
+
+            // 难度自评
+            DifficultyPicker(difficulty: $editedDifficulty)
+
+            // 自由标签
+            TagEditorView(
+                tags: $editedTags,
+                suggestedTags: container.mistakeRepo.allTags()
+            )
 
             DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
 
@@ -358,6 +371,8 @@ private extension MistakeDetailEditView {
         editedWrongSolution = mistakeSet.wrongSolution
         editedCorrectSolution = mistakeSet.correctSolution
         editedDate = mistakeSet.date
+        editedDifficulty = mistakeSet.difficulty
+        editedTags = mistakeSet.tags
 
         questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
         reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
@@ -377,6 +392,8 @@ private extension MistakeDetailEditView {
         updatedMistake.wrongSolution = editedWrongSolution
         updatedMistake.correctSolution = editedCorrectSolution
         updatedMistake.date = editedDate
+        updatedMistake.difficulty = max(0, min(DifficultyPicker.maxStars, editedDifficulty))
+        updatedMistake.tags = editedTags
 
         updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }

@@ -128,6 +128,17 @@ struct DebugCacheView: View {
                             .foregroundStyle(item.count == -1 ? .red : .primary)
                     }
                 }
+
+                // 标签统计(从内存中的错题聚合)
+                let allTags = container.mistakeRepo.allTags()
+                HStack {
+                    Text("Tags".localized())
+                        .font(.system(size: 13, design: .monospaced))
+                    Spacer()
+                    Text("\(allTags.count)")
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.primary)
+                }
             }
 
             HStack {

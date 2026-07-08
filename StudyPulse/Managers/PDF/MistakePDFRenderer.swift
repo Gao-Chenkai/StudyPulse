@@ -364,12 +364,29 @@ enum MistakePDFRenderer {
         let subjectName = snapshot.displayName(for: mistake.subject)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let meta = "\(subjectName)   •   \(dateFormatter.string(from: mistake.date))"
-        let metaLine = mistake.source.isEmpty ? meta : "\(meta)   •   \(mistake.source)"
+        var meta = "\(subjectName)   •   \(dateFormatter.string(from: mistake.date))"
+        if !mistake.source.isEmpty {
+            meta += "   •   \(mistake.source)"
+        }
+        if mistake.difficulty > 0 {
+            let stars = String(repeating: "★", count: mistake.difficulty) +
+                        String(repeating: "☆", count: max(0, 5 - mistake.difficulty))
+            meta += "   •   \(stars)"
+        }
+        let metaLine = meta
         result.append(NSAttributedString(string: metaLine + "\n\n", attributes: [
             .font: UIFont.systemFont(ofSize: 13),
             .foregroundColor: secondary
         ]))
+
+        // 标签
+        if !mistake.tags.isEmpty {
+            let tagLine = mistake.tags.map { "#\($0)" }.joined(separator: "  ")
+            result.append(NSAttributedString(string: tagLine + "\n\n", attributes: [
+                .font: UIFont.systemFont(ofSize: 12, weight: .medium),
+                .foregroundColor: UIColor.systemPurple
+            ]))
+        }
 
         // 4 段
         result.append(buildSection(

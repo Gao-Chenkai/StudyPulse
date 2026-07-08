@@ -189,6 +189,12 @@ final class MistakeNoteRecord {
     /// 手写答题历史（JSON 编码 [HandwritingAnswerEntry]）
     /// Handwriting history (JSON-encoded [HandwritingAnswerEntry]).
     var handwritingHistoryData: Data?
+    /// 用户自评难度 1-5 星;0 = 未评。SRS 调权用。
+    /// User-rated difficulty 1-5; 0 = unrated. Drives SRS weight.
+    var difficulty: Int = 0
+    /// 自由标签(平铺为 [String]);与 [MistakeNote.tags] 互转。
+    /// Free-form tags (flat [String]); round-trips with [MistakeNote.tags].
+    var tags: [String] = []
 
     init(
         id: UUID,
@@ -214,7 +220,9 @@ final class MistakeNoteRecord {
         exposureCount: Int = 0,
         masteryScore: Double = 0.0,
         masteryHistoryData: Data? = nil,
-        handwritingHistoryData: Data? = nil
+        handwritingHistoryData: Data? = nil,
+        difficulty: Int = 0,
+        tags: [String] = []
     ) {
         self.id = id
         self.title = title
@@ -240,6 +248,8 @@ final class MistakeNoteRecord {
         self.masteryScore = masteryScore
         self.masteryHistoryData = masteryHistoryData
         self.handwritingHistoryData = handwritingHistoryData
+        self.difficulty = difficulty
+        self.tags = tags
     }
 
     convenience init(from note: MistakeNote) {
@@ -274,7 +284,9 @@ final class MistakeNoteRecord {
             exposureCount: note.exposureCount,
             masteryScore: note.masteryScore,
             masteryHistoryData: historyData,
-            handwritingHistoryData: handwritingData
+            handwritingHistoryData: handwritingData,
+            difficulty: note.difficulty,
+            tags: note.tags
         )
     }
 
@@ -320,7 +332,9 @@ final class MistakeNoteRecord {
             exposureCount: exposureCount,
             masteryScore: masteryScore,
             masteryHistory: history,
-            handwritingHistory: handwriting
+            handwritingHistory: handwriting,
+            difficulty: difficulty,
+            tags: tags
         )
     }
 }

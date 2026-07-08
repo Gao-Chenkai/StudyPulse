@@ -1482,3 +1482,23 @@
 
 // Quick Theme Sheet
 "theme.shop.browseAll" = "浏览全部主题";
+
+// MARK: - 难度 & 标签 (added 2026-07-08)
+"Difficulty" = "难度";
+"Unrated" = "未评";
+"Easy" = "简单";
+"Basic" = "基础";
+"Medium" = "中等";
+"Hard" = "困难";
+"Extreme" = "极难";
+"Tags" = "标签";
+"Add Tag" = "添加标签";
+"Tag suggestions" = "标签建议";
+"Review by Tag" = "按标签复习";
+"Review All Due" = "复习全部待复习";
+"Tag Graph" = "标签图谱";
+"No tags yet" = "暂无标签";
+"No tags yet — add tags to your mistakes to see the graph" = "暂无标签 — 给错题打标签后这里会显示图谱";
+"Recenter" = "重新布局";
+"Too many tags" = "标签过多";
+"Too many tags — try removing some to view the graph" = "标签超过 60 个,删一些再查看图谱";

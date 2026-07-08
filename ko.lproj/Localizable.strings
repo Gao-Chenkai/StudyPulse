@@ -1482,3 +1482,23 @@
 
 // Quick Theme Sheet
 "theme.shop.browseAll" = "모든 테마 보기";
+
+// MARK: - 난이도 & 태그 (added 2026-07-08)
+"Difficulty" = "난이도";
+"Unrated" = "미평가";
+"Easy" = "쉬움";
+"Basic" = "기초";
+"Medium" = "보통";
+"Hard" = "어려움";
+"Extreme" = "매우 어려움";
+"Tags" = "태그";
+"Add Tag" = "태그 추가";
+"Tag suggestions" = "태그 추천";
+"Review by Tag" = "태그별 복습";
+"Review All Due" = "전체 복습";
+"Tag Graph" = "태그 그래프";
+"No tags yet" = "태그가 없음";
+"No tags yet — add tags to your mistakes to see the graph" = "태그가 없습니다 — 오답에 태그를 추가하면 그래프가 표시됩니다";
+"Recenter" = "재배치";
+"Too many tags" = "태그가 너무 많음";
+"Too many tags — try removing some to view the graph" = "태그가 60개를 초과했습니다. 일부를 삭제한 후 다시 보세요";

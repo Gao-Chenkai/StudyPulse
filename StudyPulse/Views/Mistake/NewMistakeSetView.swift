@@ -58,6 +58,10 @@ struct NewMistakeSetView: View {
     @State private var editedWrongSolution = ""
     @State private var editedCorrectSolution = ""
     @State private var editedDate = Date()
+    /// 难度自评 0-5
+    @State private var editedDifficulty: Int = 0
+    /// 自由标签
+    @State private var editedTags: [String] = []
 
     @State private var selectedSection: EditSection = .question
 
@@ -206,6 +210,15 @@ private extension NewMistakeSetView {
                 TextField("Source".localized(), text: $editedSource)
                     .multilineTextAlignment(.trailing)
             }
+
+            // 难度自评
+            DifficultyPicker(difficulty: $editedDifficulty)
+
+            // 自由标签
+            TagEditorView(
+                tags: $editedTags,
+                suggestedTags: container.mistakeRepo.allTags()
+            )
 
             DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
 
@@ -419,7 +432,9 @@ private extension NewMistakeSetView {
             reasonImages: reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
             wrongSolutionImages: wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
             correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            reviewState: reviewEnabled ? .initial() : nil
+            reviewState: reviewEnabled ? .initial() : nil,
+            difficulty: max(0, min(DifficultyPicker.maxStars, editedDifficulty)),
+            tags: editedTags
         )
         container.addMistake(newMistake)
 

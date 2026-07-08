@@ -1482,3 +1482,23 @@
 
 // Quick Theme Sheet
 "theme.shop.browseAll" = "瀏覽全部主題";
+
+// MARK: - 難度 & 標籤 (added 2026-07-08)
+"Difficulty" = "難度";
+"Unrated" = "未評";
+"Easy" = "簡單";
+"Basic" = "基礎";
+"Medium" = "中等";
+"Hard" = "困難";
+"Extreme" = "極難";
+"Tags" = "標籤";
+"Add Tag" = "新增標籤";
+"Tag suggestions" = "標籤建議";
+"Review by Tag" = "按標籤複習";
+"Review All Due" = "複習全部待複習";
+"Tag Graph" = "標籤圖譜";
+"No tags yet" = "暫無標籤";
+"No tags yet — add tags to your mistakes to see the graph" = "暫無標籤 — 為錯題新增標籤後即可看到圖譜";
+"Recenter" = "重新佈局";
+"Too many tags" = "標籤過多";
+"Too many tags — try removing some to view the graph" = "標籤超過 60 個,刪除部分後再查看圖譜";

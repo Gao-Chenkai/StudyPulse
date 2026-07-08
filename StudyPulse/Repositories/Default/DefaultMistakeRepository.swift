@@ -123,6 +123,16 @@ final class DefaultMistakeRepository: MistakeRepository {
 
     // MARK: - SRS & Mastery
 
+    /// 收集当前错题库的所有 tag(去重、保序)
+    func allTags() -> [String] {
+        MistakeFilter.allTags(mistakeSets)
+    }
+
+    /// 标签计数(降序)
+    func tagCounts() -> [(tag: String, count: Int)] {
+        MistakeFilter.tagCounts(mistakeSets)
+    }
+
     func updateReviewState(_ mistakeId: UUID, newState: ReviewState?) {
         guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
             Log.data.warning("MistakeRepository updateReviewState: not found id=\(mistakeId.uuidString, privacy: .public)")
@@ -241,6 +251,8 @@ final class DefaultMistakeRepository: MistakeRepository {
                 entity.handwritingHistoryData = note.handwritingHistory.isEmpty
                     ? nil
                     : try? JSONEncoder().encode(note.handwritingHistory)
+                entity.difficulty = note.difficulty
+                entity.tags = note.tags
                 try context.save()
             } else {
                 context.insert(MistakeNoteRecord(from: note))

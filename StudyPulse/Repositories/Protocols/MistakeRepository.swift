@@ -39,4 +39,10 @@ protocol MistakeRepository: AnyObject, Sendable {
     /// Flashcard handwriting answer: append one `HandwritingAnswerEntry` to
     /// `handwritingHistory`. `quality` is `nil` if the user wrote but skipped rating.
     func recordHandwriting(_ mistakeId: UUID, pngData: Data, quality: ReviewQuality?, now: Date)
+
+    // MARK: - Tags
+    /// 收集所有错题中出现过的 tag(去重、保序)
+    func allTags() -> [String]
+    /// 按标签计数(降序)
+    func tagCounts() -> [(tag: String, count: Int)]
 }
