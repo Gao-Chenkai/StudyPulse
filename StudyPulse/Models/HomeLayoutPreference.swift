@@ -11,6 +11,8 @@ import Foundation
 
 /// 主页可配置的板块卡片类型
 enum HomeCardType: String, CaseIterable, Codable {
+    /// 今日 Top-3 计划卡(由 DailyPlanEngine 派生)
+    case dailyPlan = "dailyPlan"
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
     case flashcardReview = "flashcardReview"
@@ -30,6 +32,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// 本地化显示名称
     var displayName: String {
         switch self {
+        case .dailyPlan: return "Today's Top 3".localized()
         case .studyTimer: return "Study Timer".localized()
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
@@ -49,6 +52,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// SF Symbol 图标
     var icon: String {
         switch self {
+        case .dailyPlan: return "sparkles"
         case .studyTimer: return "timer"
         case .hrvStatus: return "heart.text.square"
         case .unregisteredExamsReminder: return "exclamationmark.bubble.fill"
@@ -93,6 +97,7 @@ struct HomeLayoutPreference: Codable, Equatable {
 
     /// 默认配置：全部启用，标准顺序
     static let `default` = HomeLayoutPreference(items: [
+        HomeCardItem(type: .dailyPlan, enabled: true),
         HomeCardItem(type: .learningHeatmap, enabled: true),
         HomeCardItem(type: .hrvStatus, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),

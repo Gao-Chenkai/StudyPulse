@@ -69,6 +69,13 @@ enum DateFormatters {
         return f
     }()
 
+    /// ISO 8601 完整时间戳(用于 Live Activity attributes / 跨进程序列化)
+    static let iso8601: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     /// 周报月日 "MM/dd"
     static let monthDay: DateFormatter = {
         let f = DateFormatter()

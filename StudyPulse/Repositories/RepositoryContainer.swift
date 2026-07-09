@@ -24,6 +24,10 @@ final class RepositoryContainer {
     let phaseRepo: any PhaseRepository
     let profileRepo: any ProfileRepository
     let subjectRepo: any SubjectRepository
+    /// 例程模板 Repository(2026-07-09 新增)
+    let routineRepo: any RoutineRepository
+    /// 例程实例 Repository(2026-07-09 新增)
+    let routineInstanceRepo: any RoutineInstanceRepository
 
     /// SwiftData ModelContainer(由 StudyPulseApp 在 .modelContainer modifier 之后注入)
     @ObservationIgnored
@@ -46,7 +50,9 @@ final class RepositoryContainer {
         taskRepo: any TaskRepository = DefaultTaskRepository(),
         phaseRepo: any PhaseRepository = DefaultPhaseRepository(),
         profileRepo: any ProfileRepository = DefaultProfileRepository(),
-        subjectRepo: any SubjectRepository = DefaultSubjectRepository()
+        subjectRepo: any SubjectRepository = DefaultSubjectRepository(),
+        routineRepo: any RoutineRepository = DefaultRoutineRepository(),
+        routineInstanceRepo: any RoutineInstanceRepository = DefaultRoutineInstanceRepository()
     ) {
         self.gradeRepo = gradeRepo
         self.mistakeRepo = mistakeRepo
@@ -55,6 +61,8 @@ final class RepositoryContainer {
         self.phaseRepo = phaseRepo
         self.profileRepo = profileRepo
         self.subjectRepo = subjectRepo
+        self.routineRepo = routineRepo
+        self.routineInstanceRepo = routineInstanceRepo
 
         // 注入跨域 weak 引用
         if let phaseImpl = phaseRepo as? DefaultPhaseRepository {
@@ -97,6 +105,8 @@ final class RepositoryContainer {
         await phaseRepo.loadAll(context: context)
         await profileRepo.loadAll(context: context)
         await subjectRepo.loadAll(context: context)
+        await routineRepo.loadAll(context: context)
+        await routineInstanceRepo.loadAll(context: context)
 
         // 内嵌图片迁移
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
@@ -152,6 +162,8 @@ final class RepositoryContainer {
         if let m = mistakeRepo as? DefaultMistakeRepository { m.recomputeFiltered() }
         if let e = examRepo as? DefaultExamRepository { e.recomputeFiltered() }
         if let t = taskRepo as? DefaultTaskRepository { t.recomputeFiltered() }
+        if let r = routineRepo as? DefaultRoutineRepository { r.recomputeFiltered() }
+        if let ri = routineInstanceRepo as? DefaultRoutineInstanceRepository { ri.recomputeDerived() }
         Log.data.debug("RepositoryContainer recomputeAllFiltered")
     }
 
@@ -235,6 +247,14 @@ final class RepositoryContainer {
             case .mistakes:     count = mistakeRepo.clearAll()
             case .exams:        count = examRepo.clearAll()
             case .tasks:        count = taskRepo.clearAll()
+            case .routines:
+                // 例程 + 关联 instance 一起清
+                let instCount = routineInstanceRepo.allInstances.count
+                for inst in routineInstanceRepo.allInstances {
+                    routineInstanceRepo.delete(inst.id)
+                }
+                let routineCount = routineRepo.clearAll()
+                count = routineCount + instCount
             case .profileReset:
                 // 重置 profile 到默认 + 删头像
                 if let filename = profileRepo.profile.avatarFileName {
@@ -394,6 +414,41 @@ final class RepositoryContainer {
         phaseRepo.activate(phase)
         recomputeAllFiltered()
     }
+
+    // MARK: - 例程 (Routine) 域 facade
+
+    /// 添加例程模板
+    func addRoutine(_ routine: Routine) {
+        routineRepo.add(routine)
+    }
+
+    /// 批量添加例程
+    func addRoutines(_ newRoutines: [Routine]) {
+        routineRepo.add(newRoutines)
+    }
+
+    /// 更新例程模板
+    func updateRoutine(_ routine: Routine) {
+        routineRepo.update(routine)
+        NotificationCenter.default.post(name: .routineDataChanged, object: nil)
+    }
+
+    /// 删除例程模板(同时清理未来未开始的 instance)
+    func deleteRoutine(_ id: UUID) {
+        // 先清理关联 instance
+        let toDelete = routineInstanceRepo.allInstances.filter { $0.routineId == id }
+        for inst in toDelete {
+            routineInstanceRepo.delete(inst.id)
+        }
+        routineRepo.delete(id)
+        NotificationCenter.default.post(name: .routineDataChanged, object: nil)
+    }
+
+    /// 设置例程启用
+    func setRoutineEnabled(_ id: UUID, enabled: Bool) {
+        routineRepo.setEnabled(id, enabled: enabled)
+        NotificationCenter.default.post(name: .routineDataChanged, object: nil)
+    }
 }
 
 // MARK: - BulkClearCategory
@@ -404,6 +459,7 @@ enum BulkClearCategory: String, CaseIterable, Identifiable, Hashable {
     case exams
     case tasks
     case profileReset
+    case routines
 
     var id: String { rawValue }
 
@@ -414,6 +470,7 @@ enum BulkClearCategory: String, CaseIterable, Identifiable, Hashable {
         case .exams:        return "考试"
         case .tasks:        return "待办"
         case .profileReset: return "重置个人资料"
+        case .routines:     return "例程"
         }
     }
 
@@ -424,6 +481,7 @@ enum BulkClearCategory: String, CaseIterable, Identifiable, Hashable {
         case .exams:        return "calendar"
         case .tasks:        return "checklist"
         case .profileReset: return "person.crop.circle.badge.exclamationmark"
+        case .routines:     return "repeat.circle.fill"
         }
     }
 }

@@ -31,6 +31,8 @@ enum ModelContainerFactory {
         UserProfileRecord.self,
         StudyPhaseRecord.self,
         PlantStateRecord.self,
+        RoutineRecord.self,
+        RoutineInstanceRecord.self,
     ]
 
     /// 创建或获取共享 ModelContainer。
@@ -215,6 +217,10 @@ enum ModelContainerFactory {
             return try context.fetchCount(FetchDescriptor<StudyPhaseRecord>())
         case is PlantStateRecord.Type:
             return try context.fetchCount(FetchDescriptor<PlantStateRecord>())
+        case is RoutineRecord.Type:
+            return try context.fetchCount(FetchDescriptor<RoutineRecord>())
+        case is RoutineInstanceRecord.Type:
+            return try context.fetchCount(FetchDescriptor<RoutineInstanceRecord>())
         default:
             // 兜底：返回 -1 提示未实现
             return -1

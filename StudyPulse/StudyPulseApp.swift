@@ -100,6 +100,17 @@ struct StudyPulseApp: App {
                     }
                     Log.app.info("HealthKit bootstrap 完成 / HealthKit bootstrap complete")
                     Log.record(.info, category: "App", message: "HealthKit bootstrap 完成 / HealthKit bootstrap complete")
+
+                    // 例程物化 + Live Activity 恢复(2026-07-09 新增)
+                    let spawner = RoutineSpawner(container: container)
+                    spawner.runOnce()
+                    // 若当前有进行中的 routine,恢复 Live Activity
+                    RoutineLiveActivityController.shared.restoreIfNeeded(container: container)
+                    // 检查今天/明天 30 分钟内是否有 routine 即将开始,尝试启动
+                    if let inst = container.routineInstanceRepo.activeInstances.first,
+                       let routine = container.routineRepo.routines.first(where: { $0.id == inst.routineId }) {
+                        RoutineLiveActivityController.shared.startIfNeeded(routine: routine, instance: inst)
+                    }
                 }
                 .onChange(of: scenePhase) {
                     let phase = scenePhase
@@ -128,6 +139,10 @@ struct StudyPulseApp: App {
                         Task { await hrvManager.refreshBodyStatus() }
                         AchievementManager.shared.handleDayRolloverIfNeeded()
                         DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)
+                    }
+                    // 离开前台时收尾 routine Live Activity
+                    if phase == .background {
+                        RoutineLiveActivityController.shared.end()
                     }
                 }
         }

@@ -16,5 +16,6 @@ struct StudyPulseWidgetBundle: WidgetBundle {
         TrendWidget()
         HRVWidget()
         StudyTimerLiveActivity()
+        RoutineLiveActivity()
     }
 }

@@ -54,6 +54,8 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var recentGrades: [Grade] = []
     @Published private(set) var upcomingExams: [Exam] = []
     @Published private(set) var unregisteredExams: [Exam] = []
+    /// 今日 Top-3 计划(2026-07-09 新增, Plans & Routines spec)
+    @Published private(set) var dailyPlan: [DailyPlanItem] = []
 
     /// 图表卡片的当前规则 + 选中科目
     @Published private(set) var chartRule: SubjectSelectionRule = .lowestScore
@@ -103,6 +105,20 @@ final class HomeViewModel: ObservableObject {
             grades: grades,
             exams: filteredExams
         )
+
+        // 今日 Top-3 计划(2026-07-09 新增)
+        let taskItems = container.taskRepo.filteredTaskItems
+        let routineInstances = container.routineInstanceRepo.allInstances
+        let planContext = DailyPlanContext(
+            grades: grades,
+            mistakeSets: mistakes,
+            examSets: filteredExams,
+            taskItems: taskItems,
+            routineInstances: routineInstances,
+            hrvReadiness: hrvManager.readiness,
+            hrvBodyStatus: hrvManager.bodyStatus
+        )
+        dailyPlan = DailyPlanEngine.generate(from: planContext, max: 3)
 
         // 图表选中科目可能因为数据变化失效,刷新
         applyChartRule(chartRule)

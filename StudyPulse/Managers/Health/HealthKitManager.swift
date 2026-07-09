@@ -13,7 +13,7 @@ import os
 
 // MARK: - HRV Readiness Result
 /// The outcome of HRV-based readiness assessment
-struct HRVReadiness {
+struct HRVReadiness: Equatable {
     let zScore: Double?
 
     let todayHRV: Double?
@@ -22,7 +22,7 @@ struct HRVReadiness {
     let category: Category
     let suggestion: String
 
-    enum Category: String {
+    enum Category: String, Equatable {
         case loading = "loading"          // 启动期 bootstrap 占位 / placeholder during bootstrap
         case excellent = "excellent"
         case normal = "normal"

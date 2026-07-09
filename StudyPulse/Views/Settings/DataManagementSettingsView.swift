@@ -625,6 +625,7 @@ struct BulkDeleteConfirmSheet: View {
         case .exams: return container.examRepo.examSets.count + container.examRepo.comprehensiveExamSets.count
         case .tasks: return container.taskRepo.taskItems.count
         case .profileReset: return 1
+        case .routines: return container.routineRepo.routines.count + container.routineInstanceRepo.allInstances.count
         }
     }
 

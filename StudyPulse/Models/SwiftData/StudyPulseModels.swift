@@ -870,3 +870,185 @@ final class StudyPhaseRecord {
         )
     }
 }
+
+// MARK: - Routine Record (例程模板)
+
+@Model
+final class RoutineRecord {
+    #Index<RoutineRecord>([\.enabled], [\.createdAt])
+
+    @Attribute(.unique) var id: UUID
+    /// 例程标题
+    var title: String
+    /// RoutineType 拍平为 rawValue
+    var typeRaw: String
+    /// 关联科目(可空)
+    var subject: String?
+    /// 触发的星期集合(Calendar.weekday: 1=周日 ... 7=周六)
+    /// 拍平为 [Int]
+    var weekdays: [Int]
+    /// 当日窗口开始时间(时:分部分有效)
+    var startTime: Date
+    /// 当日窗口结束时间(时:分部分有效)
+    var endTime: Date
+    /// 是否启用
+    var enabled: Bool
+    /// 创建时间
+    var createdAt: Date
+    /// 归属阶段 ID
+    var phaseId: UUID?
+
+    init(
+        id: UUID,
+        title: String,
+        typeRaw: String,
+        subject: String?,
+        weekdays: [Int],
+        startTime: Date,
+        endTime: Date,
+        enabled: Bool,
+        createdAt: Date,
+        phaseId: UUID?
+    ) {
+        self.id = id
+        self.title = title
+        self.typeRaw = typeRaw
+        self.subject = subject
+        self.weekdays = weekdays
+        self.startTime = startTime
+        self.endTime = endTime
+        self.enabled = enabled
+        self.createdAt = createdAt
+        self.phaseId = phaseId
+    }
+
+    convenience init(from routine: Routine) {
+        self.init(
+            id: routine.id,
+            title: routine.title,
+            typeRaw: routine.type.rawValue,
+            subject: routine.subject,
+            weekdays: routine.weekdays,
+            startTime: routine.startTime,
+            endTime: routine.endTime,
+            enabled: routine.enabled,
+            createdAt: routine.createdAt,
+            phaseId: routine.phaseId
+        )
+    }
+
+    func toSnapshot() -> Routine {
+        let type = RoutineType(rawValue: typeRaw) ?? .general
+        return Routine(
+            id: id,
+            title: title,
+            type: type,
+            subject: subject,
+            weekdays: weekdays,
+            startTime: startTime,
+            endTime: endTime,
+            enabled: enabled,
+            createdAt: createdAt,
+            phaseId: phaseId
+        )
+    }
+}
+
+// MARK: - Routine Instance Record (例程在某天的实例)
+
+@Model
+final class RoutineInstanceRecord {
+    #Index<RoutineInstanceRecord>([\.routineId], [\.dateKey], [\.date])
+
+    @Attribute(.unique) var id: UUID
+    /// idempotency key(routineId + yyyyMMdd),业务层用
+    /// 由 routineId + dateKey 复合组成;这里用 @Attribute(.unique) + 重复字段组合查重
+    var idempotencyKey: String
+    /// 所属 routine id
+    var routineId: UUID
+    /// 所属 routine 标题(冗余)
+    var title: String
+    /// 例程类型
+    var typeRaw: String
+    /// 关联科目(冗余)
+    var subject: String?
+    /// 当日窗口开始时间
+    var startTime: Date
+    /// 当日窗口结束时间
+    var endTime: Date
+    /// 当日起点
+    var date: Date
+    /// 当日 yyyyMMdd
+    var dateKey: String
+    /// 是否已完成
+    var isCompleted: Bool
+    /// 完成时间
+    var completedAt: Date?
+    /// spawn 时错题数量快照
+    var spawnedMistakeCount: Int
+
+    init(
+        id: UUID,
+        idempotencyKey: String,
+        routineId: UUID,
+        title: String,
+        typeRaw: String,
+        subject: String?,
+        startTime: Date,
+        endTime: Date,
+        date: Date,
+        dateKey: String,
+        isCompleted: Bool,
+        completedAt: Date?,
+        spawnedMistakeCount: Int
+    ) {
+        self.id = id
+        self.idempotencyKey = idempotencyKey
+        self.routineId = routineId
+        self.title = title
+        self.typeRaw = typeRaw
+        self.subject = subject
+        self.startTime = startTime
+        self.endTime = endTime
+        self.date = date
+        self.dateKey = dateKey
+        self.isCompleted = isCompleted
+        self.completedAt = completedAt
+        self.spawnedMistakeCount = spawnedMistakeCount
+    }
+
+    convenience init(from instance: RoutineInstance) {
+        self.init(
+            id: instance.id,
+            idempotencyKey: instance.idempotencyKey,
+            routineId: instance.routineId,
+            title: instance.title,
+            typeRaw: instance.type.rawValue,
+            subject: instance.subject,
+            startTime: instance.startTime,
+            endTime: instance.endTime,
+            date: instance.date,
+            dateKey: instance.dateKey,
+            isCompleted: instance.isCompleted,
+            completedAt: instance.completedAt,
+            spawnedMistakeCount: instance.spawnedMistakeCount
+        )
+    }
+
+    func toSnapshot() -> RoutineInstance {
+        let type = RoutineType(rawValue: typeRaw) ?? .general
+        return RoutineInstance(
+            id: id,
+            routineId: routineId,
+            title: title,
+            type: type,
+            subject: subject,
+            startTime: startTime,
+            endTime: endTime,
+            date: date,
+            isCompleted: isCompleted,
+            completedAt: completedAt,
+            spawnedMistakeCount: spawnedMistakeCount
+        )
+    }
+}

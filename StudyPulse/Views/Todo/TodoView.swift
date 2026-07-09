@@ -45,6 +45,9 @@ struct TodoView: View {
     @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel: TodoViewModel
 
+    /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
+    @Binding private var segment: TodoRootView.Segment
+
     // 列表 vs 日历视图模式
     @State private var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
     // 类型筛选
@@ -59,8 +62,9 @@ struct TodoView: View {
 
     // 详情导航
 
-    init(container: RepositoryContainer) {
+    init(container: RepositoryContainer, segment: Binding<TodoRootView.Segment>) {
         _viewModel = StateObject(wrappedValue: TodoViewModel.makeDefault(container: container))
+        _segment = segment
     }
     @State private var selectedExam: Exam? = nil
     @State private var selectedComprehensive: comprehensiveExam? = nil
@@ -78,6 +82,7 @@ struct TodoView: View {
             Group {
                 if viewModel.allEntries.isEmpty && viewModel.pastEntries.isEmpty {
                     VStack(spacing: 0) {
+                        segmentPicker
                         filterChips
                         ContentUnavailableView {
                             Label("No Items".localized(), systemImage: "checklist")
@@ -112,6 +117,7 @@ struct TodoView: View {
                     // iOS 会因为找不到可滚动视图而完全跳过 .large 标题的渲染。
                     // 用 ScrollView 套一层提供滚动内容，标题就能正常跟随显示/折叠。
                     VStack(spacing: 0) {
+                        segmentPicker
                         filterChips
                         ScrollView {
                             calendarContent
@@ -244,6 +250,20 @@ struct TodoView: View {
         .background(Color(.systemGroupedBackground))
     }
 
+    /// Tasks / Routines 页签选择器,作为滚动内容的一部分
+    private var segmentPicker: some View {
+        Picker("", selection: $segment) {
+            ForEach(TodoRootView.Segment.allCases) { s in
+                Label(s.title, systemImage: s.icon).tag(s)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
         let selected = viewModel.typeFilter == filter
@@ -309,6 +329,8 @@ struct TodoView: View {
     private var listContent: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // 页签选择器,跟随内容滚动
+                segmentPicker
                 // 顶部筛选胶囊行，跟随内容滚动
                 filterChips
                     .padding(.bottom, 16)
@@ -593,7 +615,7 @@ struct PastItemsSheet: View {
 
 #Preview {
     let container = RepositoryContainer()
-    TodoView(container: container)
+    TodoView(container: container, segment: .constant(.tasks))
         .environment(container)
         .preferredColorScheme(.light)
 }

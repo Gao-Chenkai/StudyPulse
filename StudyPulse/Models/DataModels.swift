@@ -848,3 +848,209 @@ nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
         self.phaseId = phaseId
     }
 }
+
+// MARK: - Routine Models (周计划例程)
+
+/// 例程类型:决定该例程在被触发时与哪种学习资源联动。
+/// Routine type: determines which learning resource the routine hooks into
+/// when it fires.
+nonisolated enum RoutineType: String, Codable, CaseIterable, Hashable, Sendable, Identifiable {
+    /// 错题复盘:进入闪卡 / 错题列表
+    /// Mistake review: opens flashcard / mistake list
+    case mistakeReview
+    /// 闪卡复习:进入闪卡
+    /// Flashcard review
+    case flashcard
+    /// 通用学习:不绑定具体资源
+    /// Generic study block
+    case general
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .mistakeReview: return "Mistake Review".localized()
+        case .flashcard:     return "Flashcard".localized()
+        case .general:       return "Study Block".localized()
+        }
+    }
+
+    /// 短标签(网格块 / Live Activity)
+    var shortTitle: String {
+        switch self {
+        case .mistakeReview: return "Mistake".localized()
+        case .flashcard:     return "Card".localized()
+        case .general:       return "Study".localized()
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .mistakeReview: return "book.fill"
+        case .flashcard:     return "rectangle.stack.fill"
+        case .general:       return "pencil.and.list.clipboard"
+        }
+    }
+
+    /// 6 位 hex(RRGGBB)颜色,Live Activity / 网格块用
+    var colorHex: String {
+        switch self {
+        case .mistakeReview: return "8B5CF6"   // 紫
+        case .flashcard:     return "3B82F6"   // 蓝
+        case .general:       return "10B981"   // 绿
+        }
+    }
+}
+
+/// 周计划例程。
+/// Weekly recurring routine: a template that spawns `RoutineInstance`s
+/// on weekdays matching `weekdays`.
+///
+/// 时间使用 `Date` 拍平的"时分"表示:startTime 与 endTime 都用绝对 Date,
+/// 调用方在比较时只取 hour/minute 即可(与 `Calendar.dateComponents([.hour, .minute], ...)` 配合)。
+nonisolated struct Routine: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    /// 例程标题,如 "数学错题复盘"
+    var title: String
+    /// 例程类型(错题复盘 / 闪卡 / 通用)
+    var type: RoutineType
+    /// 关联科目(可空)
+    var subject: String?
+    /// 触发的星期集合。Calendar.weekday:1=周日 ... 7=周六
+    var weekdays: [Int]
+    /// 当日窗口开始时间(时:分部分有效)
+    var startTime: Date
+    /// 当日窗口结束时间(时:分部分有效,需 > startTime)
+    var endTime: Date
+    /// 是否启用:关闭后不再 spawn 新 instance;已 spawn 的 instance 保留
+    var enabled: Bool
+    /// 创建时间
+    var createdAt: Date
+    /// 归属阶段(学期/假期),nil = 未归类
+    var phaseId: UUID?
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        type: RoutineType = .general,
+        subject: String? = nil,
+        weekdays: [Int],
+        startTime: Date,
+        endTime: Date,
+        enabled: Bool = true,
+        createdAt: Date = Date(),
+        phaseId: UUID? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.type = type
+        self.subject = subject
+        self.weekdays = weekdays
+        self.startTime = startTime
+        self.endTime = endTime
+        self.enabled = enabled
+        self.createdAt = createdAt
+        self.phaseId = phaseId
+    }
+
+    /// 总时长(秒),由 startTime / endTime 的时分差推算
+    var totalSeconds: Int {
+        let cal = Calendar.current
+        let sComps = cal.dateComponents([.hour, .minute], from: startTime)
+        let eComps = cal.dateComponents([.hour, .minute], from: endTime)
+        let sMin = (sComps.hour ?? 0) * 60 + (sComps.minute ?? 0)
+        let eMin = (eComps.hour ?? 0) * 60 + (eComps.minute ?? 0)
+        return max(0, (eMin - sMin) * 60)
+    }
+
+    /// 时分显示(本地化 friendly)
+    var startTimeLabel: String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f.string(from: startTime)
+    }
+
+    var endTimeLabel: String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f.string(from: endTime)
+    }
+}
+
+/// 例程在某一天的具体实例(由 `RoutineSpawner` 物化产生)。
+/// 一份 instance 绑定一个 routine + 一天;它拥有独立的完成态。
+nonisolated struct RoutineInstance: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    /// 所属 routine id
+    var routineId: UUID
+    /// 所属 routine 标题(冗余存,避免 N+1 查询)
+    var title: String
+    /// 例程类型
+    var type: RoutineType
+    /// 关联科目(冗余存)
+    var subject: String?
+    /// 当日窗口开始时间(完整 Date)
+    var startTime: Date
+    /// 当日窗口结束时间(完整 Date)
+    var endTime: Date
+    /// 当日日期(0 点,用作 grouping + idempotency key)
+    var date: Date
+    /// 当日日期 key(yyyyMMdd 字符串,idempotency 用)
+    var dateKey: String
+    /// 是否已完成
+    var isCompleted: Bool
+    /// 完成时间
+    var completedAt: Date?
+    /// spawn 时该 routine 类型(主要是 mistakeReview)对应科目下"到期"错题数量快照
+    /// 给 Live Activity 副标题"今天还有 N 张错题"用
+    var spawnedMistakeCount: Int
+
+    init(
+        id: UUID = UUID(),
+        routineId: UUID,
+        title: String,
+        type: RoutineType,
+        subject: String?,
+        startTime: Date,
+        endTime: Date,
+        date: Date,
+        isCompleted: Bool = false,
+        completedAt: Date? = nil,
+        spawnedMistakeCount: Int = 0
+    ) {
+        self.id = id
+        self.routineId = routineId
+        self.title = title
+        self.type = type
+        self.subject = subject
+        self.startTime = startTime
+        self.endTime = endTime
+        self.date = date
+        self.dateKey = RoutineInstance.dateKeyString(for: date)
+        self.isCompleted = isCompleted
+        self.completedAt = completedAt
+        self.spawnedMistakeCount = spawnedMistakeCount
+    }
+
+    /// 把任意 Date 截到当日起点(用于 grouping)
+    static func startOfDay(_ date: Date) -> Date {
+        Calendar.current.startOfDay(for: date)
+    }
+
+    /// 生成 yyyyMMdd 字符串(本地时区)
+    static func dateKeyString(for date: Date) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = .current
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd"
+        return f.string(from: startOfDay(date))
+    }
+
+    /// idempotency key(routineId + dateKey)
+    var idempotencyKey: String {
+        "\(routineId.uuidString)|\(dateKey)"
+    }
+}

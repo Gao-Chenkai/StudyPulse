@@ -56,7 +56,6 @@ struct HomeView: View {
                 LazyVStack(spacing: 20) {
                     // 顶部欢迎区域（全宽）
                     WelcomeHeaderCard(selectedTab: $selectedTab)
-
                     // 主要统计卡片（全宽，4 个指标横排）
                     if uiState.renderPhase >= 1 {
                         MainStatsCard()
@@ -127,22 +126,19 @@ struct HomeView: View {
                     ReportShareSheet(items: [image], subject: uiState.singleCardTitle)
                 }
             }
-            .alert(
-                "Report export failed".localized(),
-                isPresented: Binding(
-                    get: { uiState.reportErrorMessage != nil },
-                    set: { if !$0 { uiState.reportErrorMessage = nil } }
-                )
-            ) {
+            .alert("Report export failed".localized(), isPresented: alertBinding) {
                 Button("OK".localized(), role: .cancel) { }
             } message: {
                 Text(uiState.reportErrorMessage ?? "")
             }
-            // 派生数据重算:由 HomeViewModel.recompute() 集中处理
-            .onAppear { viewModel.recompute() }
-            .onChange(of: container.gradeRepo.grades) { _, _ in viewModel.recompute() }
-            .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
-            .onChange(of: container.mistakeRepo.mistakeSets) { _, _ in viewModel.recompute() }
+            .recomputeOnAppear(viewModel: viewModel)
+            .recomputeOnGradesChange(viewModel: viewModel, grades: container.gradeRepo.grades)
+            .recomputeOnExamsChange(viewModel: viewModel, examSets: container.examRepo.filteredExamSets)
+            .recomputeOnMistakesChange(viewModel: viewModel, mistakeSets: container.mistakeRepo.mistakeSets)
+            .recomputeOnTasksChange(viewModel: viewModel, taskItems: container.taskRepo.filteredTaskItems)
+            .recomputeOnRoutinesChange(viewModel: viewModel, routines: container.routineRepo.routines)
+            .recomputeOnRoutineInstancesChange(viewModel: viewModel, instances: container.routineInstanceRepo.allInstances)
+            .recomputeOnHRVChange(viewModel: viewModel, readiness: hrvManager.readiness)
             .overlay {
                 if uiState.isRenderingReport {
                     ZStack {
@@ -164,6 +160,14 @@ struct HomeView: View {
             try? await Task.sleep(nanoseconds: 50_000_000)
             uiState.renderPhase = 2
         }
+    }
+
+    /// 错误 alert 的可逆绑定(缩短表达式,避免类型检查超时)
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { uiState.reportErrorMessage != nil },
+            set: { if !$0 { uiState.reportErrorMessage = nil } }
+        )
     }
 
     // MARK: - Dynamic Cards
@@ -242,6 +246,9 @@ struct HomeView: View {
     private func cardView(for type: HomeCardType) -> some View {
         // 每个分支都用 `.contextMenu` 包一层，支持长按分享该卡片。
         switch type {
+        case .dailyPlan:
+            DailyPlanCard(items: viewModel.dailyPlan)
+                .contextMenu { shareCardMenu(for: type) }
         case .studyTimer:
             StudyTimerCard()
                 .contextMenu { shareCardMenu(for: type) }
@@ -367,6 +374,7 @@ struct HomeView: View {
     /// 单卡分享时使用的本地化标题。
     private func cardShareTitle(for type: HomeCardType) -> String {
         switch type {
+        case .dailyPlan: return "Today's Top 3".localized()
         case .hrvStatus: return "Recovery Radar".localized()
         case .unregisteredExamsReminder: return "Pending Grades".localized()
         case .flashcardReview: return "Flashcard Review".localized()
@@ -393,6 +401,7 @@ struct HomeView: View {
         VStack {
             Group {
                 switch type {
+                case .dailyPlan: DailyPlanCard(items: viewModel.dailyPlan)
                 case .studyTimer: StudyTimerCard()
                 case .hrvStatus: HRVStatusCard()
                 case .unregisteredExamsReminder:

@@ -191,7 +191,7 @@ struct iPadSidebarLayout: View {
         case .mistake:
             MistakeView(container: container)
         case .todo:
-            TodoView(container: container)
+            TodoRootView(container: container)
         case .settings:
             SettingsView()
         }
@@ -228,7 +228,7 @@ struct iPhoneTabLayout: View {
                 .tabItem { Label(AppTab.mistake.title, systemImage: AppTab.mistake.icon) }
                 .tag(AppTab.mistake)
 
-            TodoView(container: container)
+            TodoRootView(container: container)
                 .tabItem { Label(AppTab.todo.title, systemImage: AppTab.todo.icon) }
                 .tag(AppTab.todo)
 

@@ -29,3 +29,6 @@
 
 // MARK: - Plant Card
 "plant.card.title" = "Plant";
+
+// Routine Live Activity (2026-07-09, Plans & Routines spec)
+"left" = "left";
