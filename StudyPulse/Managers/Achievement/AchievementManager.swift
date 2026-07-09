@@ -98,6 +98,12 @@ final class AchievementManager: ObservableObject {
 
     // MARK: - Event sinks
 
+    // MARK: - Plant subscriber
+    // PlantManager 通过订阅本类的 @Published snapshot（约 1.5s polling）实现
+    // 主页植物阶段自动重算。无需在此处添加专门事件。
+    // PlantManager observes this class's @Published snapshot (1.5s polling)
+    // to recompute the home plant stage. No extra event hook needed here.
+
     /// DataManager.addGrade / addGrades 在写入 @Published grades 后调用。
     func recordGradeRecorded(count: Int = 1) {
         var snap = snapshot

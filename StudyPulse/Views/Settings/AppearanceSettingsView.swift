@@ -50,6 +50,44 @@ struct AppearanceSettingsView: View {
                 Section {
                     trendWidgetSubjectPicker
                 }
+
+                // Plant Garden (主页植物卡片)
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { envManager.preferences.plantCardEnabled },
+                        set: { envManager.preferences.plantCardEnabled = $0 }
+                    )) {
+                        Label("plant.card.toggle".localized(), systemImage: "leaf.fill")
+                    }
+                    NavigationLink(destination: PlantDetailView()) {
+                        Label("plant.card.sectionTitle".localized(), systemImage: "leaf.circle")
+                    }
+                    HStack(spacing: 10) {
+                        ForEach(PetalColorCatalog.all) { petal in
+                            Button {
+                                envManager.preferences.plantPetalColorId = petal.id
+                            } label: {
+                                Circle()
+                                    .fill(petal.resolved(colorScheme: colorScheme))
+                                    .frame(width: 30, height: 30)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(
+                                                envManager.preferences.plantPetalColorId == petal.id
+                                                    ? Color.primary : Color.primary.opacity(0.15),
+                                                lineWidth: envManager.preferences.plantPetalColorId == petal.id ? 2 : 1
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(PetalColorCatalog.localizedName(for: petal.id))
+                        }
+                    }
+                } header: {
+                    Text("plant.card.sectionTitle".localized())
+                } footer: {
+                    Text("plant.card.footer".localized())
+                }
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))
@@ -59,6 +97,8 @@ struct AppearanceSettingsView: View {
         .navigationTitle("Appearance & Layout".localized())
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    @Environment(\.colorScheme) private var colorScheme
 
     private var trendWidgetSubjectPicker: some View {
         let preferredSubject = TrendWidgetDataStore.loadPreferredSubject()

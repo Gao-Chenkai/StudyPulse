@@ -259,6 +259,9 @@ nonisolated enum Log {
     /// 成绩预测 / Score prediction (linear regression / future Core ML)
     nonisolated static let prediction = Logger(subsystem: subsystem, category: "Prediction")
 
+    /// 主页植物 / Plant card on Home (stage transitions, activity hooks, force override)
+    nonisolated static let plant = Logger(subsystem: subsystem, category: "Plant")
+
     // MARK: - Record to both os.Logger and in-memory store
 
     /// 同时写入 os.Logger 和内存 LogStore。

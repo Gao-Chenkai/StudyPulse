@@ -1496,3 +1496,74 @@
 "Recenter" = "Recenter";
 "Too many tags" = "Too many tags";
 "Too many tags — try removing some to view the graph" = "You have more than 60 tags. Try removing some to view the graph.";
+
+// MARK: - Plant Card (主页植物卡片)
+"plant.card.title" = "Plant";
+"plant.card.toggle" = "Show Plant Card";
+"plant.card.footer" = "Grows as you keep your daily goals.";
+"plant.card.sectionTitle" = "Plant Garden";
+"plant.card.colorSection" = "Petal Color";
+"plant.card.hiddenHint" = "Plant card is hidden. Re-enable below or in Appearance settings.";
+"plant.detail.title" = "Your Plant";
+"plant.detail.historyHeader" = "Growth History";
+"plant.detail.historyEmpty" = "No growth events yet — start a streak to see progress.";
+
+"plant.stage.seed.title" = "Seed";
+"plant.stage.seed.subtitle" = "A fresh start — record your first grade to sprout.";
+"plant.stage.sprout.title" = "Sprout";
+"plant.stage.sprout.subtitle" = "Your first step — keep the momentum.";
+"plant.stage.bud.title" = "Bud";
+"plant.stage.bud.subtitle" = "A bud is forming — 7 days in a row!";
+"plant.stage.bloom.title" = "Bloom";
+"plant.stage.bloom.subtitle" = "In full bloom — 14 days strong.";
+"plant.stage.flourish.title" = "Flourish";
+"plant.stage.flourish.subtitle" = "Flourishing — 30 days of consistency.";
+"plant.stage.lush.title" = "Lush";
+"plant.stage.lush.subtitle" = "Lush and thriving — 60 days!";
+"plant.stage.withered.title" = "Withered";
+"plant.stage.withered.subtitle" = "It's withered — come back within 3 days to revive.";
+"plant.stage.reborn.title" = "Reborn";
+"plant.stage.reborn.subtitle" = "Welcome back — a new cycle begins.";
+
+"plant.petal.rose.name" = "Rose";
+"plant.petal.lavender.name" = "Lavender";
+"plant.petal.sunflower.name" = "Sunflower";
+"plant.petal.jasmine.name" = "Jasmine";
+"plant.petal.aqua.name" = "Aqua";
+
+// MARK: - Debug Plant Lab
+"debug.plant.title" = "Plant Lab";
+"debug.plant.stateHeader" = "Current State";
+"debug.plant.currentStage" = "Current stage";
+"debug.plant.overrideState" = "Override";
+"debug.plant.overrideActive" = "Locked";
+"debug.plant.overrideNone" = "Free";
+"debug.plant.simulationState" = "Simulation";
+"debug.plant.simulationActive" = "Active";
+"debug.plant.forceStage" = "Force Stage";
+"debug.plant.forceStageFooter" = "Tap a stage to lock the plant there. Cleared by “Clear Override” or app reinstall.";
+"debug.plant.clearOverride" = "Clear Override";
+"debug.plant.simulationHeader" = "Simulation";
+"debug.plant.simulationFooter" = "Simulated values feed PlantStage.derive as if they were the real AchievementManager snapshot. Cleared via the “Clear All Simulations” button.";
+"debug.plant.simStreak" = "Sim streak (days)";
+"debug.plant.simDaysSince" = "Sim days since last active";
+"debug.plant.apply" = "Apply";
+"debug.plant.clear" = "Clear";
+"debug.plant.historyHeader" = "Recent transitions";
+"debug.plant.historyEmpty" = "No transitions yet.";
+"debug.plant.actionsHeader" = "Actions";
+"debug.plant.recompute" = "Recompute stage";
+"debug.plant.recordActivityGrade" = "Record activity (grade)";
+"debug.plant.dangerHeader" = "Danger zone";
+"debug.plant.dangerFooter" = "These actions are irreversible in this session.";
+"debug.plant.clearAllSimulations" = "Clear all simulations";
+"debug.plant.clearHistory" = "Clear history";
+"debug.plant.resetToSeed" = "Reset to seed";
+"debug.plant.resetConfirmTitle" = "Reset plant?";
+"debug.plant.resetConfirm" = "Reset";
+"debug.plant.resetConfirmMessage" = "This wipes current stage, history, force override and all simulations. The plant returns to seed.";
+"debug.plant.clearHistoryConfirmTitle" = "Clear plant history?";
+"debug.plant.clearHistoryConfirm" = "Clear";
+"debug.plant.clearHistoryConfirmMessage" = "This permanently removes all recorded stage transitions.";
+"common.cancel" = "Cancel";
+"debug.experiments" = "Experiments";

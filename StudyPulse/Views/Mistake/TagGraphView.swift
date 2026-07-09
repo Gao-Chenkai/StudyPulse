@@ -215,7 +215,6 @@ struct TagGraphView: View {
     @ViewBuilder
     private func nodeView(for node: (tag: String, count: Int)) -> some View {
         let isSelected = tappedTag == node.tag
-        let size = nodeTextSize(node.tag).width + nodePadding * 2
         let hue = abs(node.tag.hashValue) % 360
         let baseColor = Color(hue: Double(hue) / 360.0, saturation: 0.55, brightness: 0.85)
 

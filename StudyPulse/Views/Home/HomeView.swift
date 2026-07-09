@@ -290,6 +290,9 @@ struct HomeView: View {
         case .learningHeatmap:
             LearningHeatmapView()
                 .contextMenu { shareCardMenu(for: type) }
+        case .plant:
+            PlantHomeCard()
+                .contextMenu { shareCardMenu(for: type) }
         }
     }
 
@@ -376,6 +379,7 @@ struct HomeView: View {
         case .streakProgress: return "Streak Progress".localized()
         case .recentGrades: return "Recent Grades".localized()
         case .learningHeatmap: return "Learning Heatmap".localized()
+        case .plant: return "Plant".localized()
         }
     }
 
@@ -427,6 +431,8 @@ struct HomeView: View {
                     }
                 case .learningHeatmap:
                     LearningHeatmapView()
+                case .plant:
+                    PlantHomeCard()
                 }
             }
             .frame(maxWidth: .infinity)

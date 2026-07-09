@@ -1502,3 +1502,74 @@
 "Recenter" = "재배치";
 "Too many tags" = "태그가 너무 많음";
 "Too many tags — try removing some to view the graph" = "태그가 60개를 초과했습니다. 일부를 삭제한 후 다시 보세요";
+
+// MARK: - 홈 식물 카드 / Plant Card
+"plant.card.title" = "식물";
+"plant.card.toggle" = "식물 카드 표시";
+"plant.card.footer" = "매일 목표를 지키면 식물도 함께 자랍니다.";
+"plant.card.sectionTitle" = "식물 정원";
+"plant.card.colorSection" = "꽃잎 색상";
+"plant.card.hiddenHint" = "식물 카드가 숨겨져 있습니다. 여기 또는 '외관'에서 다시 켤 수 있습니다.";
+"plant.detail.title" = "내 식물";
+"plant.detail.historyHeader" = "성장 기록";
+"plant.detail.historyEmpty" = "아직 성장 이벤트가 없어요 — 연속 기록을 시작해 보세요.";
+
+"plant.stage.seed.title" = "씨앗";
+"plant.stage.seed.subtitle" = "새로운 시작 — 첫 성적을 기록해 발아시켜 보세요.";
+"plant.stage.sprout.title" = "새싹";
+"plant.stage.sprout.subtitle" = "첫 발걸음 — 계속 이어가세요.";
+"plant.stage.bud.title" = "봉오리";
+"plant.stage.bud.subtitle" = "봉오리가 형성 중 — 7일 연속!";
+"plant.stage.bloom.title" = "개화";
+"plant.stage.bloom.subtitle" = "만개 — 14일 연속.";
+"plant.stage.flourish.title" = "번영";
+"plant.stage.flourish.subtitle" = "번영 중 — 30일 연속.";
+"plant.stage.lush.title" = "울창";
+"plant.stage.lush.subtitle" = "울창하게 무성 — 60일 연속!";
+"plant.stage.withered.title" = "시듦";
+"plant.stage.withered.subtitle" = "시들었어요 — 3일 안에 돌아오면 되살릴 수 있습니다.";
+"plant.stage.reborn.title" = "재탄생";
+"plant.stage.reborn.subtitle" = "다시 오신 걸 환영해요 — 새로운 사이클이 시작됩니다.";
+
+"plant.petal.rose.name" = "로즈";
+"plant.petal.lavender.name" = "라벤더";
+"plant.petal.sunflower.name" = "해바라기";
+"plant.petal.jasmine.name" = "자스민";
+"plant.petal.aqua.name" = "아쿠아";
+
+// MARK: - 디버그 식물 연구실
+"debug.plant.title" = "식물 연구실";
+"debug.plant.stateHeader" = "현재 상태";
+"debug.plant.currentStage" = "현재 단계";
+"debug.plant.overrideState" = "강제 덮어쓰기";
+"debug.plant.overrideActive" = "잠김";
+"debug.plant.overrideNone" = "해제됨";
+"debug.plant.simulationState" = "시뮬레이션";
+"debug.plant.simulationActive" = "활성";
+"debug.plant.forceStage" = "단계 강제 지정";
+"debug.plant.forceStageFooter" = "단계를 탭하면 식물이 그 단계에 고정됩니다. 「강제 해제」 또는 앱 재설치로 해제할 수 있습니다.";
+"debug.plant.clearOverride" = "강제 해제";
+"debug.plant.simulationHeader" = "시뮬레이션 입력";
+"debug.plant.simulationFooter" = "시뮬레이션 값은 실제 AchievementManager 스냅샷인 것처럼 PlantStage.derive 에 전달됩니다. 「모든 시뮬레이션 지우기」 로 해제할 수 있습니다.";
+"debug.plant.simStreak" = "연속 일수 시뮬레이션";
+"debug.plant.simDaysSince" = "마지막 활동 이후 경과 일수 시뮬레이션";
+"debug.plant.apply" = "적용";
+"debug.plant.clear" = "지우기";
+"debug.plant.historyHeader" = "최근 전환";
+"debug.plant.historyEmpty" = "아직 전환 기록이 없습니다.";
+"debug.plant.actionsHeader" = "동작";
+"debug.plant.recompute" = "단계 다시 계산";
+"debug.plant.recordActivityGrade" = "활동 기록 (성적)";
+"debug.plant.dangerHeader" = "위험 영역";
+"debug.plant.dangerFooter" = "이 동작은 현재 세션에서 되돌릴 수 없습니다.";
+"debug.plant.clearAllSimulations" = "모든 시뮬레이션 지우기";
+"debug.plant.clearHistory" = "기록 지우기";
+"debug.plant.resetToSeed" = "씨앗으로 리셋";
+"debug.plant.resetConfirmTitle" = "식물을 리셋하시겠습니까?";
+"debug.plant.resetConfirm" = "리셋";
+"debug.plant.resetConfirmMessage" = "현재 단계, 기록, 강제 덮어쓰기, 모든 시뮬레이션이 삭제되고 식물이 씨앗 상태로 돌아갑니다.";
+"debug.plant.clearHistoryConfirmTitle" = "식물 기록을 지우시겠습니까?";
+"debug.plant.clearHistoryConfirm" = "지우기";
+"debug.plant.clearHistoryConfirmMessage" = "이 작업은 모든 단계 전환 기록을 영구적으로 삭제합니다.";
+"common.cancel" = "취소";
+"debug.experiments" = "실험적 기능";

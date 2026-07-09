@@ -1502,3 +1502,74 @@
 "Recenter" = "再配置";
 "Too many tags" = "タグが多すぎます";
 "Too many tags — try removing some to view the graph" = "タグが60個を超えています。一部削除してから再度表示してください";
+
+// MARK: - ホーム植物カード / Plant Card
+"plant.card.title" = "植物";
+"plant.card.toggle" = "植物カードを表示";
+"plant.card.footer" = "毎日の目標を続けると、植物も一緒に育っていきます。";
+"plant.card.sectionTitle" = "植物ガーデン";
+"plant.card.colorSection" = "花びらの色";
+"plant.card.hiddenHint" = "植物カードは非表示です。ここで、または「外観」で再有効化できます。";
+"plant.detail.title" = "あなたの植物";
+"plant.detail.historyHeader" = "成長の記録";
+"plant.detail.historyEmpty" = "まだ成長イベントがありません — 連続記録を始めましょう。";
+
+"plant.stage.seed.title" = "種";
+"plant.stage.seed.subtitle" = "新しい始まり — 最初の成績を記録して芽を出しましょう。";
+"plant.stage.sprout.title" = "芽";
+"plant.stage.sprout.subtitle" = "最初の一歩 — 勢いを維持しましょう。";
+"plant.stage.bud.title" = "つぼみ";
+"plant.stage.bud.subtitle" = "つぼみが形成中 — 7 日連続！";
+"plant.stage.bloom.title" = "開花";
+"plant.stage.bloom.subtitle" = "満開 — 14 日連続。";
+"plant.stage.flourish.title" = "繁栄";
+"plant.stage.flourish.subtitle" = "繁栄 — 30 日連続。";
+"plant.stage.lush.title" = "青々と";
+"plant.stage.lush.subtitle" = "青々と繁る — 60 日連続！";
+"plant.stage.withered.title" = "枯れ";
+"plant.stage.withered.subtitle" = "枯れてしまいました — 3 日以内に戻れば復活します。";
+"plant.stage.reborn.title" = "再生";
+"plant.stage.reborn.subtitle" = "おかえりなさい — 新しい周期が始まります。";
+
+"plant.petal.rose.name" = "ローズ";
+"plant.petal.lavender.name" = "ラベンダー";
+"plant.petal.sunflower.name" = "ひまわり";
+"plant.petal.jasmine.name" = "ジャスミン";
+"plant.petal.aqua.name" = "アクア";
+
+// MARK: - デバッグ植物ラボ
+"debug.plant.title" = "植物ラボ";
+"debug.plant.stateHeader" = "現在の状態";
+"debug.plant.currentStage" = "現在の段階";
+"debug.plant.overrideState" = "強制上書き";
+"debug.plant.overrideActive" = "ロック中";
+"debug.plant.overrideNone" = "未ロック";
+"debug.plant.simulationState" = "シミュレーション";
+"debug.plant.simulationActive" = "有効";
+"debug.plant.forceStage" = "段階を強制";
+"debug.plant.forceStageFooter" = "段階をタップすると植物をその段階にロックします。「強制をクリア」またはアプリの再インストールで解除されます。";
+"debug.plant.clearOverride" = "強制をクリア";
+"debug.plant.simulationHeader" = "シミュレーション";
+"debug.plant.simulationFooter" = "シミュレーション値は PlantStage.derive への入力として実 AchievementManager スナップショットの代わりに使用されます。「すべてのシミュレーションをクリア」で解除できます。";
+"debug.plant.simStreak" = "連続日数のシミュレート";
+"debug.plant.simDaysSince" = "最終活動からの経過日数のシミュレート";
+"debug.plant.apply" = "適用";
+"debug.plant.clear" = "クリア";
+"debug.plant.historyHeader" = "最近の切り替え";
+"debug.plant.historyEmpty" = "切り替え履歴はまだありません。";
+"debug.plant.actionsHeader" = "アクション";
+"debug.plant.recompute" = "段階を再計算";
+"debug.plant.recordActivityGrade" = "活動を記録（成績）";
+"debug.plant.dangerHeader" = "デンジャーゾーン";
+"debug.plant.dangerFooter" = "以下の操作は現在のセッション内では取り消せません。";
+"debug.plant.clearAllSimulations" = "すべてのシミュレーションをクリア";
+"debug.plant.clearHistory" = "履歴をクリア";
+"debug.plant.resetToSeed" = "シードにリセット";
+"debug.plant.resetConfirmTitle" = "植物をリセットしますか？";
+"debug.plant.resetConfirm" = "リセット";
+"debug.plant.resetConfirmMessage" = "現在の段階、履歴、強制上書き、すべてのシミュレーションをクリアし、植物をシード状態に戻します。";
+"debug.plant.clearHistoryConfirmTitle" = "植物の履歴を消去しますか？";
+"debug.plant.clearHistoryConfirm" = "消去";
+"debug.plant.clearHistoryConfirmMessage" = "これにより、すべての段階切り替え記録が完全に削除されます。";
+"common.cancel" = "キャンセル";
+"debug.experiments" = "実験的機能";

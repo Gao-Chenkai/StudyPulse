@@ -259,9 +259,7 @@ struct ThemeShopSectionView<Item: ThemeShopItemViewable>: View {
     }
 
     private func achievementTitle(for achId: String?) -> String {
-        guard let achId,
-              let def = AchievementCatalog.all.first(where: { $0.id == achId })
-        else { return "" }
+        guard let achId else { return "" }
         return "achievement.\(achId).title".localized()
     }
 }

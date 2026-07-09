@@ -26,3 +26,6 @@
 "%d sec remaining" = "%d sec remaining";
 "Elapsed %d:%02d" = "Elapsed %d:%02d";
 "Pomodoro" = "Pomodoro";
+
+// MARK: - Plant Card
+"plant.card.title" = "Plant";

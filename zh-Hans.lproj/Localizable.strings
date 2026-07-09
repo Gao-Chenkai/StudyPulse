@@ -1502,3 +1502,74 @@
 "Recenter" = "重新布局";
 "Too many tags" = "标签过多";
 "Too many tags — try removing some to view the graph" = "标签超过 60 个,删一些再查看图谱";
+
+// MARK: - 主页植物卡片 / Plant Card
+"plant.card.title" = "植物";
+"plant.card.toggle" = "显示植物卡片";
+"plant.card.footer" = "坚持每日目标，植物会一起成长。";
+"plant.card.sectionTitle" = "植物花园";
+"plant.card.colorSection" = "花瓣颜色";
+"plant.card.hiddenHint" = "植物卡片已隐藏。可在此或「外观」中重新开启。";
+"plant.detail.title" = "我的植物";
+"plant.detail.historyHeader" = "成长记录";
+"plant.detail.historyEmpty" = "还没有成长事件 — 开启一个连续打卡吧。";
+
+"plant.stage.seed.title" = "种子";
+"plant.stage.seed.subtitle" = "全新开始 — 录入第一条成绩让种子发芽。";
+"plant.stage.sprout.title" = "嫩芽";
+"plant.stage.sprout.subtitle" = "迈出第一步 — 继续加油。";
+"plant.stage.bud.title" = "花苞";
+"plant.stage.bud.subtitle" = "花苞正在形成 — 连续 7 天！";
+"plant.stage.bloom.title" = "盛开";
+"plant.stage.bloom.subtitle" = "花儿盛开 — 连续 14 天。";
+"plant.stage.flourish.title" = "繁茂";
+"plant.stage.flourish.subtitle" = "枝繁叶茂 — 连续 30 天。";
+"plant.stage.lush.title" = "葱郁";
+"plant.stage.lush.subtitle" = "葱郁蓬勃 — 连续 60 天！";
+"plant.stage.withered.title" = "凋零";
+"plant.stage.withered.subtitle" = "它已凋零 — 3 天内回来即可复活。";
+"plant.stage.reborn.title" = "重生";
+"plant.stage.reborn.subtitle" = "欢迎回来 — 新的周期开始。";
+
+"plant.petal.rose.name" = "玫瑰";
+"plant.petal.lavender.name" = "薰衣草";
+"plant.petal.sunflower.name" = "向日葵";
+"plant.petal.jasmine.name" = "茉莉";
+"plant.petal.aqua.name" = "海蓝";
+
+// MARK: - 调试植物实验室
+"debug.plant.title" = "植物实验室";
+"debug.plant.stateHeader" = "当前状态";
+"debug.plant.currentStage" = "当前阶段";
+"debug.plant.overrideState" = "强制覆盖";
+"debug.plant.overrideActive" = "已锁定";
+"debug.plant.overrideNone" = "未锁定";
+"debug.plant.simulationState" = "模拟";
+"debug.plant.simulationActive" = "已激活";
+"debug.plant.forceStage" = "强制阶段";
+"debug.plant.forceStageFooter" = "点击阶段即可把植物锁定在该阶段。点击「清除强制」或重装应用即可解除。";
+"debug.plant.clearOverride" = "清除强制";
+"debug.plant.simulationHeader" = "模拟输入";
+"debug.plant.simulationFooter" = "模拟值会当作真实的 AchievementManager 快照喂给 PlantStage.derive。可通过「清除全部模拟」解除。";
+"debug.plant.simStreak" = "模拟连续天数";
+"debug.plant.simDaysSince" = "模拟距上次活跃天数";
+"debug.plant.apply" = "应用";
+"debug.plant.clear" = "清除";
+"debug.plant.historyHeader" = "最近切换";
+"debug.plant.historyEmpty" = "暂无切换记录。";
+"debug.plant.actionsHeader" = "操作";
+"debug.plant.recompute" = "重新计算阶段";
+"debug.plant.recordActivityGrade" = "记录一次活动（成绩）";
+"debug.plant.dangerHeader" = "危险区";
+"debug.plant.dangerFooter" = "以下操作在当前会话内不可撤销。";
+"debug.plant.clearAllSimulations" = "清除全部模拟";
+"debug.plant.clearHistory" = "清空历史";
+"debug.plant.resetToSeed" = "重置为种子";
+"debug.plant.resetConfirmTitle" = "重置植物？";
+"debug.plant.resetConfirm" = "重置";
+"debug.plant.resetConfirmMessage" = "这将清空当前阶段、历史、强制覆盖和全部模拟,植物回到种子状态。";
+"debug.plant.clearHistoryConfirmTitle" = "清空植物历史？";
+"debug.plant.clearHistoryConfirm" = "清空";
+"debug.plant.clearHistoryConfirmMessage" = "这将永久删除所有阶段切换记录。";
+"common.cancel" = "取消";
+"debug.experiments" = "实验性功能";

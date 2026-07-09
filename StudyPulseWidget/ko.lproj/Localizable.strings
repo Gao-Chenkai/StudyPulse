@@ -26,3 +26,6 @@
 "%d sec remaining" = "%d초 남음";
 "Elapsed %d:%02d" = "경과 %d:%02d";
 "Pomodoro" = "포모도로";
+
+// MARK: - Plant Card
+"plant.card.title" = "Plant";

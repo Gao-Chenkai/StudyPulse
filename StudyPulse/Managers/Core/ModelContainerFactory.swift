@@ -30,6 +30,7 @@ enum ModelContainerFactory {
         TaskItemRecord.self,
         UserProfileRecord.self,
         StudyPhaseRecord.self,
+        PlantStateRecord.self,
     ]
 
     /// 创建或获取共享 ModelContainer。
@@ -37,46 +38,137 @@ enum ModelContainerFactory {
     ///
     /// 多次调用是安全的（同一进程内只创建一次），但只应在 main actor 上调用。
     /// Multiple calls are safe (single instance per process), but only call from main actor.
+    ///
+    /// 启动时若 store 加载失败（一般是 schema 不兼容的旧 store），会重命名旧的
+    /// store 文件（保留为 .bak 备份）后重新创建，避免 "invalid reuse after
+    /// initialization failure"。失败 3 次则退回纯内存容器。
+    /// On startup, if the store fails to load (typically a schema mismatch from
+    /// a previous build), the old store is renamed to a `.bak` backup and a
+    /// fresh one is created. This avoids the sticky "invalid reuse after
+    /// initialization failure" error. Falls back to in-memory after 3 failed
+    /// attempts.
     static func makeContainer() -> ModelContainer {
         if let cached = _sharedContainer { return cached }
 
         let schema = Schema(modelTypes)
+        let appSupport: URL
         do {
-            // 显式把 store URL 放到 Application Support/studypulse.store，
-            // 而不是默认的 Documents/，避免被 iCloud Backup 备份（数据可能很大）。
-            // Store in Application Support (excluded from iCloud backup) to avoid
-            // backing up large local databases.
-            let appSupport = try FileManager.default.url(
+            appSupport = try FileManager.default.url(
                 for: .applicationSupportDirectory,
                 in: .userDomainMask,
                 appropriateFor: nil,
                 create: true
             )
-            let storeURL = appSupport.appendingPathComponent("studypulse.store")
-            let config = ModelConfiguration(
-                "StudyPulse",
-                schema: schema,
-                url: storeURL,
-                cloudKitDatabase: .none
-            )
-            let container = try ModelContainer(for: schema, configurations: [config])
-            _sharedContainer = container
-            Log.data.info("ModelContainer 创建成功 / ModelContainer created: \(storeURL.path, privacy: .public)")
-            return container
         } catch {
-            // 创建失败（极少见，比如磁盘满）—— 退回内存容器
-            // Fall back to in-memory container on failure (rare: disk full, etc.)
-            Log.data.error("ModelContainer 创建失败 / ModelContainer creation failed: \(error.localizedDescription, privacy: .public). Falling back to in-memory store.")
+            Log.data.error("ModelContainer 创建失败（无法定位 Application Support）/ Cannot locate Application Support: \(error.localizedDescription, privacy: .public)")
+            return makeInMemoryContainer(schema: schema)
+        }
+        let storeURL = appSupport.appendingPathComponent("studypulse.store")
+
+        for attempt in 1...3 {
             do {
-                let inMemory = ModelConfiguration(isStoredInMemoryOnly: true)
-                let container = try ModelContainer(for: schema, configurations: [inMemory])
+                let config = ModelConfiguration(
+                    "StudyPulse",
+                    schema: schema,
+                    url: storeURL,
+                    cloudKitDatabase: .none
+                )
+                let container = try ModelContainer(for: schema, configurations: [config])
+                if attempt > 1 {
+                    Log.data.warning("ModelContainer 第 \(attempt) 次尝试才成功 / ModelContainer succeeded on attempt \(attempt)")
+                } else {
+                    Log.data.info("ModelContainer 创建成功 / ModelContainer created: \(storeURL.path, privacy: .public)")
+                }
                 _sharedContainer = container
                 return container
             } catch {
-                // 极端情况：直接 crash 不合理，返回 last resort 配置
-                fatalError("Cannot create any ModelContainer: \(error.localizedDescription)")
+                Log.data.error("ModelContainer 创建失败（attempt \(attempt)）/ ModelContainer attempt \(attempt) failed: \(error.localizedDescription, privacy: .public)")
+                // 关键:Core Data 会在 coordinator 内部把失败的 URL 标记为"已失败",
+                // 后续用相同 URL 仍会抛 "invalid reuse after initialization failure"。
+                // 解法:把旧文件改名,让新 store 用原 URL 重新创建(旧数据保留为 .bak)。
+                // Core Data marks a failed URL as "do not retry" at the coordinator
+                // level. Move the old files aside so the new store gets a fresh URL
+                // history. Old data is kept as a .bak sidecar.
+                quarantineStaleStore(at: storeURL, attempt: attempt)
+                // 给 OS / Core Data 一点时间释放文件锁 / Brief pause to release file locks
+                Thread.sleep(forTimeInterval: 0.1)
             }
         }
+
+        Log.data.error("ModelContainer 3 次重试均失败 / All 3 attempts failed; falling back to in-memory")
+        return makeInMemoryContainer(schema: schema)
+    }
+
+    /// 退回纯内存容器（最后兜底）。
+    /// Last-resort in-memory container.
+    private static func makeInMemoryContainer(schema: Schema) -> ModelContainer {
+        do {
+            let inMemory = ModelConfiguration(isStoredInMemoryOnly: true)
+            let container = try ModelContainer(for: schema, configurations: [inMemory])
+            _sharedContainer = container
+            return container
+        } catch {
+            // 极端情况：直接 crash
+            fatalError("Cannot create any ModelContainer: \(error.localizedDescription)")
+        }
+    }
+
+    /// 把所有以 baseName 开头的 store 相关文件改名到 .bak(覆盖旧 .bak)。
+    /// 改名而不是删除,便于万一需要手动恢复。
+    /// Move all sidecar files matching `baseName*` to `.bak` (overwriting any
+    /// previous .bak). Renaming instead of deleting preserves data for manual
+    /// recovery if needed.
+    @discardableResult
+    private static func quarantineStaleStore(at storeURL: URL, attempt: Int) -> Bool {
+        let fm = FileManager.default
+        let storeDir = storeURL.deletingLastPathComponent()
+        let baseName = storeURL.lastPathComponent  // e.g. "studypulse.store"
+
+        guard let contents = try? fm.contentsOfDirectory(
+            at: storeDir,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            Log.data.error("无法枚举 store 目录 / Cannot list store dir: \(storeDir.path, privacy: .public)")
+            return false
+        }
+
+        var moved = 0
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let suffix = ".bak-\(stamp)-a\(attempt)"
+
+        for url in contents {
+            let name = url.lastPathComponent
+            // 匹配 studypulse.store / studypulse.store-shm / studypulse.store-wal /
+            // studypulse.store.bak-* / 以及任何 SwiftData 元数据(suffix 可能在中间)
+            guard name == baseName || name.hasPrefix(baseName + ".") || name.hasPrefix(baseName + "-") else {
+                continue
+            }
+            let backupURL = url.deletingLastPathComponent()
+                .appendingPathComponent(name + suffix)
+            // 如果同名的 .bak 已存在,先删掉
+            if fm.fileExists(atPath: backupURL.path) {
+                try? fm.removeItem(at: backupURL)
+            }
+            do {
+                try fm.moveItem(at: url, to: backupURL)
+                moved += 1
+                Log.data.debug("已隔离旧 store 文件 / Quarantined stale store: \(name, privacy: .public) -> \(backupURL.lastPathComponent, privacy: .public)")
+            } catch {
+                Log.data.error("隔离 store 文件失败 / Failed to quarantine \(name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                // 如果改名失败(可能是只读 / 锁定),就尝试硬删一次
+                do {
+                    try fm.removeItem(at: url)
+                    moved += 1
+                } catch {
+                    Log.data.error("硬删也失败 / Hard delete also failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+
+        Log.data.info("store 隔离完成 / Store quarantine done: moved=\(moved, privacy: .public)")
+        return moved > 0
     }
 
     nonisolated(unsafe) private static var _sharedContainer: ModelContainer?
@@ -105,22 +197,24 @@ enum ModelContainerFactory {
     /// Type-erased entity count dispatcher.
     private static func entityCount(for type: any PersistentModel.Type, in context: ModelContext) throws -> Int {
         switch type {
-        case let t as SubjectRecord.Type:
+        case is SubjectRecord.Type:
             return try context.fetchCount(FetchDescriptor<SubjectRecord>())
-        case let t as GradeRecord.Type:
+        case is GradeRecord.Type:
             return try context.fetchCount(FetchDescriptor<GradeRecord>())
-        case let t as MistakeNoteRecord.Type:
+        case is MistakeNoteRecord.Type:
             return try context.fetchCount(FetchDescriptor<MistakeNoteRecord>())
-        case let t as ExamRecord.Type:
+        case is ExamRecord.Type:
             return try context.fetchCount(FetchDescriptor<ExamRecord>())
-        case let t as ComprehensiveExamRecord.Type:
+        case is ComprehensiveExamRecord.Type:
             return try context.fetchCount(FetchDescriptor<ComprehensiveExamRecord>())
-        case let t as TaskItemRecord.Type:
+        case is TaskItemRecord.Type:
             return try context.fetchCount(FetchDescriptor<TaskItemRecord>())
-        case let t as UserProfileRecord.Type:
+        case is UserProfileRecord.Type:
             return try context.fetchCount(FetchDescriptor<UserProfileRecord>())
-        case let t as StudyPhaseRecord.Type:
+        case is StudyPhaseRecord.Type:
             return try context.fetchCount(FetchDescriptor<StudyPhaseRecord>())
+        case is PlantStateRecord.Type:
+            return try context.fetchCount(FetchDescriptor<PlantStateRecord>())
         default:
             // 兜底：返回 -1 提示未实现
             return -1
@@ -132,6 +226,10 @@ enum ModelContainerFactory {
     /// 是否已经完成 JSON → SwiftData 迁移
     /// Whether the JSON → SwiftData migration has finished.
     static let migrationDoneKey = "didMigrateToSwiftData_v1"
+
+    /// 是否已经为首次启动准备好 PlantStateRecord
+    /// Whether an initial PlantStateRecord has been seeded.
+    static let plantSeedDoneKey = "didSeedPlantState_v1"
 
     /// 检查是否需要从 JSON 迁移
     /// Check if migration from JSON is needed.
@@ -228,6 +326,35 @@ enum ModelContainerFactory {
         } catch {
             Log.data.error("保存迁移数据失败 / Migration save failed: \(error.localizedDescription, privacy: .public)")
             Log.record(.error, category: "Data", message: "保存迁移数据失败: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Plant Seed
+
+    /// 首次启动时插入一条 seed PlantStateRecord。
+    /// Idempotent: 通过 `plantSeedDoneKey` 跳过；已经存在 record 也跳过。
+    /// Seed an initial PlantStateRecord on first launch. Idempotent.
+    @MainActor
+    static func migratePlantStateIfNeeded(context: ModelContext) {
+        // 已经播种过就跳过
+        if UserDefaults.standard.bool(forKey: plantSeedDoneKey) { return }
+
+        // 已经存在 record 也跳过（覆盖安装或老 build 升级上来）
+        let descriptor = FetchDescriptor<PlantStateRecord>()
+        if let existing = try? context.fetch(descriptor), !existing.isEmpty {
+            UserDefaults.standard.set(true, forKey: plantSeedDoneKey)
+            return
+        }
+
+        let initial = PlantState(currentStage: .seed, lastUpdated: Date())
+        let record = PlantStateRecord(from: initial, previousStage: .seed)
+        context.insert(record)
+        do {
+            try context.save()
+            UserDefaults.standard.set(true, forKey: plantSeedDoneKey)
+            Log.data.info("PlantState 首次播种完成 / Plant state seed complete: stage=seed")
+        } catch {
+            Log.data.error("PlantState 播种失败 / Plant state seed failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

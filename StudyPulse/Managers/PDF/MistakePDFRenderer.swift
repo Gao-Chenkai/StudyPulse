@@ -98,11 +98,7 @@ enum MistakePDFRenderer {
             }
         }
 
-        if data != nil {
-            Log.record(.info, category: "Export", message: "错题 PDF Core Text 渲染完成 / Mistake PDF Core Text rendered: mistakes=\(snapshot.mistakes.count)")
-        } else {
-            Log.record(.error, category: "Export", message: "错题 PDF Core Text 拼装失败 / Mistake PDF Core Text assembly failed")
-        }
+        Log.record(.info, category: "Export", message: "错题 PDF Core Text 渲染完成 / Mistake PDF Core Text rendered: mistakes=\(snapshot.mistakes.count)")
         return data
     }
 

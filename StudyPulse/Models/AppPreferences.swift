@@ -41,6 +41,19 @@ nonisolated struct AppPreferences: Codable {
     /// Equipped timer animation id; nil = use system default (`aurora`).
     var timerAnimationId: String? = nil
 
+    // MARK: - Plant Card (主页植物卡片)
+
+    /// 主页植物卡片总开关（默认开启）。关闭后 HomeView 隐藏 PlantHomeCard，
+    /// 但 recordActivity 仍会执行（用于 reborn 判定 + Debug 追踪）。
+    /// Master toggle for the Home plant card. When off, PlantHomeCard is hidden
+    /// in HomeView; recordActivity() still fires so the reborn transition can
+    /// trigger once the toggle is re-enabled.
+    var plantCardEnabled: Bool = true
+
+    /// 当前选中的花瓣颜色 id（nil = rose）。由 PetalColorCatalog.resolve 解析。
+    /// Selected petal color id (nil = rose). Resolved via PetalColorCatalog.
+    var plantPetalColorId: String? = nil
+
     // MARK: - Debug Mode (调试模式)
 
     /// Debug 模式总开关（默认关闭）。开启后顶部显示黄色 banner，FPS 浮窗、长按检视、Layout Bounds 等子开关才生效。
@@ -71,6 +84,7 @@ nonisolated struct AppPreferences: Codable {
     enum CodingKeys: String, CodingKey {
         case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, activePhaseId
         case cardSkinId, timerAnimationId
+        case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
     }
 
@@ -87,6 +101,8 @@ nonisolated struct AppPreferences: Codable {
         self.activePhaseId = try c.decodeIfPresent(UUID.self, forKey: .activePhaseId)
         self.cardSkinId = try c.decodeIfPresent(String.self, forKey: .cardSkinId)
         self.timerAnimationId = try c.decodeIfPresent(String.self, forKey: .timerAnimationId)
+        self.plantCardEnabled = try c.decodeIfPresent(Bool.self, forKey: .plantCardEnabled) ?? true
+        self.plantPetalColorId = try c.decodeIfPresent(String.self, forKey: .plantPetalColorId)
         self.debugModeEnabled = try c.decodeIfPresent(Bool.self, forKey: .debugModeEnabled) ?? false
         self.debugVerboseLogging = try c.decodeIfPresent(Bool.self, forKey: .debugVerboseLogging) ?? false
         self.debugFPSOverlay = try c.decodeIfPresent(Bool.self, forKey: .debugFPSOverlay) ?? false

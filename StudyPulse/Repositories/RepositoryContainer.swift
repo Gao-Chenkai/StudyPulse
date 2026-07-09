@@ -109,6 +109,10 @@ final class RepositoryContainer {
             subjectRepo.initializeDefaultSubjects()
         }
 
+        // PlantManager 首次播种 + 注入上下文 + 订阅 AchievementManager
+        ModelContainerFactory.migratePlantStateIfNeeded(context: context)
+        PlantManager.shared.attach(container: self)
+
         // 观察 active phase 变化:每次变化触发 5 个 filtered 缓存重算
         observeActivePhaseChanges()
 
@@ -315,6 +319,8 @@ final class RepositoryContainer {
     func addGrade(_ grade: Grade) {
         gradeRepo.add(grade)
         AchievementManager.shared.recordGradeRecorded()
+        // Plant subscriber: 主页植物钩子（不影响 derive 逻辑，仅记录活动 + 订阅 1.5s 内 recompute）
+        PlantManager.shared.recordActivity(trigger: .grade)
         TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
     }
 
@@ -323,6 +329,7 @@ final class RepositoryContainer {
         let count = newGrades.count
         gradeRepo.add(newGrades)
         AchievementManager.shared.recordGradeRecorded(count: count)
+        PlantManager.shared.recordActivity(trigger: .grade)
         TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
     }
 

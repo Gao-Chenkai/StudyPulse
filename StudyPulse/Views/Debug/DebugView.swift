@@ -92,6 +92,27 @@ struct DebugView: View {
             } header: {
                 Text("debug.buildInfo".localized())
             }
+
+            Section {
+                NavigationLink {
+                    PlantDebugView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("debug.plant.title".localized())
+                                .foregroundColor(.primary)
+                            Text("Force Stage · State Inspection".localized())
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "leaf.circle")
+                            .foregroundStyle(.green)
+                    }
+                }
+            } header: {
+                Text("debug.experiments".localized())
+            }
         }
         .listStyle(.insetGrouped)
         .navigationTitle("debug.title".localized())

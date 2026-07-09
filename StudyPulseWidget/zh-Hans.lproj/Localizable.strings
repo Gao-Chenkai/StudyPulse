@@ -26,3 +26,6 @@
 "%d sec remaining" = "剩余 %d 秒";
 "Elapsed %d:%02d" = "已专注 %d:%02d";
 "Pomodoro" = "番茄钟";
+
+// MARK: - Plant Card
+"plant.card.title" = "Plant";

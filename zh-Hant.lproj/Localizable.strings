@@ -1502,3 +1502,74 @@
 "Recenter" = "重新佈局";
 "Too many tags" = "標籤過多";
 "Too many tags — try removing some to view the graph" = "標籤超過 60 個,刪除部分後再查看圖譜";
+
+// MARK: - 主頁植物卡片 / Plant Card
+"plant.card.title" = "植物";
+"plant.card.toggle" = "顯示植物卡片";
+"plant.card.footer" = "堅持每日目標,植物會一起成長。";
+"plant.card.sectionTitle" = "植物花園";
+"plant.card.colorSection" = "花瓣顏色";
+"plant.card.hiddenHint" = "植物卡片已隱藏。可在此或「外觀」中重新開啟。";
+"plant.detail.title" = "我的植物";
+"plant.detail.historyHeader" = "成長記錄";
+"plant.detail.historyEmpty" = "還沒有成長事件 — 開啟一個連續打卡吧。";
+
+"plant.stage.seed.title" = "種子";
+"plant.stage.seed.subtitle" = "全新開始 — 錄入第一條成績讓種子發芽。";
+"plant.stage.sprout.title" = "嫩芽";
+"plant.stage.sprout.subtitle" = "邁出第一步 — 繼續加油。";
+"plant.stage.bud.title" = "花苞";
+"plant.stage.bud.subtitle" = "花苞正在形成 — 連續 7 天！";
+"plant.stage.bloom.title" = "盛開";
+"plant.stage.bloom.subtitle" = "花兒盛開 — 連續 14 天。";
+"plant.stage.flourish.title" = "繁茂";
+"plant.stage.flourish.subtitle" = "枝繁葉茂 — 連續 30 天。";
+"plant.stage.lush.title" = "蔥鬱";
+"plant.stage.lush.subtitle" = "蔥鬱蓬勃 — 連續 60 天!";
+"plant.stage.withered.title" = "凋零";
+"plant.stage.withered.subtitle" = "它已凋零 — 3 天內回來即可復活。";
+"plant.stage.reborn.title" = "重生";
+"plant.stage.reborn.subtitle" = "歡迎回來 — 新的週期開始。";
+
+"plant.petal.rose.name" = "玫瑰";
+"plant.petal.lavender.name" = "薰衣草";
+"plant.petal.sunflower.name" = "向日葵";
+"plant.petal.jasmine.name" = "茉莉";
+"plant.petal.aqua.name" = "海藍";
+
+// MARK: - 調試植物實驗室
+"debug.plant.title" = "植物實驗室";
+"debug.plant.stateHeader" = "當前狀態";
+"debug.plant.currentStage" = "當前階段";
+"debug.plant.overrideState" = "強制覆蓋";
+"debug.plant.overrideActive" = "已鎖定";
+"debug.plant.overrideNone" = "未鎖定";
+"debug.plant.simulationState" = "模擬";
+"debug.plant.simulationActive" = "已啟用";
+"debug.plant.forceStage" = "強制階段";
+"debug.plant.forceStageFooter" = "點選階段即可把植物鎖定在該階段。點「清除強制」或重裝 App 即可解除。";
+"debug.plant.clearOverride" = "清除強制";
+"debug.plant.simulationHeader" = "模擬輸入";
+"debug.plant.simulationFooter" = "模擬值會當作真實的 AchievementManager 快照餵給 PlantStage.derive。可透過「清除全部模擬」解除。";
+"debug.plant.simStreak" = "模擬連續天數";
+"debug.plant.simDaysSince" = "模擬距上次活躍天數";
+"debug.plant.apply" = "套用";
+"debug.plant.clear" = "清除";
+"debug.plant.historyHeader" = "最近切換";
+"debug.plant.historyEmpty" = "暫無切換記錄。";
+"debug.plant.actionsHeader" = "操作";
+"debug.plant.recompute" = "重新計算階段";
+"debug.plant.recordActivityGrade" = "記錄一次活動（成績）";
+"debug.plant.dangerHeader" = "危險區";
+"debug.plant.dangerFooter" = "以下操作於目前工作階段內無法復原。";
+"debug.plant.clearAllSimulations" = "清除全部模擬";
+"debug.plant.clearHistory" = "清空歷史";
+"debug.plant.resetToSeed" = "重設為種子";
+"debug.plant.resetConfirmTitle" = "重設植物？";
+"debug.plant.resetConfirm" = "重設";
+"debug.plant.resetConfirmMessage" = "這會清空目前階段、歷史、強制覆蓋與全部模擬,植物回到種子狀態。";
+"debug.plant.clearHistoryConfirmTitle" = "清空植物歷史？";
+"debug.plant.clearHistoryConfirm" = "清空";
+"debug.plant.clearHistoryConfirmMessage" = "這會永久刪除所有階段切換記錄。";
+"common.cancel" = "取消";
+"debug.experiments" = "實驗性功能";
