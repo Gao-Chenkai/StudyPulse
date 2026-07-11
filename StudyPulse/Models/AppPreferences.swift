@@ -77,6 +77,29 @@ nonisolated struct AppPreferences: Codable {
     /// Sub-toggle: long-press any view marked with .debugInspect() to see its raw value and type.
     var debugLongPressInspect: Bool = false
 
+    // MARK: - LLM (BYOK 大模型)
+
+    /// LLM 总开关;关闭时所有 AI 功能回退到本地版本。
+    /// Master switch for the BYOK LLM features. When off, every AI feature
+    /// silently falls back to its local implementation.
+    var llmEnabled: Bool = false
+    /// Chat Completions 风格端点 base,例如 https://api.openai.com 或 https://api.deepseek.com
+    /// OpenAI-compatible base URL (e.g. https://api.openai.com or https://api.deepseek.com).
+    /// `nil` 表示未配置。
+    var llmBaseURL: String? = nil
+    /// 用户自备的 API Key,仅在设备本地 UserDefaults 存储。
+    /// User-provided API key. Stored in local UserDefaults only.
+    var llmAPIKey: String? = nil
+    /// 模型 id,例如 gpt-4o-mini / deepseek-chat
+    /// Model id (e.g. gpt-4o-mini / deepseek-chat).
+    var llmModel: String? = nil
+    /// 自定义系统 prompt 追加(默认 prompt 之后)
+    /// Optional suffix appended to the default system prompt.
+    var llmSystemPromptAppendix: String? = nil
+    /// 采样温度(0.0-2.0,默认 0.7)
+    /// Sampling temperature (0.0-2.0, default 0.7).
+    var llmTemperature: Double = 0.7
+
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
@@ -86,6 +109,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
+        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature
     }
 
     init() {}
@@ -108,6 +132,13 @@ nonisolated struct AppPreferences: Codable {
         self.debugFPSOverlay = try c.decodeIfPresent(Bool.self, forKey: .debugFPSOverlay) ?? false
         self.debugLayoutBounds = try c.decodeIfPresent(Bool.self, forKey: .debugLayoutBounds) ?? false
         self.debugLongPressInspect = try c.decodeIfPresent(Bool.self, forKey: .debugLongPressInspect) ?? false
+        // LLM BYOK 配置 — 缺字段时使用安全默认值,保证旧版 UserDefaults 数据能继续 decode
+        self.llmEnabled = try c.decodeIfPresent(Bool.self, forKey: .llmEnabled) ?? false
+        self.llmBaseURL = try c.decodeIfPresent(String.self, forKey: .llmBaseURL)
+        self.llmAPIKey = try c.decodeIfPresent(String.self, forKey: .llmAPIKey)
+        self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)
+        self.llmSystemPromptAppendix = try c.decodeIfPresent(String.self, forKey: .llmSystemPromptAppendix)
+        self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
     }
     
     // MARK: - 语言常量

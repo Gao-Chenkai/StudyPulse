@@ -1,0 +1,264 @@
+//
+//  MistakeAIAnalysisSheet.swift
+//  StudyPulse
+//
+//  错题 AI 解析 sheet:基于错题内容调用 LLM,流式渲染 Markdown 分析结果。
+//  - 未配置 LLM 时显示 "请先在设置中配置 LLM"
+//  - 失败时显示错误信息 + 关闭按钮
+//  - 成功后右下角 "Insert into Correct Solution" 按钮把内容塞回 caller 的绑定
+//
+//  Created for LLM BYOK integration (2026-07-11).
+//
+
+import SwiftUI
+import SwiftStreamingMarkdown
+
+/// 错题 AI 解析 sheet。
+/// 通过 `onInsert` 回调让 caller 决定如何把生成内容写回数据模型。
+struct MistakeAIAnalysisSheet: View {
+    let subject: String
+    let title: String
+    let question: String
+    let wrongSolution: String
+    let correctSolution: String
+    let reason: String
+    /// 用户点击"Insert into Correct Solution"时回调,内容是 LLM 生成的"正确思路"段
+    let onInsert: (String) -> Void
+    /// 流式分析成功结束后回调,传入完整 LLM 输出(供"深入探讨" sheet 作为初始消息)
+    var onAnalysisComplete: ((String) -> Void)? = nil
+    /// 用户点击"深入探讨"时回调,传入用于讨论的上下文(含原错题信息) + 上一次的 AI 输出
+    var onDiscuss: ((_ context: String, _ lastAnalysis: String) -> Void)? = nil
+
+    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var streamTask: Task<Void, Never>? = nil
+    @State private var streamedText: String = ""
+    @State private var errorMessage: String? = nil
+    @State private var isLoading: Bool = false
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if !envManager.llmConfig.isConfigured {
+                    notConfiguredView
+                } else if let errorMessage {
+                    errorView(errorMessage)
+                } else if streamedText.isEmpty && isLoading {
+                    loadingView
+                } else {
+                    contentView
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .navigationTitle("AI Analysis".localized())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close".localized()) {
+                        streamTask?.cancel()
+                        dismiss()
+                    }
+                }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    if !streamedText.isEmpty && errorMessage == nil {
+                        // 深入探讨:在原错题上下文上与 AI 多轮对话
+                        Button {
+                            streamTask?.cancel()
+                            onDiscuss?(buildDiscussionContext(), streamedText)
+                        } label: {
+                            Label("深入探讨".localized(), systemImage: "bubble.left.and.bubble.right.fill")
+                                .labelStyle(.titleAndIcon)
+                                .font(.caption.weight(.semibold))
+                        }
+                        .tint(.teal)
+                        Button("Insert into Correct".localized()) {
+                            streamTask?.cancel()
+                            onInsert(streamedText)
+                            dismiss()
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
+            }
+            .onAppear { startAnalysis() }
+            .onDisappear { streamTask?.cancel() }
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var notConfiguredView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "brain")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            Text("LLM Not Configured".localized())
+                .font(.headline)
+            Text("Set Base URL, API Key and Model in Settings → LLM.".localized())
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            NavigationLink(destination: LLMSettingsView()) {
+                Label("Open LLM Settings".localized(), systemImage: "gearshape")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.orange)
+            Text("AI 解析失败".localized())
+                .font(.headline)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Retry".localized()) {
+                startAnalysis()
+            }
+            .buttonStyle(.bordered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.4)
+            Text("Analyzing...".localized())
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var contentView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                summaryHeader
+                Divider()
+                if streamedText.isEmpty {
+                    Text("Waiting for response...".localized())
+                        .foregroundColor(.secondary)
+                } else {
+                    // 流式渲染:每个字符更新都会触发 onDelta,但 SwiftUI 的 .task(id:) 会在 text 变化时重新 parse
+                    // 我们用一个内部 AsyncStream 把 streamedText 喂给 StreamedMarkdownView
+                    MarkdownStreamedContent(text: streamedText)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var summaryHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.headline)
+            }
+            HStack(spacing: 6) {
+                if !subject.isEmpty {
+                    Text(subject)
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.blue.opacity(0.15)))
+                        .foregroundColor(.blue)
+                }
+                if !question.isEmpty {
+                    Text("\(question.count) chars".localized())
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Stream
+
+    private func startAnalysis() {
+        streamTask?.cancel()
+        streamedText = ""
+        errorMessage = nil
+        isLoading = true
+        let config = envManager.llmConfig
+        let prompt = MistakeAnalysisLLM.makePrompt(
+            subject: subject,
+            title: title,
+            question: question,
+            wrongSolution: wrongSolution,
+            correctSolution: correctSolution,
+            reason: reason
+        )
+        streamTask = Task {
+            do {
+                _ = try await LLMClient.shared.stream(prompt: prompt, config: config) { snapshot in
+                    streamedText = snapshot
+                }
+                isLoading = false
+                // 流式结束后,把完整输出交给 caller,便于"深入探讨" sheet 使用
+                onAnalysisComplete?(streamedText)
+            } catch is CancellationError {
+                isLoading = false
+            } catch {
+                isLoading = false
+                errorMessage = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+            }
+        }
+    }
+
+    /// 构造"深入探讨" sheet 用的上下文(含错题元信息 + 上一次的 AI 解析)
+    private func buildDiscussionContext() -> String {
+        var lines: [String] = []
+        if !subject.isEmpty { lines.append("学科:\(subject)") }
+        if !title.isEmpty { lines.append("标题:\(title)") }
+        if !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 原题 ---")
+            lines.append(question)
+        }
+        if !wrongSolution.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 错误解法 ---")
+            lines.append(wrongSolution)
+        }
+        if !correctSolution.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 正确解法 ---")
+            lines.append(correctSolution)
+        }
+        if !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 错因 ---")
+            lines.append(reason)
+        }
+        if !streamedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 上一次 AI 解析(只读) ---")
+            lines.append(streamedText)
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+// MARK: - Streamed Markdown Content
+
+/// `StreamedMarkdownView` 内部已经实现了"流式 Markdown 重新 parse",但要求传入
+/// `StreamedMarkdownSource`。这里用一个简单包装,直接用 `MarkdownView` 也能在
+/// text 变化时重 parse(`StreamedMarkdownView` 的注释也提示:每个 value 是当前完整快照)。
+///
+/// 选用 `MarkdownView` + `task(id: text)`:SwiftUI 在 `text` 变化时会重新触发 task,
+/// 与 `MarkdownView` 内置的 `task(id: text)` 一致,无需自己实现 `StreamedMarkdownSource`。
+private struct MarkdownStreamedContent: View {
+    let text: String
+
+    var body: some View {
+        // 使用与项目其它位置一致的 previewConfig + 单美元符号 LaTeX 归一化
+        MarkdownView(text: text.normalisingSingleDollarMath(), config: .previewConfig)
+    }
+}

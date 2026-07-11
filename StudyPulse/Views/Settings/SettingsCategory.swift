@@ -12,6 +12,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case themeShop
     case health
     case reports
+    case llm
     case data
     case about
     case faq
@@ -25,6 +26,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: return "Theme Shop".localized()
         case .health: return "Health & Readiness".localized()
         case .reports: return "Learning Reports".localized()
+        case .llm: return "LLM".localized()
         case .data: return "Data Management".localized()
         case .about: return "About".localized()
         case .faq: return "FAQ".localized()
@@ -39,6 +41,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: return "Primary · Cards · Timer".localized()
         case .health: return "HRV · Recovery · Focus".localized()
         case .reports: return "Weekly · Monthly · Auto Reports".localized()
+        case .llm: return "AI · BYOK · Provider".localized()
         case .data: return "Import · Export · Backup".localized()
         case .about: return "Version · License".localized()
         case .faq: return "Q&A · Help".localized()
@@ -53,6 +56,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: return "Unlock primary colors, card skins and timer animations as you hit milestones.".localized()
         case .health: return "Connect Apple Health to read your HRV and get personalized study readiness suggestions.".localized()
         case .reports: return "Configure automatic weekly and monthly learning reports with charts and summaries.".localized()
+        case .llm: return "Connect your own OpenAI-compatible LLM endpoint. All requests go directly to the URL you provide.".localized()
         case .data: return "Import, export and manage your grades, mistakes and exams data.".localized()
         case .about: return "App information, version and license details.".localized()
         case .faq: return "Frequently asked questions about using StudyPulse.".localized()
@@ -66,6 +70,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: return "sparkles.rectangle.stack.fill"
         case .health: return "heart.text.square.fill"
         case .reports: return "chart.bar.xaxis"
+        case .llm: return "brain"
         case .data: return "externaldrive.fill"
         case .about: return "info.circle.fill"
         case .faq: return "questionmark.circle.fill"
@@ -79,6 +84,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: return .purple
         case .health: return .pink
         case .reports: return .indigo
+        case .llm: return .teal
         case .data: return .green
         case .about: return .orange
         case .faq: return .blue
@@ -93,6 +99,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .themeShop: ThemeShopView()
         case .health: HealthSettingsView()
         case .reports: WeeklyReportSettingsView()
+        case .llm: LLMSettingsView()
         case .data: DataManagementSettingsView()
         case .about: AboutSettingsView()
         case .faq: QASettingsView()

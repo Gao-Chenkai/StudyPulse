@@ -176,6 +176,14 @@ final class HomeViewModel: ObservableObject {
     /// 生成学习建议列表。供 StudySuggestionsCardViewModel 调用。
     /// 内部调用 `SuggestionEngine.generate(...)`,body 状态建议从 HealthKitManager 取。
     func generateSuggestions(limit: Int = 3) -> [StudySuggestion] {
+        let context = buildSuggestionsContext()
+        return SuggestionEngine.generate(from: context, max: limit)
+    }
+
+    /// 构造学习建议上下文(供 LLM 增强使用)。
+    /// 拆出来是为了让 `StudySuggestionsCard` 在不改 `SuggestionEngine` 的前提下
+    /// 把同一份上下文喂给 LLM prompt。
+    func buildSuggestionsContext() -> StudySuggestionsContext {
         let body = StudyReadinessAlgorithm.recommend(
             hrvEnabled: hrvManager.hrvEnabled,
             hrvOnboardingCompleted: hrvManager.hrvOnboardingCompleted,
@@ -185,13 +193,12 @@ final class HomeViewModel: ObservableObject {
             baselines: hrvManager.personalBaselines,
             age: container.profileRepo.profile.age
         )
-        let context = StudySuggestionsContext(
+        return StudySuggestionsContext(
             grades: container.gradeRepo.grades,
             mistakeSets: container.mistakeRepo.mistakeSets,
             examSets: container.examRepo.filteredExamSets,
             profile: container.profileRepo.profile,
             bodyStatusSuggestion: body
         )
-        return SuggestionEngine.generate(from: context, max: limit)
     }
 }

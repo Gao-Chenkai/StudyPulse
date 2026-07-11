@@ -13,6 +13,7 @@
 import SwiftUI
 import Charts
 import os
+import SwiftStreamingMarkdown
 
 // MARK: - 预测结果入口 Sheet
 
@@ -31,6 +32,17 @@ struct ScorePredictionSheet: View {
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingDetail = false
     @State private var didLog = false
+
+    // LLM AI 预测状态
+    @State private var aiPredictionText: String? = nil
+    @State private var aiPredictionLoading: Bool = false
+    @State private var aiPredictionError: String? = nil
+    @State private var aiPredictionTask: Task<Void, Never>? = nil
+
+    // LLM 深入探讨 sheet
+    @State private var showDiscussion: Bool = false
+    @State private var discussionContext: String = ""
+    @State private var discussionInitial: String? = nil
 
     private let predictor: ScorePredictor = ScorePredictorFactory.active
 
@@ -82,11 +94,24 @@ struct ScorePredictionSheet: View {
                     .adaptiveSheet(detents: [.medium, .large])
                 }
             }
+            .sheet(isPresented: $showDiscussion) {
+                AIDiscussionSheet(
+                    title: "AI 预测 · 深入探讨".localized(),
+                    context: discussionContext,
+                    initialAssistantMessage: discussionInitial,
+                    onDismiss: { showDiscussion = false }
+                )
+                .adaptiveSheet(detents: [.large])
+            }
             .background(Color(.systemGroupedBackground))
             .onAppear {
                 guard !didLog else { return }
                 didLog = true
                 Log.prediction.info("预测 Sheet 打开 / sheet opened; exam=\(self.exam.name, privacy: .public), subject=\(self.exam.subject, privacy: .public), history=\(self.history.count, privacy: .public)")
+            }
+            .onDisappear {
+                aiPredictionTask?.cancel()
+                aiPredictionTask = nil
             }
         }
     }
@@ -119,12 +144,206 @@ struct ScorePredictionSheet: View {
                 // 历史样本
                 historyCard(result: result)
 
+                // AI 预测按钮 + 折叠结果(LLM BYOK;未配置时按钮灰显)
+                aiPredictionCard(result: result)
+
                 // 详情入口
                 detailButton
             }
             .padding(.horizontal)
             .padding(.vertical, 16)
         }
+    }
+
+    /// AI 预测卡:默认显示一个"让大模型预测"按钮;点击后流式拉取 LLM 预测。
+    /// 失败时显示错误信息(可点重试),成功时用 MarkdownView 渲染。
+    @ViewBuilder
+    private func aiPredictionCard(result: ScorePredictionResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.teal)
+                Text("AI 预测".localized())
+                    .font(.subheadline.weight(.semibold))
+                if aiPredictionLoading {
+                    ProgressView().scaleEffect(0.7).padding(.leading, 2)
+                }
+                Spacer()
+                if envManager.llmConfig.isConfigured {
+                    Text("BYOK".localized())
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.teal.opacity(0.15)))
+                        .foregroundColor(.teal)
+                }
+            }
+
+            // 状态 1: 未配置 LLM
+            if !envManager.llmConfig.isConfigured {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("未配置 LLM,无法使用 AI 预测".localized())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    NavigationLink(destination: LLMSettingsView()) {
+                        Label("去配置".localized(), systemImage: "gearshape")
+                            .font(.caption.weight(.medium))
+                    }
+                }
+            }
+            // 状态 2: 已配置且已有结果 → 渲染 Markdown
+            else if let text = aiPredictionText {
+                MarkdownView(
+                    text: text.normalisingSingleDollarMath(),
+                    config: .previewConfig
+                )
+                .textSelection(.enabled)
+                HStack(spacing: 10) {
+                    // 深入探讨:基于本场预测与 AI 多轮对话
+                    Button {
+                        presentDiscussion(result: result, lastPrediction: text)
+                    } label: {
+                        Label("深入探讨".localized(), systemImage: "bubble.left.and.bubble.right.fill")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    .tint(.teal)
+                    Spacer()
+                    Button {
+                        aiPredictionText = nil
+                        aiPredictionError = nil
+                    } label: {
+                        Label("重测".localized(), systemImage: "arrow.clockwise")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+            }
+            // 状态 3: 已配置,正在加载 → 显示流式累积
+            else if aiPredictionLoading {
+                Text(aiPredictionText ?? "Waiting...".localized())
+                    .font(.caption.monospaced())
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            // 状态 4: 已配置,出错
+            else if let err = aiPredictionError {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Button("重试".localized()) {
+                        startAIPrediction(result: result)
+                    }
+                    .font(.caption)
+                }
+            }
+            // 状态 5: 已配置,未触发 → 显示"开始预测"按钮
+            else {
+                Text("让大模型基于历史成绩、错题状态和默认预测,给出第二意见。".localized())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button {
+                    startAIPrediction(result: result)
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                        Text("让大模型预测".localized())
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.teal)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.teal.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.teal.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    /// 触发 LLM 流式预测
+    private func startAIPrediction(result: ScorePredictionResult) {
+        aiPredictionTask?.cancel()
+        aiPredictionText = ""
+        aiPredictionError = nil
+        aiPredictionLoading = true
+        let config = envManager.llmConfig
+        let context = MistakeContext.build(from: subjectMistakes)
+        let prompt = ScorePredictionLLM.makePrompt(
+            exam: exam,
+            history: history,
+            defaultResult: result,
+            fullScore: fullScore,
+            mistakeContext: context
+        )
+        aiPredictionTask = Task {
+            do {
+                _ = try await LLMClient.shared.stream(
+                    prompt: prompt,
+                    config: config
+                ) { snapshot in
+                    aiPredictionText = snapshot
+                }
+            } catch is CancellationError {
+                // ignore
+            } catch {
+                let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+                aiPredictionError = desc
+            }
+            aiPredictionLoading = false
+        }
+    }
+
+    /// 打开"深入探讨" sheet:把本场默认预测 + 已有 AI 预测作为上下文/初始消息。
+    private func presentDiscussion(result: ScorePredictionResult, lastPrediction: String) {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        let recent = history.suffix(5)
+            .map { g in
+                let full = g.fullScore ?? fullScore
+                return "  - \(f.string(from: g.date))  \(Int(g.score.rounded()))/\(Int(full.rounded()))  \(g.examName.isEmpty ? "(无标题)" : g.examName)"
+            }
+            .joined(separator: "\n")
+        let ctx = MistakeContext.build(from: subjectMistakes)
+        let mistakeBlock: String = ctx.reviewedMistakeCount > 0
+            ? """
+            \n--- 错题复习状态 ---
+            已复习错题数:\(ctx.reviewedMistakeCount)
+            平均掌握度:\(String(format: "%.0f%%", ctx.averageMastery * 100))
+            总曝光次数:\(ctx.totalExposureCount)
+            """
+            : "\n--- 错题复习状态 ---\n(本科目暂无错题数据)\n"
+        let context = """
+        学科:\(exam.subject)
+        考试名称:\(exam.name)
+        考试日期:\(f.string(from: exam.examDate))
+        满分:\(Int(fullScore))
+
+        --- 默认算法预测 ---
+        点估计:\(Int(result.predicted.rounded()))
+        95% 区间:[\(Int(result.lowerBound.rounded())), \(Int(result.upperBound.rounded()))]
+        区间半宽:±\(String(format: "%.1f", result.halfWidth))
+        样本量:\(result.usedSampleSize)
+
+        --- 最近 5 次成绩 ---
+        \(recent.isEmpty ? "(无)" : recent)
+        \(mistakeBlock)
+
+        --- 上一次 AI 预测(只读) ---
+        \(lastPrediction)
+        """
+        discussionContext = context
+        discussionInitial = lastPrediction
+        showDiscussion = true
     }
 
     /// v1.5:数据不足横幅——明确告诉用户 CI 不可信,数字只是"参考"。
@@ -851,6 +1070,17 @@ struct ComprehensiveScorePredictionSheet: View {
 
     @EnvironmentObject var envManager: AppEnvironmentManager
 
+    // LLM AI 预测状态
+    @State private var aiPredictionText: String? = nil
+    @State private var aiPredictionLoading: Bool = false
+    @State private var aiPredictionError: String? = nil
+    @State private var aiPredictionTask: Task<Void, Never>? = nil
+
+    // LLM 深入探讨 sheet
+    @State private var showDiscussion: Bool = false
+    @State private var discussionContext: String = ""
+    @State private var discussionInitial: String? = nil
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -859,6 +1089,8 @@ struct ComprehensiveScorePredictionSheet: View {
                     ForEach(target.perSubject, id: \.subject) { item in
                         perSubjectCard(item: item)
                     }
+                    // AI 预测卡:与单科一致,默认显示一个"让大模型预测"按钮
+                    comprehensiveAIPredictionCard
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 16)
@@ -876,7 +1108,200 @@ struct ComprehensiveScorePredictionSheet: View {
                         .font(.headline)
                 }
             }
+            .onDisappear {
+                aiPredictionTask?.cancel()
+                aiPredictionTask = nil
+            }
+            .sheet(isPresented: $showDiscussion) {
+                AIDiscussionSheet(
+                    title: "AI 总分预测 · 深入探讨".localized(),
+                    context: discussionContext,
+                    initialAssistantMessage: discussionInitial,
+                    onDismiss: { showDiscussion = false }
+                )
+                .adaptiveSheet(detents: [.large])
+            }
         }
+    }
+
+    /// 综合考试 AI 预测卡(总分第二意见)
+    @ViewBuilder
+    private var comprehensiveAIPredictionCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.teal)
+                Text("AI 总分预测".localized())
+                    .font(.subheadline.weight(.semibold))
+                if aiPredictionLoading {
+                    ProgressView().scaleEffect(0.7).padding(.leading, 2)
+                }
+                Spacer()
+                if envManager.llmConfig.isConfigured {
+                    Text("BYOK".localized())
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.teal.opacity(0.15)))
+                        .foregroundColor(.teal)
+                }
+            }
+
+            // 状态 1: 未配置 LLM
+            if !envManager.llmConfig.isConfigured {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("未配置 LLM,无法使用 AI 预测".localized())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    NavigationLink(destination: LLMSettingsView()) {
+                        Label("去配置".localized(), systemImage: "gearshape")
+                            .font(.caption.weight(.medium))
+                    }
+                }
+            }
+            // 状态 2: 已配置且已有结果 → 渲染 Markdown
+            else if let text = aiPredictionText {
+                MarkdownView(
+                    text: text.normalisingSingleDollarMath(),
+                    config: .previewConfig
+                )
+                .textSelection(.enabled)
+                HStack(spacing: 10) {
+                    // 深入探讨:基于综合预测与 AI 多轮对话
+                    Button {
+                        presentComprehensiveDiscussion(lastPrediction: text)
+                    } label: {
+                        Label("深入探讨".localized(), systemImage: "bubble.left.and.bubble.right.fill")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    .tint(.teal)
+                    Spacer()
+                    Button {
+                        aiPredictionText = nil
+                        aiPredictionError = nil
+                    } label: {
+                        Label("重测".localized(), systemImage: "arrow.clockwise")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+            }
+            // 状态 3: 已配置,正在加载 → 显示流式累积
+            else if aiPredictionLoading {
+                Text(aiPredictionText ?? "Waiting...".localized())
+                    .font(.caption.monospaced())
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            // 状态 4: 已配置,出错
+            else if let err = aiPredictionError {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Button("重试".localized()) {
+                        startComprehensiveAIPrediction()
+                    }
+                    .font(.caption)
+                }
+            }
+            // 状态 5: 已配置,未触发 → 显示"开始预测"按钮
+            else {
+                Text("让大模型基于各科默认预测,给出总分第二意见。".localized())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button {
+                    startComprehensiveAIPrediction()
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                        Text("让大模型预测".localized())
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.teal)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.teal.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.teal.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    /// 触发 LLM 流式预测(综合考试)
+    private func startComprehensiveAIPrediction() {
+        aiPredictionTask?.cancel()
+        aiPredictionText = ""
+        aiPredictionError = nil
+        aiPredictionLoading = true
+        let config = envManager.llmConfig
+        let prompt = ComprehensiveScorePredictionLLM.makePrompt(
+            exam: target.exam,
+            target: target
+        )
+        aiPredictionTask = Task {
+            do {
+                _ = try await LLMClient.shared.stream(
+                    prompt: prompt,
+                    config: config
+                ) { snapshot in
+                    aiPredictionText = snapshot
+                }
+            } catch is CancellationError {
+                // ignore
+            } catch {
+                let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+                aiPredictionError = desc
+            }
+            aiPredictionLoading = false
+        }
+    }
+
+    /// 打开"深入探讨" sheet:把综合考试各科/总分预测 + 已有 AI 预测作为上下文/初始消息。
+    private func presentComprehensiveDiscussion(lastPrediction: String) {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        let subjectLines = target.perSubject
+            .map { item -> String in
+                let r = item.result
+                let range = "\(Int(r.lowerBound.rounded()))~\(Int(r.upperBound.rounded()))"
+                let n = r.usedSampleSize
+                let half = String(format: "%.1f", r.halfWidth)
+                return "  - \(item.subject): 点估计=\(Int(r.predicted.rounded())), 95% CI=[\(range)], ±\(half) pts, n=\(n), 满分=\(Int(r.fullScore.rounded()))"
+            }
+            .joined(separator: "\n")
+        let totalHalf = (target.totalUpper - target.totalLower) / 2.0
+        let context = """
+        综合考试名称:\(target.exam.name)
+        考试日期:\(f.string(from: target.exam.examDate))
+        距离考试:\(max(0, Calendar.current.dateComponents([.day], from: Date(), to: target.exam.examDate).day ?? 0)) 天
+        学科数:\(target.perSubject.count)
+        满分合计:\(Int(target.totalFull.rounded()))
+
+        --- 各科默认预测 ---
+        \(subjectLines.isEmpty ? "(无)" : subjectLines)
+
+        --- 总分默认预测 ---
+        点估计:\(Int(target.totalPredicted.rounded()))
+        95% 区间:[\(Int(target.totalLower.rounded())), \(Int(target.totalUpper.rounded()))]
+        区间半宽:±\(String(format: "%.1f", totalHalf))
+
+        --- 上一次 AI 总分预测(只读) ---
+        \(lastPrediction)
+        """
+        discussionContext = context
+        discussionInitial = lastPrediction
+        showDiscussion = true
     }
 
     /// 总分卡

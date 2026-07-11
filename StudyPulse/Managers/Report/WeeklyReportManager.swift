@@ -269,13 +269,20 @@ enum WeeklyReportManager {
     // MARK: - Report Generation
 
     /// Generate a complete report image.
+    /// `aiSummary` 可选 LLM 生成的 AI 总结;非空时渲染在 Summary 之上。
     static func generateReportImage(
         data: ReportData,
         profile: UserProfile,
-        subjects: [Subject]
+        subjects: [Subject],
+        aiSummary: String? = nil
     ) -> UIImage? {
         let summary = generateSummary(data: data, profile: profile)
-        let view = WeeklyReportView(reportData: data, summary: summary, subjects: subjects)
+        let view = WeeklyReportView(
+            reportData: data,
+            summary: summary,
+            subjects: subjects,
+            aiSummary: aiSummary
+        )
         return ReportRenderer.render(view)
     }
 

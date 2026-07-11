@@ -150,6 +150,71 @@ class AppEnvironmentManager: ObservableObject {
         preferences.glassEffectEnabled = enabled
     }
 
+    // MARK: - LLM (BYOK 大模型) 透传属性
+
+    /// 当前 LLM 配置快照(只读)。调用方按需构造 `LLMPrompt`。
+    var llmConfig: LLMConfig {
+        LLMConfig.from(preferences)
+    }
+
+    /// LLM 总开关
+    var llmEnabled: Bool {
+        get { preferences.llmEnabled }
+        set {
+            Log.preferences.info("切换 LLM 总开关 / LLM enabled: -> \(newValue, privacy: .public)")
+            preferences.llmEnabled = newValue
+        }
+    }
+
+    /// 设置 LLM baseURL。`nil` / 空字符串视作未配置。
+    func setLLMBaseURL(_ url: String?) {
+        let normalized: String?
+        if let url, !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            normalized = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            normalized = nil
+        }
+        Log.preferences.info("更新 LLM baseURL / LLM baseURL: -> \(normalized ?? "nil", privacy: .public)")
+        preferences.llmBaseURL = normalized
+    }
+
+    /// 设置 LLM API Key。`nil` / 空字符串视作清空。
+    func setLLMAPIKey(_ key: String?) {
+        let normalized: String?
+        if let key, !key.isEmpty { normalized = key } else { normalized = nil }
+        Log.preferences.info("更新 LLM apiKey / LLM apiKey: -> \(normalized == nil ? "nil" : "<redacted>", privacy: .public)")
+        preferences.llmAPIKey = normalized
+    }
+
+    /// 设置 LLM 模型 id
+    func setLLMModel(_ model: String?) {
+        let normalized: String?
+        if let model, !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            normalized = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            normalized = nil
+        }
+        Log.preferences.info("更新 LLM model / LLM model: -> \(normalized ?? "nil", privacy: .public)")
+        preferences.llmModel = normalized
+    }
+
+    /// 设置 LLM 自定义系统 prompt 追加
+    func setLLMSystemPromptAppendix(_ appendix: String?) {
+        let normalized: String?
+        if let appendix, !appendix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            normalized = appendix
+        } else {
+            normalized = nil
+        }
+        preferences.llmSystemPromptAppendix = normalized
+    }
+
+    /// 设置 LLM 采样温度(0.0-2.0,内部 clamp)
+    func setLLMTemperature(_ temperature: Double) {
+        let clamped = max(0, min(2, temperature))
+        preferences.llmTemperature = clamped
+    }
+
     /// 设置当前激活的 study phase（nil = 全部数据）
     func setActivePhaseId(_ id: UUID?) {
         Log.preferences.info("切换 phase / Active phase change: -> \(id?.uuidString ?? "all", privacy: .public)")

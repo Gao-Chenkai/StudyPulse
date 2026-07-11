@@ -6,6 +6,10 @@
 // 给出 3 条最高优先级建议。建议生成已迁入 HomeViewModel.generateSuggestions(...)
 // (底层调用 SuggestionEngine);卡片本身只负责渲染。
 //
+//  LLM BYOK 增强(2026-07-11):当 `AppPreferences.llmEnabled == true` 时,
+//  卡片额外调用 `LLMClient.stream` 拉取 3 条 AI 建议并流式覆盖本地结果;
+//  失败时静默回退到本地建议 + 显示 "AI 建议不可用"。
+//
 //  Extracted from HomeView.swift during card-extraction refactor (2026-07-05).
 //
 
@@ -18,14 +22,35 @@ struct StudySuggestionsCard: View {
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject private var healthManager = HealthKitManager.shared
     @EnvironmentObject private var envManager: AppEnvironmentManager
-    @State private var suggestions: [StudySuggestion] = []
+
+    /// 本地建议(由 `HomeViewModel.generateSuggestions` 产生,作为 fallback)
+    @State private var localSuggestions: [StudySuggestion] = []
+    /// AI 建议(流式累积,任意时刻可被本地覆盖以回退)
+    @State private var aiSuggestions: [StudySuggestion]? = nil
+    /// 当前 LLM 流式任务;进入卡片/重新加载前 cancel 旧任务
+    @State private var aiTask: Task<Void, Never>? = nil
+    /// AI 错误信息(用于显示"AI 建议不可用"小灰字)
+    @State private var aiErrorMessage: String? = nil
+    /// AI 加载中(用于显示 progress chip)
+    @State private var aiLoading: Bool = false
+
+    /// 当前展示的建议(优先 AI,失败/未启用时本地)
+    private var displayed: [StudySuggestion] {
+        aiSuggestions ?? localSuggestions
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("Study Suggestions".localized())
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
+
+                if envManager.llmConfig.isConfigured && aiSuggestions != nil {
+                    aiChip
+                } else if envManager.llmConfig.isConfigured && aiLoading {
+                    aiLoadingChip
+                }
 
                 Spacer()
 
@@ -34,7 +59,7 @@ struct StudySuggestionsCard: View {
                     .foregroundColor(.yellow)
             }
 
-            if suggestions.isEmpty {
+            if displayed.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 32))
@@ -48,8 +73,14 @@ struct StudySuggestionsCard: View {
                 .padding(.vertical, 20)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(suggestions.prefix(3), id: \.id) { suggestion in
+                    ForEach(displayed.prefix(3), id: \.id) { suggestion in
                         SuggestionRowView(suggestion: suggestion)
+                    }
+                    if envManager.llmConfig.isConfigured && aiErrorMessage != nil && aiSuggestions == nil {
+                        Text(aiErrorMessage ?? "")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
@@ -60,11 +91,88 @@ struct StudySuggestionsCard: View {
         .onAppear { reload() }
         .debugLayoutBoundsAuto()
         .onChange(of: healthManager.bodyStatus) { _, _ in reload() }
+        .onDisappear { aiTask?.cancel() }
     }
 
-    /// 拉取最新 3 条建议。底层走 `HomeViewModel.generateSuggestions(limit:)`。
+    // MARK: - AI chip
+
+    private var aiChip: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .bold))
+            Text("AI".localized())
+                .font(.system(size: 10, weight: .bold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(Color.teal.opacity(0.18)))
+        .foregroundColor(.teal)
+    }
+
+    private var aiLoadingChip: some View {
+        HStack(spacing: 4) {
+            ProgressView().scaleEffect(0.55)
+            Text("AI".localized())
+                .font(.system(size: 10, weight: .bold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(Color.teal.opacity(0.12)))
+        .foregroundColor(.teal)
+    }
+
+    // MARK: - Reload
+
+    /// 拉取最新 3 条本地建议 + 可选的 AI 建议。
+    /// 失败时静默回退到本地版本。
     private func reload() {
-        suggestions = viewModel.generateSuggestions(limit: 3)
+        // 1) 本地建议总是先就位
+        localSuggestions = viewModel.generateSuggestions(limit: 3)
+
+        // 2) 如果 LLM 未配置 / 未启用,直接展示本地版本
+        guard envManager.llmConfig.isConfigured else {
+            aiSuggestions = nil
+            aiErrorMessage = nil
+            aiLoading = false
+            return
+        }
+
+        // 3) 取消上一次流式任务
+        aiTask?.cancel()
+        aiLoading = true
+        aiErrorMessage = nil
+        aiSuggestions = nil
+
+        aiTask = Task {
+            await streamAI()
+        }
+    }
+
+    @MainActor
+    private func streamAI() async {
+        let config = envManager.llmConfig
+        let context = viewModel.buildSuggestionsContext()
+        let prompt = StudySuggestionsLLM.makePrompt(context)
+        var accumulated = ""
+        do {
+            _ = try await LLMClient.shared.stream(prompt: prompt, config: config) { snapshot in
+                accumulated = snapshot
+            }
+            if let parsed = StudySuggestionsLLM.parse(accumulated) {
+                aiSuggestions = parsed
+                aiErrorMessage = nil
+            } else {
+                // 解析失败 → 回退本地
+                aiSuggestions = nil
+                aiErrorMessage = "AI 建议不可用,显示本地版本".localized()
+            }
+        } catch is CancellationError {
+            // 正常取消,保持当前状态
+        } catch {
+            aiSuggestions = nil
+            aiErrorMessage = "AI 建议不可用,显示本地版本".localized()
+        }
+        aiLoading = false
     }
 }
 

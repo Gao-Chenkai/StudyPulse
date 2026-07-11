@@ -10,6 +10,7 @@ import SwiftUI
 struct MistakeDetailEditView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     let mistakeSet: MistakeNote
 
     /// 是否在内部包一层 NavigationStack。
@@ -61,6 +62,9 @@ struct MistakeDetailEditView: View {
 
     /// 是否加入 SRS 复习队列（opt-in）
     @State private var reviewEnabled: Bool = false
+
+    /// AI 解析 sheet
+    @State private var showingAIAnalysis = false
     
     var body: some View {
         // 根据调用场景决定是否包自己的 NavigationStack:
@@ -116,6 +120,25 @@ struct MistakeDetailEditView: View {
             Button("OK".localized()) { }
         } message: {
             Text(ocrErrorMessage)
+        }
+        .sheet(isPresented: $showingAIAnalysis) {
+            MistakeAIAnalysisSheet(
+                subject: selectedSubject,
+                title: editedTitle,
+                question: editedOriginalQuestion,
+                wrongSolution: editedWrongSolution,
+                correctSolution: editedCorrectSolution,
+                reason: editedErrorReason,
+                onInsert: { insertText in
+                    // 把 AI 解析结果拼接到 "正解" 段
+                    if editedCorrectSolution.isEmpty {
+                        editedCorrectSolution = insertText
+                    } else {
+                        editedCorrectSolution += "\n\n" + insertText
+                    }
+                }
+            )
+            .environmentObject(envManager)
         }
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
@@ -300,11 +323,32 @@ private extension MistakeDetailEditView {
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save".localized()) {
-                    saveChanges()
-                    presentationMode.wrappedValue.dismiss()
+                HStack(spacing: 12) {
+                    // AI 解析按钮 — LLM 未配置时按钮仍可点(打开 sheet 后有"去设置"入口)
+                    // 用 Label 文本让按钮更显眼,不再只是个小图标
+                    Button {
+                        showingAIAnalysis = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                            Text("AI".localized())
+                                .font(.caption.weight(.bold))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule().fill(Color.teal.opacity(envManager.llmConfig.isConfigured ? 0.18 : 0.08))
+                        )
+                        .foregroundColor(envManager.llmConfig.isConfigured ? .teal : .secondary)
+                    }
+                    .accessibilityLabel("AI Analysis".localized())
+
+                    Button("Save".localized()) {
+                        saveChanges()
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .fontWeight(.semibold)
                 }
-                .fontWeight(.semibold)
             }
         }
     }

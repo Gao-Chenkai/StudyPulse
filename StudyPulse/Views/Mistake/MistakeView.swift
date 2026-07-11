@@ -853,6 +853,9 @@ struct MistakeSetDetailView: View {
     @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingEditSheet = false
     @State private var showingQuickReview = false
+    @State private var showingAIAnalysis = false
+    @State private var showingAIDiscussion = false
+    @State private var lastAIAnalysis: String? = nil
 
     /// 始终从 mistakeRepo 里取最新快照（错题标题/内容/掌握度等可能
     /// 在闪卡复习后被异步更新），这样 MasteryCurveView 才会随 review 实时刷新。
@@ -1050,9 +1053,75 @@ struct MistakeSetDetailView: View {
                 }
             }
         }
+        .toolbar {
+            // AI 解析按钮(直接显示在详情页,无需进入编辑页)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAIAnalysis = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("AI".localized())
+                            .font(.caption.weight(.bold))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color.teal.opacity(envManager.llmConfig.isConfigured ? 0.18 : 0.08))
+                    )
+                    .foregroundColor(envManager.llmConfig.isConfigured ? .teal : .secondary)
+                }
+                .accessibilityLabel("AI Analysis".localized())
+            }
+        }
         .sheet(isPresented: $showingEditSheet) {
             MistakeDetailEditView(mistakeSet: liveMistake)
                 .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingAIAnalysis) {
+            MistakeAIAnalysisSheet(
+                subject: liveMistake.subject,
+                title: liveMistake.title,
+                question: liveMistake.originalQuestion,
+                wrongSolution: liveMistake.wrongSolution,
+                correctSolution: liveMistake.correctSolution,
+                reason: liveMistake.errorReason,
+                onInsert: { insight in
+                    // 把"正确思路"段写回错题数据库(详情页直接写)
+                    var updated = liveMistake
+                    let trimmed = insight.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        if updated.correctSolution.isEmpty {
+                            updated.correctSolution = trimmed
+                        } else {
+                            updated.correctSolution += "\n\n---\n\n" + trimmed
+                        }
+                        container.mistakeRepo.update(updated)
+                    }
+                },
+                onAnalysisComplete: { fullText in
+                    lastAIAnalysis = fullText
+                },
+                onDiscuss: { context, lastAnalysis in
+                    showingAIAnalysis = false
+                    // 稍微延迟,等 sheet 关闭动画完成
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingAIDiscussion = true
+                    }
+                }
+            )
+            .environmentObject(envManager)
+            .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingAIDiscussion) {
+            AIDiscussionSheet(
+                title: "AI 解析 · 深入探讨".localized(),
+                context: buildMistakeDiscussionContext(),
+                initialAssistantMessage: lastAIAnalysis,
+                onDismiss: { showingAIDiscussion = false }
+            )
+            .environmentObject(envManager)
+            .adaptiveSheet(detents: [.large])
         }
         .fullScreenCover(isPresented: $showingQuickReview) {
             NavigationStack {
@@ -1089,6 +1158,42 @@ struct MistakeSetDetailView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// 为"AI 解析 · 深入探讨" sheet 构造上下文
+    private func buildMistakeDiscussionContext() -> String {
+        let m = liveMistake
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        var lines: [String] = []
+        lines.append("错题 ID:\(m.id.uuidString)")
+        lines.append("学科:\(m.subject.isEmpty ? "(无)" : m.subject)")
+        lines.append("标题:\(m.title)")
+        lines.append("来源:\(m.source.isEmpty ? "(无)" : m.source)")
+        lines.append("日期:\(f.string(from: m.date))")
+        lines.append("难度:\(m.difficulty)/5")
+        lines.append("掌握度:\(String(format: "%.0f%%", m.masteryScore * 100))")
+        lines.append("曝光次数:\(m.exposureCount)")
+        if !m.tags.isEmpty {
+            lines.append("标签:\(m.tags.joined(separator: ", "))")
+        }
+        func block(_ title: String, _ body: String) {
+            if !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                lines.append("")
+                lines.append("--- \(title) ---")
+                lines.append(body)
+            }
+        }
+        block("原题", m.originalQuestion)
+        block("错因", m.errorReason)
+        block("错误解法", m.wrongSolution)
+        block("正确解法", m.correctSolution)
+        if let last = lastAIAnalysis, !last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.append("")
+            lines.append("--- 上一次 AI 解析(只读) ---")
+            lines.append(last)
+        }
+        return lines.joined(separator: "\n")
     }
 }
 
