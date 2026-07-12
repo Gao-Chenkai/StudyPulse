@@ -100,6 +100,17 @@ OCR：Vision 框架 `VNRecognizeTextRequest`。
     - `Achievement/`：
       - `AchievementManager.swift`：`@MainActor` ObservableObject 单例；`recordGradeRecorded` / `recordMistakeReviewed` / `recordFocusMinutes` 三个事件入口；`updateConfig` 改每日目标；`handleDayRolloverIfNeeded` 跨日滚动；`bootstrap(container:)` 在 `RepositoryContainer.isReady` 之后调用。
       - `AchievementStore.swift`：`AchievementsSnapshot` 的 JSON 持久化（NSLock 线程安全，含首次启动从 `grades.json` / `study_sessions.json` 反推 30 天历史）。
+    - `Audio/`：
+      - `AudioStorage.swift`：`nonisolated` struct，封装 `~/Documents/audio/` 目录 + 唯一文件名生成（`<uuid>.m4a`）+ 删除。
+      - `VoiceMemoManager.swift`：`@MainActor` ObservableObject，封装 `AVAudioRecorder` 录音会话（请求麦克风权限、启动 / 暂停 / 停止 / 删除）。
+    - `LLM/`（BYOK 大模型子系统）：
+      - `LLMConfig.swift`：`nonisolated` value type，从 `AppPreferences` 桥接 `enabled / baseURL / apiKey / model / systemPromptAppendix / temperature / overrideSystemPrompt`；`isConfigured` 判定三字段全非空。
+      - `LLMError.swift`：`notConfigured` / `invalidURL` / `unauthorized`（401）/ `rateLimited`（429）/ `serverError(statusCode:body:)` / `network` / `malformedResponse` / `emptyResponse` / `timeout`；服务端 4xx 错误时 `body` 拼进 `errorDescription` 便于诊断。
+      - `LLMPrompt.swift`：`nonisolated` struct，封装 `system` / `[user,assistant]` 消息 + 工具函数 `toMessages()` / `tokensApprox()`。
+      - `LLMRequestBuilder.swift`：`enum LLMRequestBuilder` + 命名空间子 enum（`StudySuggestionsLLM` / `MistakeAILLM` / `WeeklyReportLLM` / `AIDiscussionLLM` / `BodyRadarLLM` / `HomeAskLLM` / `AISimilarQuestionLLM`），按场景把上下文编码为 system / user prompt，**固定输出格式**（`## 错因分析/## 正确思路/## 类似题建议` 或 `## 强度/标题/建议/依据`）便于解析回写本地模型。
+      - `LLMResponseParser.swift`：`enum LLMResponseParser` 把 LLM 输出按 `## 段落名` 切分并合并回 `StudySuggestion` / 错因分析 / 周报总结 / 雷达建议，**保留本地 `icon/priority/color`**，只替换 `title/description`。
+      - `LLMClient.swift`：`@MainActor` ObservableObject 单例（`LLMClient.shared`）；`complete(prompt:config:caller:)` 非流式 / `stream(prompt:config:caller:onDelta:)` 流式；自动注入 `Authorization: Bearer` / 构造 Chat Completions 请求体 / 解析 SSE 流 / 拆分 `LLMError`；DEBUG 模式下每次调用写 `LLMCallDebugInfo` 到 `lastCallInfo` + 环形 20 条 `recentCalls` 缓冲。
+      - `HomeAskDataProvider.swift`：`enum HomeAskDataProvider` 把用户输入关键词匹配到 4 类上下文（`grade` / `mistake` / `trend` / `readiness`）之一，组合成 HomeAskLLM 的 prompt。
   - `Repositories/`：7 域 Repository（`Repositories/Protocols/` 协议 + `Default*Repository` 实现）。
     - `Protocols/`：
       - `GradeRepository.swift`：`@MainActor` protocol；`grades` / `filteredGrades` + CRUD + `migrateInlineImagesIfNeeded()` + `reloadFromSwiftData()`。
@@ -133,7 +144,7 @@ OCR：Vision 框架 `VNRecognizeTextRequest`。
     - `Trends/`：`TrendsView.swift` 趋势分析（顶部可选 `LearningHeatmapView`，受 `AppPreferences.learningHeatmapOnTrends` 控制）。
     - `Exam/`：`ExamView.swift` / `ExamCalendarView.swift` / `ExamDetailView.swift`（含考场信息 / 考前清单 / 倒计时通知 / 分享给家人 / 复盘 entry）/ `ExamDetailEditView.swift` / `NewExamSetView.swift` / `ExamReviewView.swift` / `ScorePredictionEngine.swift` / `ScorePredictionSheet.swift`。
     - `Grade/`：`AddGradeView.swift` / `SubjectScoreCard.swift`。
-    - `Mistake/`：`MistakeView.swift`（toolbar 含 PDF 导出 + 加入 SRS 队列按钮）/ `MistakeDetailEditView.swift` / `NewMistakeSetView.swift` / `PDF/MistakePDFExportSheet.swift` / `PDF/MistakePDFGenerationView.swift`。
+    - `Mistake/`：`MistakeView.swift`（toolbar 含 PDF 导出 + 加入 SRS 队列按钮，详情 toolbar 含 AI 解析 Menu）/ `MistakeDetailEditView.swift`（支持每错题附加语音备忘录）/ `NewMistakeSetView.swift` / `PDF/MistakePDFExportSheet.swift` / `PDF/MistakePDFGenerationView.swift` / `Audio/AudioPlaybackView.swift`（详情页内嵌播放）/ `Audio/VoiceMemoRecordingSheet.swift`（编辑页录音 sheet）/ `LLM/AISimilarQuestionFlowView.swift`（AI 相似题组卷流程）。
     - `Flashcard/`：`FlashcardStudyView.swift` / `FlashcardCardView.swift` / `FlashcardSessionSummaryView.swift` / `FlashcardCalculatorView.swift`。
     - `Todo/`：`TodoView.swift`（统一待办主页面，类型筛选 + 时间分组 + 列表/日历切换 + 过期 sheet）/ `TodoRowView.swift` / `NewTaskView.swift` / `TaskDetailView.swift` / `TaskDetailEditView.swift`。
     - `Profile/`：`EditSubjectsView.swift` / `PreferencesView.swift` / `ProfileEditView.swift`。
@@ -158,7 +169,16 @@ OCR：Vision 框架 `VNRecognizeTextRequest`。
     - `About/`：`AboutView.swift` / `CopyrightView.swift` / `HRVOnboardingView.swift`（3 页介绍 + 隐私 + 授权）。
     - `Admin/`：`DataAdminView.swift` 开发者工具页。
     - `OnBoarding/`：`OnboardingView.swift`（原生 iOS 26 风格 TabView 分页 + 渐变 + 玻璃质感）/ `OnboardingConfig.swift` / `OnboardingFlowState.swift` / `OnboardingProfileFormView.swift`（6 页基础信息表单）/ `VersionedWelcomeModifier.swift`（版本感知欢迎页）。
+    - `MistakeAIAnalysisSheet`：错题详情 toolbar ✨ 按钮触发的 sheet，按 `## 错因分析 / ## 正确思路 / ## 类似题建议` 三段流式渲染；可一键把「正确思路」插入 `editedCorrectSolution`。
     - `Components/`：`GradeChartView` / `HRVStatusCard` / `LearningHeatmapView`（90 天 GitHub 风格热力图）/ `MasteryCurveView` / `PhaseSelectorView`（全局 phase 切换器 pill，放 5 主页面 toolbar `.principal`）/ `SectionHeader` / `StreakHomeCard` / `StudyTimerCard` / `SubjectPickerView` / `TrendChartView` / `Markdown/`（`MarkdownEditorView` / `MarkdownPreviewView` / `MarkdownTextEditor`）。
+    - `LLM/`（BYOK 大模型 UI）：
+      - `LLMSettingsView.swift`：总开关 + Base URL + API Key（masked 显示 / 修改）+ Model + Temperature slider + System Prompt 追加 + Test Connection。
+      - `LLMChatView.swift` + `LLMChatViewModel.swift`：通用 AI 助手聊天页（in-memory 历史、离开页面自动清空）；复用 `ChatBubble` + `ChatInputBar`。
+      - `AIDiscussionSheet.swift`：错题解析 / 成绩预测 / 雷达建议等的「深入探讨」sheet，多轮对话（首条 assistant 消息用 `isInitialContext` 视觉弱化，不放入 conversation history，仅作 system prompt 引用）。
+      - `MistakeAIAnalysisSheet.swift`：错题 AI 解析流式 sheet。
+      - `HomeAskSheet.swift` + `HomeCards/HomeAskCard.swift` + `HomeAskViewModel.swift`：主页 AI 问答主卡片 + sheet（`HomeAskDataProvider` 根据输入关键词自动选择上下文）。
+      - `ChatBubble.swift` + `ChatInputBar.swift`：从原 `LLMMessageBubbleView` 拆出的可复用 chat 组件。
+      - `LLMDebugSheet.swift`：DEBUG 模式下面板，按 caller 分组显示 `LLMCallInfo` 环形 20 条历史 + JSON 详情。
     - `Helpers/`：`AvatarView` / `ImagePicker` / `PhotoCaptureView` / `ScoreColor` / `ZoomableImageView` / `iPadLayout`。
   - `Extensions/`：`AppleIntelligenceGradient.swift` / `ColorExtensions.swift` / `DateExtensions.swift` / `GlassCardModifier.swift`（`.glassCard(enabled:cornerRadius:)` 修饰符）。
   - `Intents/`：`StudyPulseShortcuts.swift`（6 个 AppIntent：AddGrade / RecordMistake / CheckUpcomingExams / CheckBodyStatus / CheckReadiness / CheckSubjectAverage）/ `AddGradeIntent.swift` / `RecordMistakeIntent.swift` / `CheckBodyStatusIntent.swift` / `CheckReadinessIntent.swift` / `CheckSubjectAverageIntent.swift` / `CheckUpcomingExamsIntent.swift` / `IntentAction.swift` / `IntentDataLoader.swift` / `SubjectEntity.swift`。
@@ -431,21 +451,66 @@ PersonalBaselines 30 天个人基线：
 
 ---
 
+## 7.5 LLM (BYOK 大模型) 子系统
+
+`LLMClient.shared` 为 `@MainActor` ObservableObject 单例，**OpenAI Chat Completions 协议兼容**（支持 OpenAI / DeepSeek / 月之暗面 / 任何兼容端点）。`LLMConfig` 是 `nonisolated value type` 的不可变配置快照，由 `LLMConfig.from(_: AppPreferences)` 在主线程上按需构造（避免直接持有 `AppPreferences` 引用导致 UI 不能立即更新）。
+
+**核心抽象**：
+- `LLMClient.complete(prompt:config:caller:)`：非流式调用，返回最终 `String`。
+- `LLMClient.stream(prompt:config:caller:onDelta:)`：流式调用，`onDelta` 接收**到目前为止的完整文本**（不是增量），便于 UI 端存进 `AsyncStream` 给 `SwiftStreamingMarkdown` 的 `MarkdownView` 流式渲染。
+- `LLMPrompt`：`nonisolated` struct，封装 `system` / `[user,assistant]` 消息；`LLMRequestBuilder` 按场景（`StudySuggestionsLLM` / `MistakeAILLM` / `WeeklyReportLLM` / `AIDiscussionLLM` / `BodyRadarLLM` / `HomeAskLLM` / `AISimilarQuestionLLM`）拼装 system + user prompt，**固定输出格式**（如 `## 错因分析 / ## 正确思路 / ## 类似题建议`）便于 `LLMResponseParser` 解析回写本地模型。
+- `LLMError`：9 类错误（`notConfigured` / `invalidURL` / `unauthorized` 401 / `rateLimited` 429 / `serverError(statusCode:body:)` / `network` / `malformedResponse` / `emptyResponse` / `timeout`），服务端 4xx 错误时把 `body` 拼进 `errorDescription` 便于排查。
+- `LLMCallDebugInfo`：DEBUG 面板用，记录 `startTime` / `endTime` / `url` / `model` / `temperature` / `systemPrompt` / `messages` / `response` / `error` / `caller` 标签；`LLMClient.lastCallInfo` 缓存最近一次，`recentCalls` 环形 20 条历史。
+
+**4 大用户面 AI 功能 + 1 配置入口**：
+1. **学习建议卡 `StudySuggestionsCard`**：先展示本地建议，再用 LLM 流式替换为 ✨ AI 建议（带 `✨ AI` 角标），失败回退本地 + 灰字提示。
+2. **错题 AI 解析 `MistakeAIAnalysisSheet`**：错题详情 toolbar ✨ 按钮，按三段格式流式渲染；可一键把「正确思路」插入 `editedCorrectSolution`。toolbar Menu 还含 `AI 相似题组卷` → `AISimilarQuestionFlowView`。
+3. **周 / 月报 AI 总结 `WeeklyReportSettingsView` + `WeeklyReportView`**：周报 / 月报 AI Summary 区块，流式 Markdown + 淡青底色，失败静默跳过。
+4. **主页 AI 问答主卡片 `HomeAskCard` + `HomeAskSheet`**：点开 sheet，**`HomeAskDataProvider` 根据用户输入关键词自动选择 4 类上下文**（`grade` / `mistake` / `trend` / `readiness`）之一，与基础问题合并发给 `HomeAskLLM`。
+5. **`LLMSettingsView` 配置入口**：总开关 + Base URL + API Key（masked 显示，Change 调用 `setLLMAPIKey(nil)` 清空后才能改）+ Model + Temperature slider + System Prompt 追加 + Test Connection。
+
+**强制规范**：
+- **总开关关闭 / 缺字段 / 网络错 / 解析失败都必须静默回退到本地实现**，绝不向用户弹 alert；只写 `Log.llm` category。
+- **`LLMClient` 必须从环境注入 `AppPreferences`（`@EnvironmentObject`）**而不是 `AppPreferences()` 初始化器，否则 UI toggle 改了 debug 面板看不到。
+- **错题 AI 解析输出固定 3 段**（`## 错因分析 / ## 正确思路 / ## 类似题建议`）；雷达 LLM 输出固定 4 段（`## 强度/标题/建议/依据`），解析后只替换 `title/description`，**保留本地 `icon/priority/color`**。
+- **AI 解析 / 预测按钮必须放在用户最直接看到的页面**（如 `MistakeSetDetailView` 错题详情页 toolbar），而不仅仅放在二级编辑页 `MistakeDetailEditView`；否则用户找不到 AI 功能。
+- **雷达 LLM 请求有 40 分钟冷却**，仅用户点击「立刻分析」按钮可绕过；持久化到 `AppPreferences.lastRadarAIRequestTime` / `lastStudySuggestionsAIRequestTime`。
+- **`LLMChatView` 历史只在内存**，**离开页面自动清空**；不持久化到磁盘。
+- **「深入探讨」sheet 把上一次的 AI 输出放在 system prompt**（`===` 分隔符 + "务必主动引用"指示），**不要**作为 conversation history 的第一条 assistant 消息；UI 上用 `isInitialContext` 标记 + 视觉弱化展示。
+- DEBUG 模式：`LLMDebugSheet` 按 caller 分组显示 `recentCalls` + JSON 详情；`HomeView` 工具栏 `.llmDebugHomeButton()`（`caller = nil` 显示全部分组）。
+- AI 启用卡片底部显示 `LLMCallIndicator`：`🤖 [caller] · <time> ago · <duration>s` + 状态图标。
+
+---
+
+## 7.6 Audio (语音备忘录) 子系统
+
+`AudioStorage`（`nonisolated` struct）封装 `~/Documents/audio/` 目录 + 唯一文件名生成（`<uuid>.m4a`）+ 删除。
+`VoiceMemoManager`（`@MainActor` ObservableObject）封装 `AVAudioRecorder` 录音会话：请求 `NSMicrophoneUsageDescription` 权限、`startRecording()` / `pause()` / `resume()` / `stop()` / `delete(filename:)`。
+
+**使用流程**：
+- `MistakeDetailEditView` 编辑错题时显示「录音」按钮 → 弹出 `VoiceMemoRecordingSheet`（`AVAudioRecorder` 波形 + 时长 + 暂停 / 继续 / 完成）→ 完成后写 `~/Documents/audio/<uuid>.m4a` 并把 `filename` 写入 `MistakeNote.audioFileName`。
+- `MistakeSetDetailView` 详情页若 `MistakeNote.audioFileName != nil` 则嵌入 `AudioPlaybackView`（`AVAudioPlayer` + 进度条 + 播放 / 暂停 / 删除）。
+
+**权限**：`Info.plist` 新增 `NSMicrophoneUsageDescription`（说明录音用于错题语音备忘录）。
+
+---
+
 ## 8. 可定制主页
 
 `HomeLayoutPreference` 为 Codable struct，持久化到 UserDefaults。`HomeView` 每一次 body 评估时都从 UserDefaults 读取，按启用顺序渲染启用的卡片。iPad 使用两栏 `LazyVGrid`，iPhone 使用单列 VStack。
 
 `HomeCardType` 包括：
-- hrvStatus：HRV 状态。
+- hrvStatus：HRV 状态（接入 LLM 增强，40 分钟冷却）。
 - unregisteredExamsReminder：未注册考试提醒，空时隐藏。
 - quickActions：快速动作。
-- studySuggestions：学习建议。
+- studySuggestions：学习建议（接入 LLM 增强，40 分钟冷却）。
 - trendChart：趋势图。
 - upcomingExams：即将到来的考试。
 - dailyQuote：每日金句。
 - recentGrades：近期成绩。
 - streakProgress：连续打卡 / 每日目标进度（`StreakHomeCard`），点按进入 `AchievementsView`。
 - **learningHeatmap**：90 天学习热力图（`LearningHeatmapView`），`isFullWidth: true` 全宽。
+- **homeAsk**：主页 AI 问答主卡片（`HomeAskCard`），点击弹出 `HomeAskSheet` 与大模型讨论身体 / 成绩 / 趋势 / 复习；自带 Button 弹出 sheet，**不参与长按分享菜单**。
 
 `HomeLayoutSettingsView` 提供拖动重新排序与每项启用 / 禁用开关，然后保存回 UserDefaults。`HomeLayoutPreference.mergeWithDefault` 当未来版本新增卡片类型时保留用户的选择。
 
@@ -525,6 +590,7 @@ AppIntents 桥接管线：
 - `NSCalendarsUsageDescription`：用于添加考试到系统日历。
 - `NSRemindersUsageDescription`：用于把作业 / 阅读材料同步到系统提醒事项（Todo 模块）。
 - `NSHealthShareUsageDescription`：用于读取 HRV / 心率 / 呼吸率 / 睡眠 / Apple 锻炼时间。
+- `NSMicrophoneUsageDescription`：用于在 `MistakeDetailEditView` 中录制错题语音备忘录。
 - `NSSupportsLiveActivities`：Info.plist 启用 Live Activity（学习计时器）。
 - `com.apple.developer.healthkit`：在 entitlements 文件开启 HealthKit 能力。
 - `com.apple.security.application-groups`：App Group `group.com.chenkai.gao.studypulse`，主应用与 `StudyPulseWidgetExtension` 共享小组件与 Live Activity 数据。
@@ -655,7 +721,7 @@ AI 代理在本仓库工作时遵循以下规则：
   - 视图辅助放在 `Views/Helpers/`。
   - 开发者页面放在 `Views/Admin/`。
   - 数据结构放在 `Models/`。
-  - 业务管理器放在 `Managers/` 按子领域拆分（Core / Health / Logging / PDF / Report / Study / Utility / Widget / Achievement）。
+  - 业务管理器放在 `Managers/` 按子领域拆分（Core / Health / Logging / PDF / Report / Study / Utility / Widget / Achievement / **Audio / LLM**）。
   - **Repository 协议 + 实现放在 `Repositories/Protocols/` + `Repositories/`，由 `RepositoryContainer` 聚合**。
   - **纯函数服务放在 `Services/`**。
   - **ViewModel 放在 `ViewModels/`**。
@@ -665,6 +731,8 @@ AI 代理在本仓库工作时遵循以下规则：
   - 本地 / Vendored 包放在 `Packages/` 下。
   - 跨进程 / Siri 桥接放在 `Intents/`（`IntentAction` / `IntentActionStore` / `StudyPulseShortcuts`）。
   - 通知调度放在 `NotificationsControl/` + `Managers/Study/`。
+  - **LLM 相关**：`Managers/LLM/{LLMConfig, LLMError, LLMPrompt, LLMRequestBuilder, LLMResponseParser, LLMClient, HomeAskDataProvider}.swift` + `Views/LLM/{LLMSettingsView, LLMChatView, AIDiscussionSheet, MistakeAIAnalysisSheet, HomeAskSheet, HomeAskCard, ChatBubble, ChatInputBar, LLMDebugSheet}.swift`。
+  - **Audio 相关**：`Managers/Audio/{AudioStorage, VoiceMemoManager}.swift` + 录音 / 播放 sheet 放在所属业务视图子目录（`Views/Mistake/Audio/`）。
 - 使用 `nonisolated value-type` 模型：新 Codable 模型必须 `nonisolated` + `Sendable` + `Hashable`，以便跨 actor 传递。
 - **新增 / 修改 `@Model` 字段必须同步更新 `toSnapshot()` / `init(from:)` + `ModelContainerFactory` 迁移工具 + `ModelContainerFactory.modelTypes` 数组**，否则旧数据迁移后会丢字段或新表不可见。
 - **新增 / 修改 `StudyPhase` 字段必须同步更新 `StudyPhase` struct 的 `init(from:)`（用 `decodeIfPresent` 给默认值）+ `StudyPhaseRecord.toSnapshot()` / `init(from:)` + `PhaseRepository` 双向映射**。
@@ -689,6 +757,15 @@ AI 代理在本仓库工作时遵循以下规则：
 ## 20. 变更记录
 
 近期变更（给 Agent 参考）：
+- **HomeAsk 卡片 + 雷达 LLM 冷却 + LLM DEBUG 面板 + 错题语音备忘录 + AI 相似题组卷 + Chat 组件重构（2026-07-12, commit `3b364a5d`）**：
+  - **HomeAsk 主页 AI 问答主卡片**：新增 `HomeCardType.homeAsk` + `HomeCards/HomeAskCard.swift` + `Views/LLM/HomeAskSheet.swift` + `ViewModels/HomeAskViewModel.swift` + `Managers/LLM/HomeAskDataProvider.swift`（按用户输入关键词自动选择 `grade/mistake/trend/readiness` 4 类上下文）；`HomeView` 集成 + 跳过长按分享菜单（卡片含 Button 不能导出图片）。
+  - **雷达 LLM 40 分钟冷却**：`AppPreferences.lastRadarAIRequestTime` 持久化；`HRVStatusCard` 实现 `canRequestNow() / requestAIImmediately()` + 倒计时 UI + 「立刻分析」按钮绕过冷却。`StudyReadinessAlgorithm` 新增 `BodyReadinessContext` 封装 HRV + BodyStatus + 30 天基线 + 年龄参考范围 + 本地建议 + 4 个预校准分数；`LLMRequestBuilder.BodyRadarLLM` 喂给 LLM 后按 `## 强度/标题/建议/依据` 4 段解析，**保留本地 `icon/priority/color`**。`buildBodyReadinessContext` 必须在 `@MainActor` 调用。
+  - **LLM DEBUG 模式**：`LLMCallDebugInfo`（`startTime/endTime/url/model/temperature/systemPrompt/messages/response/error/caller` + `asDebugJSON()`）+ `LLMClient.lastCallInfo` + 20 条环形 `recentCalls`；`DebugModifiers` 新增 `.llmDebugHomeButton()`（`caller = nil` 显示全部分组）+ `LLMCallIndicator`（卡片底部 `🤖 [caller] · <time> ago · <duration>s` + 状态图标）；`LLMDebugSheet` 按 caller 分组显示历史 + JSON 详情；修复 `LLMChatViewModel` 用 `AppPreferences()` 而非环境注入导致 debug 面板看不到 override 的问题。
+  - **错题语音备忘录**：新增 `Managers/Audio/{AudioStorage, VoiceMemoManager}.swift` + `Views/Mistake/Audio/{AudioPlaybackView, VoiceMemoRecordingSheet}.swift`；`MistakeNote` 新增 `audioFileName: String?` 字段（`~/Documents/audio/<uuid>.m4a`）；`MistakeDetailEditView` 录音 + 删除；`MistakeSetDetailView` 详情页嵌入 `AudioPlaybackView`；Info.plist 新增 `NSMicrophoneUsageDescription`。
+  - **AI 相似题组卷**：`Views/Mistake/LLM/AISimilarQuestionFlowView.swift`；`MistakeView` toolbar 改 Menu 整合「AI 解析错因」 + 「AI 相似题组卷」。
+  - **Chat 组件重构**：删除 `LLMMessageBubbleView.swift`，拆为 `Views/LLM/ChatBubble.swift` + `ChatInputBar.swift`；`LLMChatView` + `AIDiscussionSheet` 共用。
+  - **`StudySuggestionsCard` 同样接入 40 分钟冷却**（`AppPreferences.lastStudySuggestionsAIRequestTime` + `canRequestNow()`）。
+  - 5 语言本地化同步（HomeAsk / 雷达 LLM / DEBUG / 语音 / 相似题 / 立刻分析等 ~30 个新 key）。
 - **MVVM + Repository 重构（2026-07-05）**：5 个主页面 + ViewModel + Service 全部落地。新增 `StudyPulse/ViewModels/`（Home/Trends/Mistake/Exam/Todo/SubjectMistakes/ViewModelError 共 7 文件）+ `StudyPulse/Services/`（DateFormatters/SubjectAggregator/SuggestionEngine/ExamFilter/MistakeFilter/QuoteProvider 共 6 文件）+ `StudyPulse/Repositories/`（7 个 protocol + 7 个 `Default*Repository` 实现）+ `RepositoryContainer`（`@Observable @MainActor`，替代老的 `DataManager`）。`StudyPulseApp` 改持有 `RepositoryContainer`（7 个 Repository 聚合）。
 - **学期 / 假期阶段 (Study Phase) 架构（2026-07-04）**：`StudyPhase` + `PhaseGoal` struct（`name` / `startDate` / `endDate` / `isArchived` / `archivedAt` / `goals` / `createdAt`）；`StudyPhaseRecord` (`@Model`) 落盘 + `gradeRepo` / `mistakeRepo` / `examRepo` / `taskRepo` 加 `phaseId: UUID?` 字段（带 `#Index<...>` 索引）；`AppPreferences.activePhaseId: UUID?`；`RepositoryContainer.recomputeAllFiltered()` 在 phase 切换时重算 5 个 `filtered*` 缓存；`PhaseSelectorView` 胶囊 pill 放 5 主页面 toolbar `.principal`；`Settings → Data Management` 顶部 `PhaseManagementView`（active list + archived disclosure + overview）+ `PhaseEditView`（含 goals 编辑）。新增数据自动跟随 active phase；删除 phase 会清空所有引用 `phaseId`。
 - **考前清单 + 考场信息 (Exam Pre-Exam Checklist + Location)**：`Exam` struct 新增 `checklist: [ExamChecklistItem]`（默认 `[]`）+ `locationSchool/locationClassroom/locationSeat: String`（默认 `""`）+ `countdownNotifyDays: [Int]?`（nil=默认 [1,3,5,10,30] / `[]`=关闭）+ `examReview: ExamReview?`；`ExamRecord` 落盘 `checklistData: Data?`（JSON-encoded `[ExamChecklistItem]`）+ `locationSchool/Classroom/Seat: String` + `countdownNotifyDaysData: Data?` + `examReviewData: Data?`。`RepositoryContainer.toggleExamChecklistItem` / `setExamChecklist` + `updateExamReview` 辅助。`ExamPrepareNotifications.scheduleNotifications(for:date:days:)` 接受可选 `days` 参数：先 `getPendingNotificationRequests` 取消该 exam 旧通知（按 `identifier.contains("Exam_<name>_")` 过滤），再按新 `days` 列表重排；空数组 = 关闭通知；过期日期自动跳过。`ExamDetailView` 新增考场信息 / 考前待办清单 / 倒计时通知 / 复盘 / 分享给家人 5 个 Section，分享用 `ShareLink`（iOS 16+ 自动处理 iPad popover anchor）分享 Markdown。

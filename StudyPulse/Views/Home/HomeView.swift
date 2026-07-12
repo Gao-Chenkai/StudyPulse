@@ -93,7 +93,7 @@ struct HomeView: View {
                 set: { uiState.showingFlashcards = $0 }
             )) {
                 NavigationStack {
-                    FlashcardStudyView()
+                    FlashcardStudyView(container: container)
                         .environment(container)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
@@ -528,7 +528,7 @@ struct UnregisteredExamsReminderCard: View {
             y: 4
         )
         .sheet(isPresented: $showingAddGrade) {
-            AddGradeView()
+            AddGradeView(container: container)
                 .environment(container)
                 .adaptiveSheet()
         }

@@ -48,7 +48,7 @@ struct QuickActionsCard: View {
                         icon: "pencil.tip.crop.circle.badge.plus",
                         color: .orange,
                         destination: {
-                            NewMistakeSetView(usesInternalNavigationStack: false)
+                            NewMistakeSetView(container: container, usesInternalNavigationStack: false)
                                 .environment(container)
                                 .adaptiveSheet()
                         }
@@ -67,16 +67,16 @@ struct QuickActionsCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
         .sheet(isPresented: $showingAddGrade) {
-            AddGradeView()
+            AddGradeView(container: container)
                 .environment(container)
                 .adaptiveSheet()
         }
         .sheet(isPresented: $showingNewExam) {
-            NewExamSetView()
+            NewExamSetView(container: container)
                 .adaptiveSheet()
         }
         .sheet(isPresented: $showingNewMistake) {
-            NewMistakeSetView()
+            NewMistakeSetView(container: container)
                 .environment(container)
                 .adaptiveSheet()
         }

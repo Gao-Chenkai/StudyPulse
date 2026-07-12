@@ -107,24 +107,24 @@ struct ContentView: View {
             }
             IntentActionStore.setPending(nil)
         }
-       .sheet(isPresented: $showingAddGradeFromIntent) {
+        .sheet(isPresented: $showingAddGradeFromIntent) {
             if case let .addGrade(subject, score, examName) = currentIntentAction {
-                AddGradeView(presetSubject: subject, presetScore: score, presetExamName: examName)
+                AddGradeView(container: container, presetSubject: subject, presetScore: score, presetExamName: examName)
                     .environment(container)
             } else {
-                AddGradeView()
+                AddGradeView(container: container)
                     .environment(container)
             }
-       }
-       .sheet(isPresented: $showingNewMistakeFromIntent) {
-            if case let .recordMistake(subject, title) = currentIntentAction {
-                NewMistakeSetView(presetSubject: subject, presetTitle: title)
-                    .environment(container)
-            } else {
-                NewMistakeSetView()
-                    .environment(container)
-            }
-       }
+        }
+        .sheet(isPresented: $showingNewMistakeFromIntent) {
+             if case let .recordMistake(subject, title) = currentIntentAction {
+                 NewMistakeSetView(container: container, presetSubject: subject, presetTitle: title)
+                     .environment(container)
+             } else {
+                 NewMistakeSetView(container: container)
+                     .environment(container)
+             }
+        }
     }
 
     private func nextTab() -> AppTab {

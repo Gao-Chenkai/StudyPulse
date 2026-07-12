@@ -3,10 +3,8 @@
 //  StudyPulse
 //
 //  「待办」页：统一展示日常作业、阅读材料与考试日程。
-//  与原「考试」页相比,本页同时承担三类条目的列表/筛选/分组/详情/编辑。
 //
-//  The Todo page unifies daily homework, reading materials, and exam schedules in a single
-//  list with type-based filtering and time-based grouping.
+//  Created by Chenkai Gao on 2026/3/21.
 //
 
 import SwiftUI
@@ -48,32 +46,10 @@ struct TodoView: View {
     /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
     @Binding private var segment: TodoRootView.Segment
 
-    // 列表 vs 日历视图模式
-    @State private var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
-    // 类型筛选
-    // (移到 TodoViewModel.typeFilter; View 通过 $viewModel.typeFilter 双向绑定)
-
-    // 是否显示已完成（默认隐藏，主列表更干净）
-    // (移到 TodoViewModel.showCompleted; View 通过 $viewModel.showCompleted 双向绑定)
-
-    // 新增菜单控制
-    @State private var showingNewExam: Bool = false
-    @State private var showingNewTask: TaskType? = nil
-
-    // 详情导航
-
     init(container: RepositoryContainer, segment: Binding<TodoRootView.Segment>) {
         _viewModel = StateObject(wrappedValue: TodoViewModel.makeDefault(container: container))
         _segment = segment
     }
-    @State private var selectedExam: Exam? = nil
-    @State private var selectedComprehensive: comprehensiveExam? = nil
-    @State private var selectedTask: TaskItem? = nil
-
-    // 已过期面板
-    @State private var showingPastSheet: Bool = false
-
-    // MARK: - 派生数据来源已全部迁移到 TodoViewModel。View 只读 vm.allEntries / vm.upcomingEntries 等。
 
     // MARK: - 主体
 
@@ -91,17 +67,17 @@ struct TodoView: View {
                         } actions: {
                             Menu {
                                 Button {
-                                    showingNewExam = true
+                                    viewModel.showingNewExam = true
                                 } label: {
                                     Label("New Exam".localized(), systemImage: "calendar.badge.plus")
                                 }
                                 Button {
-                                    showingNewTask = .homework
+                                    viewModel.showingNewTask = .homework
                                 } label: {
                                     Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
                                 }
                                 Button {
-                                    showingNewTask = .reading
+                                    viewModel.showingNewTask = .reading
                                 } label: {
                                     Label("New Reading".localized(), systemImage: "book.fill")
                                 }
@@ -112,10 +88,7 @@ struct TodoView: View {
                         }
                     }
                     .background(Color(.systemGroupedBackground))
-                } else if viewMode == .calendar {
-                    // 月历本身是 ZStack + .clipShape，没有顶层 ScrollView，
-                    // iOS 会因为找不到可滚动视图而完全跳过 .large 标题的渲染。
-                    // 用 ScrollView 套一层提供滚动内容，标题就能正常跟随显示/折叠。
+                } else if viewModel.viewMode == .calendar {
                     VStack(spacing: 0) {
                         segmentPicker
                         filterChips
@@ -129,10 +102,6 @@ struct TodoView: View {
                 }
             }
             .navigationTitle("Todo".localized())
-            // 标准 NavigationView 标题行为：
-            // - 列表在顶时显示大标题
-            // - 列表上滑后 iOS 自动把大标题折叠为居中 inline 小字体
-            // 胶囊现在是 List 的一行（filterChipsListRow），不会干扰 iOS 对主滚动内容的检测。
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemGroupedBackground))
             .containerBackground(.clear, for: .navigation)
@@ -143,7 +112,7 @@ struct TodoView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !viewModel.pastEntries.isEmpty {
                         Button {
-                            showingPastSheet = true
+                            viewModel.showingPastSheet = true
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.arrow.circlepath")
@@ -175,61 +144,58 @@ struct TodoView: View {
                     PhaseSelectorView()
                 }
             }
-            // 派生数据重算:仅在筛选条件/数据源变化时触发,避免 body 每次 re-render 全量重算
             .onAppear { viewModel.recompute() }
             .onChange(of: viewModel.typeFilter) { _, _ in viewModel.recompute() }
             .onChange(of: viewModel.showCompleted) { _, _ in viewModel.recompute() }
             .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
             .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
             .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
-            .sheet(isPresented: $showingNewExam) {
-                NewExamSetView()
+            .sheet(isPresented: $viewModel.showingNewExam) {
+                NewExamSetView(container: container)
                     .adaptiveSheet()
             }
-            .sheet(item: $showingNewTask) { taskType in
+            .sheet(item: $viewModel.showingNewTask) { taskType in
                 NewTaskView(initialType: taskType)
                     .adaptiveSheet()
             }
-            .sheet(isPresented: $showingPastSheet) {
+            .sheet(isPresented: $viewModel.showingPastSheet) {
                 PastItemsSheet(
                     pastEntries: viewModel.pastEntries,
                     onSelectExam: { exam in
-                        showingPastSheet = false
+                        viewModel.showingPastSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            selectedExam = exam
+                            viewModel.selectedExam = exam
                         }
                     },
                     onSelectComprehensive: { exam in
-                        showingPastSheet = false
+                        viewModel.showingPastSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            selectedComprehensive = exam
+                            viewModel.selectedComprehensive = exam
                         }
                     },
                     onSelectTask: { task in
-                        showingPastSheet = false
+                        viewModel.showingPastSheet = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            selectedTask = task
+                            viewModel.selectedTask = task
                         }
                     },
-                    onDeleteEntry: deleteEntry
+                    onDeleteEntry: { entry in viewModel.deleteTodoEntry(entry) }
                 )
                 .adaptiveSheet(detents: [.medium, .large])
             }
-            .navigationDestination(item: $selectedExam) { exam in
+            .navigationDestination(item: $viewModel.selectedExam) { exam in
                 ExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
             }
-            .navigationDestination(item: $selectedComprehensive) { exam in
+            .navigationDestination(item: $viewModel.selectedComprehensive) { exam in
                 ComprehensiveExamDetailView(exam: exam)
                     .background(Color(.systemBackground))
             }
-            .navigationDestination(item: $selectedTask) { task in
+            .navigationDestination(item: $viewModel.selectedTask) { task in
                 TaskDetailView(task: task)
                     .background(Color(.systemBackground))
             }
             .onAppear {
-                // 页面出现时从系统 Reminders 拉取一次完成态
-                // Pull completion flags from the system Reminders app on view appear.
                 container.refreshTaskCompletionStatesFromReminders()
             }
     }
@@ -267,10 +233,6 @@ struct TodoView: View {
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
         let selected = viewModel.typeFilter == filter
-        // iOS 26 风格筛选胶囊（Liquid Glass）：
-        // - 选中：accent 同色边框 + 轻微 tint 叠加，文字保持 primary
-        // - 未选中：纯 Liquid Glass 半透明
-        // - 文字颜色在两种状态下都不变（不随选中切换颜色）
         let accent = chipAccent(for: filter)
         Button {
             withAnimation(.easeInOut(duration: 0.15)) {
@@ -287,11 +249,6 @@ struct TodoView: View {
             .padding(.horizontal, 13)
             .padding(.vertical, 8)
             .background {
-                // 液态玻璃背景：iOS 26+ 用系统真正的 `glassEffect`，
-                // 低版本用 `.regularMaterial` 兜底。
-                // 注意：`glassEffect(_:in:)` 必须作用在透明画布上（`Color.clear`），
-                // 并通过 `in:` 把形状传进去；直接给 `Capsule()` 调 `glassEffect` 会得到
-                // 几乎不透明的大色块。
                 if #available(iOS 26, *) {
                     Color.clear.glassEffect(.regular, in: Capsule())
                 } else {
@@ -299,7 +256,6 @@ struct TodoView: View {
                 }
             }
             .overlay(
-                // 选中态：accent 半透明填充 + 描边，叠在玻璃层之上
                 Capsule()
                     .fill(selected ? accent.opacity(0.18) : Color.clear)
             )
@@ -312,14 +268,12 @@ struct TodoView: View {
         .buttonStyle(.plain)
     }
 
-    /// 每个筛选项对应的活泼 accent 色
-    /// 全部 → 蓝；考试 → 紫；作业 → 绿；阅读 → 青
     private func chipAccent(for filter: TodoTypeFilter) -> Color {
         switch filter {
-        case .all:       return Color(red: 0.00, green: 0.42, blue: 1.00)   // 高饱和亮蓝
-        case .exam:      return Color(red: 0.58, green: 0.18, blue: 1.00)   // 高饱和亮紫
-        case .homework:  return Color(red: 0.05, green: 0.72, blue: 0.28)   // 高饱和亮绿
-        case .reading:   return Color(red: 0.00, green: 0.62, blue: 0.92)   // 高饱和亮青
+        case .all:       return Color(red: 0.00, green: 0.42, blue: 1.00)
+        case .exam:      return Color(red: 0.58, green: 0.18, blue: 1.00)
+        case .homework:  return Color(red: 0.05, green: 0.72, blue: 0.28)
+        case .reading:   return Color(red: 0.00, green: 0.62, blue: 0.92)
         }
     }
 
@@ -329,9 +283,7 @@ struct TodoView: View {
     private var listContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // 页签选择器,跟随内容滚动
                 segmentPicker
-                // 顶部筛选胶囊行，跟随内容滚动
                 filterChips
                     .padding(.bottom, 16)
 
@@ -373,7 +325,7 @@ struct TodoView: View {
                                             }
                                         }
                                         Button(role: .destructive) {
-                                            deleteEntry(entry)
+                                            viewModel.deleteTodoEntry(entry)
                                         } label: {
                                             Label("Delete".localized(), systemImage: "trash")
                                         }
@@ -390,7 +342,6 @@ struct TodoView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    /// 分组标题
     @ViewBuilder
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
@@ -404,16 +355,14 @@ struct TodoView: View {
 
     @ViewBuilder
     private var calendarContent: some View {
-        // 月历视图在四种筛选下都可用：考试 / 综合考试 / 作业 / 阅读统一展示
         ExamCalendarView(
-            onSelectExam: { exam in selectedExam = exam },
-            onSelectComprehensive: { exam in selectedComprehensive = exam },
-            onSelectTask: { task in selectedTask = task },
+            onSelectExam: { exam in viewModel.selectedExam = exam },
+            onSelectComprehensive: { exam in viewModel.selectedComprehensive = exam },
+            onSelectTask: { task in viewModel.selectedTask = task },
             typeFilter: calendarFilter
         )
     }
 
-    /// 把列表顶部的 TodoTypeFilter 映射为月历视图使用的 CalendarItemKindFilter
     private var calendarFilter: CalendarItemKindFilter {
         switch viewModel.typeFilter {
         case .all: return .all
@@ -427,7 +376,7 @@ struct TodoView: View {
 
     private var viewModeMenu: some View {
         Menu {
-            Picker("View Mode".localized(), selection: $viewMode) {
+            Picker("View Mode".localized(), selection: $viewModel.viewMode) {
                 ForEach(ExamViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.icon)
                         .tag(mode)
@@ -435,9 +384,9 @@ struct TodoView: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Image(systemName: viewMode == .calendar ? "calendar" : "list.bullet")
+            Image(systemName: viewModel.viewMode == .calendar ? "calendar" : "list.bullet")
         }
-        .onChange(of: viewMode) { _, newValue in
+        .onChange(of: viewModel.viewMode) { _, newValue in
             newValue.saveToDefaults()
         }
     }
@@ -447,17 +396,17 @@ struct TodoView: View {
     private var addMenu: some View {
         Menu {
             Button {
-                showingNewExam = true
+                viewModel.showingNewExam = true
             } label: {
                 Label("New Exam".localized(), systemImage: "calendar.badge.plus")
             }
             Button {
-                showingNewTask = .homework
+                viewModel.showingNewTask = .homework
             } label: {
                 Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
             }
             Button {
-                showingNewTask = .reading
+                viewModel.showingNewTask = .reading
             } label: {
                 Label("New Reading".localized(), systemImage: "book.fill")
             }
@@ -471,34 +420,17 @@ struct TodoView: View {
     private func tapped(_ entry: TodoEntry) {
         switch entry.kind {
         case .exam:
-            if let exam = entry.exam { selectedExam = exam }
+            if let exam = entry.exam { viewModel.selectedExam = exam }
         case .comprehensiveExam:
-            if let comp = entry.comprehensiveExam { selectedComprehensive = comp }
+            if let comp = entry.comprehensiveExam { viewModel.selectedComprehensive = comp }
         case .homework, .reading:
-            if let task = entry.taskItem { selectedTask = task }
+            if let task = entry.taskItem { viewModel.selectedTask = task }
         }
     }
 
     private func toggleCompletion(of entry: TodoEntry) {
         guard let task = entry.taskItem else { return }
-        container.setTaskCompletion(task.id, isCompleted: !task.isCompleted)
-    }
-
-    private func deleteEntry(_ entry: TodoEntry) {
-        switch entry.kind {
-        case .exam:
-            if let exam = entry.exam {
-                container.deleteExam(exam)
-            }
-        case .comprehensiveExam:
-            if let comp = entry.comprehensiveExam {
-                container.deleteComprehensiveExam(comp)
-            }
-        case .homework, .reading:
-            if let task = entry.taskItem {
-                container.deleteTask(task)
-            }
-        }
+        viewModel.toggleCompletion(for: task)
     }
 }
 

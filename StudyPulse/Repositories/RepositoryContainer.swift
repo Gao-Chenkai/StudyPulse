@@ -140,6 +140,31 @@ final class RepositoryContainer {
         Log.data.info("RepositoryContainer asyncInit done: g=\(self.gradeRepo.grades.count, privacy: .public) m=\(self.mistakeRepo.mistakeSets.count, privacy: .public) e=\(self.examRepo.examSets.count, privacy: .public) t=\(self.taskRepo.taskItems.count, privacy: .public)")
     }
 
+#if DEBUG
+    /// 仅限测试与预览（Unit Tests & Previews）：注入纯内存的 ModelContainer 完成全套 Repo 初始化
+    func asyncTestInit(with testContainer: ModelContainer) async {
+        self.modelContainer = testContainer
+        let context = testContainer.mainContext
+
+        await gradeRepo.loadAll(context: context)
+        await mistakeRepo.loadAll(context: context)
+        await examRepo.loadAll(context: context)
+        await taskRepo.loadAll(context: context)
+        await phaseRepo.loadAll(context: context)
+        await profileRepo.loadAll(context: context)
+        await subjectRepo.loadAll(context: context)
+        await routineRepo.loadAll(context: context)
+        await routineInstanceRepo.loadAll(context: context)
+
+        if subjectRepo.subjects.isEmpty {
+            subjectRepo.initializeDefaultSubjects()
+        }
+
+        recomputeAllFiltered()
+        isReady = true
+    }
+#endif
+
     /// 订阅 AppEnvironmentManager 的 activePhaseId 变化。
     /// 用 polling(每 0.5s 检查)而非 Combine 桥接,避免引入 Combine 依赖。
     private func observeActivePhaseChanges() {

@@ -2,37 +2,36 @@
 //  TodoViewModel.swift
 //  StudyPulse
 //
-//  待办页 ViewModel。负责 type filter / past vs upcoming 拆分 / 时间分桶。
-// 抽取自 TodoView.recomputeEntries() 78 行派生算法。
-//
-//  Created for MVVM refactor (2026-07-05).
-//  Updated for Repository pattern (2026-07-05).
+//  Created by Antigravity on 2026/7/12.
 //
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 final class TodoViewModel: ObservableObject {
-
     // MARK: - Dependencies
-
     private let container: RepositoryContainer
 
-    // MARK: - Input State(View 写,VM 读)
-
+    // MARK: - Input/UI States
     @Published var typeFilter: TodoTypeFilter = .all
     @Published var showCompleted: Bool = false
+    @Published var showingNewExam: Bool = false
+    @Published var showingNewTask: TaskType? = nil
+    @Published var selectedExam: Exam? = nil
+    @Published var selectedComprehensive: comprehensiveExam? = nil
+    @Published var selectedTask: TaskItem? = nil
+    @Published var showingPastSheet: Bool = false
+    @Published var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
 
-    // MARK: - Output State
-
+    // MARK: - Output States
     @Published private(set) var allEntries: [TodoEntry] = []
     @Published private(set) var upcomingEntries: [TodoEntry] = []
     @Published private(set) var pastEntries: [TodoEntry] = []
     @Published private(set) var groupedUpcoming: [(sectionTitle: String, entries: [TodoEntry])] = []
 
     // MARK: - Init
-
     init(container: RepositoryContainer) {
         self.container = container
     }
@@ -41,9 +40,7 @@ final class TodoViewModel: ObservableObject {
         TodoViewModel(container: container)
     }
 
-    // MARK: - 业务方法
-
-    /// 集中重算所有缓存
+    // MARK: - Actions
     func recompute() {
         let all = container.todoEntries(includeCompleted: showCompleted)
         let filtered: [TodoEntry]
@@ -61,7 +58,6 @@ final class TodoViewModel: ObservableObject {
         }
         allEntries = filtered
 
-        // 单次遍历拆分 past / upcoming
         let todayStart = Calendar.current.startOfDay(for: Date())
         var upcoming: [TodoEntry] = []
         var past: [TodoEntry] = []
@@ -76,7 +72,6 @@ final class TodoViewModel: ObservableObject {
         upcomingEntries = upcoming
         pastEntries = past
 
-        // 单次遍历分桶
         let now = Date()
         guard let oneWeekLater = Calendar.current.date(byAdding: .day, value: 7, to: now),
               let oneMonthLater = Calendar.current.date(byAdding: .month, value: 1, to: now) else {
@@ -103,8 +98,6 @@ final class TodoViewModel: ObservableObject {
         groupedUpcoming = result
     }
 
-    // MARK: - 业务方法:完成任务
-
     func toggleCompletion(for task: TaskItem) {
         var updated = task
         updated.isCompleted.toggle()
@@ -113,7 +106,24 @@ final class TodoViewModel: ObservableObject {
     }
 
     func toggleCompletion(for exam: Exam) {
-        // Exam 当前没有 isCompleted 字段,留作 hook(后续若加字段再实现)
         _ = exam
+    }
+
+    func deleteTodoEntry(_ entry: TodoEntry) {
+        switch entry.kind {
+        case .homework, .reading:
+            if let task = container.taskRepo.taskItems.first(where: { $0.id == entry.id }) {
+                container.taskRepo.delete(task)
+            }
+        case .exam:
+            if let exam = container.examRepo.examSets.first(where: { $0.id == entry.id }) {
+                container.examRepo.deleteExam(exam)
+            }
+        case .comprehensiveExam:
+            if let exam = container.examRepo.comprehensiveExamSets.first(where: { $0.id == entry.id }) {
+                container.examRepo.deleteComprehensiveExam(exam)
+            }
+        }
+        recompute()
     }
 }

@@ -12,62 +12,19 @@ struct AddGradeView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
     
-    // 基础信息
-    @State private var examName = ""
-    @State private var selectedDate = Date()
-    @State private var importance = 3
-    
-    // 考试模式
-    @State private var isComprehensiveExam = false
-    @State private var selectedSingleSubject = ""
-    @State private var selectedMultipleSubjects: [String] = []
-    
-    // 科目分数模型
-    struct SubjectScore: Identifiable {
-        let id = UUID()
-        let subject: String
-        var score: Double = 85.0
-        var useRawScore: Bool = false
-        var useRanking: Bool = false
-        var rawScore: Double = 85.0
-        var ranking: Int? = 1
-    }
-    
-   @State private var subjectScores: [SubjectScore] = []
-   @StateObject private var subjectInfo = SubjectInfo()
+    @StateObject private var viewModel: AddGradeViewModel
+    @StateObject private var subjectInfo = SubjectInfo()
 
-   // MARK: - Pre-fill from App Intent
-
-    /// Default initializer (required since we added a custom init).
-    init() {}
-
-   /// Convenience init that seeds the form with Siri-provided values.
-   init(presetSubject: String, presetScore: Double, presetExamName: String? = nil) {
-        self._selectedSingleSubject = State(initialValue: presetSubject)
-        self._examName = State(initialValue: presetExamName ?? "")
-        self._subjectScores = State(initialValue: [
-            SubjectScore(subject: presetSubject, score: presetScore)
-        ])
+    /// Default initializer.
+    init(container: RepositoryContainer) {
+        self._viewModel = StateObject(wrappedValue: AddGradeViewModel(container: container))
     }
 
-   // 可用科目
-    var availableSubjects: [String] {
-        container.subjectRepo.subjects.filter {
-            $0.enabled && !$0.name.starts(with: "GROUP:")
-        }.map { $0.name }
-    }
-
-    // 显示用的科目名
-    func displayName(forSubject name: String) -> String {
-        if let subject = container.subjectRepo.subjects.first(where: { $0.name == name }) {
-            return subject.displayName.isEmpty ? name.localized() : subject.displayName
-        }
-        return name.localized()
-    }
-    
-    // 列表高度
-    var dynamicListHeight: CGFloat {
-        CGFloat(availableSubjects.count * 60)
+    /// Convenience init that seeds the form with Siri-provided values.
+    init(container: RepositoryContainer, presetSubject: String, presetScore: Double, presetExamName: String? = nil) {
+        let vm = AddGradeViewModel(container: container)
+        vm.seedPreset(presetSubject: presetSubject, presetScore: presetScore, presetExamName: presetExamName)
+        self._viewModel = StateObject(wrappedValue: vm)
     }
     
     var body: some View {
@@ -75,7 +32,7 @@ struct AddGradeView: View {
             Form {
                 examDetailsSection
                 
-                if !subjectScores.isEmpty {
+                if !viewModel.subjectScores.isEmpty {
                     scoreInputSections
                 }
                 
@@ -85,7 +42,7 @@ struct AddGradeView: View {
             .navigationTitle("Add New Grade")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
-            .onAppear { syncSubjectScores() }
+            .onAppear { viewModel.syncSubjectScores() }
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()
@@ -101,11 +58,11 @@ private extension AddGradeView {
         Section(header: Text("Exam Details".localized())) {
             HStack {
                 Text("Exam Name".localized())
-                TextField("Name".localized(), text: $examName)
+                TextField("Name".localized(), text: $viewModel.examName)
                     .multilineTextAlignment(.trailing)
             }
 
-            DatePicker("Exam Date".localized(), selection: $selectedDate, in: ...Date(), displayedComponents: .date)
+            DatePicker("Exam Date".localized(), selection: $viewModel.selectedDate, in: ...Date(), displayedComponents: .date)
 
             examTypePicker
         }
@@ -114,13 +71,13 @@ private extension AddGradeView {
     // 2. 考试类型选择器
     var examTypePicker: some View {
         VStack(spacing: 8) {
-            Picker("Exam Type".localized(), selection: $isComprehensiveExam) {
+            Picker("Exam Type".localized(), selection: $viewModel.isComprehensiveExam) {
                 Text("Single Subject".localized()).tag(false)
                 Text("Comprehensive Exam".localized()).tag(true)
             }
             .pickerStyle(.segmented)
             
-            if !isComprehensiveExam {
+            if !viewModel.isComprehensiveExam {
                 singleSubjectPicker
             } else {
                 multipleSubjectList
@@ -130,14 +87,14 @@ private extension AddGradeView {
     
     // 3. 单选科目
     var singleSubjectPicker: some View {
-        Picker("Select Subject".localized(), selection: $selectedSingleSubject) {
-            ForEach(availableSubjects, id: \.self) { name in
-                Text(displayName(forSubject: name)).tag(name)
+        Picker("Select Subject".localized(), selection: $viewModel.selectedSingleSubject) {
+            ForEach(viewModel.availableSubjects, id: \.self) { name in
+                Text(viewModel.displayName(forSubject: name)).tag(name)
             }
         }
         .padding(.top, 10)
         .padding(2)
-        .onChange(of: selectedSingleSubject) { syncSubjectScores() }
+        .onChange(of: viewModel.selectedSingleSubject) { viewModel.syncSubjectScores() }
     }
     
     // 4. 多选科目
@@ -147,27 +104,27 @@ private extension AddGradeView {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            ForEach(availableSubjects, id: \.self) { subject in
+            ForEach(viewModel.availableSubjects, id: \.self) { subject in
                 HStack {
-                    Text(displayName(forSubject: subject))
+                    Text(viewModel.displayName(forSubject: subject))
                     Spacer()
-                    if selectedMultipleSubjects.contains(subject) {
+                    if viewModel.selectedMultipleSubjects.contains(subject) {
                         Image(systemName: "checkmark.circle.fill").foregroundColor(.blue)
                     }
                 }
                 .contentShape(Rectangle())
-                .onTapGesture { toggleSubject(subject) }
+                .onTapGesture { viewModel.toggleSubject(subject) }
             }
         }
-        .frame(height: dynamicListHeight)
+        .frame(height: viewModel.dynamicListHeight)
         .listStyle(.plain)
     }
     
     // 5. 所有科目分数录入区域
     var scoreInputSections: some View {
-        ForEach($subjectScores) { $subject in
+        ForEach($viewModel.subjectScores) { $subject in
             Section(header: Text("Score \(subject.subject.localized())".localized())) {
-                let maxScore = container.fullScore(for: subject.subject)
+                let maxScore = viewModel.fullScore(for: subject.subject)
                 
                 ScoreControlView(
                     title: "Score".localized(),
@@ -203,14 +160,14 @@ private extension AddGradeView {
                 HStack {
                     Text("Importance".localized())
                     Spacer()
-                    Text(String(format: "%d / 5".localized(), importance)).foregroundColor(.secondary)
+                    Text(String(format: "%d / 5".localized(), viewModel.importance)).foregroundColor(.secondary)
                 }
                 HStack {
                     ForEach(1...5, id: \.self) { index in
-                        Image(systemName: index <= importance ? "star.fill" : "star")
-                            .foregroundColor(index <= importance ? .yellow : .gray)
+                        Image(systemName: index <= viewModel.importance ? "star.fill" : "star")
+                            .foregroundColor(index <= viewModel.importance ? .yellow : .gray)
                             .font(.title3)
-                            .onTapGesture { importance = index }
+                            .onTapGesture { viewModel.importance = index }
                     }
                 }
             }
@@ -226,57 +183,17 @@ private extension AddGradeView {
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save") {
-                    saveGrades()
+                    viewModel.saveGrades()
                     presentationMode.wrappedValue.dismiss()
                 }
                 .fontWeight(.semibold)
-                .disabled(examName.isEmpty || subjectScores.isEmpty)
+                .disabled(viewModel.examName.isEmpty || viewModel.subjectScores.isEmpty)
             }
         }
     }
 }
 
-// MARK: 业务逻辑s
-private extension AddGradeView {
-    
-    func toggleSubject(_ subject: String) {
-        if selectedMultipleSubjects.contains(subject) {
-            selectedMultipleSubjects.removeAll { $0 == subject }
-        } else {
-            selectedMultipleSubjects.append(subject)
-        }
-        syncSubjectScores()
-    }
-    
-    func syncSubjectScores() {
-        let selected = isComprehensiveExam ? selectedMultipleSubjects : [selectedSingleSubject]
-        let existing = subjectScores.map { $0.subject }
-        
-        for sub in selected where !existing.contains(sub) {
-            subjectScores.append(SubjectScore(subject: sub))
-        }
-        
-        subjectScores.removeAll { !selected.contains($0.subject) }
-    }
-    
-    func saveGrades() {
-        let newGrades: [Grade] = subjectScores.map { subjectScore in
-            var grade = Grade(
-                subject: subjectScore.subject,
-                score: subjectScore.score,
-                rawScore: subjectScore.useRawScore ? subjectScore.rawScore : nil,
-                ranking: subjectScore.ranking,
-                importance: importance,
-                date: selectedDate,
-                examName: examName
-            )
-            // 记录此次成绩对应的满分
-            grade.fullScore = container.fullScore(for: subjectScore.subject)
-            return grade
-        }
-        container.addGrades(newGrades)
-    }
-}
+
 
 // MARK: - 抽离公共控件（彻底解耦）
 struct ScoreControlView: View {
@@ -389,5 +306,6 @@ struct RankingControlView: View {
 }
 
 #Preview {
-    AddGradeView().environment(RepositoryContainer())
+    let container = RepositoryContainer()
+    return AddGradeView(container: container).environment(container)
 }

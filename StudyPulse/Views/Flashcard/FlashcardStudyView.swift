@@ -80,7 +80,6 @@ enum FlashcardFilter: Equatable {
         }
     }
 
-    /// 是否为「单题模式」（不计 SM-2 完整流程,只推到 1 天后）
     var isSingleMode: Bool {
         if case .single = self { return true }
         return false
@@ -95,45 +94,11 @@ struct FlashcardStudyView: View {
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
 
-    let filter: FlashcardFilter
+    @StateObject private var viewModel: FlashcardStudyViewModel
 
-    @State private var queue: [MistakeNote] = []
-    @State private var currentIndex: Int = 0
-    @State private var isFlipped: Bool = false
-    @State private var stats: FlashcardSessionStats = FlashcardSessionStats()
-    @State private var showingSummary: Bool = false
-    @State private var reinsertQueue: [MistakeNote] = []  // 「Again」的题目临时重插入
-    @State private var showingCalculator: Bool = false  // 简易计算器浮层
-
-    // 手写答题相关状态
-    @State private var handwritingEnabled: Bool = false
-    @State private var currentDrawing: PKDrawing = PKDrawing()
-    @State private var sessionHandwriting: [UUID: Data] = [:]   // mistakeId -> 提交时的 PNG
-    @State private var hasSubmittedCurrent: Bool = false
-    @State private var showHandwritingRequiredAlert: Bool = false
-
-    init(filter: FlashcardFilter = .dueQueue, handwritingEnabled: Bool = false) {
-        self.filter = filter
-        self.handwritingEnabled = handwritingEnabled
+    init(container: RepositoryContainer, filter: FlashcardFilter = .dueQueue, handwritingEnabled: Bool = false) {
+        self._viewModel = StateObject(wrappedValue: FlashcardStudyViewModel(container: container, filter: filter, handwritingEnabled: handwritingEnabled))
     }
-
-    // MARK: - Computed
-
-    private var currentMistake: MistakeNote? {
-        guard currentIndex < queue.count else { return nil }
-        return queue[currentIndex]
-    }
-
-    private var totalToReview: Int {
-        queue.count + reinsertQueue.count
-    }
-
-    private var progress: Double {
-        guard totalToReview > 0 else { return 0 }
-        return Double(stats.reviewed) / Double(totalToReview)
-    }
-
-    // MARK: - Body
 
     var body: some View {
         ZStack {
@@ -145,17 +110,16 @@ struct FlashcardStudyView: View {
             )
             .ignoresSafeArea()
 
-            if showingSummary {
-                FlashcardSessionSummaryView(stats: stats) {
+            if viewModel.showingSummary {
+                FlashcardSessionSummaryView(stats: viewModel.stats) {
                     dismiss()
                 }
-            } else if queue.isEmpty && reinsertQueue.isEmpty {
+            } else if viewModel.queue.isEmpty && viewModel.reinsertQueue.isEmpty {
                 emptyState
-            } else if let mistake = currentMistake {
+            } else if let mistake = viewModel.currentMistake {
                 reviewContent(mistake: mistake)
             } else {
-                // 队列走完但有 reinsert（不应该到这里，因为 onComplete 会 advance）
-                FlashcardSessionSummaryView(stats: stats) {
+                FlashcardSessionSummaryView(stats: viewModel.stats) {
                     dismiss()
                 }
             }
@@ -164,10 +128,10 @@ struct FlashcardStudyView: View {
         .toolbar { toolbar }
         .overlay(alignment: .topTrailing) { calculatorFAB }
         .overlay(alignment: .topTrailing) {
-            if showingCalculator {
+            if viewModel.showingCalculator {
                 FlashcardCalculatorView {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        showingCalculator = false
+                        viewModel.showingCalculator = false
                     }
                 }
                 .padding(.top, 60)
@@ -179,8 +143,8 @@ struct FlashcardStudyView: View {
                 .zIndex(10)
             }
         }
-        .onAppear { loadQueue() }
-        .alert("Handwriting Required".localized(), isPresented: $showHandwritingRequiredAlert) {
+        .onAppear { viewModel.loadQueue() }
+        .alert("Handwriting Required".localized(), isPresented: $viewModel.showHandwritingRequiredAlert) {
             Button("OK".localized(), role: .cancel) { }
         } message: {
             Text("Please write and submit your answer first".localized())
@@ -191,22 +155,22 @@ struct FlashcardStudyView: View {
     private var calculatorFAB: some View {
         Button {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                showingCalculator.toggle()
+                viewModel.showingCalculator.toggle()
             }
         } label: {
-            Image(systemName: showingCalculator ? "function" : "function")
+            Image(systemName: "function")
                 .font(.subheadline.weight(.bold))
                 .frame(width: 36, height: 36)
                 .background(
                     Circle().fill(LinearGradient(
-                        colors: showingCalculator
+                        colors: viewModel.showingCalculator
                             ? [.purple, .blue]
                             : [Color(.tertiarySystemBackground), Color(.secondarySystemBackground)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
                 )
-                .foregroundStyle(showingCalculator ? .white : .primary)
+                .foregroundStyle(viewModel.showingCalculator ? .white : .primary)
                 .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 3)
         }
         .accessibilityLabel("Calculator".localized())
@@ -248,16 +212,16 @@ struct FlashcardStudyView: View {
             // 顶部进度条
             VStack(spacing: 8) {
                 HStack {
-                    Text(String(format: "%d / %d".localized(), stats.reviewed, totalToReview))
+                    Text(String(format: "%d / %d".localized(), viewModel.stats.reviewed, viewModel.totalToReview))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(String(format: "Time: %@".localized(), stats.durationString))
+                    Text(String(format: "Time: %@".localized(), viewModel.stats.durationString))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                ProgressView(value: progress)
+                ProgressView(value: viewModel.progress)
                     .progressViewStyle(.linear)
                     .tint(envManager.effectiveAccentColor)
             }
@@ -268,31 +232,27 @@ struct FlashcardStudyView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     // 主卡片
-                    FlashcardCardView(mistake: mistake, isFlipped: $isFlipped)
+                    FlashcardCardView(mistake: mistake, isFlipped: $viewModel.isFlipped)
                         .frame(maxWidth: 720)
                         .overlay(alignment: .topTrailing) {
                             // 反面时叠加手写笔迹(右上角小图)
-                            if isFlipped,
-                               let png = sessionHandwriting[mistake.id],
+                            if viewModel.isFlipped,
+                               let png = viewModel.sessionHandwriting[mistake.id],
                                let img = UIImage(data: png) {
                                 handwritingOverlay(img: img)
                             }
                         }
 
                     // 手写画布(仅当启用手写且未翻面时显示)
-                    if handwritingEnabled && !isFlipped {
+                    if viewModel.handwritingEnabled && !viewModel.isFlipped {
                         FlashcardHandwritingCanvasView(
-                            drawing: $currentDrawing,
-                            hasContent: { !currentDrawing.strokes.isEmpty },
+                            drawing: $viewModel.currentDrawing,
+                            hasContent: { !viewModel.currentDrawing.strokes.isEmpty },
                             onSubmit: { pngData in
-                                sessionHandwriting[mistake.id] = pngData
-                                hasSubmittedCurrent = true
-                                Log.view.info("FlashcardStudyView handwriting submitted: mistakeId=\(mistake.id.uuidString, privacy: .public) bytes=\(pngData.count, privacy: .public)")
+                                viewModel.submitHandwriting(pngData: pngData)
                             },
                             onClear: {
-                                currentDrawing = PKDrawing()
-                                hasSubmittedCurrent = false
-                                sessionHandwriting.removeValue(forKey: mistake.id)
+                                viewModel.clearHandwriting()
                             }
                         )
                         .frame(maxWidth: 720)
@@ -304,9 +264,9 @@ struct FlashcardStudyView: View {
             }
 
             // 底部操作区
-            if isFlipped {
+            if viewModel.isFlipped {
                 ReviewActionsRow { quality in
-                    handleRating(quality)
+                    viewModel.handleRating(quality)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .padding(.horizontal, 20)
@@ -314,18 +274,18 @@ struct FlashcardStudyView: View {
             } else {
                 Button {
                     // 启用手写但未提交:拦截
-                    if handwritingEnabled && !hasSubmittedCurrent {
-                        showHandwritingRequiredAlert = true
+                    if viewModel.handwritingEnabled && !viewModel.hasSubmittedCurrent {
+                        viewModel.showHandwritingRequiredAlert = true
                         return
                     }
                     withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) {
-                        isFlipped = true
+                        viewModel.isFlipped = true
                     }
                 } label: {
                     Label(
-                        (handwritingEnabled && hasSubmittedCurrent)
+                        (viewModel.handwritingEnabled && viewModel.hasSubmittedCurrent)
                             ? "Show Answer".localized()
-                            : (handwritingEnabled
+                            : (viewModel.handwritingEnabled
                                 ? "Submit & Show Answer".localized()
                                 : "Show Answer".localized()),
                         systemImage: "eye.fill"
@@ -335,7 +295,7 @@ struct FlashcardStudyView: View {
                     .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(handwritingEnabled && hasSubmittedCurrent ? .purple : .purple)
+                .tint(.purple)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
                 .transition(.opacity)
@@ -383,7 +343,7 @@ struct FlashcardStudyView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Button {
-                finishSession()
+                viewModel.finishSession()
             } label: {
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.semibold))
@@ -393,128 +353,20 @@ struct FlashcardStudyView: View {
         ToolbarItem(placement: .navigationBarTrailing) {
             Button {
                 withAnimation(.easeInOut(duration: 0.25)) {
-                    handwritingEnabled.toggle()
-                    if !handwritingEnabled {
-                        // 关闭手写时清空当前画布与已提交缓存
-                        currentDrawing = PKDrawing()
-                        hasSubmittedCurrent = false
-                        if let id = currentMistake?.id {
-                            sessionHandwriting.removeValue(forKey: id)
-                        }
-                    }
+                    viewModel.toggleHandwriting()
                 }
             } label: {
-                Image(systemName: handwritingEnabled
+                Image(systemName: viewModel.handwritingEnabled
                       ? "pencil.tip.crop.circle.badge.minus"
                       : "pencil.tip.crop.circle.badge.plus")
                     .font(.subheadline.weight(.semibold))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(handwritingEnabled ? Color.purple : .secondary)
+                    .foregroundStyle(viewModel.handwritingEnabled ? Color.purple : .secondary)
             }
-            .accessibilityLabel(handwritingEnabled
+            .accessibilityLabel(viewModel.handwritingEnabled
                                 ? "Handwriting Off".localized()
                                 : "Handwriting On".localized())
         }
-    }
-
-    // MARK: - Actions
-
-    private func loadQueue() {
-        switch filter {
-        case .dueQueue:
-            queue = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
-        case .single(let note):
-            queue = [note]
-        case .tag(let tag):
-            let due = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
-            queue = MistakeFilter.tagged(due, tag: tag)
-        }
-        currentIndex = 0
-        isFlipped = false
-        stats = FlashcardSessionStats()
-        reinsertQueue = []
-        handwritingEnabled = false
-        currentDrawing = PKDrawing()
-        hasSubmittedCurrent = false
-        sessionHandwriting = [:]
-    }
-
-    private func handleRating(_ quality: ReviewQuality) {
-        guard let current = currentMistake else { return }
-        stats.record(quality)
-
-        // 应用 SM-2（.dueQueue / .tag 计入,单题模式只标记已复习）
-        // 难度后置调权:把错题自评难度 1-5 传给 SRSAlgorithm,SRS 会再乘一个乘子
-        // (1→0.5, 3→1.0, 5→1.6),让难的题间隔更久、简单的更频繁。
-        switch filter {
-        case .dueQueue, .tag:
-            if var state = current.reviewState {
-                state = SRSAlgorithm.apply(quality: quality, to: state, difficulty: current.difficulty)
-                container.mistakeRepo.updateReviewState(current.id, newState: state)
-            }
-        case .single:
-            // 单题模式：只把 nextReviewDate 推后 1 天
-            if var state = current.reviewState {
-                state.lastReviewDate = Date()
-                if let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
-                    state.nextReviewDate = nextDay
-                }
-                container.mistakeRepo.updateReviewState(current.id, newState: state)
-            }
-        }
-
-        // 记录曝光 / 掌握度：自评后曝光 +1，按 quality 调整 masteryScore 并追加 history
-        container.mistakeRepo.recordReview(current.id, quality: quality, now: Date())
-
-        // 记录手写答题：启用手写且本卡已提交笔迹时追加一条到 handwritingHistory
-        if handwritingEnabled, let png = sessionHandwriting[current.id] {
-            container.mistakeRepo.recordHandwriting(current.id, pngData: png, quality: quality, now: Date())
-        }
-
-        // 「Again」立即重插入队尾（确保至少复习一次）。单题模式不重插。
-        if quality == .again, !filter.isSingleMode {
-            reinsertQueue.append(current)
-        }
-
-        // 推进到下一张
-        advance()
-    }
-
-    private func advance() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            isFlipped = false
-        }
-        // 清理当前卡的手写状态(画布 + 已提交缓存)
-        let prevId = currentMistake?.id
-        currentDrawing = PKDrawing()
-        hasSubmittedCurrent = false
-        if let id = prevId {
-            sessionHandwriting.removeValue(forKey: id)
-        }
-        // 简单实现：移除当前并显示下一张
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            if currentIndex < queue.count - 1 {
-                currentIndex += 1
-            } else {
-                // 走完了；如果有 reinsert 就接上
-                if !reinsertQueue.isEmpty {
-                    queue = reinsertQueue
-                    reinsertQueue = []
-                    currentIndex = 0
-                } else {
-                    finishSession()
-                }
-            }
-        }
-    }
-
-    private func finishSession() {
-        stats.endTime = Date()
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showingSummary = true
-        }
-        // 通知全部重调度
-        SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
     }
 }
 

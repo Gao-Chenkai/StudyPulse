@@ -146,7 +146,7 @@ struct TrendsView: View {
                 }
             }
             .sheet(isPresented: $showingAddGrade) {
-                AddGradeView()
+                AddGradeView(container: container)
                     .adaptiveSheet()
             }
             // 派生数据重算:仅在 grades/subjects 变化时触发
@@ -440,7 +440,7 @@ struct SubjectDetailView: View {
             }
         }
         .sheet(isPresented: $showingAddGrade) {
-            AddGradeView()
+            AddGradeView(container: container)
                 .adaptiveSheet()
         }
     }

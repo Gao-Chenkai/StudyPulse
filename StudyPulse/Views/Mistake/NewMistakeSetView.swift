@@ -39,90 +39,37 @@ struct NewMistakeSetView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
-    /// 是否在内部包一层 NavigationStack。
-    /// iPhone sheet 场景需要自己提供 stack(.navigationTitle / .toolbar 才能生效),
-    /// iPad 走 NavigationLink 推到父级 stack 时必须传 false,否则会出现双重 stack。
-    /// Whether to wrap the body in its own NavigationStack.
-    /// - `true` (default): used inside a `.sheet`, the view must provide its own
-    ///   `NavigationStack` so the title / toolbar / `.containerBackground` work.
-    /// - `false`: used as a `NavigationLink` destination on iPad; the parent
-    ///   `NavigationStack` already provides the navigation chrome, so we skip
-    ///   the inner one to avoid nested-stack glitches.
     let usesInternalNavigationStack: Bool
+    
+    @StateObject private var viewModel: NewMistakeSetViewModel
 
-    @State private var editedTitle = ""
-    @State private var selectedSubject = ""
-    @State private var editedOriginalQuestion = ""
-    @State private var editedSource = ""
-    @State private var editedErrorReason = ""
-    @State private var editedWrongSolution = ""
-    @State private var editedCorrectSolution = ""
-    @State private var editedDate = Date()
-    /// 难度自评 0-5
-    @State private var editedDifficulty: Int = 0
-    /// 自由标签
-    @State private var editedTags: [String] = []
+    /// Default empty-state initializer
+    init(container: RepositoryContainer, usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
+        self._viewModel = StateObject(wrappedValue: NewMistakeSetViewModel(container: container))
+    }
 
-    @State private var selectedSection: EditSection = .question
+    /// Convenience init that seeds the form with Siri-provided values.
+    init(container: RepositoryContainer, presetSubject: String, presetTitle: String, usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
+        let vm = NewMistakeSetViewModel(container: container)
+        vm.presetValues(subject: presetSubject, title: presetTitle)
+        self._viewModel = StateObject(wrappedValue: vm)
+    }
 
-    @State private var questionImages: [UIImage] = []
-    @State private var reasonImages: [UIImage] = []
-    @State private var wrongSolutionImages: [UIImage] = []
-    @State private var correctSolutionImages: [UIImage] = []
+    /// Initialiser that seeds the editable fields with sample content.
+    init(container: RepositoryContainer, sampleMistake: SampleMistake, usesInternalNavigationStack: Bool = true) {
+        self.usesInternalNavigationStack = usesInternalNavigationStack
+        let vm = NewMistakeSetViewModel(container: container)
+        vm.seedSampleMistake(sampleMistake)
+        self._viewModel = StateObject(wrappedValue: vm)
+    }
 
-    @State private var showingImagePicker = false
-    @State private var showingPhotoCapture = false
-    @State private var showingHandwritingSheet = false
-
-    @State private var isProcessingOCR = false
-
-    /// iPad 检测:用 userInterfaceIdiom 匹配用户说的「iPad」
-    /// iPad detection via userInterfaceIdiom (matches the user's "iPad" wording).
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
-    @State private var showingOCRAlert = false
-    @State private var ocrErrorMessage = ""
-
-    /// SRS opt-in 开关，新错题默认入队
-    @State private var reviewEnabled: Bool = true
-
-    /// Default empty-state initializer used by the app and previews that
-    /// don't need to seed the form.
-   init(usesInternalNavigationStack: Bool = true) {
-        self.usesInternalNavigationStack = usesInternalNavigationStack
-   }
-
-    /// Convenience init that seeds the form with Siri-provided values.
-    init(presetSubject: String, presetTitle: String, usesInternalNavigationStack: Bool = true) {
-        self.usesInternalNavigationStack = usesInternalNavigationStack
-        self._selectedSubject = State(initialValue: presetSubject)
-        self._editedTitle = State(initialValue: presetTitle)
-    }
-
-   /// Initialiser that seeds the editable fields with sample content.
-    /// Used by the `#Preview` to demonstrate the editor + live preview
-    /// without forcing the developer to type in the canvas first.
-    init(sampleMistake: SampleMistake, usesInternalNavigationStack: Bool = true) {
-        self.usesInternalNavigationStack = usesInternalNavigationStack
-        self._editedTitle = State(initialValue: sampleMistake.title)
-        self._selectedSubject = State(initialValue: sampleMistake.subject)
-        self._editedOriginalQuestion = State(initialValue: sampleMistake.originalQuestion)
-        self._editedSource = State(initialValue: sampleMistake.source)
-        self._editedErrorReason = State(initialValue: sampleMistake.errorReason)
-        self._editedWrongSolution = State(initialValue: sampleMistake.wrongSolution)
-        self._editedCorrectSolution = State(initialValue: sampleMistake.correctSolution)
-        self._editedDate = State(initialValue: sampleMistake.date)
-        self._selectedSection = State(initialValue: sampleMistake.selectedSection)
-    }
 
     var body: some View {
-        // 根据调用场景决定是否包自己的 NavigationStack:
-        // - sheet 场景包一层,让 .navigationTitle / .toolbar 生效;
-        // - iPad NavigationLink 推到父级 stack 时不再包,避免双重 stack。
-        // Conditionally wrap in NavigationStack:
-        // - sheet → wrap (toolbar/title need a stack)
-        // - iPad NavigationLink destination → skip (parent stack is the chrome)
         if usesInternalNavigationStack {
             NavigationStack {
                 formContent
@@ -132,10 +79,6 @@ struct NewMistakeSetView: View {
         }
     }
 
-    /// Form + toolbar + sheets + alerts,shared by sheet and push contexts.
-    /// All `.navigationTitle` / `.toolbar` / `.containerBackground` modifiers
-    /// below operate on the nearest enclosing `NavigationStack`, which is
-    /// either this view's own (sheet) or the parent's (NavigationLink).
     @ViewBuilder
     private var formContent: some View {
         Form {
@@ -147,33 +90,33 @@ struct NewMistakeSetView: View {
         .navigationTitle("New Mistake".localized())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
-        .sheet(isPresented: $showingImagePicker) {
+        .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerWithCompletion(onDismiss: { image in
-                if let image = image { addImageToCurrentSection(image) }
+                if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
-        .sheet(isPresented: $showingPhotoCapture) {
+        .sheet(isPresented: $viewModel.showingPhotoCapture) {
             PhotoCaptureWithCompletion(onDismiss: { image in
-                if let image = image { addImageToCurrentSection(image) }
+                if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
-        .sheet(isPresented: $showingHandwritingSheet) {
+        .sheet(isPresented: $viewModel.showingHandwritingSheet) {
             HandwritingSheet { pngData in
                 if !pngData.isEmpty, let image = UIImage(data: pngData) {
-                    addImageToCurrentSection(image)
+                    viewModel.addImageToCurrentSection(image)
                 }
             }
             .ignoresSafeArea(edges: .bottom)
         }
-        .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
+        .alert("OCR Error".localized(), isPresented: $viewModel.showingOCRAlert) {
             Button("OK".localized()) { }
         } message: {
-            Text(ocrErrorMessage)
+            Text(viewModel.ocrErrorMessage)
         }
         .overlay {
-            if isProcessingOCR {
+            if viewModel.isProcessingOCR {
                 ProgressView("Recognizing text...".localized())
                     .padding(20)
                     .background(Color(.systemBackground))
@@ -194,11 +137,11 @@ private extension NewMistakeSetView {
         Section(header: Text("Basic Info".localized())) {
             HStack {
                 Text("Title".localized())
-                TextField("Title".localized(), text: $editedTitle)
+                TextField("Title".localized(), text: $viewModel.editedTitle)
                     .multilineTextAlignment(.trailing)
             }
 
-            Picker("Subject".localized(), selection: $selectedSubject) {
+            Picker("Subject".localized(), selection: $viewModel.selectedSubject) {
                 Text("Select".localized()).tag("")
                 ForEach(container.subjectRepo.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
@@ -207,23 +150,20 @@ private extension NewMistakeSetView {
 
             HStack {
                 Text("Source".localized())
-                TextField("Source".localized(), text: $editedSource)
+                TextField("Source".localized(), text: $viewModel.editedSource)
                     .multilineTextAlignment(.trailing)
             }
 
-            // 难度自评
-            DifficultyPicker(difficulty: $editedDifficulty)
+            DifficultyPicker(difficulty: $viewModel.editedDifficulty)
 
-            // 自由标签
             TagEditorView(
-                tags: $editedTags,
+                tags: $viewModel.editedTags,
                 suggestedTags: container.mistakeRepo.allTags()
             )
 
-            DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
+            DatePicker("Date".localized(), selection: $viewModel.editedDate, displayedComponents: .date)
 
-            // SRS opt-in 开关
-            Toggle(isOn: $reviewEnabled) {
+            Toggle(isOn: $viewModel.reviewEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Spaced Repetition".localized())
                     Text("Auto-schedule reviews using SM-2 algorithm".localized())
@@ -235,43 +175,39 @@ private extension NewMistakeSetView {
     }
     
     var contentEditorSection: some View {
-        Section(header: Text(selectedSection.title.localized())) {
-            Picker("Section".localized(), selection: $selectedSection) {
+        Section(header: Text(viewModel.selectedSection.title.localized())) {
+            Picker("Section".localized(), selection: $viewModel.selectedSection) {
                 ForEach(EditSection.allCases) { section in
                     Text(section.title.localized()).tag(section)
                 }
             }
             .pickerStyle(.segmented)
 
-            // 用 switch + 直接 binding，绑定到对应 State；
-            // .id(selectedSection) 强制 SwiftUI 在切换栏目时重建 MarkdownTextEditor
-            // 内部持有的 UITextView，避免计算属性 binding 在 UIViewRepresentable
-            // 包裹层中无法正确切换 state 的问题。
             Group {
-                switch selectedSection {
+                switch viewModel.selectedSection {
                 case .question:
                     MarkdownEditorView(
-                        text: $editedOriginalQuestion,
+                        text: $viewModel.editedOriginalQuestion,
                         placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
                     )
                 case .reason:
                     MarkdownEditorView(
-                        text: $editedErrorReason,
+                        text: $viewModel.editedErrorReason,
                         placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
                     )
                 case .wrong:
                     MarkdownEditorView(
-                        text: $editedWrongSolution,
+                        text: $viewModel.editedWrongSolution,
                         placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
                     )
                 case .correct:
                     MarkdownEditorView(
-                        text: $editedCorrectSolution,
+                        text: $viewModel.editedCorrectSolution,
                         placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
                     )
                 }
             }
-            .id(selectedSection)
+            .id(viewModel.selectedSection)
             .frame(minHeight: 620)
         }
     }
@@ -279,42 +215,38 @@ private extension NewMistakeSetView {
     var imagesSection: some View {
         Section(header: Text("Images".localized())) {
             HStack {
-                Button(action: { showingImagePicker = true }) {
+                Button(action: { viewModel.showingImagePicker = true }) {
                     Label("Library".localized(), systemImage: "photo.on.rectangle.angled")
                 }
                 Spacer()
-                Button(action: { showingPhotoCapture = true }) {
+                Button(action: { viewModel.showingPhotoCapture = true }) {
                     Label("Camera".localized(), systemImage: "camera.fill")
                 }
                 Spacer()
-                Button(action: { triggerOCR() }) {
+                Button(action: { viewModel.triggerOCR() }) {
                     Label("OCR".localized(), systemImage: "text.viewfinder")
                 }
-                .disabled(currentSectionImages.wrappedValue.isEmpty)
+                .disabled(viewModel.currentSectionImagesBinding.wrappedValue.isEmpty)
                 Spacer()
-                // iPad 用 NavigationLink 推到 HandwritingView(自带「Back」确认);
-                // iPhone 仍走 sheet 弹出 HandwritingSheet(自带「Cancel」+ 滑动手势拦截)。
-                // iPad uses NavigationLink → HandwritingView (Back button + confirm);
-                // iPhone still uses sheet → HandwritingSheet (Cancel + swipe guard).
                 if isIPad {
                     NavigationLink {
                         HandwritingView { pngData in
                             if !pngData.isEmpty, let image = UIImage(data: pngData) {
-                                addImageToCurrentSection(image)
+                                viewModel.addImageToCurrentSection(image)
                             }
                         }
                     } label: {
                         Label("Draw".localized(), systemImage: "pencil.tip")
                     }
                 } else {
-                    Button(action: { showingHandwritingSheet = true }) {
+                    Button(action: { viewModel.showingHandwritingSheet = true }) {
                         Label("Draw".localized(), systemImage: "pencil.tip")
                     }
                 }
             }
             .buttonStyle(.borderless)
             
-            if currentSectionImages.wrappedValue.isEmpty {
+            if viewModel.currentSectionImagesBinding.wrappedValue.isEmpty {
                 Text("No images".localized())
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -323,9 +255,9 @@ private extension NewMistakeSetView {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(currentSectionImages.wrappedValue.indices, id: \.self) { index in
+                        ForEach(viewModel.currentSectionImagesBinding.wrappedValue.indices, id: \.self) { index in
                             ZStack(alignment: .topTrailing) {
-                                Image(uiImage: currentSectionImages.wrappedValue[index])
+                                Image(uiImage: viewModel.currentSectionImagesBinding.wrappedValue[index])
                                     .resizable()
                                     .scaledToFill()
                                     .frame(width: 80, height: 80)
@@ -333,7 +265,7 @@ private extension NewMistakeSetView {
                                     .cornerRadius(8)
                                 
                                 Button(action: {
-                                    currentSectionImages.wrappedValue.remove(at: index)
+                                    viewModel.currentSectionImagesBinding.wrappedValue.remove(at: index)
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.red)
@@ -356,91 +288,12 @@ private extension NewMistakeSetView {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save".localized()) {
-                    saveMistake()
+                    viewModel.saveMistake()
                     presentationMode.wrappedValue.dismiss()
                 }
                 .fontWeight(.semibold)
-                .disabled(editedTitle.isEmpty || editedOriginalQuestion.isEmpty)
+                .disabled(viewModel.isSaveDisabled)
             }
-        }
-    }
-}
-
-// MARK: - Helpers
-private extension NewMistakeSetView {
-    
-    var currentBinding: Binding<String> {
-        switch selectedSection {
-        case .question: return $editedOriginalQuestion
-        case .reason: return $editedErrorReason
-        case .wrong: return $editedWrongSolution
-        case .correct: return $editedCorrectSolution
-        }
-    }
-    
-    var currentSectionImages: Binding<[UIImage]> {
-        switch selectedSection {
-        case .question: return $questionImages
-        case .reason: return $reasonImages
-        case .wrong: return $wrongSolutionImages
-        case .correct: return $correctSolutionImages
-        }
-    }
-    
-    func addImageToCurrentSection(_ image: UIImage) {
-        switch selectedSection {
-        case .question: questionImages.append(image)
-        case .reason: reasonImages.append(image)
-        case .wrong: wrongSolutionImages.append(image)
-        case .correct: correctSolutionImages.append(image)
-        }
-    }
-    
-    func triggerOCR() {
-        guard let lastImage = currentSectionImages.wrappedValue.last else { return }
-        isProcessingOCR = true
-        
-        Task {
-            do {
-                let recognizedText = try await OCRManager.recognizeText(in: lastImage)
-                if !recognizedText.isEmpty {
-                    if !currentBinding.wrappedValue.isEmpty {
-                        currentBinding.wrappedValue += "\n\n" + recognizedText
-                    } else {
-                        currentBinding.wrappedValue = recognizedText
-                    }
-                }
-            } catch {
-                ocrErrorMessage = error.localizedDescription
-                showingOCRAlert = true
-            }
-            isProcessingOCR = false
-        }
-    }
-    
-    func saveMistake() {
-        let newMistake = MistakeNote(
-            title: editedTitle.isEmpty ? "Untitled".localized() : editedTitle,
-            subject: selectedSubject,
-            originalQuestion: editedOriginalQuestion,
-            source: editedSource,
-            date: editedDate,
-            errorReason: editedErrorReason,
-            wrongSolution: editedWrongSolution,
-            correctSolution: editedCorrectSolution,
-            questionImages: questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            reasonImages: reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            wrongSolutionImages: wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            correctSolutionImages: correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) },
-            reviewState: reviewEnabled ? .initial() : nil,
-            difficulty: max(0, min(DifficultyPicker.maxStars, editedDifficulty)),
-            tags: editedTags
-        )
-        container.addMistake(newMistake)
-
-        // 调度 SRS 复习通知
-        if reviewEnabled {
-            SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
         }
     }
 }
@@ -572,7 +425,7 @@ struct SampleMistake {
         Subject(name: "English", displayName: "English", enabled: true, fullScore: 150)
     ]
 
-    return NewMistakeSetView()
+    return NewMistakeSetView(container: mockContainer)
         .environment(mockContainer)
 }
 
@@ -585,7 +438,7 @@ struct SampleMistake {
         Subject(name: "English", displayName: "English", enabled: true, fullScore: 150)
     ]
 
-    return NewMistakeSetView(sampleMistake: .quadratic)
+    return NewMistakeSetView(container: mockContainer, sampleMistake: .quadratic)
         .environment(mockContainer)
 }
 

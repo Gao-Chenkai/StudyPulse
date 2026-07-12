@@ -215,6 +215,7 @@ struct MistakeAdminView: View {
                     if UIDevice.current.userInterfaceIdiom == .pad {
                         NavigationLink {
                             MistakeDetailEditView(
+                                container: container,
                                 mistakeSet: mistake,
                                 usesInternalNavigationStack: false
                             )
@@ -242,7 +243,7 @@ struct MistakeAdminView: View {
         .navigationTitle("Mistakes".localized())
         .adaptiveMaxWidth(820)
         .sheet(item: $editingMistake) { mistake in
-            MistakeDetailEditView(mistakeSet: mistake)
+            MistakeDetailEditView(container: container, mistakeSet: mistake)
         }
     }
 
