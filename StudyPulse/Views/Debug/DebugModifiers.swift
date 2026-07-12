@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import Combine
 import os
 
 // MARK: - Layout Bounds
@@ -168,6 +169,146 @@ private struct DebugInspectAutoModifier<T>: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// MARK: - LLM Debug 入口（仅 DEBUG 模式可见）
+
+/// 任意 AI 视图挂这个修饰符,DEBUG 模式下会出现 🔧 按钮,点击打开 `LLMDebugSheet`。
+/// Attach this to any AI view; in DEBUG mode a 🔧 button appears that opens `LLMDebugSheet`.
+/// - Parameter caller: 调用方标签,传入后在调试面板里只显示同 caller 的最近一次。
+struct LLMDebugButtonModifier: ViewModifier {
+    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @ObservedObject private var client = LLMClient.shared
+    @State private var showDebug: Bool = false
+    let caller: String?
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                if envManager.debugModeEnabled {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showDebug = true
+                        } label: {
+                            // 带红点提示"有最近一次调用"
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "ladybug.fill")
+                                    .foregroundColor(.yellow)
+                                if client.lastCallInfo != nil {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 7, height: 7)
+                                        .offset(x: 4, y: -2)
+                                }
+                            }
+                        }
+                        .accessibilityLabel("LLM Debug".localized())
+                    }
+                }
+            }
+            .sheet(isPresented: $showDebug) {
+                LLMDebugSheet(filterCaller: caller)
+                    .environmentObject(envManager)
+            }
+    }
+}
+
+extension View {
+    /// 在 DEBUG 模式下显示 🔧 按钮,点击打开 `LLMDebugSheet`。
+    /// 传入 `caller` 可让调试面板只展示同 caller 的最近一次调用(便于多 AI 功能区分)。
+    /// Show a 🔧 button in DEBUG mode that opens the LLM debug panel.
+    func llmDebugButton(caller: String) -> some View {
+        modifier(LLMDebugButtonModifier(caller: caller))
+    }
+
+    /// 主页专用:DEBUG 模式按钮,无 caller 过滤(显示所有 caller 的最近一次 + 分组选择器)。
+    /// Home-page DEBUG button: no caller filter, so the panel shows the recent-calls picker.
+    func llmDebugHomeButton() -> some View {
+        modifier(LLMDebugButtonModifier(caller: nil))
+    }
+}
+
+// MARK: - 卡片上的 LLM 调用指示器(DEBUG 模式显示)
+
+/// DEBUG 模式下在卡片底部显示一行"🤖 BodyRadar · 2m 前 · 1.4s"
+/// 让用户能立即看出"刚刚的 LLM 调用来自哪个卡片"。
+/// In DEBUG mode, shows a small footer with the most-recent LLM call info for this caller.
+struct LLMCallIndicator: View {
+    @ObservedObject private var client = LLMClient.shared
+    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @State private var showDebug: Bool = false
+    let caller: String
+
+    /// 自动每 5s 刷新一次(以便 "2m 前" 持续变化)
+    /// Auto-refresh every 5s so the "2m ago" label updates.
+    private let tick = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+
+    private var latestForCaller: LLMCallDebugInfo? {
+        client.recentCalls.last(where: { $0.caller == caller })
+    }
+
+    var body: some View {
+        Group {
+            if envManager.debugModeEnabled {
+                if let info = latestForCaller {
+                    Button {
+                        showDebug = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: info.error == nil ? "sparkles" : "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                            Text(caller)
+                                .font(.caption2.weight(.semibold))
+                            Text("·")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(relativeTime(info.startTime))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text("·")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(String(format: "%.1fs", info.elapsedSeconds))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundColor(info.error == nil ? .secondary : .red)
+                        }
+                        .foregroundColor(.teal)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.teal.opacity(0.12)))
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 9))
+                        Text("\(caller) · 未触发")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.secondary.opacity(0.08)))
+                }
+            }
+        }
+        .onReceive(tick) { _ in
+            // 触发 SwiftUI 重渲染
+            _ = latestForCaller
+        }
+        .sheet(isPresented: $showDebug) {
+            LLMDebugSheet(filterCaller: caller)
+                .environmentObject(envManager)
+        }
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let interval = Date().timeIntervalSince(date)
+        if interval < 60 { return "\(Int(interval))s 前" }
+        if interval < 3600 { return "\(Int(interval / 60))m 前" }
+        if interval < 86400 { return "\(Int(interval / 3600))h 前" }
+        return "\(Int(interval / 86400))d 前"
     }
 }
 

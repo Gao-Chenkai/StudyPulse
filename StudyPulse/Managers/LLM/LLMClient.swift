@@ -19,6 +19,64 @@ import Combine
 
 // MARK: - LLM Client
 
+/// 单次 LLM 调用的调试信息(DEBUG 面板用)。包含 URL / prompt / 思考时长 / 响应。
+/// Debug info for a single LLM call. Populated by LLMClient.complete / stream.
+nonisolated struct LLMCallDebugInfo: Equatable, Sendable {
+    /// 调用起始时间
+    let startTime: Date
+    /// 调用结束时间
+    let endTime: Date
+    /// 思考/总耗时(秒)
+    var elapsedSeconds: TimeInterval { endTime.timeIntervalSince(startTime) }
+    /// 端点 URL(完整,含 /v1/chat/completions)
+    let url: String
+    /// 模型 id
+    let model: String
+    /// 采样温度
+    let temperature: Double
+    /// system prompt(完整,含 override / appendix)
+    let systemPrompt: String
+    /// 消息历史
+    let messages: [LLMMessage]
+    /// 是否使用 stream
+    let streaming: Bool
+    /// 响应内容(成功时)
+    var response: String?
+    /// 错误描述(失败时)
+    var error: String?
+    /// 调用场景标签(可选,便于多 AI 功能区分),由调用方通过 `caller` 字段填充
+    let caller: String
+
+    /// 渲染为可复制的 JSON 字符串(给 LLMDebugSheet 用)
+    func asDebugJSON() -> String {
+        let allMessages = [LLMMessage.system(systemPrompt)] + messages
+        let msgArr = allMessages.map { msg in
+            "{\"role\":\"\(msg.role.rawValue)\",\"content\":\(escapeJSON(msg.content))}"
+        }.joined(separator: ",")
+        return """
+        {
+          "caller": \(escapeJSON(caller)),
+          "url": \(escapeJSON(url)),
+          "model": \(escapeJSON(model)),
+          "temperature": \(temperature),
+          "streaming": \(streaming),
+          "elapsedSeconds": \(String(format: "%.3f", elapsedSeconds)),
+          "systemPrompt": \(escapeJSON(systemPrompt)),
+          "messages": [\(msgArr)],
+          "response": \(response.map(escapeJSON) ?? "null"),
+          "error": \(error.map(escapeJSON) ?? "null")
+        }
+        """
+    }
+
+    private func escapeJSON(_ s: String) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: [s], options: [])) ?? Data()
+        let arr = String(data: data, encoding: .utf8) ?? "[\"\"]"
+        // 取首尾的引号(数组形式 = ["..."])
+        return String(arr.dropFirst().dropLast())
+    }
+}
+
 /// OpenAI Chat Completions 兼容客户端。
 /// - `stream(...)` 中 `onDelta` 接收**到目前为止的完整文本**(不是增量),
 ///   方便 UI 端直接存进 `AsyncStream` 给 `StreamedMarkdownView`。
@@ -30,6 +88,14 @@ final class LLMClient: ObservableObject {
     private let timeoutSeconds: TimeInterval = 60
 
     private let session: URLSession
+
+    /// 最近一次调用的调试信息(给 LLMDebugSheet 显示)。每次 complete / stream 都会更新。
+    /// Most-recent call's debug info. Updated on every complete / stream.
+    @Published private(set) var lastCallInfo: LLMCallDebugInfo? = nil
+    /// 最近的若干条调用历史(最多保留 20 条,新调用 push 到末尾)。
+    /// Recent call history (newest last, capped at 20).
+    @Published private(set) var recentCalls: [LLMCallDebugInfo] = []
+    private let recentCallsLimit = 20
 
     private init(session: URLSession? = nil) {
         if let session {
@@ -47,7 +113,12 @@ final class LLMClient: ObservableObject {
 
     /// 单次非流式调用,返回最终 content。
     /// 失败抛 `LLMError`;调用方按需回退到本地。
-    func complete(prompt: LLMPrompt, config: LLMConfig) async throws -> String {
+    /// - Parameter caller: 调用场景标签(例如 "MistakeAI" / "WeeklyReport");写入 debug info。
+    func complete(
+        prompt: LLMPrompt,
+        config: LLMConfig,
+        caller: String = "complete"
+    ) async throws -> String {
         try validateConfig(config)
         let url = try buildURL(baseURL: config.baseURL)
         let body = try buildBody(prompt: prompt, config: config, stream: false)
@@ -58,25 +129,73 @@ final class LLMClient: ObservableObject {
         request.httpBody = body
         Log.llm.info("LLM complete → \(url.absoluteString, privacy: .public) model=\(config.model ?? "?", privacy: .public)")
 
+        let startTime = Date()
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
         } catch let error as URLError where error.code == .timedOut {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: nil, error: LLMError.timeout.errorDescription,
+                caller: caller
+            )
+            recordCall(info)
             throw LLMError.timeout
         } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: nil, error: error.localizedDescription,
+                caller: caller
+            )
+            recordCall(info)
             throw LLMError.network(error.localizedDescription)
         }
-        try validateHTTP(response: response, data: data)
-        return try LLMChatResponse.parseSingleResponse(data)
+        do {
+            try validateHTTP(response: response, data: data)
+        } catch {
+            let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: String(data: data, encoding: .utf8),
+                error: desc, caller: caller
+            )
+            recordCall(info)
+            throw error
+        }
+        let result = try LLMChatResponse.parseSingleResponse(data)
+        let info = LLMCallDebugInfo(
+            startTime: startTime, endTime: Date(),
+            url: url.absoluteString, model: config.model ?? "?",
+            temperature: config.temperature,
+            systemPrompt: effectiveSystem(prompt: prompt, config: config),
+            messages: prompt.messages, streaming: false,
+            response: result, error: nil, caller: caller
+        )
+        recordCall(info)
+        return result
     }
 
     /// SSE 流式调用,逐 delta 调 `onDelta`。
     /// 返回**完整文本**;`onDelta` 每次接收到目前为止的全部内容。
     /// 失败抛 `LLMError`。
+    /// - Parameter caller: 调用场景标签(例如 "MistakeAI" / "WeeklyReport");写入 debug info。
     func stream(
         prompt: LLMPrompt,
         config: LLMConfig,
+        caller: String = "stream",
         onDelta: @MainActor (String) -> Void
     ) async throws -> String {
         try validateConfig(config)
@@ -91,7 +210,27 @@ final class LLMClient: ObservableObject {
         request.timeoutInterval = timeoutSeconds
         Log.llm.info("LLM stream → \(url.absoluteString, privacy: .public) model=\(config.model ?? "?", privacy: .public)")
 
-        let (bytes, response) = try await session.bytes(for: request)
+        let startTime = Date()
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(for: request)
+        } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: nil, error: error.localizedDescription,
+                caller: caller
+            )
+            recordCall(info)
+            if let urlErr = error as? URLError, urlErr.code == .timedOut {
+                throw LLMError.timeout
+            }
+            throw LLMError.network(error.localizedDescription)
+        }
         // 如果状态非 2xx,先把整个 body 收集起来再抛(serverError 才会带 body)
         // If status is not 2xx, drain the whole body before throwing so the error carries it.
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
@@ -99,26 +238,74 @@ final class LLMClient: ObservableObject {
             for try await byte in bytes {
                 buffer.append(byte)
             }
-            try validateHTTP(response: response, data: buffer)
+            do {
+                try validateHTTP(response: response, data: buffer)
+            } catch {
+                let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+                let info = LLMCallDebugInfo(
+                    startTime: startTime, endTime: Date(),
+                    url: url.absoluteString, model: config.model ?? "?",
+                    temperature: config.temperature,
+                    systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                    messages: prompt.messages, streaming: true,
+                    response: String(data: buffer, encoding: .utf8),
+                    error: desc, caller: caller
+                )
+                recordCall(info)
+                throw error
+            }
         }
         try validateHTTP(response: response, data: Data())
 
         var accumulated = ""
         var pending = ""
-        for try await line in bytes.lines {
-            if Task.isCancelled { throw LLMError.network("Cancelled") }
-            if LLMStreamingParser.isDoneLine(line) { break }
-            // SSE 事件由空行分隔;单行处理
-            pending = line
-            if let piece = LLMStreamingParser.parseLine(pending) {
-                accumulated += piece
-                let snapshot = accumulated
-                onDelta(snapshot)
+        do {
+            for try await line in bytes.lines {
+                if Task.isCancelled { throw LLMError.network("Cancelled") }
+                if LLMStreamingParser.isDoneLine(line) { break }
+                // SSE 事件由空行分隔;单行处理
+                pending = line
+                if let piece = LLMStreamingParser.parseLine(pending) {
+                    accumulated += piece
+                    let snapshot = accumulated
+                    onDelta(snapshot)
+                }
             }
+        } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: accumulated.isEmpty ? nil : accumulated,
+                error: error.localizedDescription, caller: caller
+            )
+            recordCall(info)
+            throw error
         }
         if accumulated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: config.model ?? "?",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: nil, error: LLMError.emptyResponse.errorDescription,
+                caller: caller
+            )
+            recordCall(info)
             throw LLMError.emptyResponse
         }
+        let info = LLMCallDebugInfo(
+            startTime: startTime, endTime: Date(),
+            url: url.absoluteString, model: config.model ?? "?",
+            temperature: config.temperature,
+            systemPrompt: effectiveSystem(prompt: prompt, config: config),
+            messages: prompt.messages, streaming: true,
+            response: accumulated, error: nil, caller: caller
+        )
+        recordCall(info)
         return accumulated
     }
 
@@ -157,7 +344,9 @@ final class LLMClient: ObservableObject {
 
     private func buildBody(prompt: LLMPrompt, config: LLMConfig, stream: Bool) throws -> Data {
         // 手搓 JSON 避免引入外部 SDK
-        let effective = prompt.effectiveSystem(appendix: config.systemPromptAppendix)
+        // DEBUG 覆盖:非空时**完全替换**默认 system + appendix
+        // DEBUG override: when non-empty, replace default system + appendix entirely.
+        let effective = effectiveSystem(prompt: prompt, config: config)
         let allMessages = [LLMMessage.system(effective)] + prompt.messages
         let payload: [String: Any] = [
             "model": config.model ?? "",
@@ -166,6 +355,29 @@ final class LLMClient: ObservableObject {
             "messages": allMessages.map { ["role": $0.role.rawValue, "content": $0.content] }
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [])
+    }
+
+    /// 拼接最终 system prompt:`override` 优先,否则 `default + appendix`。
+    /// Resolve the final system prompt: override takes precedence over default + appendix.
+    private func effectiveSystem(prompt: LLMPrompt, config: LLMConfig) -> String {
+        if let override = config.overrideSystemPrompt?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty {
+            return override
+        }
+        return prompt.effectiveSystem(appendix: config.systemPromptAppendix)
+    }
+
+    /// 把一次调用写入 `lastCallInfo` + `recentCalls`,并 log 到 `Log.llm`。
+    /// Record a call into `lastCallInfo` and `recentCalls`, and emit a Log.llm entry.
+    private func recordCall(_ info: LLMCallDebugInfo) {
+        lastCallInfo = info
+        recentCalls.append(info)
+        if recentCalls.count > recentCallsLimit {
+            recentCalls.removeFirst(recentCalls.count - recentCallsLimit)
+        }
+        let elapsedStr = String(format: "%.2fs", info.elapsedSeconds)
+        let okOrErr = info.error == nil ? "OK" : "ERR: \(info.error ?? "")"
+        Log.llm.info("LLM call [\(info.caller, privacy: .public)] \(info.url, privacy: .public) elapsed=\(elapsedStr, privacy: .public) status=\(okOrErr, privacy: .public)")
     }
 
     private func validateHTTP(response: URLResponse, data: Data) throws {

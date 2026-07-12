@@ -28,6 +28,8 @@ enum HomeCardType: String, CaseIterable, Codable {
     case learningHeatmap = "learningHeatmap"
     /// 主页植物卡片（基于 streak / todayLog 的 Canvas 渲染）
     case plant = "plant"
+    /// AI 提问入口:点击后弹出"向 AI 提问" sheet,可讨论身体 / 成绩 / 趋势 / 复习
+    case homeAsk = "homeAsk"
 
     /// 本地化显示名称
     var displayName: String {
@@ -46,6 +48,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .recentGrades: return "Recent Grades".localized()
         case .learningHeatmap: return "Learning Heatmap".localized()
         case .plant: return "Plant".localized()
+        case .homeAsk: return "Ask AI".localized()
         }
     }
 
@@ -66,6 +69,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .recentGrades: return "list.bullet.rectangle"
         case .learningHeatmap: return "square.grid.4x3.fill"
         case .plant: return "leaf.fill"
+        case .homeAsk: return "text.bubble.fill"
         }
     }
 
@@ -100,6 +104,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .dailyPlan, enabled: true),
         HomeCardItem(type: .learningHeatmap, enabled: true),
         HomeCardItem(type: .hrvStatus, enabled: true),
+        HomeCardItem(type: .homeAsk, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),

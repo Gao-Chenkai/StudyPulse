@@ -73,6 +73,7 @@ struct HomeView: View {
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()
+            .llmDebugHomeButton()
             .navigationTitle("Dashboard".localized())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -300,6 +301,9 @@ struct HomeView: View {
         case .plant:
             PlantHomeCard()
                 .contextMenu { shareCardMenu(for: type) }
+        case .homeAsk:
+            // HomeAskCard 自带 Button 弹出 sheet,不参与长按分享(不能导出"输入框"图片)
+            HomeAskCard()
         }
     }
 
@@ -388,6 +392,7 @@ struct HomeView: View {
         case .recentGrades: return "Recent Grades".localized()
         case .learningHeatmap: return "Learning Heatmap".localized()
         case .plant: return "Plant".localized()
+        case .homeAsk: return "Ask AI".localized()
         }
     }
 
@@ -442,6 +447,8 @@ struct HomeView: View {
                     LearningHeatmapView()
                 case .plant:
                     PlantHomeCard()
+                case .homeAsk:
+                    HomeAskCard()
                 }
             }
             .frame(maxWidth: .infinity)

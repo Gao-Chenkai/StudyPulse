@@ -8,8 +8,10 @@
 //  UI 关键点:
 //  - 顶部 header 简要显示当前上下文来源(预测 / 错题 / 周报)
 //  - 中部:滚动对话历史,user 右对齐,assistant 左对齐 + MarkdownView 流式
-//  - 底部输入框:iOS 26 `glassEffect` 浮动胶囊(脱离键盘的悬浮玻璃感);
-//    老版本 fallback 到 `.regularMaterial` 胶囊
+//  - 底部输入框:共享 ChatInputBar(iOS 26 `glassEffect` 浮动胶囊)
+//
+//  UI 统一(2026-07-11):使用共享 ChatBubble + ChatInputBar,
+//  跟 LLMChatView / HomeAskSheet 保持一致。
 //
 //  Created for LLM BYOK integration (2026-07-11).
 //
@@ -37,10 +39,17 @@ struct AIDiscussionSheet: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 messagesList
-                floatingInput
+                ChatInputBar(
+                    text: $inputText,
+                    isStreaming: viewModel.isStreaming,
+                    canSend: canSend,
+                    onSend: send,
+                    onCancel: { viewModel.cancel() }
+                )
             }
-            .background(Color(.systemGroupedBackground).opacity(0.001))
+            .background(Color(.systemGroupedBackground).opacity(0.4))
             .containerBackground(.clear, for: .navigation)
+            .llmDebugButton(caller: "AIDiscussion")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -50,16 +59,14 @@ struct AIDiscussionSheet: View {
                         onDismiss()
                     }
                 }
-                if viewModel.isStreaming {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if viewModel.isStreaming {
                         Button {
                             viewModel.cancel()
                         } label: {
                             Image(systemName: "stop.circle.fill")
                         }
-                    }
-                } else {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    } else {
                         Button {
                             viewModel.reset()
                         } label: {
@@ -79,6 +86,11 @@ struct AIDiscussionSheet: View {
         }
     }
 
+    private var canSend: Bool {
+        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !viewModel.isStreaming && envManager.llmConfig.isConfigured
+    }
+
     // MARK: - Messages List
 
     private var messagesList: some View {
@@ -91,13 +103,25 @@ struct AIDiscussionSheet: View {
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(viewModel.messages) { message in
-                            discussionBubble(message: message)
-                                .id(message.id)
+                            ChatBubble(
+                                role: message.role == .user
+                                    ? .user
+                                    : .assistant(dimmed: message.isInitialContext),
+                                content: message.content,
+                                isStreaming: message.isStreaming,
+                                error: message.error,
+                                headerTag: message.isInitialContext
+                                    ? "以下对话基于上一次的 AI 预测".localized()
+                                    : nil
+                            )
+                            .id(message.id)
                         }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.top, 16)
+                    .padding(.top, 8)
                     .padding(.bottom, 96) // 给浮动输入框留位
+                    // 驱动 bubble 进出场的 transition
+                    .animation(.spring(response: 0.35, dampingFraction: 0.78), value: viewModel.messages.count)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -140,138 +164,10 @@ struct AIDiscussionSheet: View {
         }
     }
 
-    // MARK: - Floating Input (iOS 26 Liquid Glass)
-
-    /// 底部浮动输入框。视觉上"脱离"键盘悬浮,
-    /// iOS 26 用 `Color.clear.glassEffect(.regular, in: Capsule())`;
-    /// 老版本 fallback `.regularMaterial` 胶囊。
-    private var floatingInput: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            inputCapsule
-            sendButton
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-    }
-
-    private var inputCapsule: some View {
-        TextField("Ask anything...".localized(), text: $inputText, axis: .vertical)
-            .lineLimit(1...5)
-            .focused($inputFocused)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(minHeight: 44)
-            .background(
-                Group {
-                    if #available(iOS 26.0, *) {
-                        // iOS 26 真正的 liquid glass
-                        // Real liquid glass on iOS 26+: Color.clear + Capsule + glassEffect
-                        Color.clear
-                            .glassEffect(.regular.interactive(), in: Capsule())
-                    } else {
-                        // iOS 18- fallback: 同样的胶囊 + regularMaterial
-                        Capsule().fill(.regularMaterial)
-                    }
-                }
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        Color.primary.opacity(inputFocused ? 0.15 : 0.08),
-                        lineWidth: inputFocused ? 1 : 0.5
-                    )
-            )
-            .onSubmit { send() }
-    }
-
-    private var sendButton: some View {
-        Button {
-            send()
-        } label: {
-            Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 32))
-        }
-        .disabled(
-            inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || viewModel.isStreaming
-                || !envManager.llmConfig.isConfigured
-        )
-    }
-
     private func send() {
         let text = inputText
         inputText = ""
         viewModel.sendUserMessage(text, config: envManager.llmConfig)
-    }
-
-    // MARK: - Bubble
-
-    @ViewBuilder
-    private func discussionBubble(message: AIDiscussionViewModel.Message) -> some View {
-        HStack {
-            if message.role == .user {
-                Spacer(minLength: 40)
-                Text(message.content)
-                    .font(.body)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Color.accentColor))
-                    .frame(maxWidth: 280, alignment: .trailing)
-                    .textSelection(.enabled)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "brain")
-                            .font(.caption)
-                            .foregroundColor(.teal)
-                        Text("AI".localized())
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.teal)
-                        if message.isInitialContext {
-                            Text("·  " + "以下对话基于上一次的 AI 预测".localized())
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        if message.isStreaming {
-                            ProgressView().scaleEffect(0.6).padding(.leading, 4)
-                        }
-                        Spacer()
-                    }
-                    if let err = message.error {
-                        Text(err).font(.caption).foregroundColor(.red)
-                    } else if message.content.isEmpty && message.isStreaming {
-                        Text("Thinking...".localized())
-                            .font(.body).foregroundColor(.secondary)
-                    } else {
-                        MarkdownView(
-                            text: message.content.normalisingSingleDollarMath(),
-                            config: .previewConfig
-                        )
-                        .textSelection(.enabled)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(message.isInitialContext
-                              ? Color(.tertiarySystemBackground)
-                              : Color(.secondarySystemBackground))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .strokeBorder(
-                            message.isInitialContext ? Color.secondary.opacity(0.25) : Color.clear,
-                            lineWidth: 1
-                        )
-                )
-                .opacity(message.isInitialContext ? 0.85 : 1.0)
-                .frame(maxWidth: 300, alignment: .leading)
-                Spacer(minLength: 40)
-            }
-        }
     }
 }
 
@@ -367,7 +263,7 @@ final class AIDiscussionViewModel: ObservableObject {
         currentTask = Task { [weak self] in
             guard let self else { return }
             do {
-                _ = try await LLMClient.shared.stream(prompt: prompt, config: config) { snapshot in
+                _ = try await LLMClient.shared.stream(prompt: prompt, config: config, caller: "AIDiscussion") { snapshot in
                     Task { @MainActor in
                         if let lastIdx = self.messages.lastIndex(where: { $0.role == .assistant && $0.isStreaming }) {
                             self.messages[lastIdx].content = snapshot

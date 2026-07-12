@@ -221,6 +221,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
     /// 自由标签,例如 ["函数", "导数"];匹配时大小写不敏感。
     /// Free-form tags (e.g. ["functions", "derivatives"]); case-insensitive match.
     var tags: [String] = []
+    /// 语音备忘录文件名（存放在本地 Document/audio 目录下）
+    var audioFileName: String?
 
     init(id: UUID = UUID(), title: String, subject: String = "", originalQuestion: String, source: String, date: Date = Date(),
          errorReason: String, wrongSolution: String, correctSolution: String,
@@ -230,7 +232,8 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
          exposureCount: Int = 0, masteryScore: Double = 0.0,
          masteryHistory: [MasteryHistoryEntry] = [],
          handwritingHistory: [HandwritingAnswerEntry] = [],
-         difficulty: Int = 0, tags: [String] = []) {
+         difficulty: Int = 0, tags: [String] = [],
+         audioFileName: String? = nil) {
         self.id = id
         self.title = title
         self.subject = subject
@@ -252,6 +255,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.handwritingHistory = handwritingHistory
         self.difficulty = difficulty
         self.tags = tags
+        self.audioFileName = audioFileName
     }
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 JSON / SwiftData 数据
@@ -265,6 +269,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         case exposureCount, masteryScore, masteryHistory
         case handwritingHistory
         case difficulty, tags
+        case audioFileName
     }
 
     init(from decoder: Decoder) throws {
@@ -290,6 +295,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
         self.handwritingHistory = try c.decodeIfPresent([HandwritingAnswerEntry].self, forKey: .handwritingHistory) ?? []
         self.difficulty = try c.decodeIfPresent(Int.self, forKey: .difficulty) ?? 0
         self.tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.audioFileName = try c.decodeIfPresent(String.self, forKey: .audioFileName)
     }
 }
 

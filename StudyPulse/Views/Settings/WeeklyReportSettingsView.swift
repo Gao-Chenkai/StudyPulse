@@ -72,6 +72,7 @@ struct WeeklyReportSettingsView: View {
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
         .debugLayoutBoundsAuto()
+        .llmDebugButton(caller: "WeeklyReport")
         .sheet(isPresented: $showingShareSheet) {
             if let image = reportImage {
                 ReportShareSheet(items: [image], subject: "StudyPulse Report")
@@ -134,7 +135,7 @@ struct WeeklyReportSettingsView: View {
         if envManager.llmConfig.isConfigured {
             let prompt = WeeklyReportLLM.makePrompt(reportData)
             do {
-                aiSummary = try await LLMClient.shared.complete(prompt: prompt, config: envManager.llmConfig)
+                aiSummary = try await LLMClient.shared.complete(prompt: prompt, config: envManager.llmConfig, caller: "WeeklyReport")
             } catch {
                 Log.report.warning("AI summary failed: \(error.localizedDescription)")
                 aiSummary = nil

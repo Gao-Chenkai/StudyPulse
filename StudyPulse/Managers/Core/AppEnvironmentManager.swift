@@ -215,6 +215,19 @@ class AppEnvironmentManager: ObservableObject {
         preferences.llmTemperature = clamped
     }
 
+    /// 设置 DEBUG 模式专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
+    /// `nil` / 空字符串 → 清空覆盖,回退到默认 + appendix。
+    func setLLMDebugOverrideSystemPrompt(_ override: String?) {
+        let normalized: String?
+        if let override, !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            normalized = override
+        } else {
+            normalized = nil
+        }
+        Log.preferences.info("更新 LLM debug override / LLM debug override: -> \(normalized == nil ? "nil" : "<set>")")
+        preferences.debugOverrideSystemPrompt = normalized
+    }
+
     /// 设置当前激活的 study phase（nil = 全部数据）
     func setActivePhaseId(_ id: UUID?) {
         Log.preferences.info("切换 phase / Active phase change: -> \(id?.uuidString ?? "all", privacy: .public)")

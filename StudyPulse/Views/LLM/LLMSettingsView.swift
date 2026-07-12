@@ -22,6 +22,8 @@ struct LLMSettingsView: View {
     @State private var modelInput: String = ""
     @State private var appendixInput: String = ""
     @State private var temperature: Double = 0.7
+    /// DEBUG 专用:全局覆盖系统 prompt(仅当 debugModeEnabled 时显示)
+    @State private var overrideInput: String = ""
 
     @State private var isTesting = false
     @State private var testAlertMessage: String? = nil
@@ -148,6 +150,43 @@ struct LLMSettingsView: View {
                 Text("Advanced".localized())
             } footer: {
                 Text("Optional. Appended to the default system prompt for every AI feature.".localized())
+            }
+
+            // 3.5) DEBUG 模式专用:全局覆盖系统 prompt
+            if envManager.debugModeEnabled {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ladybug.fill").foregroundColor(.yellow)
+                            Text("DEBUG: Override System Prompt".localized())
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.primary)
+                        }
+                        TextEditor(text: $overrideInput)
+                            .frame(minHeight: 140)
+                            .font(.system(.footnote, design: .monospaced))
+                            .onChange(of: overrideInput) { _, newValue in
+                                envManager.setLLMDebugOverrideSystemPrompt(newValue.isEmpty ? nil : newValue)
+                            }
+                        if !overrideInput.isEmpty {
+                            Button(role: .destructive) {
+                                overrideInput = ""
+                                envManager.setLLMDebugOverrideSystemPrompt(nil)
+                            } label: {
+                                Label("Clear Override".localized(), systemImage: "trash")
+                            }
+                            .font(.caption)
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Image(systemName: "ladybug.fill").foregroundColor(.yellow)
+                        Text("DEBUG Override".localized())
+                    }
+                } footer: {
+                    Text("当此处有内容时,所有 AI 功能都会**完全使用此 prompt**,跳过默认 + Appendix。\n仅 DEBUG 模式可见,便于排查 prompt 行为。".localized())
+                        .font(.caption2)
+                }
             }
 
             // 4) 测试连接

@@ -52,6 +52,7 @@ struct MistakeAIAnalysisSheet: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .llmDebugButton(caller: "MistakeAI")
             .navigationTitle("AI Analysis".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -197,7 +198,7 @@ struct MistakeAIAnalysisSheet: View {
         )
         streamTask = Task {
             do {
-                _ = try await LLMClient.shared.stream(prompt: prompt, config: config) { snapshot in
+                _ = try await LLMClient.shared.stream(prompt: prompt, config: config, caller: "MistakeAI") { snapshot in
                     streamedText = snapshot
                 }
                 isLoading = false

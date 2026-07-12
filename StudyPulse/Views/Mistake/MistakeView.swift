@@ -855,6 +855,7 @@ struct MistakeSetDetailView: View {
     @State private var showingQuickReview = false
     @State private var showingAIAnalysis = false
     @State private var showingAIDiscussion = false
+    @State private var showingAISimilarQuestion = false
     @State private var lastAIAnalysis: String? = nil
 
     /// 始终从 mistakeRepo 里取最新快照（错题标题/内容/掌握度等可能
@@ -939,6 +940,12 @@ struct MistakeSetDetailView: View {
                         TagChipsView(tags: liveMistake.tags, compact: true)
                             .frame(maxWidth: 240, alignment: .trailing)
                     }
+                }
+                
+                // 语音备忘录
+                if let audioFileName = liveMistake.audioFileName {
+                    AudioPlaybackView(audioFileName: audioFileName, onDelete: nil)
+                        .padding(.top, 4)
                 }
             }
             
@@ -1056,8 +1063,17 @@ struct MistakeSetDetailView: View {
         .toolbar {
             // AI 解析按钮(直接显示在详情页,无需进入编辑页)
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAIAnalysis = true
+                Menu {
+                    Button {
+                        showingAIAnalysis = true
+                    } label: {
+                        Label("AI 解析错因".localized(), systemImage: "sparkles.magnifyingglass")
+                    }
+                    Button {
+                        showingAISimilarQuestion = true
+                    } label: {
+                        Label("AI 相似题组卷".localized(), systemImage: "doc.badge.gearshape")
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
@@ -1122,6 +1138,12 @@ struct MistakeSetDetailView: View {
             )
             .environmentObject(envManager)
             .adaptiveSheet(detents: [.large])
+        }
+        .sheet(isPresented: $showingAISimilarQuestion) {
+            AISimilarQuestionFlowView(originalMistake: liveMistake)
+                .environment(container)
+                .environmentObject(envManager)
+                .adaptiveSheet()
         }
         .fullScreenCover(isPresented: $showingQuickReview) {
             NavigationStack {

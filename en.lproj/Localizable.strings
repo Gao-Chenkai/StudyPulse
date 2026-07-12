@@ -1697,3 +1697,68 @@
 "基于本次 AI 预测继续提问" = "Continue asking about this AI prediction";
 "基于本次 AI 总分预测继续提问" = "Continue asking about this AI total score prediction";
 "以下对话基于上一次的 AI 预测" = "The following chat is based on the previous AI prediction";
+"AI 建议不可用,显示本地版本" = "AI suggestion unavailable — showing local version";
+"雷达建议 · 深入探讨" = "Radar Suggestion · Discuss Further";
+
+// MARK: - Home Ask AI (主页 AI 提问卡片)
+"Ask AI" = "Ask AI";
+"未配置 AI · 前往设置" = "AI not configured — Open Settings";
+"未配置大模型" = "LLM not configured";
+"前往 设置 → AI 设置,填入 Base URL / API Key 后即可使用" = "Go to Settings → AI Settings, fill in Base URL / API Key to start.";
+"问我关于你的身体状态、成绩、趋势、复习建议的问题。\\n我会先判断需要哪些数据,再合并上下文给你回答。" = "Ask me about your body status, grades, trends, or review plan.\\nI'll first decide which data I need, then merge it with your question.";
+"今天适合做难题吗?" = "Is today a good day for hard problems?";
+"我最近的数学成绩怎么样?" = "How are my recent math grades?";
+"本周学习时间够不够?" = "Did I study enough this week?";
+"现在应该复习什么?" = "What should I review right now?";
+"身体" = "Body";
+"成绩" = "Grades";
+"趋势" = "Trends";
+"复习" = "Review";
+"正在判断需要哪些数据…" = "Deciding which data is needed…";
+"正在生成回答…" = "Generating answer…";
+"请先在设置中配置大模型" = "Please configure the LLM in Settings first";
+"已取消" = "Cancelled";
+"查看数据快照" = "View data snapshot";
+"隐藏数据快照" = "Hide data snapshot";
+
+// MARK: - Radar LLM Cooldown (雷达 LLM 冷却)
+"立刻分析" = "Analyze Now";
+
+// MARK: - LLM DEBUG 模式
+"LLM Debug" = "LLM Debug";
+"Copy JSON" = "Copy JSON";
+"暂无 LLM 调用记录" = "No LLM calls yet";
+"触发任意 AI 功能后,这里会显示 URL / Prompt / 思考时间 / 响应。" = "After any AI feature runs, this shows URL / Prompt / thinking time / response.";
+"概览" = "Overview";
+"调用方" = "Caller";
+"时间" = "Time";
+"思考时间" = "Thinking time";
+"错误" = "Error";
+"请求" = "Request";
+"URL" = "URL";
+"System" = "System";
+"DEBUG 自定义系统提示:已生效(完全替换默认 + appendix)" = "DEBUG override is ACTIVE — replaces the default system + appendix.";
+"DEBUG 自定义系统提示:未设置(回退到默认 + appendix)" = "DEBUG override is empty — falls back to default + appendix.";
+"Messages (%d)" = "Messages (%d)";
+"响应" = "Response";
+"JSON 长度:%d chars" = "JSON length: %d chars";
+"点击右上角「Copy JSON」可把整条调用打包为 JSON 复制到剪贴板,便于上报 / 比对。" = "Tap Copy JSON (top-right) to dump the whole call as JSON for bug reports / comparison.";
+"DEBUG: Override System Prompt" = "DEBUG: Override System Prompt";
+"DEBUG Override" = "DEBUG Override";
+"Clear Override" = "Clear Override";
+"当此处有内容时,所有 AI 功能都会**完全使用此 prompt**,跳过默认 + Appendix。\n仅 DEBUG 模式可见,便于排查 prompt 行为。" = "When set, every AI feature uses ONLY this prompt, skipping the default + Appendix.\nVisible only in DEBUG mode; meant for prompt debugging.";
+
+// MARK: - Voice Memo & AI Similar Question (语音备忘录 & AI 变式题)
+"Voice Memo" = "Voice Memo";
+"Recorded" = "Recorded";
+"Record" = "Record";
+"录音" = "Recording";
+"AI 正在构思变式题..." = "AI is crafting a similar question...";
+"AI 变式题" = "AI Similar Question";
+"AI 相似题组卷" = "AI Similar Question";
+"AI 解析错因" = "AI Mistake Analysis";
+"草稿区" = "Draft Area";
+"双指滑动/缩放" = "Pinch to pan/zoom";
+"Check Solution" = "Check Solution";
+"Save to Mistakes" = "Save to Mistakes";
+"Draft / Answer" = "Draft / Answer";

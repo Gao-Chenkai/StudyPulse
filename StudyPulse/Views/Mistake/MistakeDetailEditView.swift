@@ -39,6 +39,8 @@ struct MistakeDetailEditView: View {
     @State private var editedDifficulty: Int = 0
     /// 自由标签
     @State private var editedTags: [String] = []
+    /// 语音备忘录文件名
+    @State private var audioFileName: String?
     
     @State private var questionImages: [UIImage] = []
     @State private var reasonImages: [UIImage] = []
@@ -48,6 +50,7 @@ struct MistakeDetailEditView: View {
     @State private var showingImagePicker = false
     @State private var showingPhotoCapture = false
     @State private var showingHandwritingSheet = false
+    @State private var showingAudioRecordingSheet = false
 
     @State private var selectedSection: EditSection = .question
 
@@ -115,6 +118,11 @@ struct MistakeDetailEditView: View {
                 }
             }
             .ignoresSafeArea(edges: .bottom)
+        }
+        .sheet(isPresented: $showingAudioRecordingSheet) {
+            VoiceMemoRecordingSheet { filename in
+                self.audioFileName = filename
+            }
         }
         .alert("OCR Error".localized(), isPresented: $showingOCRAlert) {
             Button("OK".localized()) { }
@@ -189,6 +197,32 @@ private extension MistakeDetailEditView {
             )
 
             DatePicker("Date".localized(), selection: $editedDate, displayedComponents: .date)
+
+            // 语音备忘录
+            HStack {
+                Text("Voice Memo".localized())
+                Spacer()
+                if let audioFileName = audioFileName {
+                    Button(role: .destructive) {
+                        AudioStorage.delete(filename: audioFileName)
+                        self.audioFileName = nil
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(.borderless)
+                    Text("Recorded".localized())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Button {
+                        showingAudioRecordingSheet = true
+                    } label: {
+                        Label("Record".localized(), systemImage: "mic.fill")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
 
             // SRS opt-in 开关
             Toggle(isOn: $reviewEnabled) {
@@ -417,6 +451,7 @@ private extension MistakeDetailEditView {
         editedDate = mistakeSet.date
         editedDifficulty = mistakeSet.difficulty
         editedTags = mistakeSet.tags
+        audioFileName = mistakeSet.audioFileName
 
         questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
         reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
@@ -438,6 +473,7 @@ private extension MistakeDetailEditView {
         updatedMistake.date = editedDate
         updatedMistake.difficulty = max(0, min(DifficultyPicker.maxStars, editedDifficulty))
         updatedMistake.tags = editedTags
+        updatedMistake.audioFileName = audioFileName
 
         updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }

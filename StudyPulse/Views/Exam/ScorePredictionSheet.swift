@@ -73,6 +73,7 @@ struct ScorePredictionSheet: View {
             }
             .navigationTitle("Score Prediction".localized())
             .navigationBarTitleDisplayMode(.inline)
+            .llmDebugButton(caller: "ScorePrediction-Subject")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done".localized()) { onDismiss() }
@@ -289,7 +290,8 @@ struct ScorePredictionSheet: View {
             do {
                 _ = try await LLMClient.shared.stream(
                     prompt: prompt,
-                    config: config
+                    config: config,
+                    caller: "ScorePrediction"
                 ) { snapshot in
                     aiPredictionText = snapshot
                 }
@@ -1098,6 +1100,7 @@ struct ComprehensiveScorePredictionSheet: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Score Prediction".localized())
             .navigationBarTitleDisplayMode(.inline)
+            .llmDebugButton(caller: "ScorePrediction-Comprehensive")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done".localized()) { onDismiss() }
@@ -1253,7 +1256,8 @@ struct ComprehensiveScorePredictionSheet: View {
             do {
                 _ = try await LLMClient.shared.stream(
                     prompt: prompt,
-                    config: config
+                    config: config,
+                    caller: "ScorePrediction"
                 ) { snapshot in
                     aiPredictionText = snapshot
                 }

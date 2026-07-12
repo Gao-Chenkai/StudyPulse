@@ -246,6 +246,93 @@ struct CalibratedValue: Equatable {
     }
 }
 
+// MARK: - LLM Context
+
+/// 给 LLM 用的"恢复准备度"完整上下文。
+/// - 包含所有今日信号 + 30 天个人基线 + 本地算法建议 + 预校准分数
+/// - 避免 View 层 / prompt 工厂再次调用 `calibrated` 造成逻辑漂移
+struct BodyReadinessContext {
+    let hrv: HRVReadiness
+    let bodyStatus: BodyStatus
+    let baselines: PersonalBaselines
+    let age: Int?
+    /// 本地算法已算出的建议;为 nil 时表示无可用信号
+    let localSuggestion: StudySuggestion?
+    let now: Date
+    /// 预校准的 4 项信号(0-1 分数 + 对比来源 + 参考值)
+    let sleepCalibration: CalibratedValue
+    let rhrCalibration: CalibratedValue
+    let rrCalibration: CalibratedValue
+    let exerciseCalibration: CalibratedValue
+
+    /// 取年龄参考范围(默认 `adult` 兜底)
+    var ageReference: AgeReference {
+        age.map(AgeReference.compute) ?? .adult
+    }
+}
+
+extension StudyReadinessAlgorithm {
+    /// 给 LLM 构造 `BodyReadinessContext`。
+    ///
+    /// 这一步会触发一次本地 `recommend(...)` 把本地建议一并产出,再把 4 个
+    /// `calibrated(...)` 调用结果也保存下来,prompt 工厂可直接读字段;
+    /// 不需要 LLM 路径再算一遍校准分数,避免本地 / LLM 看到不同的"参考值"。
+    @MainActor
+    static func buildBodyReadinessContext(
+        hrvEnabled: Bool,
+        hrvOnboardingCompleted: Bool,
+        isAuthorized: Bool,
+        hrv: HRVReadiness,
+        bodyStatus: BodyStatus,
+        baselines: PersonalBaselines = .empty,
+        age: Int? = nil,
+        now: Date = Date()
+    ) -> BodyReadinessContext {
+        let ageRef = age.map(AgeReference.compute) ?? .adult
+        let sleepCal = calibrated(
+            value: bodyStatus.restorativeSleepHours,
+            baseline: baselines.restorativeSleepHours,
+            range: ageRef.restorativeSleepHours
+        )
+        let rhrCal = calibrated(
+            value: bodyStatus.restingHeartRate,
+            baseline: baselines.restingHeartRate,
+            range: ageRef.restingHeartRate
+        )
+        let rrCal = calibrated(
+            value: bodyStatus.respiratoryRate,
+            baseline: baselines.respiratoryRate,
+            range: ageRef.respiratoryRate
+        )
+        let exerciseCal = calibrated(
+            value: bodyStatus.exerciseMinutesToday,
+            baseline: baselines.exerciseMinutes,
+            range: ageRef.exerciseMinutes
+        )
+        let local = recommend(
+            hrvEnabled: hrvEnabled,
+            hrvOnboardingCompleted: hrvOnboardingCompleted,
+            isAuthorized: isAuthorized,
+            hrv: hrv,
+            bodyStatus: bodyStatus,
+            baselines: baselines,
+            age: age
+        )
+        return BodyReadinessContext(
+            hrv: hrv,
+            bodyStatus: bodyStatus,
+            baselines: baselines,
+            age: age,
+            localSuggestion: local,
+            now: now,
+            sleepCalibration: sleepCal,
+            rhrCalibration: rhrCal,
+            rrCalibration: rrCal,
+            exerciseCalibration: exerciseCal
+        )
+    }
+}
+
 // MARK: - Algorithm
 
 /// Pure functions that turn health signals into a study recommendation.

@@ -156,6 +156,41 @@ enum MistakeAnalysisLLM {
     }
 }
 
+// MARK: - 8) AI Similar Question (AI 相似题变式)
+
+/// AI 相似题组卷 prompt 工厂。
+enum SimilarQuestionLLM {
+    static let defaultSystem: String = """
+        你是资深的学科命题专家。基于用户提供的原题、错因和正确解法，生成一道相似的变式题。
+        要求变式题考查相同的核心知识点，但具体情境或数据必须不同。
+        严格使用以下 JSON 格式输出，不要包含任何 Markdown 代码块标签（如 ```json），直接输出 JSON：
+        {
+          "question": "<变式题题目内容（支持 Markdown / LaTeX）>",
+          "correctSolution": "<变式题的正确解法，分步骤详细说明>"
+        }
+        """
+
+    static func makePrompt(
+        subject: String,
+        title: String,
+        originalQuestion: String,
+        correctSolution: String,
+        errorReason: String
+    ) -> LLMPrompt {
+        let user = """
+        学科:\(subject.isEmpty ? "(未填)" : subject)
+        原题标题:\(title.isEmpty ? "(未填)" : title)
+        原题内容:
+        \(originalQuestion.isEmpty ? "(空)" : originalQuestion)
+        原题正解:
+        \(correctSolution.isEmpty ? "(空)" : correctSolution)
+        原错因:
+        \(errorReason.isEmpty ? "(空)" : errorReason)
+        """
+        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+    }
+}
+
 // MARK: - 3) Weekly Report Summary (周报 AI 总结)
 
 /// 周/月报 AI 总结 prompt 工厂。
@@ -395,4 +430,317 @@ enum LLMChatLLM {
         回答尽量使用 Markdown(标题 / 列表 / 表格 / 代码块),中文为主,语言跟随用户提问。
         如果用户问的与学习数据无关,可以正常回答;不要主动编造未提供的个人数据。
         """
+}
+
+// MARK: - 9) Home Ask (主页 AI 提问: 路由 + 回答 两阶段)
+
+/// 主页"AI 提问"的两阶段 prompt 工厂:
+/// 1. 路由阶段:让 LLM 判断回答用户问题需要哪些数据类别
+/// 2. 回答阶段:把抓取到的数据 + 用户问题合并,让 LLM 给出最终答案
+enum HomeAskRouterLLM {
+    /// 用户可路由到的数据类别
+    enum Category: String, Codable, CaseIterable {
+        case body      // 身体状态(HRV / RHR / 睡眠 / 呼吸 / 锻炼 / 基线)
+        case grades    // 成绩(单科 / 综合 / 历史 / 即将考试)
+        case trends    // 趋势(周报 / 月报 AI 总结 / 成绩走势统计)
+        case review    // 复习(错题 / 待复习闪卡 / 复习计划)
+    }
+
+    /// 路由结果
+    struct Routing: Codable, Equatable {
+        var categories: [Category]
+        var reasoning: String
+    }
+
+    /// 路由阶段的 system prompt
+    static let defaultSystem: String = """
+        你是 StudyPulse 的"数据路由器"。用户会问一个学习 / 身体相关的问题,你的任务
+        是判断回答这个问题需要哪些数据,从以下类别中选 1-4 个:
+
+        - "body":   身体状态数据(HRV / 静息心率 / 恢复性睡眠 / 呼吸 / 今日锻炼)
+        - "grades": 成绩数据(单科 / 综合预测 / 历史成绩 / 即将到来的考试)
+        - "trends": 趋势数据(周报 / 月报 AI 总结 / 成绩走势统计)
+        - "review": 复习数据(错题 / 待复习闪卡 / 复习计划)
+
+        严格输出 JSON,无任何额外文字、Markdown、代码块、解释。
+        Schema:{"categories": ["body","review"], "reasoning": "<20 字内中文解释>"}
+        """
+
+    /// 构造路由 prompt
+    static func makePrompt(question: String) -> LLMPrompt {
+        return LLMPrompt(
+            system: defaultSystem,
+            messages: [.user(question)]
+        )
+    }
+
+    /// 解析 LLM 路由输出。容错:解析失败返回包含全部分类 + 空 reasoning 的兜底。
+    static func parse(_ output: String) -> Routing {
+        // 尝试提取最外层 JSON 对象(LLM 可能夹杂 <think> / ```json ```)
+        guard let jsonString = extractFirstJSONObject(output) else {
+            return Routing(
+                categories: Category.allCases,
+                reasoning: "解析失败,默认提供全部数据"
+            )
+        }
+        guard let data = jsonString.data(using: .utf8),
+              let routing = try? JSONDecoder().decode(Routing.self, from: data) else {
+            return Routing(
+                categories: Category.allCases,
+                reasoning: "解析失败,默认提供全部数据"
+            )
+        }
+        // 至少返回 1 个类别;空数组兜底为全部
+        let cats = routing.categories.isEmpty ? Category.allCases : routing.categories
+        return Routing(categories: cats, reasoning: routing.reasoning)
+    }
+
+    private static func extractFirstJSONObject(_ text: String) -> String? {
+        guard let start = text.firstIndex(of: "{") else { return nil }
+        var depth = 0
+        var inString = false
+        var escape = false
+        for idx in text.indices[start...] {
+            let ch = text[idx]
+            if escape { escape = false; continue }
+            if ch == "\\" { escape = true; continue }
+            if ch == "\"" { inString.toggle(); continue }
+            if inString { continue }
+            if ch == "{" { depth += 1 }
+            else if ch == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return String(text[start...idx])
+                }
+            }
+        }
+        return nil
+    }
+}
+
+/// 第二阶段:把路由抓到的数据 + 用户问题合并,让 LLM 给出最终答案
+enum HomeAskAnswerLLM {
+    /// 回答阶段 system prompt
+    static let defaultSystem: String = """
+        你是 StudyPulse 的学习顾问。基于系统提供的"问题"和"相关数据",给出准确、可操作的回答。
+        回答要求:
+        1. **严格基于提供的数据**:不要编造任何未在数据中出现的成绩 / 错题 / 身体指标;
+        2. **优先引用具体数字**:学科、分数、时间、HRV 值、置信区间等;
+        3. **给出可执行建议**:分学科 / 时间块 / 强度 / 休息时机等;
+        4. **1-3 句起步,长时用列表 / 表格**;
+        5. **使用 Markdown 渲染**:标题 / 列表 / 表格 / 行内代码;
+        6. **跟随用户语言**(中文 / 英文 / 日文 / 韩文等),默认中文;
+        7. **如果数据不足以回答问题**,直接说缺什么,不要硬猜;
+        8. 不要再做路由判断,你的任务只是基于现有数据回答。
+        """
+
+    /// 构造回答 prompt
+    /// - Parameters:
+    ///   - question: 用户当前轮的问题
+    ///   - activeCategories: 路由阶段确定的数据类别
+    ///   - dataSections: 已经被路由选中的数据(Markdown 文本)
+    static func makePrompt(
+        question: String,
+        activeCategories: [HomeAskRouterLLM.Category],
+        dataSections: [String]
+    ) -> LLMPrompt {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        let catLine = activeCategories.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
+        let dataBlock = dataSections.isEmpty
+            ? "(本轮未选择任何数据类别 — 你只能基于通用学习常识回答,且必须说明这一点)"
+            : dataSections.joined(separator: "\n\n")
+        let user = """
+        当前时间:\(f.string(from: Date()))
+        本次路由选中的数据类别:[\(catLine)]
+
+        ==== 相关数据 ====
+        \(dataBlock)
+
+        ==== 用户问题 ====
+        \(question)
+        """
+        return LLMPrompt(
+            system: defaultSystem,
+            messages: [.user(user)]
+        )
+    }
+}
+
+// MARK: - 8) Body Radar AI Suggestion (恢复雷达 AI 建议)
+
+/// 身体雷达 / 恢复准备度的 AI 增强 prompt 工厂。
+/// 调用方先跑本地 `StudyReadinessAlgorithm.recommend` 拿到默认建议,
+/// 再用 `buildBodyReadinessContext(...)` 把所有今日信号 + 30 天基线 +
+/// 预校准分数一起喂给 LLM,让 LLM 在本地算法基础上产出更个性化、可操作的建议。
+///
+/// UI 层:保留本地算法的 `icon / priority / color`(因为这些与强度是绑定的),
+/// 替换 `title / description` 为 LLM 输出。解析失败 → 回退本地版本。
+enum BodyRadarLLM {
+    /// 默认 system prompt
+    static let defaultSystem: String = """
+        你是 StudyPulse 的"恢复准备度"教练。给定用户今日的身体信号(HRV / 静息心率 / 呼吸 /
+        恢复性睡眠 / 今日锻炼 / 近期活动)+ 30 天个人基线 + 本地算法的"强度 + 焦点"建议,
+        你的任务是:基于完整数据校准本地建议,产出更具体、更可操作的中文建议。
+        严格使用以下 Markdown 结构(每个 ## 标题独占一行,顺序固定):
+
+        ## 强度
+        <peak / deepFocus / steady / light / recovery — 与本地一致或根据数据微调 1 档>
+
+        ## 标题
+        <8-18 字,贴切今日状态的标题(中文,不要用"建议"两个字开头)>
+
+        ## 建议
+        <2-5 句,具体到学科分配 / 时间块 / 强度 / 休息时机。允许使用 Markdown 列表。
+        不要再写"依据"段,所有依据会单独输出。>
+
+        ## 依据
+        <3-6 条 bullet,每条引用 1 个具体信号 vs 基线 / 参考值的对比,
+        例如:"- 恢复性睡眠 6.2h — vs 你的 30 天均值 7.4h(↓1.2h,校准分 0.42)">
+
+        不要重复输入数据;不要输出客套话、JSON、代码块;不要解释你做了什么。
+        """
+
+    /// 构造 prompt。`context` 由 `StudyReadinessAlgorithm.buildBodyReadinessContext(...)` 给出。
+    static func makePrompt(_ context: BodyReadinessContext) -> LLMPrompt {
+        let user = encodeContext(context)
+        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+    }
+
+    /// 解析 LLM 输出,合并到 `fallback`(保留 icon / priority / color)。
+    /// 解析失败 → 返回 `nil`,UI 端应回退到 `fallback`。
+    static func parse(_ output: String, fallback: StudySuggestion) -> StudySuggestion? {
+        let sections = parseSections(output)
+        guard let title = sections["标题"], !title.isEmpty else { return nil }
+        let advice = sections["建议"] ?? ""
+        let reasoning = sections["依据"] ?? ""
+        let description: String
+        if advice.isEmpty && reasoning.isEmpty {
+            return nil
+        } else if reasoning.isEmpty {
+            description = advice
+        } else if advice.isEmpty {
+            description = "\n依据:\(reasoning)"
+        } else {
+            description = advice + "\n\n依据:\n" + reasoning
+        }
+        return StudySuggestion(
+            icon: fallback.icon,
+            title: title,
+            description: description,
+            priority: fallback.priority,
+            color: fallback.color
+        )
+    }
+
+    // MARK: - Context encoder
+
+    private static func encodeContext(_ c: BodyReadinessContext) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        let b = c.bodyStatus
+        let ref = c.ageReference
+        func bl(_ stats: PersonalBaselineStats?) -> String {
+            guard let s = stats else { return "无" }
+            return String(format: "均值=%.2f σ=%.2f n=%d", s.mean, s.stdDev, s.sampleCount)
+        }
+        func val(_ v: Double?, format: String = "%.2f") -> String {
+            guard let v = v else { return "无" }
+            return String(format: format, v)
+        }
+        func cal(_ cal: CalibratedValue) -> String {
+            let src = cal.comparedTo == .personal ? "个人基线" : "年龄参考"
+            return String(format: "校准=%.2f (%@)", cal.score, src)
+        }
+        let hrvLine: String
+        if let z = c.hrv.zScore {
+            hrvLine = "HRV: \(val(c.hrv.todayHRV))ms, 类别=\(c.hrv.category.rawValue), z=\(String(format: "%+.2fσ", z))"
+        } else {
+            hrvLine = "HRV: \(val(c.hrv.todayHRV))ms, 类别=\(c.hrv.category.rawValue)"
+        }
+        let sleepBreakdown: String
+        if let deep = b.deepSleepHours, let rem = b.remSleepHours {
+            sleepBreakdown = String(format: "深睡=%.1fh + REM=%.1fh", deep, rem)
+        } else if let deep = b.deepSleepHours {
+            sleepBreakdown = String(format: "深睡=%.1fh", deep)
+        } else if let rem = b.remSleepHours {
+            sleepBreakdown = String(format: "REM=%.1fh", rem)
+        } else {
+            sleepBreakdown = "无细分"
+        }
+        let local = c.localSuggestion.map { s in
+            "标题=\(s.title); 强度=\(s.priority) ; 颜色=\(colorName(s.color))"
+        } ?? "无"
+        return """
+        当前时间:\(f.string(from: c.now))
+        年龄:\(c.age.map { "\($0)岁" } ?? "未知(用 adult 兜底)")
+
+        ===== 今日身体信号 =====
+        \(hrvLine)
+        静息心率: \(val(b.restingHeartRate, format: "%.0f bpm"))   \(cal(c.rhrCalibration))
+        呼吸: \(val(b.respiratoryRate, format: "%.0f 次/分"))   \(cal(c.rrCalibration))
+        恢复性睡眠: \(val(b.restorativeSleepHours, format: "%.1fh"))  (\(sleepBreakdown))   \(cal(c.sleepCalibration))
+        总睡眠: \(val(b.lastNightSleepHours, format: "%.1fh"))(类别: \(b.sleepQuality.rawValue))
+        今日锻炼: \(val(b.exerciseMinutesToday, format: "%.0f min"))   \(cal(c.exerciseCalibration))
+        最近一次心率: \(val(b.latestHeartRate, format: "%.0f bpm"))(若比静息高 ≥25 bpm 视为活动后)
+
+        ===== 30 天个人基线 =====
+        HRV: \(bl(c.baselines.hrv))
+        静息心率: \(bl(c.baselines.restingHeartRate))
+        呼吸: \(bl(c.baselines.respiratoryRate))
+        恢复性睡眠: \(bl(c.baselines.restorativeSleepHours))
+        总睡眠: \(bl(c.baselines.sleepHours))
+        今日锻炼: \(bl(c.baselines.exerciseMinutes))
+        年龄参考范围(RHR low/mid/high): \(Int(ref.restingHeartRate.low))/\(Int(ref.restingHeartRate.mid))/\(Int(ref.restingHeartRate.high))
+
+        ===== 本地算法已给出建议 =====
+        \(local)
+
+        (用户也会看到这条本地建议作为兜底;你的输出应在此基础上做得更具体、引用上面的数据点)
+        """
+    }
+
+    // MARK: - Helpers
+
+    /// 解析 `## 标题\\nxxx\\n## 建议\\n...` 这种 section 结构。
+    private static func parseSections(_ output: String) -> [String: String] {
+        var result: [String: String] = [:]
+        let lines = output.components(separatedBy: .newlines)
+        var currentTitle: String? = nil
+        var currentBody: [String] = []
+        for raw in lines {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("## ") {
+                if let t = currentTitle {
+                    result[t] = currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+                }
+                currentTitle = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                currentBody = []
+            } else if currentTitle != nil {
+                currentBody.append(raw)
+            }
+        }
+        if let t = currentTitle {
+            result[t] = currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+        }
+        return result
+    }
+
+    private static func priorityName(_ p: StudySuggestion.Priority) -> String {
+        switch p {
+        case .high: return "high"
+        case .medium: return "medium"
+        case .low: return "low"
+        }
+    }
+
+    private static func colorName(_ color: Color) -> String {
+        switch color {
+        case .green: return "green"
+        case .blue: return "blue"
+        case .orange: return "orange"
+        case .red: return "red"
+        default: return "other"
+        }
+    }
 }

@@ -82,7 +82,8 @@ final class LLMChatViewModel: ObservableObject {
             do {
                 _ = try await LLMClient.shared.stream(
                     prompt: prompt,
-                    config: config
+                    config: config,
+                    caller: "LLMChat"
                 ) { snapshot in
                     Task { @MainActor in
                         // 找到最新的 assistant 消息并更新 content

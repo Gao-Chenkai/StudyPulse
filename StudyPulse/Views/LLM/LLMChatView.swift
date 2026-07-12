@@ -5,6 +5,9 @@
 //  AI 助手对话页:多轮对话 + Markdown 流式渲染。
 //  对话历史仅 in-memory,离开页面或按 toolbar 的"清空"按钮释放。
 //
+//  UI 统一(2026-07-11):使用共享 ChatBubble + ChatInputBar,
+//  跟 AIDiscussionSheet / HomeAskSheet 保持一致的输入框样式和气泡外观。
+//
 //  Created for LLM BYOK integration (2026-07-11).
 //
 
@@ -18,26 +21,32 @@ struct LLMChatView: View {
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .bottom) {
             messagesList
-            inputBar
+            ChatInputBar(
+                text: $inputText,
+                isStreaming: viewModel.isStreaming,
+                canSend: canSend,
+                onSend: send,
+                onCancel: { viewModel.cancel() }
+            )
         }
-        .navigationTitle("AI Assistant".localized())
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color(.systemGroupedBackground).opacity(0.4))
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
         .debugLayoutBoundsAuto()
+        .llmDebugButton(caller: "LLMChat")
+        .navigationTitle("AI Assistant".localized())
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if viewModel.isStreaming {
-                ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if viewModel.isStreaming {
                     Button {
                         viewModel.cancel()
                     } label: {
                         Image(systemName: "stop.circle.fill")
                     }
-                }
-            } else {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                } else {
                     Button {
                         viewModel.reset()
                     } label: {
@@ -47,6 +56,11 @@ struct LLMChatView: View {
                 }
             }
         }
+    }
+
+    private var canSend: Bool {
+        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !viewModel.isStreaming && envManager.llmConfig.isConfigured
     }
 
     // MARK: - Messages List
@@ -61,14 +75,23 @@ struct LLMChatView: View {
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(viewModel.messages) { message in
-                            LLMMessageBubbleView(message: message)
-                                .id(message.id)
+                            ChatBubble(
+                                role: message.role == .user ? .user : .assistant(dimmed: false),
+                                content: message.content,
+                                isStreaming: message.isStreaming,
+                                error: message.error
+                            )
+                            .id(message.id)
                         }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                    // 驱动 bubble 进出场的 transition
+                    .animation(.spring(response: 0.35, dampingFraction: 0.78), value: viewModel.messages.count)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
@@ -114,41 +137,6 @@ struct LLMChatView: View {
         guard let last = viewModel.messages.last else { return }
         withAnimation(.easeOut(duration: 0.15)) {
             proxy.scrollTo(last.id, anchor: .bottom)
-        }
-    }
-
-    // MARK: - Input Bar
-
-    private var inputBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Ask anything...".localized(), text: $inputText, axis: .vertical)
-                    .lineLimit(1...4)
-                    .focused($inputFocused)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color(.secondarySystemBackground))
-                    )
-                    .onSubmit { send() }
-
-                Button {
-                    send()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                }
-                .disabled(
-                    inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        || viewModel.isStreaming
-                        || !envManager.llmConfig.isConfigured
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(.systemBackground).opacity(0.001)) // 让 iOS 26 透明生效
         }
     }
 

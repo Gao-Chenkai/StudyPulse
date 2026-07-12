@@ -34,6 +34,14 @@ struct StudySuggestionsCard: View {
     /// AI 加载中(用于显示 progress chip)
     @State private var aiLoading: Bool = false
 
+    /// 冷却时长(秒):默认 40 分钟,跟雷达卡片同。
+    /// Cooldown duration (seconds). Same 40-minute rate limit as the body-radar card.
+    private static let suggestionsAICooldownSeconds: TimeInterval = 40 * 60
+    /// 距下次可自动请求的剩余秒数;Timer 每秒刷新一次。
+    @State private var cooldownRemainingSeconds: Int = 0
+    /// 每秒刷新倒计时的定时器
+    @State private var cooldownTimer: Timer? = nil
+
     /// 当前展示的建议(优先 AI,失败/未启用时本地)
     private var displayed: [StudySuggestion] {
         aiSuggestions ?? localSuggestions
@@ -84,14 +92,25 @@ struct StudySuggestionsCard: View {
                     }
                 }
             }
+
+            // DEBUG 模式:卡片底部显示 LLM 调用指示器(让用户能看出刚刚的请求来自哪个卡片)
+            if envManager.llmConfig.isConfigured {
+                LLMCallIndicator(caller: "StudySuggestions")
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
-        .onAppear { reload() }
+        .onAppear {
+            startCooldownTimer()
+            reload()
+        }
+        .onDisappear {
+            aiTask?.cancel()
+            stopCooldownTimer()
+        }
         .debugLayoutBoundsAuto()
         .onChange(of: healthManager.bodyStatus) { _, _ in reload() }
-        .onDisappear { aiTask?.cancel() }
     }
 
     // MARK: - AI chip
@@ -139,10 +158,17 @@ struct StudySuggestionsCard: View {
 
         // 3) 取消上一次流式任务
         aiTask?.cancel()
-        aiLoading = true
         aiErrorMessage = nil
         aiSuggestions = nil
 
+        // 4) 冷却期内直接跳过 LLM,显示本地版本
+        //    跟 BodyRadar 卡片行为一致:不阻塞 UI、也不报错。
+        guard canRequestNow() else {
+            aiLoading = false
+            return
+        }
+
+        aiLoading = true
         aiTask = Task {
             await streamAI()
         }
@@ -155,7 +181,7 @@ struct StudySuggestionsCard: View {
         let prompt = StudySuggestionsLLM.makePrompt(context)
         var accumulated = ""
         do {
-            _ = try await LLMClient.shared.stream(prompt: prompt, config: config) { snapshot in
+            _ = try await LLMClient.shared.stream(prompt: prompt, config: config, caller: "StudySuggestions") { snapshot in
                 accumulated = snapshot
             }
             if let parsed = StudySuggestionsLLM.parse(accumulated) {
@@ -172,7 +198,46 @@ struct StudySuggestionsCard: View {
             aiSuggestions = nil
             aiErrorMessage = "AI 建议不可用,显示本地版本".localized()
         }
+        // 成功 / 失败 / 取消都重置冷却起点
+        envManager.preferences.lastStudySuggestionsAIRequestTime = Date()
+        updateCooldownRemaining()
         aiLoading = false
+    }
+
+    // MARK: - 冷却辅助
+
+    private func canRequestNow() -> Bool {
+        guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else { return true }
+        return Date().timeIntervalSince(last) >= Self.suggestionsAICooldownSeconds
+    }
+
+    private func updateCooldownRemaining() {
+        guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else {
+            cooldownRemainingSeconds = 0
+            return
+        }
+        let elapsed = Date().timeIntervalSince(last)
+        let remaining = max(0, Self.suggestionsAICooldownSeconds - elapsed)
+        cooldownRemainingSeconds = Int(remaining.rounded())
+    }
+
+    private func startCooldownTimer() {
+        updateCooldownRemaining()
+        guard cooldownRemainingSeconds > 0 else { return }
+        stopCooldownTimer()
+        cooldownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor in
+                updateCooldownRemaining()
+                if cooldownRemainingSeconds <= 0 {
+                    stopCooldownTimer()
+                }
+            }
+        }
+    }
+
+    private func stopCooldownTimer() {
+        cooldownTimer?.invalidate()
+        cooldownTimer = nil
     }
 }
 

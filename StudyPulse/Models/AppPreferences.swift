@@ -99,6 +99,23 @@ nonisolated struct AppPreferences: Codable {
     /// 采样温度(0.0-2.0,默认 0.7)
     /// Sampling temperature (0.0-2.0, default 0.7).
     var llmTemperature: Double = 0.7
+    /// 主页雷达 LLM 增强建议冷却时间戳(用于 40 分钟最多 1 次的限流)。
+    /// 持久化以便跨 app 重启也生效;`立刻分析` 按钮可绕过此限制。
+    /// Last request timestamp of the body-radar LLM-enhanced suggestion.
+    /// Used to enforce a 40-minute rate limit; the `Analyze now` button bypasses it.
+    var lastRadarAIRequestTime: Date? = nil
+
+    /// Debug 专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
+    /// 非空时 LLMClient.buildBody 会**完全替换**默认 system + appendix,用于排查 prompt 行为。
+    /// 空 / nil 时回退到默认 + appendix 的常规逻辑。
+    /// DEBUG-only: when set, LLMClient replaces the default system prompt + appendix.
+    /// Hidden in LLMSettingsView unless debug mode is on.
+    var debugOverrideSystemPrompt: String? = nil
+
+    /// 主页"学习建议"卡片 LLM 增强冷却时间戳(用于 40 分钟最多 1 次的限流)。
+    /// 持久化以便跨 app 重启也生效;BodyRadar 同字段已存在,这里镜像实现。
+    /// Last LLM request timestamp for the Study Suggestions card; same 40-minute cooldown as BodyRadar.
+    var lastStudySuggestionsAIRequestTime: Date? = nil
 
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
@@ -109,7 +126,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature
+        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
     }
 
     init() {}
@@ -139,6 +156,9 @@ nonisolated struct AppPreferences: Codable {
         self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)
         self.llmSystemPromptAppendix = try c.decodeIfPresent(String.self, forKey: .llmSystemPromptAppendix)
         self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
+        self.lastRadarAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastRadarAIRequestTime)
+        self.debugOverrideSystemPrompt = try c.decodeIfPresent(String.self, forKey: .debugOverrideSystemPrompt)
+        self.lastStudySuggestionsAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastStudySuggestionsAIRequestTime)
     }
     
     // MARK: - 语言常量

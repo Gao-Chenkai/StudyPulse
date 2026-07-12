@@ -28,6 +28,9 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     var systemPromptAppendix: String?
     /// 采样温度 (0.0-2.0)
     var temperature: Double
+    /// Debug 专用:完整覆盖 system prompt(非空时,会**完全替换**默认 system + appendix)。
+    /// DEBUG-only override: when set, replaces the default system prompt + appendix entirely.
+    var overrideSystemPrompt: String?
 
     /// 是否已配置完整(baseURL / apiKey / model 都非空)。
     /// `LLMClient.complete/stream` 入口处统一检查;
@@ -67,7 +70,8 @@ extension LLMConfig {
             apiKey: prefs.llmAPIKey,
             model: prefs.llmModel,
             systemPromptAppendix: prefs.llmSystemPromptAppendix,
-            temperature: prefs.llmTemperature
+            temperature: prefs.llmTemperature,
+            overrideSystemPrompt: prefs.debugOverrideSystemPrompt
         )
     }
 }
