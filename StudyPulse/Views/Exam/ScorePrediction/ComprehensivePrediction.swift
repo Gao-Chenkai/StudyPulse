@@ -3,15 +3,20 @@
 //  StudyPulse
 //
 //  Created for the Exam "预测" button feature.
+//  Exam "Predict" button feature — comprehensive exam score prediction.
 //
 
 import SwiftUI
 
+/// 单科预测条目:把 ScorePredictionResult 包一层
+/// Per-subject prediction entry — wraps a ScorePredictionResult.
 struct PerSubjectPrediction: Equatable {
     let subject: String
     let result: ScorePredictionResult
 }
 
+/// 综合预测 Sheet 的目标(含各科预测 + 总分聚合)
+/// Comprehensive prediction sheet target (per-subject predictions + aggregate totals).
 struct ComprehensivePredictionTarget: Identifiable {
     let id = UUID()
     let exam: comprehensiveExam
@@ -22,6 +27,8 @@ struct ComprehensivePredictionTarget: Identifiable {
     let totalUpper: Double
 }
 
+/// 综合预测内容视图(总分卡 + 各科卡 + AI 讨论入口)
+/// Comprehensive prediction content view (total card + per-subject cards + AI discussion entry).
 struct ComprehensivePredictionContent: View {
     let target: ComprehensivePredictionTarget
 
@@ -30,23 +37,30 @@ struct ComprehensivePredictionContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // 总分卡
+            // Total score card.
             totalCard
 
             // 各科卡片
+            // Per-subject cards.
             ForEach(target.perSubject, id: \.subject) { item in
                 perSubjectCard(item: item)
             }
 
             // AI 预测卡片
+            // AI prediction card.
             PredictionDiscussionEntryView(context: .comprehensive(target: target))
         }
     }
 
     // MARK: - 子卡片
+    // MARK: - Sub-cards
 
     /// 总分卡
+    /// Total score card (aggregated upper / predicted / lower bounds).
     @ViewBuilder
     private var totalCard: some View {
+        // 95% CI 跨度比例阈值(>=0.8 视为区间过宽,需要提示)
+        // 95% CI width ratio threshold (≥0.8 → CI is too wide, needs warning).
         let totalHalfWidth = (target.totalUpper - target.totalLower) / 2.0
         let ciSpanRatio = target.totalFull > 0
             ? (target.totalUpper - target.totalLower) / target.totalFull
@@ -107,6 +121,7 @@ struct ComprehensivePredictionContent: View {
     }
 
     /// 单科预测卡(简化版,无详情入口)
+    /// Per-subject prediction card (simplified, no detail entry).
     @ViewBuilder
     private func perSubjectCard(item: PerSubjectPrediction) -> some View {
         let r = item.result

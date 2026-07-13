@@ -2,23 +2,43 @@
 //  MistakePDFGenerationView.swift
 //  StudyPulse
 //
-//  错题 PDF 生成进度 sheet：
+//  错题 PDF 生成进度 sheet:
 //  - ProgressView(value: 0...1) 显示当前进度
 //  - 完成后回调 onCompleted(data) 触发 fileExporter
 //  - 失败时回调 onError(message) 让父视图弹错
-//  - 整个生成过程在 MainActor 串行执行（ImageRenderer 必须在主线程）
+//  - 整个生成过程在 MainActor 串行执行(ImageRenderer 必须在主线程)
+//
+//  Mistake PDF generation progress sheet:
+//  - ProgressView(value: 0...1) drives the current progress
+//  - On success: onCompleted(data) triggers a fileExporter
+//  - On failure: onError(message) lets the parent surface the error
+//  - Runs serially on the MainActor (ImageRenderer must be on main)
 //
 
 import SwiftUI
 
+/// 错题 PDF 生成进度页:snapshot → data → 父视图保存/分享。
+/// Mistake PDF generation progress page: snapshot → data → parent saves / shares.
 struct MistakePDFGenerationView: View {
+    /// 已渲染好的"待导出"快照(由父视图提供)
+    /// Pre-rendered export snapshot (provided by the parent).
     let snapshot: MistakePDFSnapshot
+    /// 成功回调(传回 PDF 的 Data)
+    /// Success callback (returns the PDF data).
     let onCompleted: (Data) -> Void
+    /// 错误回调(传回错误信息)
+    /// Error callback (returns the error message).
     let onError: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    /// 当前进度 0...1
+    /// Current progress 0...1.
     @State private var progress: Double = 0
+    /// 是否正在生成
+    /// Whether generation is in progress.
     @State private var isGenerating: Bool = true
+    /// 错误信息
+    /// Error message.
     @State private var errorMessage: String? = nil
 
     var body: some View {

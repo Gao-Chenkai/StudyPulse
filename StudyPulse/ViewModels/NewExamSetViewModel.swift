@@ -4,17 +4,25 @@
 //
 //  Created by Antigravity on 2026/7/12.
 //
+//  新增考试 ViewModel。负责单科 / 综合考试表单 + 时间段编辑 + 日历同步。
+//  New-exam VM. Single/comprehensive exam form, per-subject time slots,
+//  Calendar sync.
+//
 
 import Foundation
 import SwiftUI
 import Combine
 
+/// 综合考试中某科目的时间段(可被多次编辑)
+/// Per-subject time slot inside a comprehensive exam (editable).
 struct SubjectTimeEntry: Identifiable, Equatable {
     let id: UUID
     let subject: String
     var startTime: Date
     var endTime: Date
 
+    /// 默认 08:00-10:00;可传 startTime / endTime 覆盖
+    /// Defaults to 08:00–10:00; pass startTime / endTime to override.
     init(id: UUID = UUID(), subject: String, startTime: Date? = nil, endTime: Date? = nil) {
         self.id = id
         self.subject = subject
@@ -27,57 +35,67 @@ struct SubjectTimeEntry: Identifiable, Equatable {
 
 @MainActor
 final class NewExamSetViewModel: ObservableObject {
-    // MARK: - Dependencies
+    // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
-    // MARK: - Form States
+    // MARK: - 表单状态 / Form state
     @Published var name = ""
     @Published var selectedSubject = "Mathematics"
     @Published var isComprehensiveExam = false
+    /// 考试开始日期(综合考试时作为"考试周"首日)
+    /// Exam start date (or first day of an "exam week").
     @Published var examDate: Date = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    /// 综合考试结束日期(单科时无意义) / End date (unused for single-subject).
     @Published var examEndDate: Date = Calendar.current.date(byAdding: .day, value: 3, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @Published var importance = 3
     @Published var masteryDegree = 50
     @Published var examNote = ""
-    
-    // Calendar & Alert states
+
+    // MARK: - 日历 & 弹窗 / Calendar & alert state
+    /// 是否同时把这次考试加到系统日历 / Also add to system Calendar?
     @Published var addToCalendarToggle = true
     @Published var showingCalendarAlert = false
     @Published var calendarAlertMessage = ""
-    
-    // Subject Selection states
+
+    // MARK: - 科目选择 / Subject selection
     @Published var selectedSingleSubject = ""
     @Published var selectedMultipleSubjects: [String] = []
     @Published var subjectTimeEntries: [SubjectTimeEntry] = []
 
-    // MARK: - Init
+    // MARK: - 初始化 / Initialization
+    /// 默认选中第一个可用科目 / Pre-selects the first available subject.
     init(container: RepositoryContainer) {
         self.container = container
-        // Set default single subject
         if let first = availableSubjects.first {
             selectedSingleSubject = first
         }
     }
 
-    // MARK: - Computed Properties
+    // MARK: - 计算属性 / Computed properties
+    /// 启用的且非 "GROUP:" 聚合的 `Subject` 列表
+    /// Enabled, non-`GROUP:` `Subject` records.
     var enabledSubjects: [Subject] {
         container.subjectRepo.subjects.filter {
             $0.enabled && !$0.name.starts(with: "GROUP:")
         }
     }
-    
+
+    /// 动态列表高度(每行 80pt) / Dynamic list height (80pt per row).
     var dynamicListHeight: CGFloat {
         CGFloat(enabledSubjects.count * 80)
     }
-    
+
+    /// 启用的科目名列表(不去重 GROUP) / Enabled subject names.
     var availableSubjectNames: [String] {
         enabledSubjects.map { $0.name }
     }
-    
+
+    /// 启用的科目名列表(包含 GROUP) / Enabled names (includes GROUP).
     var availableSubjects: [String] {
         container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
 
+    /// 是否禁用"保存"按钮 / Whether the save button is disabled.
     var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespaces).isEmpty ||
         (isComprehensiveExam && examDate > examEndDate) ||
@@ -85,11 +103,14 @@ final class NewExamSetViewModel: ObservableObject {
         (isComprehensiveExam && selectedMultipleSubjects.isEmpty)
     }
 
-    // MARK: - Actions
+    // MARK: - 操作 / Actions
+    /// 让 `subjectTimeEntries` 与当前选中的科目集合对齐
+    /// Reconcile `subjectTimeEntries` with the current subject selection.
     func syncSubjectTimeEntries() {
         let selected = isComprehensiveExam ? selectedMultipleSubjects : [selectedSingleSubject].filter { !$0.isEmpty }
 
-        // 1. Update existing entries
+        // 1. 更新已有条目:把"时分"保持,把"年月日"换成新 examDate
+        // 1. Update existing entries: keep "hour:minute", swap "Y-M-D" to new examDate.
         for index in subjectTimeEntries.indices {
             guard selected.contains(subjectTimeEntries[index].subject) else { continue }
             let oldStart = subjectTimeEntries[index].startTime
@@ -106,6 +127,7 @@ final class NewExamSetViewModel: ObservableObject {
                                                   minute: compsEnd.minute ?? 0,
                                                   second: 0,
                                                   of: examDate) ?? examDate
+            // 结束 ≤ 开始 → 自动顺延 1 小时 / Auto-extend by 1 hour when invalid.
             if newEnd <= newStart {
                 newEnd = Calendar.current.date(byAdding: .hour, value: 1, to: newStart) ?? newStart
             }
@@ -113,10 +135,11 @@ final class NewExamSetViewModel: ObservableObject {
             subjectTimeEntries[index].endTime   = newEnd
         }
 
-        // 2. Remove entries no longer selected
+        // 2. 移除不再选中的条目 / 2. Remove entries no longer selected.
         subjectTimeEntries.removeAll { !selected.contains($0.subject) }
 
-        // 3. Add default time slots for newly selected subjects
+        // 3. 给新选中的科目补默认时间段(08:00-10:00)
+        // 3. Add default 08:00–10:00 slots for newly selected subjects.
         let existingSubjects = subjectTimeEntries.map { $0.subject }
         for sub in selected where !existingSubjects.contains(sub) {
             let defaultStart = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: examDate) ?? examDate
@@ -125,17 +148,20 @@ final class NewExamSetViewModel: ObservableObject {
         }
     }
 
+    /// 保存考试:创建 Exam / comprehensiveExam,可选择地写入系统日历
+    /// Persist the exam; optionally write to system Calendar.
     func saveExam(onSuccess: @escaping () -> Void) async {
         guard !name.isEmpty else { return }
-        
+
+        // 安排备考通知 / Schedule exam-prep notifications.
         ExamPrepareNotifications.shared.scheduleNotifications(for: name, date: examDate)
-        
+
         if isComprehensiveExam {
             var timeSlots: [String: ExamTimeSlot] = [:]
             for entry in subjectTimeEntries {
                 timeSlots[entry.subject] = ExamTimeSlot(startTime: entry.startTime, endTime: entry.endTime)
             }
-            
+
             let newCompExam = comprehensiveExam(
                 name: name,
                 date: examDate,
@@ -147,7 +173,7 @@ final class NewExamSetViewModel: ObservableObject {
                 subjectTimeSlots: addToCalendarToggle ? timeSlots : nil
             )
             container.addExams(single: [], comprehensive: [newCompExam])
-            
+
             if addToCalendarToggle {
                 do {
                     for entry in subjectTimeEntries {
@@ -169,12 +195,14 @@ final class NewExamSetViewModel: ObservableObject {
             } else {
                 onSuccess()
             }
-            
+
         } else {
             guard !selectedSingleSubject.isEmpty else { return }
-            
+
             var timeSlot: ExamTimeSlot? = nil
             if addToCalendarToggle, let entry = subjectTimeEntries.first {
+                // 单科时把"时分"投影到 examDate 的"年月日"
+                // For single-subject, project "hour:minute" onto "Y-M-D" of examDate.
                 let combinedStart = Calendar.current.date(
                     bySettingHour: Calendar.current.component(.hour, from: entry.startTime),
                     minute: Calendar.current.component(.minute, from: entry.startTime),
@@ -189,7 +217,7 @@ final class NewExamSetViewModel: ObservableObject {
                 ) ?? examDate
                 timeSlot = ExamTimeSlot(startTime: combinedStart, endTime: combinedEnd)
             }
-            
+
             let newExam = Exam(
                 name: name,
                 date: examDate,
@@ -200,7 +228,7 @@ final class NewExamSetViewModel: ObservableObject {
                 timeSlot: timeSlot
             )
             container.addExams(single: [newExam], comprehensive: [])
-            
+
             if addToCalendarToggle, let slot = timeSlot {
                 do {
                     _ = try await CalendarManager.shared.addExamToCalendar(

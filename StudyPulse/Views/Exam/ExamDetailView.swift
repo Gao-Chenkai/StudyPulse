@@ -4,10 +4,16 @@
 //
 //  Created by Chenkai Gao on 2026/3/23.
 //
+//  单科考试详情页:概览 / 重要度+掌握度 / 倒计时 / 考场 / 考前待办 / 倒计时通知 / 日历 / 分享 / 关联错题 / 复盘 / 预测
+//  Single-subject exam detail page: overview, importance + mastery, countdown, location,
+//  pre-exam checklist, countdown notifications, calendar, share, related mistakes, review, prediction.
+//
 
 import SwiftUI
 import EventKit
 
+/// 单科考试详情页
+/// Single-subject exam detail page.
 struct ExamDetailView: View {
     let exam: Exam
     @Environment(RepositoryContainer.self) private var container
@@ -15,11 +21,14 @@ struct ExamDetailView: View {
     @State private var showingCalendarAlert = false
     @State private var calendarAlertMessage = ""
     /// 预测目标(非空时弹出 ScorePredictionSheet)
+    /// Prediction target (non-nil triggers ScorePredictionSheet).
     @State private var predictionTarget: PredictionTarget? = nil
     /// 复盘编辑器(为空时不弹)
+    /// Review editor sheet presenter (nil = hidden).
     @State private var showingReviewSheet = false
 
     // 关联的错题
+    // Mistakes tied to the same subject (newest first).
     var relatedMistakes: [MistakeNote] {
         container.mistakeRepo.mistakeSets
             .filter { $0.subject == exam.subject }
@@ -102,6 +111,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 考场信息
+            // MARK: - Exam location
             Section(header: Text("Exam Location".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
@@ -132,6 +142,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 考前待办清单
+            // MARK: - Pre-exam checklist
             Section {
                 if currentExam.checklist.isEmpty {
                     HStack {
@@ -168,6 +179,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 倒计时通知
+            // MARK: - Countdown notifications
             Section {
                 if effectiveNotifyDays.isEmpty {
                     HStack {
@@ -213,6 +225,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 添加到日历
+            // MARK: - Add to calendar
             Section {
                 Button(action: { addToCalendar() }) {
                     HStack {
@@ -232,6 +245,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 分享给家人
+            // MARK: - Share with family
             Section {
                 ShareLink(
                     item: shareText,
@@ -253,6 +267,7 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 关联的错题
+            // MARK: - Related mistakes
             Section(header: Text("Related Mistakes".localized())
                 .foregroundColor(Color(.secondaryLabel))
             ) {
@@ -286,9 +301,11 @@ struct ExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 考试复盘
+            // MARK: - Exam review
             examReviewSection
 
             // MARK: - 预测入口
+            // MARK: - Score prediction entry
             Section {
                 Button {
                     openPrediction()
@@ -363,6 +380,8 @@ struct ExamDetailView: View {
         }
     }
 
+    /// 写入考试到系统日历(根据 timeSlot 决定是全天事件还是定时事件)
+    /// Write the exam to the system calendar (all-day or timed based on timeSlot).
     private func addToCalendar() {
         Task {
             do {
@@ -437,13 +456,16 @@ struct ExamDetailView: View {
     // MARK: - 复盘 Section
     // Exam review section: shows 4-section rendered markdown, lets user
     // fill/edit the review, and share the full review as Markdown.
+    // 复盘 Section:展示 4 段渲染后的 markdown,允许用户填写 / 编辑,并支持整段分享为 Markdown。
 
     /// 4 段复盘 Section(若有则展示 + 分享;若否则引导填写 + 24h 提醒说明)
+    /// 4-section review block (show + share if present; otherwise nudge to fill + 24h reminder hint).
     @ViewBuilder
     private var examReviewSection: some View {
         if let review = currentExam.examReview {
             Section {
                 // 顶部元信息行:复盘时间 + 操作按钮
+                // Top meta row: review timestamp + action buttons.
                 HStack(spacing: 12) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(Color(.systemGreen))
@@ -469,6 +491,7 @@ struct ExamDetailView: View {
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 // 4 段折叠预览
+                // 4 collapsible preview rows.
                 ReviewSectionRow(
                     title: "What Was Tested".localized(),
                     icon: "doc.text.magnifyingglass",
@@ -491,6 +514,7 @@ struct ExamDetailView: View {
                 )
 
                 // 关联错题
+                // Linked mistakes navigation row.
                 if !review.linkedMistakeIds.isEmpty {
                     NavigationLink {
                         LinkedMistakesListView(
@@ -513,6 +537,7 @@ struct ExamDetailView: View {
                 }
 
                 // 分享整段复盘
+                // Share the full review as a single Markdown block.
                 ShareLink(
                     item: review.fullShareText,
                     subject: Text("Exam Review · \(currentExam.name)"),
@@ -569,9 +594,12 @@ struct ExamDetailView: View {
     }
 
     /// "复盘窗口说明" 页脚文案:考试已结束 24h 后改为"窗口已关闭"提示
+    /// "Review window hint" footer text — switches to "window closed" once 24h past exam.
     private var reviewReminderFooter: String {
         let baseDate = currentExam.examEndDate ?? currentExam.examDate
         let elapsed = Date().timeIntervalSince(baseDate)
+        // 24h = 86400s
+        // 24h = 86400 seconds
         if elapsed > 24 * 3600 {
             return "The 24h review window has closed. You can still fill it out now — useful as a delayed reflection.".localized()
         } else {
@@ -580,6 +608,7 @@ struct ExamDetailView: View {
     }
 
     // 根据掌握程度确定颜色
+    // Mastery color thresholds.
     private var masteryColor: Color {
         if currentExam.masteryDegree <= 20 {
             return Color(.systemRed)
@@ -591,6 +620,7 @@ struct ExamDetailView: View {
     }
 
     // 进度条颜色
+    // Progress bar tint (differs slightly from mastery text color).
     private var masteryProgressColor: Color {
         if currentExam.masteryDegree <= 20 {
             return Color(.systemRed)
@@ -603,7 +633,10 @@ struct ExamDetailView: View {
 }
 
 // MARK: - Checklist Row
+// MARK: - Checklist row
 
+/// 考前清单行(显示 + 整行点击 toggle)
+/// Pre-exam checklist row — tap anywhere to toggle.
 struct ChecklistRowView: View {
     let item: ExamChecklistItem
     let onToggle: () -> Void
@@ -650,6 +683,10 @@ struct ChecklistRowView: View {
 }
 
 // MARK: - 关联的错题卡片
+// MARK: - Related mistake card
+
+/// 关联错题列表里的一行卡片
+/// Row card used inside the related mistakes list.
 struct RelatedMistakeCard: View {
     let mistake: MistakeNote
     @State private var animateIn = false
@@ -659,6 +696,8 @@ struct RelatedMistakeCard: View {
         mistake.wrongSolutionImages.count + mistake.correctSolutionImages.count
     }
 
+    /// 距加入日期的相对文案(今天/昨天/N 天前/具体日期)
+    /// Relative label from the add-date (Today / Yesterday / N days ago / absolute date).
     var daysSinceAdded: String {
         let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
         let days = components.day ?? 0
@@ -743,6 +782,7 @@ struct RelatedMistakeCard: View {
 }
 
 // MARK: - 复盘 4 段行(折叠预览)
+// MARK: - Review 4-section row (collapsible preview)
 
 /// 复盘单段折叠行:点击展开渲染后的 Markdown。
 /// Collapsible row showing a single review section's rendered markdown.
@@ -787,6 +827,7 @@ struct ReviewSectionRow: View {
 }
 
 // MARK: - 关联错题列表(从复盘跳进去看)
+// MARK: - Linked mistakes list (drilled in from the review)
 
 /// 复盘"关联错题"行点击进入的子页面:列出复盘里勾选的所有错题。
 /// Sub-page shown when tapping "Linked Mistakes" on the review — lists

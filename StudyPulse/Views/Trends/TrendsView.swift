@@ -4,11 +4,17 @@
 //
 //  Created by Chenkai Gao on 2026/3/21.
 //
+//  趋势主页：90 天学习热力图 + 需关注科目横滚卡 + 科目分卡网格 + 添加/切换模式
+//  Trends home: 90-day learning heatmap + subjects-needing-attention scroller
+//  + subject score card grid + add / mode switch.
+//
 
 import SwiftUI
 import Charts
 import Combine
 
+/// 趋势主页
+/// Trends home view.
 struct TrendsView: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
@@ -16,6 +22,8 @@ struct TrendsView: View {
     @State private var showingAddGrade = false
 
     // score = ranking =
+    /// 卡片显示模式：score / ranking
+    /// Card display mode: score / ranking.
     @State var trendsShowingMode = "score"
 
     init(container: RepositoryContainer) {
@@ -23,12 +31,14 @@ struct TrendsView: View {
     }
 
     // 派生数据缓存(已迁移到 TrendsViewModel)
+    // Derived data cache — has been moved to TrendsViewModel.
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     // 90 天学习热力图（顶部全宽；通过 toolbar Menu 开关控制）
+                    // 90-day learning heatmap (top, full-width; toolbar Menu toggles it on/off).
                     if envManager.preferences.learningHeatmapOnTrends {
                         LearningHeatmapView()
                             .padding(.horizontal)
@@ -36,6 +46,7 @@ struct TrendsView: View {
 
                     if viewModel.activeSubjects.isEmpty {
                         // 空状态
+                        // Empty state — no grades yet.
                         ContentUnavailableView(
                             "No Grades Yet".localized(),
                             systemImage: "chart.xyaxis.line",

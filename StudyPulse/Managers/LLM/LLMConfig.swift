@@ -11,9 +11,12 @@
 import Foundation
 
 // MARK: - LLM Config (LLM 配置)
+// MARK: - LLM Config
 
 /// 用户在 `LLMSettingsView` 中配置的 LLM 参数。
 /// `enabled == false` 时所有 LLM 调用都应回退到本地实现。
+/// LLM parameters configured in `LLMSettingsView`.
+/// When `enabled == false`, every LLM call should fall back to the local impl.
 nonisolated struct LLMConfig: Sendable, Equatable {
     /// 总开关;关闭时所有 AI 功能回退到本地版本。
     var enabled: Bool
@@ -35,6 +38,9 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     /// 是否已配置完整(baseURL / apiKey / model 都非空)。
     /// `LLMClient.complete/stream` 入口处统一检查;
     /// `false` 时抛 `LLMError.notConfigured`,调用方按需回退。
+    /// True only when baseURL / apiKey / model are all non-empty.
+    /// `LLMClient.complete/stream` checks this and throws `LLMError.notConfigured`
+    /// when false so the caller can fall back to the local implementation.
     var isConfigured: Bool {
         enabled
             && !(baseURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
@@ -45,6 +51,7 @@ nonisolated struct LLMConfig: Sendable, Equatable {
 
 extension LLMConfig {
     /// 默认配置(全部关闭 / 空)。用于首次启动 / 测试 fallback。
+    /// Default config (everything off / empty). Used for first launch and tests.
     static let empty = LLMConfig(
         enabled: false,
         baseURL: nil,
@@ -55,6 +62,7 @@ extension LLMConfig {
     )
 }
 
+// MARK: - AppPreferences 桥接 / AppPreferences bridge
 // MARK: - AppPreferences 桥接
 
 import os
@@ -62,6 +70,8 @@ import os
 extension LLMConfig {
     /// 从 `AppPreferences` 当前值构造一份 `LLMConfig`。
     /// 这是只读快照;修改配置请走 `AppEnvironmentManager` 提供的 setter。
+    /// Build an `LLMConfig` snapshot from the current `AppPreferences`.
+    /// Read-only; mutate through the `AppEnvironmentManager` setters.
     @MainActor
     static func from(_ prefs: AppPreferences) -> LLMConfig {
         LLMConfig(

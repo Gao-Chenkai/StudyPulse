@@ -11,25 +11,35 @@
 import Foundation
 
 /// 错题分组结果
+/// Mistake grouping result.
 struct MistakeGroups {
     /// 按 subject 分组(空 subject 归到 "Uncategorized")
+    /// Grouped by subject (empty subject → "Uncategorized").
     let bySubject: [String: [MistakeNote]]
     /// 科目列表,按错题数降序、同数按字母升序
+    /// Subject list, sorted by mistake count desc (ties alphabetical asc).
     let sortedSubjects: [String]
     /// 应用搜索词后的科目列表
+    /// Subject list after applying the search text.
     let filteredSubjects: [String]
     /// 总数
+    /// Total mistake count.
     let totalCount: Int
 }
 
 /// 错题筛选/分组服务。纯函数。
+/// Mistake filter / grouping. Pure functions.
 enum MistakeFilter {
 
     /// 一次性产出 5 个聚合结果(分组 + 排序 + 搜索过滤 + 总数)。
+    /// Produce the 5 aggregate outputs in one pass (group + sort + search filter + total).
     /// - Parameters:
     ///   - mistakes: 输入错题
+    ///     Input mistake notes.
     ///   - searchText: 搜索词,支持 `#tag1 #tag2` 多标签 AND + 自由文本子串匹配
+    ///     Search text: supports `#tag1 #tag2` (AND across tags) and free text substring match.
     ///   - uncategorizedKey: 空 subject 归到哪个桶(默认 "Uncategorized")
+    ///     Bucket name for empty subject (default "Uncategorized").
     static func group(
         mistakes: [MistakeNote],
         searchText: String,
@@ -74,15 +84,25 @@ enum MistakeFilter {
     }
 
     // MARK: - 单科目内的搜索/排序/复习建议
+    // MARK: - 单科目内的搜索/排序/复习建议 / Per-subject search/sort/review
 
     // MARK: - 搜索词解析
+    // MARK: - 搜索词解析 / Search query parser
 
     /// 把搜索词拆成 (1) 标签过滤(精确大小写不敏感,AND 多标签) + (2) 自由文本(子串匹配)。
+    /// Split the query into (1) tag filter (case-insensitive exact match,
+    /// AND across tags) + (2) free text (substring match).
     /// 约定:
+    /// Conventions:
     ///   - `#tag` 视为标签精确过滤(忽略大小写、忽略前后空白)
+    ///     `#tag` = exact tag filter (case-insensitive, trim whitespace).
     ///   - 多个 `#tag` token → AND(必须全部命中)
+    ///     Multiple `#tag` tokens → AND.
     ///   - 标签之间允许用空格 / `,` / `, ` 分隔
+    ///     Tags can be separated by space / `,` / `, `.
     ///   - 剩余非 `#` 文本走 title / subject / originalQuestion / source / tags 子串匹配
+    ///     Remaining non-`#` text substring-matches against title / subject /
+    ///     originalQuestion / source / tags.
     static func parseSearchQuery(_ searchText: String) -> (tags: [String], text: String) {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return ([], "") }
@@ -112,6 +132,7 @@ enum MistakeFilter {
     }
 
     /// 判定某错题是否命中解析后的搜索条件
+    /// Test whether a mistake matches the parsed search query.
     static func matches(_ mistake: MistakeNote, parsed: (tags: [String], text: String)) -> Bool {
         let (tags, text) = parsed
         // 1) 标签必须全部命中(AND)
@@ -134,8 +155,12 @@ enum MistakeFilter {
 extension MistakeFilter {
 
     /// 在指定 subject 的错题上做搜索过滤 + 按日期降序排序。
+    /// Filter a subject's mistakes by search text + sort by date desc.
     /// 多标签:用空格或逗号分隔的 `#tag1 #tag2` 视为 AND 过滤。
+    /// Multi-tag: `#tag1 #tag2` (space- or comma-separated) = AND filter.
     /// Plain 文本(无 `#`)走 title / originalQuestion / source / tags 子串匹配(向后兼容)。
+    /// Plain text (no `#`) substring-matches title / originalQuestion /
+    /// source / tags (backwards compatible).
     static func searchInSubject(
         _ mistakes: [MistakeNote],
         searchText: String
@@ -151,6 +176,7 @@ extension MistakeFilter {
     }
 
     /// 按标签过滤(大小写不敏感,任一 tag 完全匹配)
+    /// Filter by tag (case-insensitive; any tag exact-matches).
     static func tagged(_ mistakes: [MistakeNote], tag: String) -> [MistakeNote] {
         let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return mistakes }
@@ -161,6 +187,7 @@ extension MistakeFilter {
     }
 
     /// 收集所有错题中出现过的 tag(去重 + 保持首次出现顺序,过滤空字符串)
+    /// Collect all tags ever used in any mistake (deduped, first-seen order, blanks removed).
     static func allTags(_ mistakes: [MistakeNote]) -> [String] {
         var seenLower: Set<String> = []
         var ordered: [String] = []
@@ -178,6 +205,7 @@ extension MistakeFilter {
     }
 
     /// 按标签计数(返回 [(tag, count)],已按 count desc 排序;平局按字母升序)
+    /// Tag counts as `[(tag, count)]`, sorted by count desc (ties alphabetical asc).
     static func tagCounts(_ mistakes: [MistakeNote]) -> [(tag: String, count: Int)] {
         var counts: [String: Int] = [:]
         var firstAppearance: [String: String] = [:]
@@ -201,11 +229,17 @@ extension MistakeFilter {
     }
 
     /// 取最近一段时间录入的错题 + 按"复习紧急度"排序。
+    /// Most-recent mistakes ranked by review urgency.
     /// 排序规则:
+    /// Sort rules:
     /// - 1 周内录入 → 优先级 2(最紧急)
+    ///   Recorded within 1 week → priority 2 (most urgent)
     /// - 1 个月前录入 → 优先级 1(中)
+    ///   Recorded 1+ month ago → priority 1 (mid)
     /// - 其它 → 优先级 0
+    ///   Other → priority 0
     /// 同优先级按日期倒序。返回前 4 条。
+    /// Within the same priority, sorted by date desc. Returns the top `limit` items.
     static func suggestedForReview(
         _ mistakes: [MistakeNote],
         now: Date = Date(),

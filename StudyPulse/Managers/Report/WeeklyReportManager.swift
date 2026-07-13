@@ -60,9 +60,11 @@ enum WeeklyReportManager {
         let dailyStudyMinutes: [(date: Date, minutes: Int)]
     }
 
+    // MARK: - 数据聚合 / Data Aggregation
     // MARK: - Data Aggregation
 
-    /// Aggregate study data for the given period.
+    /// 聚合指定时间窗内的学习数据(成绩 / 错题 / 考试 / sessions / 学科)。
+    /// Aggregate study data for the given period (grades, mistakes, exams, sessions, subjects).
     static func aggregateData(
         period: ReportPeriod,
         sessions: [StudySession],
@@ -189,8 +191,10 @@ enum WeeklyReportManager {
         return result
     }
 
+    // MARK: - 文字摘要 / Text Summary
     // MARK: - Text Summary
 
+    /// 根据 ReportData + 用户 profile 生成多行可读文字摘要。
     /// Generate a text summary for the report.
     static func generateSummary(data: ReportData, profile: UserProfile) -> String {
         var lines: [String] = []
@@ -251,6 +255,8 @@ enum WeeklyReportManager {
     }
 
     private static func generateEncouragement(data: ReportData) -> String {
+        // 多级鼓励文案:无学习时间 / 优秀 / 良好 / 高频 / 默认
+        // Tiered encouragement: no data / outstanding / good / high-frequency / default.
         if data.totalStudyMinutes == 0 {
             return "💡 " + "Start tracking your study sessions to see insights!".localized()
         }
@@ -266,10 +272,13 @@ enum WeeklyReportManager {
         return "💪 " + "Every session counts. Keep going!".localized()
     }
 
+    // MARK: - 报告生成 / Report Generation
     // MARK: - Report Generation
 
-    /// Generate a complete report image.
+    /// 生成完整的报告图片。
     /// `aiSummary` 可选 LLM 生成的 AI 总结;非空时渲染在 Summary 之上。
+    /// Generate a complete report image.
+    /// `aiSummary` (optional) is rendered above the local Summary if non-empty.
     static func generateReportImage(
         data: ReportData,
         profile: UserProfile,
@@ -286,8 +295,10 @@ enum WeeklyReportManager {
         return ReportRenderer.render(view)
     }
 
+    // MARK: - 通知调度 / Notification Scheduling
     // MARK: - Notification Scheduling
 
+    /// 调度周报/月报的本地通知(可重复触发)。
     /// Schedule a weekly or monthly report notification.
     static func scheduleNotification(period: ReportPeriod, enabled: Bool) async {
         let center = UNUserNotificationCenter.current()
@@ -320,7 +331,8 @@ enum WeeklyReportManager {
 
         switch period {
         case .weekly:
-            // Every Monday at 9:00 AM
+            // 每周一 9:00 重复触发
+            // Every Monday at 9:00 AM.
             var dateComponents = DateComponents()
             dateComponents.weekday = 2 // Monday
             dateComponents.hour = 9
@@ -328,7 +340,8 @@ enum WeeklyReportManager {
             trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
         case .monthly:
-            // First day of each month at 9:00 AM
+            // 每月 1 日 9:00 重复触发
+            // First day of each month at 9:00 AM.
             var dateComponents = DateComponents()
             dateComponents.day = 1
             dateComponents.hour = 9

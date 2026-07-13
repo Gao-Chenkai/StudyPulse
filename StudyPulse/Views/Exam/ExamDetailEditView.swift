@@ -4,18 +4,25 @@
 //
 //  Created by Chenkai Gao on 2026/3/23.
 //
+//  考试编辑表单：基础信息 / 重要度 / 掌握度 / 考场 / 考前待办 / 倒计时通知
+//  Exam edit form: basic info / importance / mastery / location / pre-exam checklist / countdown notifications.
+//
 
 import SwiftUI
 import os
 
+/// 单科考试编辑表单
+/// Edit form for a single-subject exam.
 struct ExamDetailEditView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
     // 接收要编辑的原始对象
+    // The original exam being edited.
     let originalExam: Exam
 
     // 绑定到表单的状态变量 (初始化为原始值)
+    // Form-bound state variables (seeded from the original values).
     @State private var name: String
     @State private var selectedSubject: String
     @State private var examDate: Date
@@ -25,6 +32,7 @@ struct ExamDetailEditView: View {
     @State private var subjectStartTime: Date
     @State private var subjectEndTime: Date
     // 考前待办 / 考场 / 倒计时通知
+    // Pre-exam checklist / exam location / countdown notification days.
     @State private var checklist: [ExamChecklistItem]
     @State private var locationSchool: String
     @State private var locationClassroom: String
@@ -39,6 +47,7 @@ struct ExamDetailEditView: View {
     init(exam: Exam) {
         self.originalExam = exam
         // 初始化状态
+        // Initialize form state.
         _name = State(initialValue: exam.name)
         _selectedSubject = State(initialValue: exam.subject)
         _examDate = State(initialValue: exam.examDate)
@@ -53,9 +62,12 @@ struct ExamDetailEditView: View {
         _locationClassroom = State(initialValue: exam.locationClassroom)
         _locationSeat = State(initialValue: exam.locationSeat)
         // 默认使用 [1, 3, 5, 10, 30] —— 跟 ExamDetailView / ExamPrepareNotifications 默认值保持一致
+        // Default [1, 3, 5, 10, 30] — must match ExamDetailView / ExamPrepareNotifications defaults.
         _notifyDays = State(initialValue: Set(exam.countdownNotifyDays ?? [1, 3, 5, 10, 30]))
     }
 
+    /// 已启用科目列表(供 Picker)
+    /// Enabled subjects (for the picker).
     private var availableSubjects: [String] {
         container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
@@ -80,6 +92,7 @@ struct ExamDetailEditView: View {
 
                 Section(header: Text("Assessment".localized())) {
                     // 重要性
+                    // Importance (1–5 stars).
                     VStack(alignment: .leading) {
                         HStack {
                             Text("Importance".localized())
@@ -100,6 +113,7 @@ struct ExamDetailEditView: View {
                     }
 
                     // 掌握程度
+                    // Mastery degree (0–100%, step 5).
                     VStack(alignment: .leading) {
                         HStack {
                             Text("Mastery Degree".localized())
@@ -120,6 +134,7 @@ struct ExamDetailEditView: View {
                 }
 
                 // MARK: - 考场信息
+                // MARK: - Exam location
                 Section(header: Text("Exam Location".localized()),
                         footer: Text("Fill in the school / classroom / seat number so you can find it on exam day.".localized())) {
                     TextField("School".localized(), text: $locationSchool)
@@ -128,6 +143,7 @@ struct ExamDetailEditView: View {
                 }
 
                 // MARK: - 考前待办清单
+                // MARK: - Pre-exam checklist
                 Section(header: Text("Pre-Exam Checklist".localized()),
                         footer: Text("Tap a row to mark as done. Examples: ID, admission ticket, stationery, review list.".localized())) {
                     if checklist.isEmpty {
@@ -191,6 +207,7 @@ struct ExamDetailEditView: View {
                 }
 
                 // MARK: - 倒计时通知
+                // MARK: - Countdown notifications
                 Section(header: Text("Countdown Notifications".localized()),
                         footer: Text("Pick how many days before the exam you want a reminder. Empty = no notifications. Save will reschedule.".localized())) {
                     ForEach(Self.candidateDays, id: \.self) { day in
@@ -228,6 +245,8 @@ struct ExamDetailEditView: View {
         }
     }
 
+    /// 在 checklist 末尾追加一项(下一个 sortOrder = max + 1)
+    /// Append a new checklist item at the tail (next sortOrder = max + 1).
     private func addChecklistItem() {
         let trimmed = newChecklistText.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
@@ -238,6 +257,7 @@ struct ExamDetailEditView: View {
 
     private func updateExam() {
         // 构造新的 Exam
+        // Build the updated Exam.
         let updatedExam = Exam(
             id: originalExam.id,
             name: name.trimmingCharacters(in: .whitespaces),
@@ -257,6 +277,7 @@ struct ExamDetailEditView: View {
         )
 
         // 通知：先取消旧的，再用新的天数列表重排
+        // Notifications: cancel old, then reschedule with the new day list.
         ExamPrepareNotifications.shared.cancelNotifications(for: originalExam.name)
         if !notifyDays.isEmpty {
             ExamPrepareNotifications.shared.scheduleNotifications(
@@ -267,6 +288,7 @@ struct ExamDetailEditView: View {
         }
 
         // 写回 examRepo（同时落盘 SwiftData）
+        // Persist via examRepo (which also flushes to SwiftData).
         container.examRepo.updateExam(updatedExam)
         Log.data.info("考试编辑成功 / Exam updated: name=\(updatedExam.name, privacy: .public) id=\(originalExam.id.uuidString, privacy: .public) checklist=\(updatedExam.checklist.count, privacy: .public) notifyDays=\(Array(notifyDays).sorted(), privacy: .public)")
         presentationMode.wrappedValue.dismiss()

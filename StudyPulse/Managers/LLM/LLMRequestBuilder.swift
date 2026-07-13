@@ -4,8 +4,33 @@
 //
 //  把 StudyPulse 内部数据(学习建议上下文 / 错题 / 周报 / 对话历史)
 //  拼装成 `LLMPrompt`(system + messages)与可选的 `suggestionParser`。
+//  Assembles StudyPulse internal data (study-suggestion context, mistakes,
+//  weekly report, chat history) into `LLMPrompt` (system + messages) and
+//  optional parsers.
 //
 //  全部为纯函数 / enum,无副作用,易测。
+//  All pure functions / enums; no side effects, easy to unit-test.
+//
+//  内置场景(共 10 个 prompt 工厂) / Built-in scenarios (10 prompt factories):
+//    1. StudySuggestionsLLM          — 学习建议 3 条
+//    2. MistakeAnalysisLLM           — 错题 AI 解析(3 段固定格式)
+//    3. WeeklyReportLLM              — 周/月报 AI 总结
+//    4. LLMChatLLM                   — AI 助手自由对话
+//    5. ScorePredictionLLM           — 预测分数 AI 二次意见
+//    6. ComprehensiveScorePrediction — 综合考试 AI 二次意见
+//    7. AIDiscussionLLM              — "深入探讨" 多轮对话
+//    8. SimilarQuestionLLM           — AI 相似题变式
+//    8b.SimilarQuestionGradingLLM    — AI 变式题判分
+//    9. HomeAskRouterLLM             — 主页 AI 提问 路由阶段
+//    +  HomeAskAnswerLLM             — 主页 AI 提问 回答阶段
+//    10.QuizGenerationLLM            — AI 自测出题
+//    10b.QuizGradingLLM              — AI 自测判分
+//
+//  关键解析逻辑 / Key parsing logic:
+//    • StudySuggestionsLLM.parse   — 正则提取 `- **<icon> <title>** — <desc>`
+//    • SimilarQuestionGradingLLM.parse — 提取"评分"段的第一个 0-100 整数
+//    • HomeAskRouterLLM.parse      — 提取最外层 JSON 对象,容错回退到全部分类
+//    • BodyRadarLLM.parse          — 解析 `## 强度/标题/建议/依据` 4 段
 //
 //  Created for LLM BYOK integration (2026-07-11).
 //
@@ -40,8 +65,11 @@ enum StudySuggestionsLLM {
     }
 
     /// 解析 LLM 输出为 `[StudySuggestion]`。
+    /// Parse LLM output into `[StudySuggestion]`.
     /// 行格式:`- **<icon> <title>** — <description>`
+    /// Line format: `- **<icon> <title>** — <description>`
     /// 解析失败返回 `nil`,UI 端应回退到本地建议。
+    /// Returns `nil` on failure; the UI should fall back to local suggestions.
     static func parse(_ output: String) -> [StudySuggestion]? {
         let lines = output
             .components(separatedBy: .newlines)
@@ -113,6 +141,8 @@ enum StudySuggestionsLLM {
 // MARK: - 2) Mistake Analysis (错题 AI 解析)
 
 /// 错题 AI 解析 prompt 工厂。
+/// Mistake AI analysis prompt factory. Output format: 3 fixed sections
+/// (`## 错因分析` / `## 正确思路` / `## 类似题建议`) for consistent UI rendering.
 enum MistakeAnalysisLLM {
     static let defaultSystem: String = """
         你是错题分析专家。给定错题内容,输出 Markdown 总结,中文。
@@ -590,8 +620,11 @@ enum HomeAskRouterLLM {
     }
 
     /// 解析 LLM 路由输出。容错:解析失败返回包含全部分类 + 空 reasoning 的兜底。
+    /// Parse LLM routing output. Fallback: if parsing fails, return all
+    /// categories + empty reasoning (so the answer stage still gets data).
     static func parse(_ output: String) -> Routing {
         // 尝试提取最外层 JSON 对象(LLM 可能夹杂 <think> / ```json ```)
+        // Extract the outermost JSON object (LLM may embed `<think>` / ```json```)
         guard let jsonString = extractFirstJSONObject(output) else {
             return Routing(
                 categories: Category.allCases,
@@ -606,10 +639,16 @@ enum HomeAskRouterLLM {
             )
         }
         // 至少返回 1 个类别;空数组兜底为全部
+        // At least 1 category; empty array → fallback to all
         let cats = routing.categories.isEmpty ? Category.allCases : routing.categories
         return Routing(categories: cats, reasoning: routing.reasoning)
     }
 
+    /// 简易 JSON 提取器 / Naïve outermost-JSON extractor:
+    /// - 按字符扫描,维护 brace depth + string 状态
+    /// - 支持 \" 转义;遇到配对的 `{...}` 立即返回子串
+    /// - Scans char-by-char, tracks brace depth and string state;
+    ///   returns the substring on the first balanced `{...}`.
     private static func extractFirstJSONObject(_ text: String) -> String? {
         guard let start = text.firstIndex(of: "{") else { return nil }
         var depth = 0
@@ -723,7 +762,15 @@ enum BodyRadarLLM {
     }
 
     /// 解析 LLM 输出,合并到 `fallback`(保留 icon / priority / color)。
+    /// Parse LLM output, merge into `fallback` (keep icon / priority / color).
     /// 解析失败 → 返回 `nil`,UI 端应回退到 `fallback`。
+    /// Returns `nil` on failure; the UI should fall back to `fallback`.
+    ///
+    /// 期望的 4 段 / Expected 4 sections:
+    ///   ## 强度  →  仅在 BodyRadarLLM 内部用于协议一致性,UI 不直接展示
+    ///   ## 标题  →  StudySuggestion.title
+    ///   ## 建议  →  StudySuggestion.description 第一段
+    ///   ## 依据  →  拼到 description 末尾(以 "依据:" 开头)
     static func parse(_ output: String, fallback: StudySuggestion) -> StudySuggestion? {
         let sections = parseSections(output)
         guard let title = sections["标题"], !title.isEmpty else { return nil }

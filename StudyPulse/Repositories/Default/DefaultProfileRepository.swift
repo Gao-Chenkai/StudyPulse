@@ -10,26 +10,35 @@ import Foundation
 import SwiftData
 import os
 
+/// 用户资料 (UserProfile) Repository 默认实现。
+/// Default ProfileRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultProfileRepository: ProfileRepository {
+    /// 内存中的资料（单例）
+    /// In-memory profile (singleton).
     var profile: UserProfile = UserProfile()
 
     @ObservationIgnored
     private var modelContext: ModelContext?
 
     /// 跨域引用:commitOnboardingProfile 会写 subjects(由 SubjectRepository 持有)
+    /// Cross-domain ref: commitOnboardingProfile writes subjects (held by SubjectRepository).
     @ObservationIgnored
     weak var subjectRef: (any SubjectRepository)?
 
     init() {}
 
     /// 容器在 init 时调用,注入 SubjectRepository weak 引用。
+    /// Called by the container on init; injects the SubjectRepository weak ref.
     func setSubjectRef(_ repo: any SubjectRepository) {
         self.subjectRef = repo
     }
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载用户资料（首条 record）
+    /// Load the user profile (first record).
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -43,7 +52,10 @@ final class DefaultProfileRepository: ProfileRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 写入当前 profile 到 SwiftData（首条 record，upsert）
+    /// Persist the current profile (upsert into the first record).
     func saveProfile() {
         guard let context = modelContext else { return }
         do {
@@ -135,7 +147,10 @@ final class DefaultProfileRepository: ProfileRepository {
     }
 
     // MARK: - 头像
+    // MARK: - 头像 / Avatar
 
+    /// 保存头像到文件系统，写入 filename 到 profile
+    /// Save the avatar to the filesystem and store its filename in profile.
     @discardableResult
     func saveAvatar(_ data: Data) -> String? {
         let filename = "avatar_\(UUID().uuidString).jpg"

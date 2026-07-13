@@ -20,7 +20,7 @@ import os
 final class SRSReviewNotifications {
     static let shared = SRSReviewNotifications()
 
-    nonisolated private let logger = Logger(subsystem: "app.StudyPulse.notifications", category: "SRS")
+    nonisolated private let logger = Logger(subsystem: "app.StudyPulse.notifications", category: "SRS")  // SRS 专用 os.Logger
     private init() {}
 
     // MARK: - Public API

@@ -10,15 +10,21 @@ import Foundation
 import SwiftData
 import os
 
+/// 学习阶段 (StudyPhase) Repository 默认实现。
+/// Default PhaseRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultPhaseRepository: PhaseRepository {
+    /// 全部阶段（按 startDate desc 排序）
+    /// All phases, sorted by startDate desc.
     var phases: [StudyPhase] = []
 
     @ObservationIgnored
     private var modelContext: ModelContext?
 
     /// 跨域引用:Phase 操作会读 / 改其它域的 phaseId。
+    /// Cross-domain refs: phase ops read/write phaseId in other domains.
     /// 这些 weak 引用由容器在 init 时注入。
+    /// These weak refs are injected by the container on init.
     @ObservationIgnored
     weak var gradeRef: (any GradeRepository)?
     @ObservationIgnored
@@ -31,6 +37,8 @@ final class DefaultPhaseRepository: PhaseRepository {
     init() {}
 
     /// 由容器调用,注入其它 4 个 repo 的 weak 引用以支持跨域 phaseId 操作。
+    /// Called by the container; injects weak refs to the other 4 repos
+    /// so cross-domain phaseId ops work.
     func setCrossRefs(
         grade: any GradeRepository,
         mistake: any MistakeRepository,
@@ -44,7 +52,10 @@ final class DefaultPhaseRepository: PhaseRepository {
     }
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载所有学习阶段
+    /// Load all study phases.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -58,20 +69,29 @@ final class DefaultPhaseRepository: PhaseRepository {
     }
 
     // MARK: - Computed
+    // MARK: - 计算属性 / Computed
 
+    /// 当前激活的 phase
+    /// Currently active phase.
     var activePhase: StudyPhase? {
         guard let id = AppEnvironmentManager.shared.activePhaseId else { return nil }
         return phases.first(where: { $0.id == id })
     }
 
+    /// phase 过滤是否开启（activePhaseId != nil）
+    /// Whether phase filtering is on (activePhaseId != nil).
     var phaseFilterEnabled: Bool {
         AppEnvironmentManager.shared.activePhaseId != nil
     }
 
+    /// 是否存在 phaseId == nil 的"未归类"数据
+    /// Whether any domain has records with phaseId == nil.
     var hasUnassignedData: Bool {
         unassignedRecordCount > 0
     }
 
+    /// 全部域中 phaseId == nil 的记录数（用于未归类提示）
+    /// Total unassigned records across all domains (used by the unassigned prompt).
     var unassignedRecordCount: Int {
         let g = gradeRef?.grades.filter { $0.phaseId == nil }.count ?? 0
         let m = mistakeRef?.mistakeSets.filter { $0.phaseId == nil }.count ?? 0
@@ -82,7 +102,10 @@ final class DefaultPhaseRepository: PhaseRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 新增一个 phase
+    /// Add a new phase.
     func add(_ phase: StudyPhase) {
         if let context = modelContext {
             context.insert(StudyPhaseRecord(from: phase))
@@ -155,7 +178,10 @@ final class DefaultPhaseRepository: PhaseRepository {
     }
 
     // MARK: - 跨域 phaseId 工具
+    // MARK: - 跨域 phaseId 工具 / Cross-domain phaseId helpers
 
+    /// 把全部 phaseId == nil 的记录归到指定 phase
+    /// Assign all unassigned records (phaseId == nil) to the given phase.
     @discardableResult
     func assignUnassignedDataToPhase(_ phaseId: UUID) -> (grades: Int, mistakes: Int, exams: Int, comprehensiveExams: Int, tasks: Int) {
         guard let context = modelContext else { return (0, 0, 0, 0, 0) }
@@ -212,6 +238,8 @@ final class DefaultPhaseRepository: PhaseRepository {
         return (gCount, mCount, eCount, cCount, tCount)
     }
 
+    /// 清空其它域对指定 phase 的引用（删除 phase 前调用）
+    /// Clear all references to the given phase in other domains (called before delete).
     func clearPhaseReferences(phaseId: UUID) {
         guard let context = modelContext else { return }
         do {

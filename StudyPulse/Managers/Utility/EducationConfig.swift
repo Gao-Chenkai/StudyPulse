@@ -8,9 +8,12 @@
 import Foundation
 
 // MARK: - Education Stage (教育阶段)
+// MARK: - Education Stage
 
-/// 用户所处的教育阶段
-/// 每个阶段对应不同的教育体系和科目配置
+/// 用户所处的教育阶段。
+/// 每个阶段对应不同的教育体系和科目配置。
+/// User's current education stage. Each stage maps to a different
+/// curriculum and subject configuration.
 nonisolated enum EducationStage: String, CaseIterable, Identifiable, Codable, Sendable {
     case primarySchool = "Primary School"              /// 小学
     case middleSchool = "Middle School"                /// 初中
@@ -45,17 +48,22 @@ nonisolated enum EducationStage: String, CaseIterable, Identifiable, Codable, Se
 }
 
 // MARK: - Education Category (教育体系分类)
+// MARK: - Education Category
 
-/// 教育体系分类：国内 / 国际
+/// 教育体系分类:国内 / 国际。
+/// Top-level curriculum category: domestic vs. international.
 nonisolated enum EducationCategory: String, CaseIterable, Codable, Sendable {
     case domestic = "Domestic"        /// 国内体系（中国大陆、台湾、香港、新加坡等）
     case international = "International"  /// 国际体系（IB、AP、A-Level、SAT、ACT 等）
 }
 
 // MARK: - Education Region (地区教育体系配置)
+// MARK: - Education Region
 
-/// 代表一个地区的教育体系配置（如：浙江高中 3+3、IB Diploma 等）
-/// 包含该体系下的所有科目配置
+/// 代表一个地区的教育体系配置(如:浙江高中 3+3、IB Diploma 等)。
+/// 包含该体系下的所有科目配置。
+/// A region-specific curriculum (e.g. Zhejiang 3+3, IB Diploma),
+/// including all subjects offered under it.
 nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
     var id: String { name }
     /// 内部标识名（如 "zhejiang", "ib_dp"）
@@ -75,6 +83,8 @@ nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
 
     /// 极端兜底:配置被清空时(availableRegions 返空)用这个最小 region 防止
     /// `defaultRegion`/`availableRegions[0]` 之类调用崩溃。
+    /// Last-resort fallback when availableRegions is empty. Prevents crashes
+    /// from `defaultRegion` / `availableRegions[0]` style accesses.
     static func fallback(for stage: EducationStage) -> EducationRegion {
         EducationRegion(
             name: "fallback_\(stage.rawValue)",
@@ -89,8 +99,10 @@ nonisolated struct EducationRegion: Identifiable, Codable, Hashable, Sendable {
 }
 
 // MARK: - Subject Config (科目配置)
+// MARK: - Subject Config
 
-/// 单个科目的配置信息，用于教育体系中的科目定义
+/// 单个科目的配置信息,用于教育体系中的科目定义。
+/// A single subject definition within a curriculum.
 nonisolated struct SubjectConfig: Identifiable, Codable, Hashable, Sendable {
     var id: String { name }
     /// 科目内部标识名（英文）

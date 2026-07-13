@@ -14,9 +14,12 @@ import SwiftData
 import os
 
 /// Repository 容器:7 域 + 跨域 + ModelContainer 持有 + ready 状态。
+/// Repository container: 7 domain repos + cross-domain orchestration +
+/// ModelContainer ownership + readiness flag.
 @Observable @MainActor
 final class RepositoryContainer {
     // 7 个 Repository(由外部注入,默认是 Default 实现)
+    // The 7 repositories (injected by caller, default = Default implementations).
     let gradeRepo: any GradeRepository
     let mistakeRepo: any MistakeRepository
     let examRepo: any ExamRepository
@@ -25,19 +28,27 @@ final class RepositoryContainer {
     let profileRepo: any ProfileRepository
     let subjectRepo: any SubjectRepository
     /// 例程模板 Repository(2026-07-09 新增)
+    /// Routine template repository (added 2026-07-09).
     let routineRepo: any RoutineRepository
     /// 例程实例 Repository(2026-07-09 新增)
+    /// Routine instance repository (added 2026-07-09).
     let routineInstanceRepo: any RoutineInstanceRepository
 
     /// SwiftData ModelContainer(由 StudyPulseApp 在 .modelContainer modifier 之后注入)
+    /// SwiftData ModelContainer (injected by StudyPulseApp after the
+    /// `.modelContainer(...)` modifier).
     @ObservationIgnored
     private(set) var modelContainer: ModelContainer?
 
     /// 是否完成 asyncInit 全部加载。View 用这个 gating loader。
+    /// Whether `asyncInit` has finished loading. Views use this to gate a loader.
     private(set) var isReady: Bool = false
 
     /// 跨域桥接(给 Intents 跨进程用):镜像 IntentActionStore.shared.pendingIntentAction。
+    /// Cross-domain bridge (for Intents across processes): mirrors
+    /// `IntentActionStore.shared.pendingIntentAction`.
     /// View 直接观察 IntentActionStore(ContentView 已用 @ObservedObject 桥)。
+    /// Views observe `IntentActionStore` directly (ContentView uses an `@ObservedObject` bridge).
     var pendingIntentAction: IntentAction? {
         get { IntentActionStore.shared.pendingIntentAction }
         set { IntentActionStore.shared.pendingIntentAction = newValue }
@@ -81,11 +92,16 @@ final class RepositoryContainer {
     }
 
     // MARK: - ModelContainer wiring
+    // MARK: - ModelContainer 装配 / ModelContainer wiring
 
     /// 顶层初始化:JSON 迁移 + 7 个 repo 并行 loadAll + 内嵌图片迁移 + 通知 / widget 调度。
+    /// Top-level init: JSON migration + 7 repo loadAll + inline image migration + notification / widget scheduling.
     ///
     /// 容器来自 `ModelContainerFactory.makeContainer()`(同进程单例缓存),
     /// 与 Scene 的 `.modelContainer(...)` modifier 共享同一 ModelContainer。
+    /// The container comes from `ModelContainerFactory.makeContainer()`
+    /// (in-process singleton cache), shared with the Scene's
+    /// `.modelContainer(...)` modifier.
     func asyncInit() async {
         let container = ModelContainerFactory.makeContainer()
         self.modelContainer = container
@@ -142,6 +158,7 @@ final class RepositoryContainer {
 
 #if DEBUG
     /// 仅限测试与预览（Unit Tests & Previews）：注入纯内存的 ModelContainer 完成全套 Repo 初始化
+    /// Tests & previews only: boot the whole repo stack against an in-memory ModelContainer.
     func asyncTestInit(with testContainer: ModelContainer) async {
         self.modelContainer = testContainer
         let context = testContainer.mainContext
@@ -166,7 +183,9 @@ final class RepositoryContainer {
 #endif
 
     /// 订阅 AppEnvironmentManager 的 activePhaseId 变化。
+    /// Subscribe to `AppEnvironmentManager` activePhaseId changes.
     /// 用 polling(每 0.5s 检查)而非 Combine 桥接,避免引入 Combine 依赖。
+    /// Uses polling (every 0.5s) instead of a Combine bridge to avoid the Combine dependency.
     private func observeActivePhaseChanges() {
         Task { @MainActor [weak self] in
             var lastId: UUID? = AppEnvironmentManager.shared.activePhaseId
@@ -182,6 +201,7 @@ final class RepositoryContainer {
     }
 
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)。
+    /// Recompute the 5 filtered caches (called on phase switch).
     func recomputeAllFiltered() {
         if let g = gradeRepo as? DefaultGradeRepository { g.recomputeFiltered() }
         if let m = mistakeRepo as? DefaultMistakeRepository { m.recomputeFiltered() }
@@ -193,11 +213,15 @@ final class RepositoryContainer {
     }
 
     // MARK: - 跨域操作
+    // MARK: - 跨域操作 / Cross-domain operations
 
     /// 合并考试 + 待办为统一 TodoEntry(供 TodoView 用)。
+    /// Merge exams + tasks into a unified `TodoEntry` list (for `TodoView`).
     /// - Parameters:
     ///   - includeCompleted:是否包含已完成条目
+    ///     Whether to include already-completed items.
     ///   - phaseId:外部显式指定过滤 phase;nil=按 active phase 自动判定
+    ///     Explicit phase filter; nil = derive from the active phase.
     func todoEntries(includeCompleted: Bool = false, phaseId: UUID? = nil) -> [TodoEntry] {
         let active = phaseId ?? AppEnvironmentManager.shared.activePhaseId
         var entries: [TodoEntry] = []
@@ -262,6 +286,7 @@ final class RepositoryContainer {
     }
 
     /// 批量清空数据(category → 删除条数)。
+    /// Bulk-clear data. Returns `(category, deleted count)` pairs.
     @discardableResult
     func bulkClearData(categories: Set<BulkClearCategory>) -> [(category: BulkClearCategory, count: Int)] {
         var results: [(BulkClearCategory, Int)] = []
@@ -296,71 +321,86 @@ final class RepositoryContainer {
     }
 
     // MARK: - Passthroughs(原 DataManager 调用习惯的兼容)
+    // MARK: - Passthroughs(原 DataManager 调用习惯的兼容) / Passthroughs (legacy DataManager compat)
 
     /// Subject fullScore(原来 DataManager.fullScore)
+    /// Subject `fullScore` (legacy `DataManager.fullScore`).
     func fullScore(for subjectName: String) -> Double {
         subjectRepo.fullScore(for: subjectName)
     }
 
     /// Subject displayName(原来 DataManager.displayName)
+    /// Subject `displayName` (legacy `DataManager.displayName`).
     func displayName(for subjectName: String) -> String {
         subjectRepo.displayName(for: subjectName)
     }
 
     /// 用户头像异步加载(原来 DataManager.loadAvatarAsync)
+    /// Async avatar load (legacy `DataManager.loadAvatarAsync`).
     func loadAvatarAsync() async -> Data? {
         await profileRepo.loadAvatarAsync()
     }
 
     /// 错题 exposure +1(原来 DataManager.recordMistakeExposure)
+    /// Mistake exposure +1 (legacy `DataManager.recordMistakeExposure`).
     func recordMistakeExposure(_ mistakeId: UUID) {
         mistakeRepo.recordExposure(mistakeId)
     }
 
     /// 切换任务完成态(原来 DataManager.setTaskCompletion)
+    /// Toggle task completion (legacy `DataManager.setTaskCompletion`).
     func setTaskCompletion(_ taskId: UUID, isCompleted: Bool) {
         taskRepo.setCompletion(taskId, isCompleted: isCompleted)
     }
 
     /// 刷新系统 Reminders 完成态(原来 DataManager.refreshTaskCompletionStatesFromReminders)
+    /// Refresh task completion state from system Reminders.
     func refreshTaskCompletionStatesFromReminders() {
         taskRepo.refreshCompletionStatesFromReminders()
     }
 
     /// 切换考试 checklist 状态(原来 DataManager.toggleExamChecklistItem)
+    /// Toggle one exam checklist item.
     func toggleExamChecklistItem(_ examId: UUID, itemId: UUID) {
         examRepo.toggleChecklistItem(examId, itemId: itemId)
     }
 
     /// 启用智能科目推荐(原来 DataManager.applySmartSubjectRecommendation)
+    /// Apply smart subject recommendation.
     func applySmartSubjectRecommendation(stage: EducationStage, regionCode: String) {
         subjectRepo.applySmartSubjectRecommendation(stage: stage, regionCode: regionCode)
     }
 
     /// 初始化默认科目(原来 DataManager.initializeDefaultSubjects)
+    /// Initialize default subjects.
     func initializeDefaultSubjects() {
         subjectRepo.initializeDefaultSubjects()
     }
 
     /// 保存头像并更新 profile(原来 DataManager.saveAvatar)
+    /// Save avatar and update profile.
     @discardableResult
     func saveAvatar(_ data: Data) -> String? {
         profileRepo.saveAvatar(data)
     }
 
     /// 删除头像文件(原来 DataManager.deleteAvatar)
+    /// Delete an avatar file.
     func deleteAvatar(filename: String) {
         profileRepo.deleteAvatar(filename: filename)
     }
 
     /// 提交 onboarding 资料(原来 DataManager.commitOnboardingProfile)
+    /// Commit the onboarding profile.
     func commitOnboardingProfile(draft: OnboardingProfileDraft, selectedSubjectNames: [String]) {
         profileRepo.commitOnboardingProfile(draft: draft, selectedSubjectNames: selectedSubjectNames)
     }
 
     // MARK: - 高层 facade(常用 view 调用习惯)
+    // MARK: - 高层 facade(常用 view 调用习惯) / High-level facade (common view call patterns)
 
     /// 添加单条 grade(带 widget sync / Achievement 副作用)
+    /// Add a single grade (triggers widget sync + Achievement side effects).
     func addGrade(_ grade: Grade) {
         gradeRepo.add(grade)
         AchievementManager.shared.recordGradeRecorded()
@@ -370,6 +410,7 @@ final class RepositoryContainer {
     }
 
     /// 批量添加 grade(带 widget sync / Achievement 副作用)
+    /// Batch-add grades (triggers widget sync + Achievement side effects).
     func addGrades(_ newGrades: [Grade]) {
         let count = newGrades.count
         gradeRepo.add(newGrades)
@@ -379,88 +420,105 @@ final class RepositoryContainer {
     }
 
     /// 删除 grade(带 widget sync)
+    /// Delete a grade (triggers widget sync).
     func deleteGrade(_ grade: Grade) {
         gradeRepo.delete(grade)
         TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
     }
 
     /// 添加错题(带 SRS 调度)
+    /// Add a mistake (triggers SRS reschedule).
     func addMistake(_ mistake: MistakeNote) {
         mistakeRepo.add(mistake)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
     }
 
     /// 批量添加错题
+    /// Batch-add mistakes (triggers SRS reschedule).
     func addMistakes(_ mistakes: [MistakeNote]) {
         mistakeRepo.add(mistakes)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
     }
 
     /// 删除错题(带 SRS 取消)
+    /// Delete a mistake (triggers SRS reschedule).
     func deleteMistake(_ mistake: MistakeNote) {
         mistakeRepo.delete(mistake)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
     }
 
     /// 添加考试(带 Review 通知调度)
+    /// Add exams (triggers exam review notification reschedule).
     func addExams(single: [Exam], comprehensive: [comprehensiveExam]) {
         examRepo.add(single: single, comprehensive: comprehensive)
         ExamReviewNotifications.shared.rescheduleAll(exams: examRepo.examSets)
     }
 
     /// 删除单科考试
+    /// Delete a single-subject exam.
     func deleteExam(_ exam: Exam) {
         ExamReviewNotifications.shared.cancel(for: exam.id)
         examRepo.deleteExam(exam)
     }
 
     /// 删除综合考试
+    /// Delete a comprehensive exam.
     func deleteComprehensiveExam(_ exam: comprehensiveExam) {
         examRepo.deleteComprehensiveExam(exam)
     }
 
     /// 添加待办
+    /// Add a task.
     func addTask(_ task: TaskItem, syncToReminders: Bool = false, reminderResult: (calendarItemId: String, calendarId: String)? = nil) {
         taskRepo.add(task, syncToReminders: syncToReminders, reminderResult: reminderResult)
     }
 
     /// 批量添加待办
+    /// Batch-add tasks.
     func addTasks(_ newTasks: [TaskItem]) {
         taskRepo.add(newTasks)
     }
 
     /// 删除待办(带 Reminder 清理)
+    /// Delete a task (cleans up its linked Reminder).
     func deleteTask(_ task: TaskItem) {
         taskRepo.delete(task)
     }
 
     /// 激活 phase(更新 AppEnvironmentManager + 触发 filtered 重算)
+    /// Activate a phase (updates `AppEnvironmentManager` + recomputes filtered caches).
     func activatePhase(_ phase: StudyPhase?) {
         phaseRepo.activate(phase)
         recomputeAllFiltered()
     }
 
     // MARK: - 例程 (Routine) 域 facade
+    // MARK: - 例程 (Routine) 域 facade / Routine facade
 
     /// 添加例程模板
+    /// Add a routine template.
     func addRoutine(_ routine: Routine) {
         routineRepo.add(routine)
     }
 
     /// 批量添加例程
+    /// Batch-add routine templates.
     func addRoutines(_ newRoutines: [Routine]) {
         routineRepo.add(newRoutines)
     }
 
     /// 更新例程模板
+    /// Update a routine template.
     func updateRoutine(_ routine: Routine) {
         routineRepo.update(routine)
         NotificationCenter.default.post(name: .routineDataChanged, object: nil)
     }
 
     /// 删除例程模板(同时清理未来未开始的 instance)
+    /// Delete a routine template (and any future-not-started instances).
     func deleteRoutine(_ id: UUID) {
         // 先清理关联 instance
+        // First clear linked instances.
         let toDelete = routineInstanceRepo.allInstances.filter { $0.routineId == id }
         for inst in toDelete {
             routineInstanceRepo.delete(inst.id)
@@ -470,6 +528,7 @@ final class RepositoryContainer {
     }
 
     /// 设置例程启用
+    /// Enable or disable a routine.
     func setRoutineEnabled(_ id: UUID, enabled: Bool) {
         routineRepo.setEnabled(id, enabled: enabled)
         NotificationCenter.default.post(name: .routineDataChanged, object: nil)
@@ -477,7 +536,10 @@ final class RepositoryContainer {
 }
 
 // MARK: - BulkClearCategory
+// MARK: - 批量清空类别 / Bulk-clear categories
 
+/// 批量清空选项（用于设置页"清空数据"面板）
+/// Bulk-clear option (used in Settings → "Clear Data" panel).
 enum BulkClearCategory: String, CaseIterable, Identifiable, Hashable {
     case grades
     case mistakes

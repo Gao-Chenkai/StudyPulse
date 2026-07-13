@@ -2,20 +2,32 @@
 //  NewMistakeSetView.swift
 //  StudyPulse
 //
-//  Created by Chenkai Gao on 2026/3/21.
+//  新建错题页:basic info(标题/学科/难度/状态)+ 编辑 sections
+//  (原题 / 错因 / 错解 / 正解) + 配图。
+//  iPhone / iPad 共享(usesInternalNavigationStack)。
+//
+//  New mistake page: basic info (title / subject / difficulty / status) +
+//  editable sections (question / reason / wrong / correct) + images.
+//  Shared between iPhone and iPad (`usesInternalNavigationStack`).
 //
 
 import SwiftUI
 
-// MARK: - EditSection Enum
+// MARK: - EditSection Enum / 编辑分节枚举
+
+/// "哪一段"被选中(决定 toolbar / OCR 作用到哪个 markdown 字段)
+/// Which section is currently selected (drives which markdown field
+/// the toolbar / OCR actions apply to).
 enum EditSection: String, CaseIterable, Identifiable {
     case question = "Question"
     case reason = "Reason"
     case wrong = "Wrong"
     case correct = "Correct"
-    
+
     var id: String { self.rawValue }
-    
+
+    /// SF Symbol 图标
+    /// SF Symbol for the section.
     var icon: String {
         switch self {
         case .question: return "doc.text"
@@ -24,7 +36,9 @@ enum EditSection: String, CaseIterable, Identifiable {
         case .correct: return "checkmark.circle"
         }
     }
-    
+
+    /// 本地化标题
+    /// Localized title.
     var title: String {
         switch self {
         case .question: return "Question".localized()
@@ -35,20 +49,28 @@ enum EditSection: String, CaseIterable, Identifiable {
     }
 }
 
+/// 新建错题主表单
+/// New mistake main form.
 struct NewMistakeSetView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
+    /// 是否自己挂 NavigationStack(iPad split-view 上为 false)
+    /// Whether to host its own NavigationStack (false in iPad split-view).
     let usesInternalNavigationStack: Bool
-    
+
+    /// 内部 ViewModel(表单字段 + 图片 + 验证)
+    /// Internal view model (form fields + images + validation).
     @StateObject private var viewModel: NewMistakeSetViewModel
 
-    /// Default empty-state initializer
+    /// 默认空态初始化
+    /// Default empty-state initializer.
     init(container: RepositoryContainer, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
         self._viewModel = StateObject(wrappedValue: NewMistakeSetViewModel(container: container))
     }
 
+    /// 让 Siri 提供的值预填表单的便捷初始化
     /// Convenience init that seeds the form with Siri-provided values.
     init(container: RepositoryContainer, presetSubject: String, presetTitle: String, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
@@ -57,6 +79,7 @@ struct NewMistakeSetView: View {
         self._viewModel = StateObject(wrappedValue: vm)
     }
 
+    /// 用 sample content 预填字段的初始化
     /// Initialiser that seeds the editable fields with sample content.
     init(container: RepositoryContainer, sampleMistake: SampleMistake, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
@@ -65,6 +88,8 @@ struct NewMistakeSetView: View {
         self._viewModel = StateObject(wrappedValue: vm)
     }
 
+    /// 当前设备是否为 iPad
+    /// Whether the current device is an iPad.
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
@@ -81,6 +106,8 @@ struct NewMistakeSetView: View {
 
     @ViewBuilder
     private var formContent: some View {
+        // 表单三段:basic / content / images
+        // The form is split into three sections: basic / content / images.
         Form {
             basicInfoSection
             contentEditorSection
@@ -90,18 +117,24 @@ struct NewMistakeSetView: View {
         .navigationTitle("New Mistake".localized())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
+        // 系统图库 → 当前 section 的图片数组
+        // System photo library → the current section's image array.
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerWithCompletion(onDismiss: { image in
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
+        // 相机拍照 → 同上
+        // Camera capture → same.
         .sheet(isPresented: $viewModel.showingPhotoCapture) {
             PhotoCaptureWithCompletion(onDismiss: { image in
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
+        // PencilKit 手写 → 转 UIImage 追加
+        // PencilKit hand-drawing → convert to UIImage and append.
         .sheet(isPresented: $viewModel.showingHandwritingSheet) {
             HandwritingSheet { pngData in
                 if !pngData.isEmpty, let image = UIImage(data: pngData) {
@@ -110,11 +143,15 @@ struct NewMistakeSetView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
+        // OCR 失败 alert
+        // OCR failure alert.
         .alert("OCR Error".localized(), isPresented: $viewModel.showingOCRAlert) {
             Button("OK".localized()) { }
         } message: {
             Text(viewModel.ocrErrorMessage)
         }
+        // OCR 进行中的全屏 loading 蒙层
+        // Full-screen overlay shown while OCR is in progress.
         .overlay {
             if viewModel.isProcessingOCR {
                 ProgressView("Recognizing text...".localized())
@@ -124,13 +161,15 @@ struct NewMistakeSetView: View {
                     .shadow(radius: 10)
             }
         }
+        // iOS 26+ 上让 nav bar 背景透明
+        // On iOS 26+ make the nav bar background transparent.
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
         .debugLayoutBoundsAuto()
     }
 }
 
-// MARK: - Sections
+// MARK: - Sections / 分组
 private extension NewMistakeSetView {
     
     var basicInfoSection: some View {
@@ -213,21 +252,32 @@ private extension NewMistakeSetView {
     }
     
     var imagesSection: some View {
+        // 图片区:四种来源(图库 / 拍照 / OCR / 手写)+ 横滑预览
+        // Image section: four sources (library / camera / OCR / handwriting)
+        // + horizontal preview strip.
         Section(header: Text("Images".localized())) {
             HStack {
+                // 系统图库
+                // System photo library.
                 Button(action: { viewModel.showingImagePicker = true }) {
                     Label("Library".localized(), systemImage: "photo.on.rectangle.angled")
                 }
                 Spacer()
+                // 相机拍照
+                // Camera capture.
                 Button(action: { viewModel.showingPhotoCapture = true }) {
                     Label("Camera".localized(), systemImage: "camera.fill")
                 }
                 Spacer()
+                // OCR:把当前 section 的图 → 文本写回 markdown
+                // OCR: convert the current section's images into text written back into the markdown.
                 Button(action: { viewModel.triggerOCR() }) {
                     Label("OCR".localized(), systemImage: "text.viewfinder")
                 }
                 .disabled(viewModel.currentSectionImagesBinding.wrappedValue.isEmpty)
                 Spacer()
+                // iPad:手写页用 NavigationLink;iPhone:用 sheet
+                // iPad: NavigationLink to the handwriting page; iPhone: sheet.
                 if isIPad {
                     NavigationLink {
                         HandwritingView { pngData in
@@ -245,7 +295,9 @@ private extension NewMistakeSetView {
                 }
             }
             .buttonStyle(.borderless)
-            
+
+            // 当前 section 还没有图片 → 占位
+            // Empty placeholder when there are no images in the current section.
             if viewModel.currentSectionImagesBinding.wrappedValue.isEmpty {
                 Text("No images".localized())
                     .font(.caption)
@@ -253,6 +305,8 @@ private extension NewMistakeSetView {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
             } else {
+                // 横滑条:每张图右上角带红色删除按钮
+                // Horizontal scroller: each thumbnail has a red delete button in the top-right.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(viewModel.currentSectionImagesBinding.wrappedValue.indices, id: \.self) { index in
@@ -260,10 +314,14 @@ private extension NewMistakeSetView {
                                 Image(uiImage: viewModel.currentSectionImagesBinding.wrappedValue[index])
                                     .resizable()
                                     .scaledToFill()
+                                    // 80x80 缩略图,cornerRadius 让圆角统一
+                                    // 80x80 thumbnail, with a unified corner radius.
                                     .frame(width: 80, height: 80)
                                     .clipped()
                                     .cornerRadius(8)
-                                
+
+                                // 红圈删除按钮
+                                // Red-circle delete button.
                                 Button(action: {
                                     viewModel.currentSectionImagesBinding.wrappedValue.remove(at: index)
                                 }) {
@@ -279,14 +337,20 @@ private extension NewMistakeSetView {
             }
         }
     }
-    
+
     var toolbar: some ToolbarContent {
+        // 顶部 toolbar:Cancel + Save
+        // Top toolbar: Cancel + Save.
         Group {
             ToolbarItem(placement: .navigationBarLeading) {
+                // 直接 dismiss,无确认(用户随时可重开新增页)
+                // Dismiss directly, no confirm (the user can always re-open the new page).
                 Button("Cancel".localized()) { presentationMode.wrappedValue.dismiss() }
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
+                // Save 按钮:viewModel.isSaveDisabled 已做必填校验
+                // Save button: viewModel.isSaveDisabled already gates the required fields.
                 Button("Save".localized()) {
                     viewModel.saveMistake()
                     presentationMode.wrappedValue.dismiss()
@@ -298,7 +362,7 @@ private extension NewMistakeSetView {
     }
 }
 
-// MARK: - Sample Mistake (for previews)
+// MARK: - Sample Mistake (for previews) / 示例错题(用于预览)
 
 /// A simple value type that carries the four editable markdown blocks
 /// (plus title / subject / source / date) so the `#Preview` can open
@@ -442,7 +506,7 @@ struct SampleMistake {
         .environment(mockContainer)
 }
 
-// MARK: - Image Picker with Completion Handler
+// MARK: - Image Picker with Completion Handler / 带回调的图片选择器
 struct ImagePickerWithCompletion: UIViewControllerRepresentable {
     var onDismiss: (UIImage?) -> Void
     
@@ -479,7 +543,7 @@ struct ImagePickerWithCompletion: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Photo Capture with Completion Handler
+// MARK: - Photo Capture with Completion Handler / 带回调的拍照
 struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
     var onDismiss: (UIImage?) -> Void
     

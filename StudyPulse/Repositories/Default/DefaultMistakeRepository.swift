@@ -11,9 +11,15 @@ import SwiftData
 import SwiftUI
 import os
 
+/// 错题 (MistakeNote) Repository 默认实现。
+/// Default MistakeRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultMistakeRepository: MistakeRepository {
+    /// 全部错题（按 date desc 排序）
+    /// All mistake notes, sorted by date desc.
     var mistakeSets: [MistakeNote] = []
+    /// 按 active phase 过滤后的错题缓存
+    /// Cached mistakes filtered by the active phase.
     var filteredMistakeSets: [MistakeNote] = []
 
     @ObservationIgnored
@@ -22,7 +28,10 @@ final class DefaultMistakeRepository: MistakeRepository {
     init() {}
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载所有错题
+    /// Load all mistake notes.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -39,7 +48,10 @@ final class DefaultMistakeRepository: MistakeRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 新增一条错题
+    /// Add a single mistake note.
     func add(_ mistake: MistakeNote) {
         var stored = mistake
         if stored.phaseId == nil {
@@ -122,17 +134,22 @@ final class DefaultMistakeRepository: MistakeRepository {
     }
 
     // MARK: - SRS & Mastery
+    // MARK: - SRS & 掌握度 / SRS & Mastery
 
     /// 收集当前错题库的所有 tag(去重、保序)
+    /// Collect all tags in the current mistake pool (deduped, ordered).
     func allTags() -> [String] {
         MistakeFilter.allTags(mistakeSets)
     }
 
     /// 标签计数(降序)
+    /// Tag counts (descending).
     func tagCounts() -> [(tag: String, count: Int)] {
         MistakeFilter.tagCounts(mistakeSets)
     }
 
+    /// 更新某条错题的 SRS 复习状态
+    /// Update SRS review state for a single mistake.
     func updateReviewState(_ mistakeId: UUID, newState: ReviewState?) {
         guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
             Log.data.warning("MistakeRepository updateReviewState: not found id=\(mistakeId.uuidString, privacy: .public)")
@@ -193,7 +210,10 @@ final class DefaultMistakeRepository: MistakeRepository {
     }
 
     // MARK: - Internals
+    // MARK: - 内部工具 / Internals
 
+    /// 重新计算 filteredMistakeSets
+    /// Recompute filteredMistakeSets from the active phase.
     func recomputeFiltered() {
         let activeId = AppEnvironmentManager.shared.activePhaseId
         if let id = activeId {

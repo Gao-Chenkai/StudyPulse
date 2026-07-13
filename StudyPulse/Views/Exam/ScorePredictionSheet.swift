@@ -3,13 +3,17 @@
 //  StudyPulse
 //
 //  Created for the Exam "预测" button feature.
+//  Exam "Predict" button feature.
 //
 
 import SwiftUI
 import os
 
 // MARK: - 共享头部卡片
+// MARK: - Shared header card
 
+/// 预测页通用头部(标题 / 副标题 / 日期 / 引擎名)
+/// Shared prediction header (title / subtitle / date / engine name).
 struct ScorePredictionHeaderCard: View {
     let title: String
     let subtitle: String
@@ -55,7 +59,10 @@ struct ScorePredictionHeaderCard: View {
 }
 
 // MARK: - 单科预测入口 Sheet
+// MARK: - Single-subject prediction entry sheet
 
+/// 单科预测入口 Sheet
+/// Single-subject prediction entry sheet.
 struct ScorePredictionSheet: View {
     let exam: Exam
     let history: [Grade]
@@ -67,13 +74,19 @@ struct ScorePredictionSheet: View {
     @State private var showingDetail = false
     @State private var didLog = false
 
+    /// 当前激活的预测器(由工厂决定)
+    /// The currently active predictor (chosen by the factory).
     private let predictor: ScorePredictor = ScorePredictorFactory.active
 
+    /// 同科目错题(用于 mistakeContext)
+    /// Same-subject mistakes (for building mistakeContext).
     private var subjectMistakes: [MistakeNote] {
         container.mistakeRepo.filteredMistakeSets
             .filter { $0.subject == exam.subject }
     }
 
+    /// 调用预测器得出结果(每次访问都会重算;无数据时为 nil)
+    /// The predictor result (recomputed on every access; nil when there's not enough data).
     private var predictionResult: ScorePredictionResult? {
         let context = MistakeContext.build(from: subjectMistakes)
         return predictor.predict(
@@ -146,6 +159,8 @@ struct ScorePredictionSheet: View {
         }
     }
 
+    /// 数据不足时的占位视图
+    /// Placeholder view shown when there isn't enough data.
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 16) {
@@ -164,7 +179,10 @@ struct ScorePredictionSheet: View {
 }
 
 // MARK: - 综合考试预测 Sheet
+// MARK: - Comprehensive exam prediction sheet
 
+/// 综合考试预测 Sheet
+/// Comprehensive exam prediction sheet.
 struct ComprehensiveScorePredictionSheet: View {
     let target: ComprehensivePredictionTarget
     let onDismiss: () -> Void

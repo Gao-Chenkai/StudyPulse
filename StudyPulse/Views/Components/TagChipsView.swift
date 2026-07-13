@@ -8,18 +8,36 @@
 //  Read-only tag chip strip (optionally tappable). Used by the detail
 //  view, list cards, and the suggested review card.
 //
+//  行为:
+//  - compact = true:列表卡片用的小号(3 个上限,默认)
+//  - compact = false:详情/表单用的常规大小(10 个上限,默认)
+//  - maxVisible > 0 时覆盖默认值;超出显示 +N
+//
+//  Behavior:
+//  - `compact = true`: small chip used in list cards (default 3 visible).
+//  - `compact = false`: regular size used in details / forms (default 10 visible).
+//  - `maxVisible > 0` overrides the default; overflow is shown as `+N`.
+//
 
 import SwiftUI
 
+/// 标签胶囊展示行。
+/// Tag chip row.
 struct TagChipsView: View {
+    /// 要显示的标签列表
+    /// Tags to display.
     let tags: [String]
     /// 点击回调(可选)
+    /// Optional tap callback.
     var onTap: ((String) -> Void)? = nil
     /// 是否显示为紧凑小芯片(列表卡片用)
+    /// Whether to use the compact (list-card) style.
     var compact: Bool = false
     /// 最多显示几个 chip(超出显示 +N)。0 = 无限
+    /// Maximum number of chips to show (overflow rendered as `+N`). 0 = unlimited.
     var maxVisible: Int = 0
     /// 0 = auto:compact=3 / 普通=10
+    /// 0 = auto: `compact=3 / normal=10`.
     var effectiveMax: Int {
         if maxVisible > 0 { return maxVisible }
         return compact ? 3 : 10

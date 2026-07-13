@@ -12,15 +12,20 @@
 import Foundation
 
 /// 考试分桶后的一段(时间窗口 + 窗口内所有考试项)
+/// One bucket in a bucketed exam list (a time window + its exams).
 struct ExamBucket {
     /// 区间标题(本地化)
+    /// Bucket title (localized).
     let title: String
     /// 区间内的考试项
+    /// Exams inside the bucket.
     let items: [ExamItem]
 }
 
 /// 用于跨视图复用的"考试项"统一类型。
 /// 既能装单科 Exam 也能装综合 comprehensiveExam。
+/// Unified "exam item" used across views. Wraps either a single-subject
+/// `Exam` or a `comprehensiveExam`.
 enum ExamItem: Hashable {
     case single(Exam)
     case comprehensive(comprehensiveExam)
@@ -41,11 +46,14 @@ enum ExamItem: Hashable {
 }
 
 /// 考试筛选/分桶服务。纯函数。
+/// Exam filter / bucketing. Pure functions.
 enum ExamFilter {
 
     // MARK: - 合并排序
+    // MARK: - 合并排序 / Merge and sort
 
     /// 把单科和综合考试合并,按 examDate 升序。
+    /// Merge single + comprehensive exams, sorted by `examDate` asc.
     static func mergeAndSort(
         single: [Exam],
         comprehensive: [comprehensiveExam]
@@ -58,23 +66,29 @@ enum ExamFilter {
     }
 
     // MARK: - past / upcoming 拆分
+    // MARK: - past / upcoming 拆分 / Past vs upcoming
 
     /// 已过期考试(日期 < 今天 0 点)
+    /// Past exams (date < today's start-of-day).
     static func pastItems(from items: [ExamItem], now: Date = Date()) -> [ExamItem] {
         let todayStart = Calendar.current.startOfDay(for: now)
         return items.filter { $0.date < todayStart }
     }
 
     /// 即将到来(日期 >= 今天 0 点)
+    /// Upcoming exams (date >= today's start-of-day).
     static func upcomingItems(from items: [ExamItem], now: Date = Date()) -> [ExamItem] {
         let todayStart = Calendar.current.startOfDay(for: now)
         return items.filter { $0.date >= todayStart }
     }
 
     // MARK: - 未来考试按时间窗口分桶(Week / Month / Later)
+    // MARK: - 未来考试按时间窗口分桶(Week / Month / Later) / Bucket upcoming by window
 
     /// 未来考试按 "1 Week / 1 Month / Later" 分桶。
+    /// Bucket upcoming exams into "Within 1 Week / Within 1 Month / Later".
     /// - Returns: 非空桶的列表,顺序: Week → Month → Later
+    ///   List of non-empty buckets, in order: Week → Month → Later.
     static func bucketUpcomingItems(
         from items: [ExamItem],
         now: Date = Date()
@@ -105,8 +119,10 @@ enum ExamFilter {
     }
 
     // MARK: - N 天内 / 已过 N 天 但未登记
+    // MARK: - N 天内 / 已过 N 天 但未登记 / Within N days / past N days unregistered
 
     /// 未来 N 天内的考试(14 = 14 天,0 = 全部未来)
+    /// Exams within the next `days` days (0 = all upcoming).
     static func examsWithinDays(
         _ days: Int,
         exams: [Exam],
@@ -121,11 +137,17 @@ enum ExamFilter {
     }
 
     /// 已过 startDays ~ endDays 之间、但未在 grades 中登记的考试。
+    /// Past exams in the [`endDaysAgo`, `startDaysAgo`] window that have no
+    /// matching grade in `grades` yet.
     /// - Parameters:
     ///   - startDaysAgo: 时间窗口起点(负数,例如 -3 = 3 天前)
+    ///     Window start (negative; e.g. -3 = 3 days ago).
     ///   - endDaysAgo: 时间窗口终点(负数,例如 -7 = 7 天前)
+    ///     Window end (negative; e.g. -7 = 7 days ago).
     ///   - grades: 已登记成绩
+    ///     Already-recorded grades.
     ///   - exams: 待查的考试列表
+    ///     Candidate exams to scan.
     static func unregisteredExams(
         startDaysAgo: Int,
         endDaysAgo: Int,

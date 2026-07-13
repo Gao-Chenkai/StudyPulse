@@ -4,10 +4,15 @@
 //
 //  Created by Chenkai Gao on 2026/3/23.
 //
+//  新建考试表单:单科 / 综合二选一,可设多科目时间槽并写入系统日历
+//  New-exam form: single-subject or comprehensive; supports per-subject time slots and calendar write.
+//
 
 import SwiftUI
 import UserNotifications
 
+/// 新建考试表单
+/// New-exam form.
 struct NewExamSetView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode

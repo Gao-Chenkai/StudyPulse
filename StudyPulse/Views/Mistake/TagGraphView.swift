@@ -2,6 +2,13 @@
 //  TagGraphView.swift
 //  StudyPulse
 //
+//  Obsidian 风格标签图谱:
+//  - 每个标签 = 一个节点(胶囊形 label)
+//  - 共享 ≥ 1 道错题的两个标签之间画边,权重 = 共享错题数
+//  - 布局:力导向(Fruchterman-Reingold)via `TagGraphLayout`
+//  - 点击节点 → 触发 `onSelectTag` 让 caller 过滤错题
+//  - Recenter 按钮重新计算布局
+//
 //  Obsidian-style tag graph view.
 //  - Each tag is a node (capsule label).
 //  - Edges connect tags that share ≥ 1 mistake (weight = # of shared mistakes).
@@ -12,27 +19,55 @@
 
 import SwiftUI
 
+/// 标签图谱:展示错题标签的节点 + 共享边 + 力导向布局。
+/// Tag graph: shows mistake tags as nodes plus their shared edges
+/// laid out with a force-directed algorithm.
 struct TagGraphView: View {
+    /// 错题(从中提取标签与共享关系)
+    /// Mistakes (from which tags and shared edges are derived).
     let mistakes: [MistakeNote]
+    /// 点击节点时的回调(让 caller 过滤错题)
+    /// Callback when a node is tapped (lets the caller filter mistakes).
     var onSelectTag: (String) -> Void
+    /// 关闭 sheet 的回调(为空时用系统 dismiss)
+    /// Sheet-dismiss callback (falls back to system dismiss when nil).
     var onClose: () -> Void = {}
 
+    /// 当前 canvas 的尺寸
+    /// Current canvas size.
     @State private var canvasSize: CGSize = .zero
+    /// 节点位置字典(tag → CGPoint)
+    /// Node position dictionary (tag → CGPoint).
     @State private var positions: [String: CGPoint] = [:]
+    /// 重新计算布局的"扳机"(变化时跑一次 layout)
+    /// Recomputation trigger (changing it re-runs the layout).
     @State private var recomputeKey: UUID = UUID()
+    /// 当前被点击的节点 tag
+    /// Currently tapped node's tag.
     @State private var tappedTag: String?
 
     // 画布 pan / zoom 状态
+    // Canvas pan / zoom state
+    /// 当前 canvas 累计的平移
+    /// Accumulated pan offset of the canvas.
     @State private var canvasOffset: CGSize = .zero
+    /// 当前 canvas 缩放
+    /// Current canvas scale.
     @State private var canvasScale: CGFloat = 1.0
     /// 当前手势的临时平移(松手后归零)
+    /// Temporary translation from the current gesture (resets on release).
     @GestureState private var dragAccumulator: CGSize = .zero
     /// 当前手势的临时缩放(松手后归零)
+    /// Temporary scale from the current gesture (resets on release).
     @GestureState private var magnifyBy: CGFloat = 1.0
 
     @Environment(\.dismiss) private var dismiss
 
+    /// 节点胶囊内边距(让 label 不贴边)
+    /// Inner padding for the node capsule.
     private let nodePadding: CGFloat = 12
+    /// 参与布局的最大节点数;超出时显示提示而不是渲染一团乱麻
+    /// Max nodes allowed in the layout; over the limit we show a "too many" message.
     private let maxNodesForLayout: Int = 60
 
     /// Compute the tag nodes (with usage count) and edges (shared-mistake weight).
@@ -117,7 +152,7 @@ struct TagGraphView: View {
         }
     }
 
-    // MARK: - Empty / Too many states
+    // MARK: - Empty / Too many states / 空态 / 节点过多提示
 
     private var emptyState: some View {
         ContentUnavailableView(
@@ -143,7 +178,7 @@ struct TagGraphView: View {
         )
     }
 
-    // MARK: - Canvas
+    // MARK: - Canvas / 画布
 
     private var graphCanvas: some View {
         GeometryReader { proxy in
@@ -256,7 +291,7 @@ struct TagGraphView: View {
         return (text as NSString).size(withAttributes: attrs)
     }
 
-    // MARK: - Layout
+    // MARK: - Layout / 布局计算
 
     private func recomputeLayout(in size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
@@ -276,7 +311,7 @@ struct TagGraphView: View {
         positions = merged
     }
 
-    // MARK: - Tap handling
+    // MARK: - Tap handling / 点击处理
 
     private func handleTap(_ tag: String) {
         // Toggle selected

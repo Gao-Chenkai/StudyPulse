@@ -3,6 +3,7 @@
 //  StudyPulse
 //
 //  主页快捷操作卡:登记成绩 / 新建考试 / 新建错题 3 个入口。
+//  Home quick-actions card: 3 common entry points (add grade / new exam / new mistake).
 //
 //  Extracted from HomeView.swift during card-extraction refactor (2026-07-05).
 //
@@ -10,11 +11,18 @@
 import SwiftUI
 
 /// 主页"快捷操作"卡片:3 个常用入口。
+/// Home "Quick Actions" card: 3 common entry points.
 struct QuickActionsCard: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject private var envManager: AppEnvironmentManager
+    /// 是否显示登记成绩 sheet
+    /// Whether to show the "Add Grade" sheet.
     @State private var showingAddGrade = false
+    /// 是否显示新建考试 sheet
+    /// Whether to show the "New Exam" sheet.
     @State private var showingNewExam = false
+    /// 是否显示新建错题 sheet(iPhone 用,iPad 走 NavigationLink)
+    /// Whether to show the "New Mistake" sheet (iPhone only; iPad uses NavigationLink).
     @State private var showingNewMistake = false
 
     var body: some View {
@@ -85,10 +93,15 @@ struct QuickActionsCard: View {
 }
 
 // MARK: - 快捷操作按钮
+// MARK: - Quick Action Button
 
 /// QuickActionsCard 内的单个操作按钮(图标 + 标题 + 点击缩放反馈)。
 /// 在 iPad 上,如果提供 `navigationDestination`,按钮会渲染为 `NavigationLink`
 /// 直接推到父级 NavigationStack,这样能给用户"安全感",不会误触关掉整个表单页。
+/// Single action button inside QuickActionsCard (icon + title + press-scale feedback).
+/// On iPad, when a `navigationDestination` is provided, the button becomes a
+/// `NavigationLink` pushed onto the parent NavigationStack — this avoids the user
+/// accidentally dismissing the whole form page via the sheet.
 struct QuickActionButton<Destination: View>: View {
     let title: String
     let icon: String
@@ -97,6 +110,7 @@ struct QuickActionButton<Destination: View>: View {
     @ViewBuilder let destination: (() -> Destination)?
 
     /// 默认 action 模式(走 sheet / 自定义 action)。
+    /// Default action mode (sheet / custom action).
     init(
         title: String,
         icon: String,
@@ -127,9 +141,12 @@ struct QuickActionButton<Destination: View>: View {
         self.destination = destination
     }
 
+    /// 是否处于按下态(用于缩放反馈)
+    /// Whether the button is currently pressed (drives the scale animation).
     @State private var isPressed = false
 
     /// 共享的图标 + 标题 内容,被 Button 和 NavigationLink 共用。
+    /// Shared icon + title content reused by both the Button and NavigationLink branches.
     @ViewBuilder
     private var labelContent: some View {
         VStack(spacing: 12) {
@@ -179,8 +196,10 @@ struct QuickActionButton<Destination: View>: View {
 }
 
 // MARK: - 缩放按钮样式
+// MARK: - Scale Button Style
 
 /// QuickActionButton 使用的按下缩放反馈。
+/// Press-scale feedback used by QuickActionButton.
 struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

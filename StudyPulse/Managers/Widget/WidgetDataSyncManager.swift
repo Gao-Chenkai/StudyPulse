@@ -12,7 +12,7 @@ import os
 /// 将主 App 的考试数据同步到 Widget 共享容器
 @MainActor
 enum WidgetDataSyncManager {
-    /// 从 DataManager 获取即将到来的考试（未来 14 天内）
+    /// 从 DataManager 获取即将到来的考试(未来 14 天内)。
     /// Build the upcoming-exams payload from DataManager (next 14 days) and push it to widgets.
     static func syncUpcomingExams(
         examSets: [Exam],
@@ -21,6 +21,8 @@ enum WidgetDataSyncManager {
         Log.widget.info("开始同步即将到来的考试 / Syncing upcoming exams: single=\(examSets.count, privacy: .public) comprehensive=\(comprehensiveExamSets.count, privacy: .public)")
         let now = Date()
         let calendar = Calendar.current
+        // 14 天窗口:足够覆盖下周 / 家长会议,又不会让 widget 列表过长
+        // 14-day window: covers next week / parents' meetings, while keeping the widget list short.
         let cutoff = calendar.date(byAdding: .day, value: 14, to: now) ?? now
 
         var widgetExams: [ExamWidgetData] = []

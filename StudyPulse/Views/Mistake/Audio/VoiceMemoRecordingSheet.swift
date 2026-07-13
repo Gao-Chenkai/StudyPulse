@@ -2,31 +2,42 @@
 //  VoiceMemoRecordingSheet.swift
 //  StudyPulse
 //
-//  Created for Voice Memos feature.
+//  语音备忘录录制 sheet(录音 / 暂停 / 取消 / 完成)。
+//  Voice-memo recording sheet (record / pause / cancel / done).
 //
 
 import SwiftUI
 
+/// 语音备忘录录制 sheet(录音 / 暂停 / 取消 / 完成)。
+/// 完成后通过 `onSave` 把音频文件名交回 caller。
+/// Voice-memo recording sheet (record / pause / cancel / done).
+/// On save, hands the audio file name back via `onSave`.
 struct VoiceMemoRecordingSheet: View {
     @Environment(\.dismiss) private var dismiss
+    /// 录音管理器(负责 AVAudioSession / 文件落盘)
+    /// Recording manager (handles AVAudioSession / file write).
     @StateObject private var manager = VoiceMemoManager()
-    
+
+    /// 保存回调(传回录音文件相对路径)
+    /// Save callback (returns the relative path of the recorded file).
     let onSave: (String) -> Void
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
+                // 大号时间码:分:秒.厘秒(0.01s 精度)
+                // Large timer: mm:ss.cs (0.01s precision).
                 Text(timeString(from: manager.currentTime))
                     .font(.system(size: 64, weight: .thin, design: .monospaced))
                     .monospacedDigit()
                     .padding(.top, 40)
-                
+
                 if !manager.hasPermission {
                     Text("请在设置中允许麦克风权限。".localized())
                         .foregroundColor(.red)
                         .font(.subheadline)
                 }
-                
+
                 HStack(spacing: 40) {
                     if manager.isRecording || manager.isPaused || manager.currentFileName != nil {
                         Button(role: .destructive) {
@@ -39,7 +50,7 @@ struct VoiceMemoRecordingSheet: View {
                         }
                         .tint(.red)
                     }
-                    
+
                     Button {
                         if manager.isRecording {
                             if manager.isPaused {
@@ -57,7 +68,7 @@ struct VoiceMemoRecordingSheet: View {
                     }
                     .tint(manager.isRecording && !manager.isPaused ? .orange : .red)
                     .disabled(!manager.hasPermission)
-                    
+
                     if manager.isRecording || manager.isPaused || manager.currentFileName != nil {
                         Button {
                             manager.stopRecording()
@@ -73,7 +84,7 @@ struct VoiceMemoRecordingSheet: View {
                         .tint(.green)
                     }
                 }
-                
+
                 Spacer()
             }
             .navigationTitle("录音".localized())
@@ -87,9 +98,13 @@ struct VoiceMemoRecordingSheet: View {
                 }
             }
         }
+        // 固定 350pt 高度,避免过大的 sheet 浪费屏幕
+        // Fixed 350pt height to avoid wasting screen real-estate.
         .presentationDetents([.height(350)])
     }
-    
+
+    /// 把 TimeInterval 格式化为 "mm:ss.cs"(0.01s 精度)
+    /// Format a TimeInterval as "mm:ss.cs" (centisecond precision).
     private func timeString(from time: TimeInterval) -> String {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60

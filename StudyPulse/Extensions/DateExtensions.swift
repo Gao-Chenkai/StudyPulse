@@ -8,6 +8,7 @@
 import Foundation
 
 extension Date {
+    /// 按指定日期/时间样式格式化 / Format using `DateFormatter` with given styles.
     func formatted(date style: DateFormatter.Style, time style2: DateFormatter.Style) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = style

@@ -9,20 +9,39 @@
 //  - 主体:多轮消息流,每条 assistant 消息可展开看路由 / 数据快照
 //  - 底部:共享 ChatInputBar(Liquid Glass 浮动)
 //
+//  Home screen AI question sheet.
+//  - Header: title + phase indicator (routing / fetching / answering) + close/clear buttons
+//  - Body: multi-turn message stream, each assistant message can expand to show the route / data snapshot
+//  - Bottom: shared ChatInputBar (floating Liquid Glass)
+//
 //  UI 统一(2026-07-11):使用共享 ChatBubble + ChatInputBar,
 //  跟 LLMChatView / AIDiscussionSheet 保持一致。
+//  UI unification (2026-07-11): uses the shared ChatBubble + ChatInputBar,
+//  keeping style consistent with LLMChatView / AIDiscussionSheet.
 //
 
 import SwiftUI
 import Combine
 import SwiftStreamingMarkdown
 
+/// 主页 AI 提问 sheet:由 home 上的 "Ask AI" 入口打开。
+/// Home-screen AI question sheet: opened from the "Ask AI" entry on Home.
+/// LLM 会先做一次"路由"(决定需要哪些数据),再合并上下文给最终回答。
+/// The LLM first "routes" the question (decides which data to fetch),
+/// then merges the context for the final answer.
 struct HomeAskSheet: View {
     @StateObject private var viewModel: HomeAskViewModel
     @Environment(\.dismiss) private var dismiss
+    /// 输入框焦点状态(用于 example chip 点击后弹出键盘)
+    /// Input focus state (used so tapping an example chip pops the keyboard).
     @FocusState private var inputFocused: Bool
+    
+    /// 预设的初始提问内容
+    /// Injected initial question.
+    private let initialQuestion: String?
 
-    init(container: RepositoryContainer, envManager: AppEnvironmentManager) {
+    init(container: RepositoryContainer, envManager: AppEnvironmentManager, initialQuestion: String? = nil) {
+        self.initialQuestion = initialQuestion
         _viewModel = StateObject(
             wrappedValue: HomeAskViewModel(container: container, envManager: envManager)
         )
@@ -80,9 +99,16 @@ struct HomeAskSheet: View {
         }
         .llmDebugButton(caller: "HomeAsk-Answer")
         .onDisappear { viewModel.cancel() }
+        .onAppear {
+            // 如果传入了初始问题，且当前无对话记录，则自动触发发送
+            // Automatically submit the initial question on appear if present and conversation is empty.
+            if let initialQuestion, !initialQuestion.isEmpty, viewModel.messages.isEmpty {
+                viewModel.send(initialQuestion)
+            }
+        }
     }
 
-    // MARK: - Empty / not configured
+    // MARK: - Empty / not configured / 空态 / 未配置
 
     private var notConfiguredView: some View {
         VStack(spacing: 12) {
@@ -151,7 +177,7 @@ struct HomeAskSheet: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Message list
+    // MARK: - Message list / 消息列表
 
     private var messageList: some View {
         ScrollViewReader { proxy in
@@ -172,11 +198,14 @@ struct HomeAskSheet: View {
                         .padding(.leading, 12)
                         .id("phase-indicator")
                     }
-                    Color.clear.frame(height: 96).id("bottom") // 给浮动输入条留位
+                    // 96pt 占位 = ChatInputBar 高度 + 一点安全边距
+                    // 96pt placeholder = ChatInputBar height + a bit of safe padding.
+                    Color.clear.frame(height: 96).id("bottom")
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
                 // 驱动 bubble 进出场 transition
+                // Drives bubble enter/exit transitions.
                 .animation(.spring(response: 0.35, dampingFraction: 0.78), value: viewModel.messages.count)
             }
             .scrollContentBackground(.hidden)
@@ -230,10 +259,13 @@ struct HomeAskSheet: View {
             }
         case .tool:
             // Tool messages are not surfaced in this UI (LLM is a pure chat flow)
+            // Tool 消息不在此 UI 展示(LLM 是纯 chat 流程)
             EmptyView()
         }
     }
 
+    /// 路由分类的本地化展示名
+    /// Localized display name for a routing category.
     private func categoryDisplayName(_ c: HomeAskRouterLLM.Category) -> String {
         switch c {
         case .body:   return "身体".localized()
@@ -243,6 +275,8 @@ struct HomeAskSheet: View {
         }
     }
 
+    /// 发送条件:有内容 + 空闲
+    /// Send condition: has content + idle phase.
     private var canSend: Bool {
         let trimmed = viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmed.isEmpty && viewModel.phase == .idle
@@ -250,7 +284,13 @@ struct HomeAskSheet: View {
 }
 
 // MARK: - Data Snapshot (可折叠)
+// MARK: - Data snapshot (collapsible)
 
+/// 助手消息下方的"数据快照"折叠区。
+/// 展示 AI 路由阶段抓取到的真实数据,方便用户审计 AI 的回答。
+/// Collapsible "data snapshot" block under each assistant message.
+/// Shows the raw data the LLM grabbed during routing, so the user can
+/// audit the AI's answer.
 private struct DataSnapshotBlock: View {
     let snapshot: String
     @State private var expanded: Bool = false

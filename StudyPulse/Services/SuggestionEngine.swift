@@ -12,18 +12,24 @@ import Foundation
 import SwiftUI
 
 /// 学习建议生成上下文。所有输入由调用方提供,engine 自身不做 IO / 不依赖环境。
+/// `StudySuggestion` generation context. All inputs are supplied by the
+/// caller; the engine does no I/O and has no environment dependencies.
 struct StudySuggestionsContext {
     let grades: [Grade]
     let mistakeSets: [MistakeNote]
     let examSets: [Exam]
     let profile: UserProfile
     /// 身体状态驱动的建议(由 `StudyReadinessAlgorithm.recommend(...)` 产出)
+    /// Body-driven suggestion (produced by `StudyReadinessAlgorithm.recommend(...)`).
     let bodyStatusSuggestion: StudySuggestion?
     /// 当前日期(便于测试固定时间)
+    /// Current date (injectable for tests).
     let now: Date
     /// "未来 N 天内即将考试"窗口,默认 14
+    /// "Upcoming exams in next N days" window (default 14).
     let upcomingWindowDays: Int
     /// "今天或明天有考试"窗口,默认 1
+    /// "Exam today/tomorrow" window (default 1).
     let urgentWindowDays: Int
 
     init(
@@ -48,11 +54,15 @@ struct StudySuggestionsContext {
 }
 
 /// 学习建议生成器。纯函数,无副作用。
+/// `StudySuggestion` generator. Pure, side-effect free.
 /// 内部复用 `SubjectAggregator` 一次扫描。
+/// Reuses `SubjectAggregator` to avoid scanning `grades` more than once.
 enum SuggestionEngine {
 
     /// 生成按优先级排序的建议列表(最多 `max` 条)。
+    /// Generate suggestions sorted by priority, capped at `max`.
     /// - Returns: 优先级 high > medium > low,按添加顺序
+    ///   Priority: high > medium > low, in append order within the same priority.
     static func generate(
         from context: StudySuggestionsContext,
         max: Int = 3
@@ -222,8 +232,10 @@ enum SuggestionEngine {
     }
 
     // MARK: - Helpers
+    // MARK: - 工具方法 / Helpers
 
     /// 错题按 subject 计数(单次扫)
+    /// Mistake count per subject (single scan).
     static func mistakeCountsBySubject(_ mistakeSets: [MistakeNote]) -> [String: Int] {
         var counts: [String: Int] = [:]
         for m in mistakeSets {
@@ -233,20 +245,24 @@ enum SuggestionEngine {
     }
 
     // MARK: - 7 个独立 find*(全部纯函数,可单独被 ViewModel 调用)
+    // MARK: - 7 个独立 find*(全部纯函数,可单独被 ViewModel 调用) / 7 standalone find* helpers (all pure, callable from any view model)
 
     /// 平均分最低的科目(样本数 >= 2 才有意义)
+    /// Lowest-average subject (only with >= 2 samples).
     static func findWeakSubject(aggregates: [String: SubjectAggregate]) -> String? {
         let qualified = SubjectAggregator.qualifiedAggregates(aggregates, minCount: 2)
         return qualified.min { $0.value.average < $1.value.average }?.key
     }
 
     /// 平均分最高的科目(样本数 >= 2)
+    /// Highest-average subject (only with >= 2 samples).
     static func findStrongSubject(aggregates: [String: SubjectAggregate]) -> String? {
         let qualified = SubjectAggregator.qualifiedAggregates(aggregates, minCount: 2)
         return qualified.max { $0.value.average < $1.value.average }?.key
     }
 
     /// 最近 3 次成绩严格下滑 ≥ 5 分
+    /// Subject whose last 3 scores strictly decline by >= 5 points.
     static func findDecliningTrend(aggregates: [String: SubjectAggregate]) -> String? {
         for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
             let last3 = Array(agg.sortedAsc.suffix(3))
@@ -262,6 +278,7 @@ enum SuggestionEngine {
     }
 
     /// 最近 3 次成绩严格进步 ≥ 5 分
+    /// Subject whose last 3 scores strictly improve by >= 5 points.
     static func findImprovingTrend(aggregates: [String: SubjectAggregate]) -> String? {
         for (subject, agg) in aggregates where agg.sortedAsc.count >= 3 {
             let last3 = Array(agg.sortedAsc.suffix(3))
@@ -276,6 +293,7 @@ enum SuggestionEngine {
     }
 
     /// 错题 ≥ 3 但成绩为 0 的科目(前 2 个)
+    /// Subjects with >= 3 mistakes but 0 recorded grades (top 2).
     static func findUnreviewedMistakeSubjects(
         aggregates: [String: SubjectAggregate],
         mistakeCounts: [String: Int]
@@ -291,6 +309,7 @@ enum SuggestionEngine {
     }
 
     /// 错题 ≥ 5 且错题数 > 成绩数 × 2 的科目
+    /// Subject where mistakes >= 5 AND mistakes > grades × 2.
     static func findMistakeHeavySubject(
         aggregates: [String: SubjectAggregate],
         mistakeCounts: [String: Int]
@@ -307,6 +326,7 @@ enum SuggestionEngine {
     }
 
     /// 学科失衡:某科成绩数 > 其余科目平均的 3 倍
+    /// Subject imbalance: a subject's grade count > 3 × the average of the rest.
     static func findImbalancedStudy(aggregates: [String: SubjectAggregate]) -> String? {
         guard aggregates.count >= 3 else { return nil }
         let sorted = aggregates.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
@@ -319,8 +339,10 @@ enum SuggestionEngine {
     }
 
     // MARK: - Exam-window helpers
+    // MARK: - Exam-window helpers / 考试窗口工具
 
     /// 未来 N 天内的考试数量
+    /// Number of exams in the next `windowDays` days.
     static func upcomingExamsCount(
         examSets: [Exam],
         now: Date = Date(),
@@ -331,6 +353,7 @@ enum SuggestionEngine {
     }
 
     /// 今天/明天有考试的数量
+    /// Number of exams today or tomorrow (`nil` if zero).
     static func urgentExamsCount(
         examSets: [Exam],
         now: Date = Date(),

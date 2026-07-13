@@ -139,8 +139,9 @@ enum TagGraphLayout {
         return current
     }
 
-    // MARK: - Helpers
+    // MARK: - Helpers / 辅助函数
 
+    /// 均匀圆形初始化位置(确定性 + hash 抖动)
     /// Deterministic initial positions: even spacing on a circle centered in the canvas.
     private static func initialPositions(
         tags: [String],

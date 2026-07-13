@@ -4,12 +4,10 @@
 //
 //  Created by Chenkai Gao on 2026/7/11.
 //
-//  主页 AI 提问 sheet 的 ViewModel。
-//  实现两阶段流:
-//  1) 路由阶段:把用户问题发给 LLM,让 LLM 选出需要的数据类别(body / grades / trends / review)
-//  2) 抓取阶段:用 `HomeAskDataProvider` 按类别拉取数据
-//  3) 回答阶段:把"用户问题 + 抓到的数据"发给 LLM,流式返回 Markdown 答案
-//  多轮对话:每轮都重跑 1→2→3,确保 LLM 看到的是最新数据 + 完整历史
+//  主页 AI 提问 sheet 的 ViewModel。两阶段:路由 → 抓取 → 流式回答。
+//  多轮对话:每轮都重跑 1→2→3,确保 LLM 看到最新数据 + 完整历史。
+//  Home-page AI question sheet VM. Two-stage: route → fetch → stream.
+//  Multi-turn: each turn re-runs 1→2→3 so the LLM always sees fresh data.
 //
 
 import Foundation
@@ -19,16 +17,20 @@ import os
 
 @MainActor
 final class HomeAskViewModel: ObservableObject {
+    /// 单条对话消息(支持流式累积 / 错误 / 路由标签)
+    /// Single chat message (streaming accumulation, error, routing tag).
     struct Message: Identifiable, Equatable {
         let id: UUID
         let role: LLMRole
         var content: String
         var isStreaming: Bool
         var error: String?
-        /// 路由阶段确定的类别(显示为该消息右上角的小标签)
+        /// 路由阶段确定的类别(右上角小标签)
+        /// Categories from routing (small tag at top-right).
         var routingCategories: [HomeAskRouterLLM.Category] = []
         var routingReasoning: String = ""
-        /// 抓取到的数据(完整 Markdown 块,显示在折叠区里供用户查看)
+        /// 抓取到的数据快照(折叠区展示)
+        /// Fetched data snapshot (shown in a collapsible area).
         var dataSnapshot: String = ""
 
         init(
@@ -52,17 +54,24 @@ final class HomeAskViewModel: ObservableObject {
         }
     }
 
+    /// 当前阶段(驱动 loading 文案) / Current stage (drives loading text).
     enum Phase: Equatable {
         case idle
         case routing
         case answering
     }
 
+    /// 完整对话历史 / Full conversation history.
     @Published var messages: [Message] = []
+    /// 当前阶段 / Current stage.
     @Published var phase: Phase = .idle
+    /// 用户正在输入的文本 / In-progress user text.
     @Published var inputText: String = ""
+    /// 数据抓取器 / Data fetcher.
     @Published var dataProvider: HomeAskDataProvider
+    /// LLM 环境配置管理器 / LLM env config manager.
     let envManager: AppEnvironmentManager
+    /// 当前正在运行的 LLM 任务 / Currently running LLM task.
     private var currentTask: Task<Void, Never>? = nil
 
     init(container: RepositoryContainer, envManager: AppEnvironmentManager) {
@@ -74,42 +83,49 @@ final class HomeAskViewModel: ObservableObject {
         )
     }
 
-    // MARK: - Lifecycle
-
+    // MARK: - 生命周期 / Lifecycle
+    /// 取消当前 LLM 任务(保留历史) / Cancel the in-flight LLM task.
     func cancel() {
         currentTask?.cancel()
         currentTask = nil
     }
 
+    /// 完全重置 / Full reset.
     func reset() {
         cancel()
         messages.removeAll()
         phase = .idle
     }
 
-    // MARK: - 发送
-
-    /// 发送问题。两阶段:路由 → 抓取 → 流式回答。
+    // MARK: - 发送 / Sending
+    /// 发送问题。两阶段:路由 → 抓取 → 流式回答
+    /// Send a user question. Two-stage: route → fetch → stream.
     func send(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 三道闸:非空、当前空闲、LLM 已配置
+        // Three guards: non-empty, idle, LLM configured.
         guard !trimmed.isEmpty,
               phase == .idle,
               envManager.llmConfig.isConfigured
         else { return }
 
         // 1) 把用户消息加入历史
+        // 1) Append user message to history.
         messages.append(Message(role: .user, content: trimmed))
         inputText = ""
 
-        // 2) assistant 占位
+        // 2) assistant 占位 / Add empty assistant placeholder.
         let placeholder = Message(role: .assistant, content: "", isStreaming: true)
         messages.append(placeholder)
 
+        // 启动 detached 任务执行两阶段管线
+        // Kick off the two-stage pipeline in a detached task.
         currentTask = Task { [weak self] in
             await self?.runPipeline(userText: trimmed, placeholderId: placeholder.id)
         }
     }
 
+    /// 两阶段管线执行体 / The two-stage pipeline body.
     private func runPipeline(userText: String, placeholderId: UUID) async {
         let config = envManager.llmConfig
         guard config.isConfigured else {
@@ -118,8 +134,9 @@ final class HomeAskViewModel: ObservableObject {
             return
         }
 
-        // === 阶段 1: 路由 ===
+        // === 阶段 1: 路由 === / Stage 1: routing
         phase = .routing
+        // 兜底:默认拉取全部分类 / Fallback: all categories.
         var routing = HomeAskRouterLLM.Routing(
             categories: HomeAskRouterLLM.Category.allCases,
             reasoning: "兜底:全部分类"
@@ -138,20 +155,21 @@ final class HomeAskViewModel: ObservableObject {
             return
         } catch {
             Log.llm.error("HomeAsk routing failed: \(error.localizedDescription, privacy: .public)")
-            // 路由失败 → 默认提供全部分类
+            // 路由失败 → 默认全部分类 / Fallback on failure.
         }
-        // 把路由结果暂时记到 placeholder
+        // 把路由结果写到 placeholder(供 UI 显示分类标签)
+        // Write the routing decision back to the placeholder.
         updateMessage(id: placeholderId) {
             $0.routingCategories = routing.categories
             $0.routingReasoning = routing.reasoning
         }
 
-        // === 阶段 2: 抓取数据 ===
+        // === 阶段 2: 抓取数据 === / Stage 2: fetch data
         let dataSections = dataProvider.fetch(categories: routing.categories)
         let dataBlock = dataSections.joined(separator: "\n\n")
         updateMessage(id: placeholderId) { $0.dataSnapshot = dataBlock }
 
-        // === 阶段 3: 流式回答 ===
+        // === 阶段 3: 流式回答 === / Stage 3: stream the answer
         phase = .answering
         let answerPrompt = HomeAskAnswerLLM.makePrompt(
             question: userText,
@@ -173,6 +191,7 @@ final class HomeAskViewModel: ObservableObject {
         phase = .idle
     }
 
+    /// 按 id 找到消息并 mutate / Find a message by id and mutate it.
     private func updateMessage(id: UUID, _ mutate: (inout Message) -> Void) {
         guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
         mutate(&messages[idx])

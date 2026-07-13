@@ -3,6 +3,7 @@
 //  StudyPulse
 //
 //  闪卡复习 session 结束总结页
+//  Flashcard session summary page shown when a review session finishes.
 //
 //  Created by Chenkai Gao on 2026/6/27.
 //
@@ -10,6 +11,7 @@
 import SwiftUI
 
 /// 复习 session 总结页
+/// Session summary page.
 struct FlashcardSessionSummaryView: View {
     let stats: FlashcardSessionStats
     let onDismiss: () -> Void
@@ -17,6 +19,7 @@ struct FlashcardSessionSummaryView: View {
     var body: some View {
         VStack(spacing: 24) {
             // 顶部：完成图标
+            // Top: completion icon.
             ZStack {
                 Circle()
                     .fill(LinearGradient(
@@ -34,12 +37,14 @@ struct FlashcardSessionSummaryView: View {
                 .font(.title.weight(.bold))
 
             // 主要统计
+            // Headline stats.
             HStack(spacing: 32) {
                 StatCircle(value: "\(stats.reviewed)", label: "Reviewed".localized(), color: .purple)
                 StatCircle(value: stats.durationString, label: "Duration".localized(), color: .blue)
             }
 
             // 4 档分布
+            // 4-bucket breakdown.
             VStack(alignment: .leading, spacing: 12) {
                 Text("Breakdown".localized())
                     .font(.headline)
@@ -65,6 +70,7 @@ struct FlashcardSessionSummaryView: View {
             Spacer()
 
             // 关闭按钮
+            // Dismiss button.
             Button {
                 onDismiss()
             } label: {

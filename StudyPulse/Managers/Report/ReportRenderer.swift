@@ -29,11 +29,15 @@ enum ReportRenderer {
         _ view: Content,
         scale: CGFloat = 2.0
     ) -> UIImage? {
+        // ImageRenderer 是 iOS 16+ 的 SwiftUI → UIImage 桥接
+        // ImageRenderer is the iOS 16+ SwiftUI → UIImage bridge.
         let renderer = ImageRenderer(content: view)
-        renderer.scale = scale
+        renderer.scale = scale                    // 2.0 = 视网膜屏近似 144 dpi 打印品质
         renderer.proposedSize = .init(width: defaultWidth, height: nil)
-        renderer.isOpaque = true
+        renderer.isOpaque = true                  // 不透明(避免 alpha 通道)
         guard let image = renderer.uiImage else {
+            // 渲染失败打 error 日志(常见于含 zero-size 子视图的 layout)
+            // Log on render failure (often caused by zero-size subviews).
             Log.record(.error, category: "Export", message: "学习报告渲染失败 / Report render returned nil image")
             return nil
         }

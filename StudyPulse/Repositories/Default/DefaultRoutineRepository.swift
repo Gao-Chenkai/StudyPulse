@@ -10,12 +10,20 @@ import Foundation
 import SwiftData
 import os
 
+/// 例程 (Routine) Repository 默认实现。SwiftData 持久化。
+/// Default RoutineRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultRoutineRepository: RoutineRepository {
+    /// 全部例程模板
+    /// All routine templates.
     var routines: [Routine] = []
+    /// 仅 enabled 例程
+    /// Enabled-only routines.
     var enabledRoutines: [Routine] {
         routines.filter { $0.enabled }
     }
+    /// 按 active phase 过滤后的例程
+    /// Routines filtered by the active phase.
     var filteredRoutines: [Routine] = []
 
     @ObservationIgnored
@@ -24,7 +32,10 @@ final class DefaultRoutineRepository: RoutineRepository {
     init() {}
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载全部例程
+    /// Load all routines.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -39,7 +50,10 @@ final class DefaultRoutineRepository: RoutineRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 新增例程
+    /// Add a routine.
     func add(_ routine: Routine) {
         var stored = routine
         if stored.phaseId == nil {
@@ -122,7 +136,10 @@ final class DefaultRoutineRepository: RoutineRepository {
     }
 
     // MARK: - Internals
+    // MARK: - 内部工具 / Internals
 
+    /// 重新计算 filteredRoutines
+    /// Recompute filteredRoutines from the active phase.
     func recomputeFiltered() {
         let activeId = AppEnvironmentManager.shared.activePhaseId
         if let id = activeId {

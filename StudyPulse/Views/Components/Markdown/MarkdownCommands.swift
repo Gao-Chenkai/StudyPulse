@@ -22,10 +22,18 @@
 //  action closure is always the live, current one — no need to
 //  re-read it at fire time.
 //
+//  场景级菜单命令:在 iPadOS 26 窗口化模式的菜单栏(以及
+//  连接硬件键盘时的快捷键)里暴露 markdown 编辑器的格式化操作。
+//  在 StudyPulseApp 的 WindowGroup 上通过 .commands 挂载。
+//
 
 import SwiftUI
 
+/// 场景级菜单:把 MarkdownEditorView 的格式化动作暴露到菜单栏 / 键盘快捷键。
+/// Scene-level menu: expose the MarkdownEditorView's formatting actions to the menu bar / keyboard shortcuts.
 struct MarkdownCommands: Commands {
+    /// 当前聚焦的 MarkdownEditorView 的 text + cursor 绑定
+    /// Text + cursor bindings of the currently focused MarkdownEditorView.
     @FocusedValue(\.markdownFormatting) private var ctx
 
     var body: some Commands {
@@ -36,6 +44,7 @@ struct MarkdownCommands: Commands {
     }
 
     // MARK: - Format
+    // MARK: - 格式菜单
 
     private func formatMenu(ctx: MarkdownFormattingContext) -> some Commands {
         CommandMenu("markdown.menu.format".localized()) {
@@ -91,6 +100,7 @@ struct MarkdownCommands: Commands {
     }
 
     // MARK: - View
+    // MARK: - 视图菜单
 
     private var viewMenu: some Commands {
         CommandMenu("markdown.menu.view".localized()) {
@@ -108,11 +118,13 @@ struct MarkdownCommands: Commands {
 }
 
 // MARK: - Mutate helper
+// MARK: - 变更辅助
 
 private extension MarkdownFormattingContext {
-    /// Read the current text + cursor, run a `MarkdownFormatting`
-    /// action, and write the new values back. Used by every
-    /// `Format`-menu `Button` so the closure stays a one-liner.
+    /// 读取当前 text + cursor,执行 MarkdownFormatting 动作,把新值写回。
+    /// 所有 Format 菜单 Button 都用它,这样闭包可以保持单行。
+    /// Read the current text + cursor, run a `MarkdownFormatting` action, and write the new values back.
+    /// Used by every `Format`-menu `Button` so the closure stays a one-liner.
     func mutate(_ action: (inout String, inout NSRange) -> Void) {
         var text = self.text.wrappedValue
         var range = self.selectedRange.wrappedValue

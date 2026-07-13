@@ -4,29 +4,42 @@
 //
 //  Created by Chenkai Gao on 2026/3/21.
 //
- 
+
 import SwiftUI
 import os
 
+/// 新建成绩表单(sheet / page)。
+/// 支持两种考试类型:
+/// - 单科(单 subject,单 score)
+/// - 综考(comprehensive:多 subject 一次性录入,带"加总/均分/全部" 3 种聚合)
+/// 字段、考试类型 picker、重要性都拆到 private extension 的子 view,
+/// 避免主 `body` 过长。
+/// Add-grade form (sheet / page).
+/// Supports two exam kinds: single subject and comprehensive exam
+/// (multi-subject in one go, with "sum / average / per-subject" aggregates).
+/// Each sub-section lives in a `private extension` to keep the main
+/// `body` small.
 struct AddGradeView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
-    
+
     @StateObject private var viewModel: AddGradeViewModel
     @StateObject private var subjectInfo = SubjectInfo()
 
+    /// 默认初始化器
     /// Default initializer.
     init(container: RepositoryContainer) {
         self._viewModel = StateObject(wrappedValue: AddGradeViewModel(container: container))
     }
 
-    /// Convenience init that seeds the form with Siri-provided values.
+    /// 预填表单的便捷初始化器(Siri 入口 / 模板等)
+    /// Convenience initializer that seeds the form with Siri-provided values.
     init(container: RepositoryContainer, presetSubject: String, presetScore: Double, presetExamName: String? = nil) {
         let vm = AddGradeViewModel(container: container)
         vm.seedPreset(presetSubject: presetSubject, presetScore: presetScore, presetExamName: presetExamName)
         self._viewModel = StateObject(wrappedValue: vm)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -50,10 +63,13 @@ struct AddGradeView: View {
     }
 }
 
-// MARK: - 子界面拆分（UI 逻辑剥离）
+// MARK: - 子界面拆分(UI 逻辑剥离)
+// MARK: - Sub-view Decomposition
+
 private extension AddGradeView {
-    
+
     // 1. 考试信息区域
+    // 1. Exam details section
     var examDetailsSection: some View {
         Section(header: Text("Exam Details".localized())) {
             HStack {
@@ -69,6 +85,7 @@ private extension AddGradeView {
     }
     
     // 2. 考试类型选择器
+    // 2. Exam type picker
     var examTypePicker: some View {
         VStack(spacing: 8) {
             Picker("Exam Type".localized(), selection: $viewModel.isComprehensiveExam) {

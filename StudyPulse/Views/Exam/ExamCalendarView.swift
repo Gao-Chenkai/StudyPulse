@@ -4,6 +4,8 @@
 //
 //  考试月历视图：按日期标点，多日考试跨日高亮。
 //  v1.x: 同时展示考试、作业、阅读材料三类条目。
+//  Exam monthly calendar view: dots per date, multi-day exams highlighted across days.
+//  v1.x: shows exams, homework, and reading tasks together.
 //
 
 import SwiftUI
@@ -12,33 +14,49 @@ import SwiftUI
 ///
 /// 视觉上与原 ExamCalendarView 完全一致；现在 `CalendarItem.kind` 把考试 / 综合考试 / 作业 / 阅读
 /// 统一在同一个月历内展示。每个 dot / 每行 row 用不同颜色区分类型。
+/// Exam / task monthly calendar view.
+///
+/// Visually identical to the original ExamCalendarView; now `CalendarItem.kind`
+/// unifies exams, comprehensive exams, homework, and reading on the same grid.
+/// Each dot / row uses a different color per type.
 struct ExamCalendarView: View {
     @Environment(RepositoryContainer.self) private var container
 
     /// 当前显示月份（动画过程中已提前切为目标月）
+    /// Currently displayed month (already swapped to the target month during animation).
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     /// 正在滑出的旧月份（nil 表示无动画中）
+    /// Outgoing month being slid out (nil when no animation is running).
     @State private var outgoingMonth: Date? = nil
     /// 新网格滑入进度（1 → 0，使用弹簧）
+    /// Incoming grid slide-in progress (1 → 0, spring).
     @State private var incomingProgress: CGFloat = 0
     /// 旧网格滑出进度（1 → 0，使用 easeOut 防止回弹）
+    /// Outgoing grid slide-out progress (1 → 0, easeOut to avoid bounce).
     @State private var outgoingProgress: CGFloat = 0
     /// 滑动方向：1 表示下一个月从底部滑入，-1 表示上一个月从顶部滑入
+    /// Slide direction: 1 = next month slides in from the bottom; -1 = previous from the top.
     @State private var slideDirection: Int = 0
     /// 用户当前选中的日期
+    /// User-selected date.
     @State private var selectedDate: Date = Calendar.current.startOfDay(for: Date())
 
     /// 点击单科考试行的回调
+    /// Callback for tapping a single-subject exam row.
     var onSelectExam: ((Exam) -> Void)?
     /// 点击综合考试行的回调
+    /// Callback for tapping a comprehensive exam row.
     var onSelectComprehensive: ((comprehensiveExam) -> Void)?
     /// 点击作业 / 阅读材料行的回调
+    /// Callback for tapping a homework / reading row.
     var onSelectTask: ((TaskItem) -> Void)?
 
     /// 类型过滤（默认全部；考试 / 作业 / 阅读可单独筛选）
+    /// Type filter (default: all; can filter by exam / homework / reading).
     var typeFilter: CalendarItemKindFilter = .all
 
     /// 当天及之后需要展示的「待办」条目（统一格式）
+    /// All "to-do" items to display (unified format).
     private var allItems: [CalendarItem] {
         var items: [CalendarItem] = []
 
@@ -120,17 +138,21 @@ struct ExamCalendarView: View {
     }
 
     /// 当天（selectedDate）所在的条目
+    /// Items that fall on the selected date.
     private var itemsOnSelectedDate: [CalendarItem] {
         let day = Calendar.current.startOfDay(for: selectedDate)
         return allItems
             .filter { $0.contains(day: day) }
             .sorted { lhs, rhs in
                 // 重要度降序，再按开始时间升序
+                // Sort: importance DESC, then start time ASC.
                 if lhs.importance != rhs.importance { return lhs.importance > rhs.importance }
                 return lhs.start < rhs.start
             }
     }
 
+    /// 当前显示月内涉及的所有条目（按开始时间升序）
+    /// All items in the displayed month (sorted by start time ASC).
     private var monthItems: [CalendarItem] {
         guard let monthInterval = Calendar.current.dateInterval(of: .month, for: displayedMonth) else {
             return []
@@ -162,6 +184,7 @@ struct ExamCalendarView: View {
     }
 
     // MARK: - 月份网格背景层
+    // MARK: - Month grid background layer
 
     private var monthGridContainer: some View {
         GeometryReader { geo in
@@ -228,10 +251,13 @@ struct ExamCalendarView: View {
     }
 
     // MARK: - 顶部玻璃层
+    // MARK: - Top glass header layer
 
     /// 玻璃背景与屏幕左右边缘之间的内缩量
+    /// Horizontal inset of the glass background from the screen edges.
     private let glassEdgeInset: CGFloat = 16
     /// 顶部玻璃层固定总高度（与 monthGridContainer 的 .padding(.top) 对齐）
+    /// Total fixed height of the top glass layer (aligned with monthGridContainer's top padding).
     private let headerTotalFixedHeight: CGFloat = 88
 
     private var glassHeaderLayer: some View {
@@ -353,6 +379,7 @@ struct ExamCalendarView: View {
     }
 
     // MARK: - 底部玻璃详情面板
+    // MARK: - Bottom glass detail panel
 
     private var glassBottomPanel: some View {
         VStack(spacing: 0) {
@@ -438,6 +465,7 @@ struct ExamCalendarView: View {
     }
 
     // MARK: - 跳转
+    // MARK: - Navigation
 
     private func shiftMonth(by offset: Int) {
         guard let next = Calendar.current.date(byAdding: .month, value: offset, to: displayedMonth) else { return }
@@ -470,6 +498,7 @@ struct ExamCalendarView: View {
 }
 
 // MARK: - 单日格子
+// MARK: - Day cell
 
 private struct DayCell: View {
     let date: Date
@@ -548,6 +577,7 @@ private struct DayCell: View {
     private var sortedItemsForDisplay: [CalendarItem] {
         items.sorted { lhs, rhs in
             // 优先级：综合考试 > 单科考试 > 作业 > 阅读
+            // Priority: comprehensive exam > single-subject exam > homework > reading
             if lhs.kind.sortPriority != rhs.kind.sortPriority {
                 return lhs.kind.sortPriority < rhs.kind.sortPriority
             }
@@ -563,6 +593,7 @@ private struct DayCell: View {
 
     private var multiDaySpanInfo: (color: Color, isStart: Bool, isEnd: Bool)? {
         // 仅当天的考试（且非单日）才会跨日展示
+        // Only exams marked as multi-day are drawn as a connecting span bar.
         for item in items where item.isMultiDay {
             let isStart = Calendar.current.isDate(date, inSameDayAs: item.start)
             let isEnd = Calendar.current.isDate(date, inSameDayAs: item.end)
@@ -585,6 +616,7 @@ private struct DayCell: View {
 }
 
 // MARK: - 选中日行
+// MARK: - Selected day row
 
 private struct CalendarItemRow: View {
     let item: CalendarItem
@@ -663,8 +695,10 @@ private struct CalendarItemRow: View {
 }
 
 // MARK: - 数据模型
+// MARK: - Data model
 
 /// 视图层统一的「日历条目」，把考试 / 作业 / 阅读都装进同一个 view model
+/// View-layer unified "calendar item" that wraps exams, homework, and reading.
 struct CalendarItem: Identifiable, Hashable {
     let id: UUID
     let kind: CalendarItemKind
@@ -680,6 +714,8 @@ struct CalendarItem: Identifiable, Hashable {
     let comprehensiveExam: comprehensiveExam?
     let taskItem: TaskItem?
 
+    /// 该条目是否单日(起止同一天)
+    /// Whether this item is single-day (start == end).
     var isSingleDay: Bool {
         Calendar.current.isDate(start, inSameDayAs: end)
     }
@@ -690,6 +726,8 @@ struct CalendarItem: Identifiable, Hashable {
         kind.accentColor
     }
 
+    /// 某天是否落在这条目的时间区间内(含起止)
+    /// Whether a given day falls within this item's range (inclusive).
     func contains(day: Date) -> Bool {
         let target = Calendar.current.startOfDay(for: day)
         return target >= start && target <= end
@@ -705,6 +743,7 @@ struct CalendarItem: Identifiable, Hashable {
 }
 
 /// 日历条目类型：与 TodoEntryKind 类似但只用于日历视图层
+/// Calendar item kind — similar to TodoEntryKind but only used by the calendar view.
 enum CalendarItemKind: Hashable, Sendable {
     case exam
     case comprehensiveExam
@@ -730,6 +769,7 @@ enum CalendarItemKind: Hashable, Sendable {
     }
 
     /// 排序优先级（数值越小越靠前）
+    /// Sort priority (smaller value ranks first).
     var sortPriority: Int {
         switch self {
         case .comprehensiveExam: return 0
@@ -741,6 +781,7 @@ enum CalendarItemKind: Hashable, Sendable {
 }
 
 /// 月历视图的类型过滤器（与 TodoTypeFilter 平行）
+/// Type filter for the monthly calendar view (parallel to TodoTypeFilter).
 enum CalendarItemKindFilter: Hashable {
     case all
     case exam
@@ -749,6 +790,7 @@ enum CalendarItemKindFilter: Hashable {
 }
 
 // MARK: - Calendar 扩展
+// MARK: - Calendar extension
 
 private extension Calendar {
     func startOfMonth(for date: Date) -> Date {
@@ -772,6 +814,7 @@ private extension Calendar {
     }
 }
 
+// MARK: - Preview
 // MARK: - Preview
 
 #Preview("With Sample Data") {

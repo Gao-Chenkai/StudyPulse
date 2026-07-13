@@ -19,8 +19,10 @@ import os
 enum DataExportManager {
 
     // MARK: - Headers
+    // MARK: - 表头 / Headers
 
     /// 成绩 CSV 表头
+    /// Grade CSV header.
     static let gradesHeader = [
         "ID", "Subject", "Score", "FullScore", "ScoreRate",
         "RawScore", "Ranking", "Importance", "ExamName", "Date"
@@ -30,6 +32,10 @@ enum DataExportManager {
     /// 旧版：10 列 (无曝光/掌握度)，向后兼容
     /// 13 列版：尾部追加 ExposureCount / MasteryScore / MasteryHistory
     /// 15 列版：尾部再追加 Difficulty / Tags
+    /// Mistake CSV header.
+    /// Legacy: 10 columns (no exposure / mastery), backward compatible.
+    /// 13-col version: appends ExposureCount / MasteryScore / MasteryHistory.
+    /// 15-col version: appends Difficulty / Tags.
     static let mistakesHeader = [
         "ID", "Title", "Subject", "OriginalQuestion", "Source",
         "Date", "ErrorReason", "WrongSolution", "CorrectSolution", "SRSEnabled",
@@ -38,6 +44,7 @@ enum DataExportManager {
     ]
 
     /// 考试 CSV 表头
+    /// Exam CSV header.
     static let examsHeader = [
         "ID", "Name", "Subject", "Date", "ExamEndDate", "Importance", "Mastery", "Type"
     ]
@@ -50,8 +57,10 @@ enum DataExportManager {
     ]
 
     // MARK: - Export
+    // MARK: - 导出 / Export
 
     /// 导出成绩到 CSV
+    /// Export grades to CSV.
     static func exportGradesToCSV(grades: [Grade], subjects: [Subject]) -> String {
         var csv = joinRow(gradesHeader)
 
@@ -79,6 +88,7 @@ enum DataExportManager {
     }
 
     /// 导出错题到 CSV
+    /// Export mistakes to CSV.
     static func exportMistakesToCSV(mistakes: [MistakeNote]) -> String {
         var csv = joinRow(mistakesHeader)
 
@@ -91,6 +101,7 @@ enum DataExportManager {
             }()
 
             // tags 用 `;` 分隔(避开逗号);escapeCSV 仍会把含特殊字符的 tag 包进双引号
+            // Tags are joined with `;` to dodge commas; escapeCSV still wraps tags with special chars in double quotes.
             let tagsJoined = mistake.tags
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
@@ -121,6 +132,8 @@ enum DataExportManager {
 
     /// 导出考试（单科 + 综合）到 CSV
     /// Type 列：single / comprehensive
+    /// Export exams (single-subject + comprehensive) to CSV.
+    /// Type column: single / comprehensive.
     static func exportExamsToCSV(exams: [Exam], comprehensiveExams: [comprehensiveExam]) -> String {
         var csv = joinRow(examsHeader)
 
@@ -183,10 +196,13 @@ enum DataExportManager {
     }
 
     // MARK: - Import
+    // MARK: - 导入 / Import
 
     // MARK: - Import (with diagnostics)
+    // MARK: - 导入（含诊断信息）/ Import with diagnostics
 
     /// 从 CSV 解析成绩，附带诊断信息
+    /// Parse grades from a CSV string with diagnostic info.
     static func parseGradesWithDiagnostics(
         from csvString: String,
         subjects: [Subject],
@@ -217,10 +233,12 @@ enum DataExportManager {
             ))
         }
         // 检查表头语义
+        // Inspect header semantics.
         let expectedHeader = Set(gradesHeader)
         let actualHeader = Set(header)
         if !expectedHeader.isSubset(of: actualHeader) && !Set(expectedHeader).isSubset(of: actualHeader) {
             // 不阻止,只是警告
+            // Don't block; just warn.
         }
 
         var grades: [Grade] = []
@@ -257,6 +275,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析错题，附带诊断信息
+    /// Parse mistakes from a CSV string with diagnostic info.
     static func parseMistakesWithDiagnostics(
         from csvString: String,
         fileName: String = "mistakes.csv"
@@ -311,6 +330,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析考试，附带诊断信息
+    /// Parse exams from a CSV string with diagnostic info.
     static func parseExamsWithDiagnostics(
         from csvString: String,
         fileName: String = "exams.csv"
@@ -368,6 +388,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析任务，附带诊断信息
+    /// Parse tasks from a CSV string with diagnostic info.
     static func parseTasksWithDiagnostics(
         from csvString: String,
         fileName: String = "tasks.csv"
@@ -429,6 +450,8 @@ enum DataExportManager {
 
     /// 读取 CSV 文本，依次尝试多种编码。
     /// 失败时返回 (.failure, nil)；成功时返回 (.success, encodingName, content)
+    /// Read CSV text by trying several encodings in order.
+    /// On failure returns (.failure, nil); on success (.success, encodingName, content).
     static func readCSV(from fileURL: URL) -> (result: ReadResult, encoding: String?, content: String?) {
         let encodings: [(String.Encoding, String)] = [
             (.utf8, "utf-8"),
@@ -439,6 +462,7 @@ enum DataExportManager {
             (.isoLatin1, "iso-8859-1")
         ]
         // iOS sandboxed fileImporter URL 需要先开 security scope
+        // iOS-sandboxed fileImporter URLs need to open a security scope first.
         let needsScope = fileURL.startAccessingSecurityScopedResource()
         defer {
             if needsScope { fileURL.stopAccessingSecurityScopedResource() }
@@ -461,6 +485,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析成绩
+    /// Parse grades from a CSV string.
     static func parseGrades(from csvString: String, subjects: [Subject]) -> [Grade] {
         let rows = parseCSVRows(csvString)
         guard rows.count > 1 else { return [] }
@@ -475,6 +500,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析错题
+    /// Parse mistakes from a CSV string.
     static func parseMistakes(from csvString: String) -> [MistakeNote] {
         let rows = parseCSVRows(csvString)
         Log.export.info("开始解析错题 CSV / Parsing mistakes CSV: rowCount=\(rows.count, privacy: .public)")
@@ -497,6 +523,7 @@ enum DataExportManager {
     }
 
     /// 从 CSV 解析考试（单科 + 综合），根据 Type 列区分
+    /// Parse exams (single-subject + comprehensive) from a CSV. The Type column distinguishes them.
     static func parseExams(from csvString: String) -> (single: [Exam], comprehensive: [comprehensiveExam]) {
         let rows = parseCSVRows(csvString)
         guard rows.count > 1 else { return ([], []) }
@@ -536,17 +563,21 @@ enum DataExportManager {
     }
 
     // MARK: - Row Parsers (private)
+    // MARK: - 行级解析器（私有）/ Row parsers (private)
 
     private static func parseGradeRow(_ fields: [String], subjects: [Subject]) -> Grade? {
         // 兼容旧版本（无 ScoreRate 列时也能解析）
         // 旧版列数 = 10（ID, Subject, Score, FullScore, ScoreRate, RawScore, Ranking, Importance, ExamName, Date）
         // 新版同旧版，列定义未变
+        // Backward compatible with legacy (works even without the ScoreRate column).
+        // Legacy column count = 10. The current schema is the same 10 columns.
         guard fields.count >= gradesHeader.count else { return nil }
 
         let subjectName = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
         guard let score = Double(fields[2].trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
         let fullScore = Double(fields[3].trimmingCharacters(in: .whitespacesAndNewlines))
         // fields[4] is ScoreRate — derived, not parsed
+        // fields[4] is ScoreRate, derived — not parsed.
         let rawScore = Double(fields[5].trimmingCharacters(in: .whitespacesAndNewlines))
         let ranking = Int(fields[6].trimmingCharacters(in: .whitespacesAndNewlines))
         let importance = Int(fields[7].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 3
@@ -573,6 +604,11 @@ enum DataExportManager {
         //  10 列：旧版（带 SRSEnabled）
         //  13 列：带 SRSEnabled + ExposureCount + MasteryScore + MasteryHistory
         //  15 列：再追加 Difficulty / Tags
+        // Backward compatible with multiple column counts:
+        //  9 cols: legacy (no SRSEnabled)
+        //  10 cols: SRSEnabled added
+        //  13 cols: + ExposureCount / MasteryScore / MasteryHistory
+        //  15 cols: + Difficulty / Tags
         guard fields.count >= 9 else { return nil }
 
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -585,6 +621,8 @@ enum DataExportManager {
         let correctSolution = fields[8].trimmingCharacters(in: .whitespacesAndNewlines)
         // SRSEnabled：true / 1 / yes / 是 视作开启 SM-2 间隔复习
         // 缺列或空值时按 false 处理
+        // SRSEnabled: true / 1 / yes / 是 enable SM-2 spaced repetition.
+        // Missing column or empty value → treated as false.
         let srsEnabledRaw = fields.count > 9
             ? fields[9].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             : ""
@@ -593,6 +631,8 @@ enum DataExportManager {
 
         // 新增字段（v2.0+）：曝光次数 / 掌握度 / 掌握度历史
         // 旧版 CSV 没有这些列，按 0 / 0 / [] 处理
+        // New fields (v2.0+): exposure count / mastery / mastery history.
+        // Legacy CSVs without these columns fall back to 0 / 0 / [].
         let exposureCount: Int = {
             guard fields.count > 10 else { return 0 }
             let raw = fields[10].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -614,6 +654,7 @@ enum DataExportManager {
         }()
 
         // 15 列：Difficulty / Tags
+        // 15 columns: Difficulty / Tags.
         let difficulty: Int = {
             guard fields.count > 13 else { return 0 }
             let raw = fields[13].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -657,6 +698,8 @@ enum DataExportManager {
     private static func parseExamRow(_ fields: [String]) -> ParsedExam {
         // 新版 8 列：ID, Name, Subject, Date, ExamEndDate, Importance, Mastery, Type
         // 旧版 7 列：ID, Name, Subject, Date, Importance, Mastery, Type
+        // New schema: 8 columns including ExamEndDate.
+        // Legacy: 7 columns (no ExamEndDate).
         guard fields.count >= 7 else { return .invalid }
 
         let name = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -664,6 +707,7 @@ enum DataExportManager {
         let date = parseDate(fields[3].trimmingCharacters(in: .whitespacesAndNewlines))
 
         // 8 列格式带 examEndDate
+        // The 8-column layout carries examEndDate.
         let examEndDate: Date?
         let importance: Int
         let mastery: Int
@@ -677,6 +721,7 @@ enum DataExportManager {
             typeRaw = fields[7].trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
             // 兼容 7 列旧格式
+            // Backward compatibility for 7-column legacy format.
             examEndDate = nil
             importance = Int(fields[4].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
             mastery = Int(fields[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
@@ -715,6 +760,7 @@ enum DataExportManager {
     private enum ExamKind { case single, comprehensive, unknown }
 
     /// 兼容英文（single / comprehensive）和中文（单科 / 综合）
+    /// Accepts both English (single / comprehensive) and Chinese (单科 / 综合) labels.
     private static func normalizeExamType(_ raw: String) -> ExamKind {
         let lower = raw.lowercased()
         if lower == "single" || lower == "单科" { return .single }
@@ -729,6 +775,7 @@ enum DataExportManager {
 
         // 0=ID, 1=Title, 2=Type, 3=Subject, 4=DueDate, 5=ReminderTime,
         // 6=Importance, 7=Notes, 8=IsCompleted, 9=CreatedAt
+        // 任务行字段顺序 / Task row field order.
         let idString = fields[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let id = UUID(uuidString: idString) ?? UUID()
         let title = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -770,9 +817,12 @@ enum DataExportManager {
     }
 
     // MARK: - CSV Low-Level
+    // MARK: - CSV 底层 / CSV low-level
 
     /// 解析整个 CSV 字符串为行（每行是字段数组）。
     /// 支持引号转义（"" 表示字面量 "），可处理字段内含 , " 换行。
+    /// Parses a whole CSV string into rows of field arrays.
+    /// Handles quoted escapes (`""` → literal `"`) and fields containing commas, quotes, or newlines.
     private static func parseCSVRows(_ csvString: String) -> [[String]] {
         var cleaned = csvString
         if cleaned.hasPrefix("\u{FEFF}") {
@@ -780,6 +830,7 @@ enum DataExportManager {
         }
 
         // 统一换行符
+        // Normalize line endings.
         cleaned = cleaned
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
@@ -799,6 +850,7 @@ enum DataExportManager {
                 if c == "\"" {
                     if i + 1 < n && chars[i + 1] == "\"" {
                         // "" -> 字面量 "
+                        // "" → literal " character.
                         currentField.append("\"")
                         i += 2
                         continue
@@ -824,6 +876,7 @@ enum DataExportManager {
                     continue
                 } else if c == "\n" {
                     currentRow.append(currentField)
+                    // 跳过纯空行 / Skip blank lines.
                     if !(currentRow.count == 1 && currentRow[0].isEmpty) {
                         rows.append(currentRow)
                     }
@@ -840,6 +893,7 @@ enum DataExportManager {
         }
 
         // 收尾
+        // Flush the trailing row/field.
         if !currentField.isEmpty || !currentRow.isEmpty {
             currentRow.append(currentField)
             if !(currentRow.count == 1 && currentRow[0].isEmpty) {
@@ -851,11 +905,13 @@ enum DataExportManager {
     }
 
     /// 把一行字段拼成 CSV 行（自动加引号转义）
+    /// Joins a field array into a CSV line (auto-escapes via quotes).
     private static func joinRow(_ fields: [String]) -> String {
         return fields.map(escapeCSV).joined(separator: ",") + "\n"
     }
 
     /// RFC 4180 转义：包含 , " 换行的字段用 " 包起来，内部 " 变 ""
+    /// RFC 4180 escape: fields containing `,` `"` or newlines are wrapped in `"`, and inner `"` becomes `""`.
     private static func escapeCSV(_ string: String) -> String {
         if string.contains(",") || string.contains("\"") || string.contains("\n") || string.contains("\r") {
             return "\"" + string.replacingOccurrences(of: "\"", with: "\"\"") + "\""
@@ -874,6 +930,8 @@ enum DataExportManager {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return Date() }
 
+        // 依次尝试常见格式,命中即返回。
+        // Try common formats in order; first hit wins.
         let formats = [
             "yyyy-MM-dd HH:mm:ss",
             "yyyy-MM-dd HH:mm",

@@ -18,13 +18,15 @@ import Combine
 @MainActor
 @Observable
 final class RoutineSpawner {
+    // MARK: - 依赖 / Dependencies
     // MARK: - Deps
     @ObservationIgnored private let container: RepositoryContainer
     @ObservationIgnored private let log = Logger(subsystem: "app.StudyPulse", category: "RoutineSpawner")
 
+    // MARK: - 内部状态 / Internal state
     // MARK: - State
-    @ObservationIgnored private var lastSpawnedDateKey: String?
-    @ObservationIgnored private var pollTimer: Timer?
+    @ObservationIgnored private var lastSpawnedDateKey: String?  // 上次 spawn 的 dateKey,跨日判定
+    @ObservationIgnored private var pollTimer: Timer?             // 60s 兜底跨日检测
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init

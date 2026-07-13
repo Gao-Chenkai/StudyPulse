@@ -44,16 +44,16 @@ final class PlantManager {
     // MARK: - Non-observable internal state
 
     @ObservationIgnored
-    private var cancellables: Set<AnyCancellable> = []
+    private var cancellables: Set<AnyCancellable> = []  // AchievementManager snapshot 订阅句柄
 
     @ObservationIgnored
-    private var modelContext: ModelContext?
+    private var modelContext: ModelContext?              // SwiftData 主上下文(由 attach() 注入)
 
     @ObservationIgnored
-    private var bootstrapComplete: Bool = false
+    private var bootstrapComplete: Bool = false         // attach 完成后才允许 recompute
 
     @ObservationIgnored
-    private var lastDerivedStage: PlantStage = .seed
+    private var lastDerivedStage: PlantStage = .seed    // 上一次 derive 阶段(用于检测 withered → reborn)
 
     // MARK: - Init
 

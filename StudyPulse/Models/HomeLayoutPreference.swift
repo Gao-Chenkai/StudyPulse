@@ -8,10 +8,13 @@
 import Foundation
 
 // MARK: - Home Card Type
+// MARK: - 主页卡片类型 / Home Card Type
 
 /// 主页可配置的板块卡片类型
+/// Home page card types users can configure (order + enabled).
 enum HomeCardType: String, CaseIterable, Codable {
     /// 今日 Top-3 计划卡(由 DailyPlanEngine 派生)
+    /// Today's Top-3 plan card (derived by DailyPlanEngine).
     case dailyPlan = "dailyPlan"
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
@@ -25,10 +28,13 @@ enum HomeCardType: String, CaseIterable, Codable {
     case dailyQuote = "dailyQuote"
     case recentGrades = "recentGrades"
     /// 90 天学习热力图（GitHub 风格活动格子图）
+    /// 90-day learning heatmap (GitHub-style activity grid).
     case learningHeatmap = "learningHeatmap"
     /// 主页植物卡片（基于 streak / todayLog 的 Canvas 渲染）
+    /// Home plant card (Canvas-rendered from streak / todayLog).
     case plant = "plant"
     /// AI 提问入口:点击后弹出"向 AI 提问" sheet,可讨论身体 / 成绩 / 趋势 / 复习
+    /// AI Ask entry: opens an "Ask AI" sheet covering body / grades / trends / review.
     case homeAsk = "homeAsk"
 
     /// 本地化显示名称
@@ -84,8 +90,10 @@ enum HomeCardType: String, CaseIterable, Codable {
 }
 
 // MARK: - Home Card Item
+// MARK: - 主页卡片项 / Home Card Item
 
 /// 单个卡片配置项
+/// A single card entry (type + enabled flag).
 struct HomeCardItem: Identifiable, Codable, Equatable {
     var type: HomeCardType
     var enabled: Bool
@@ -94,12 +102,15 @@ struct HomeCardItem: Identifiable, Codable, Equatable {
 }
 
 // MARK: - Home Layout Preference
+// MARK: - 主页布局偏好 / Home Layout Preference
 
 /// 主页布局偏好：控制卡片的显示顺序和是否显示
+/// Home layout preference: card order + enabled flags.
 struct HomeLayoutPreference: Codable, Equatable {
     var items: [HomeCardItem]
 
     /// 默认配置：全部启用，标准顺序
+    /// Default: all enabled, standard order.
     static let `default` = HomeLayoutPreference(items: [
         HomeCardItem(type: .dailyPlan, enabled: true),
         HomeCardItem(type: .learningHeatmap, enabled: true),
@@ -119,20 +130,24 @@ struct HomeLayoutPreference: Codable, Equatable {
     ])
     
     /// 当前启用的卡片类型（按顺序）
+    /// Currently enabled card types, in user order.
     var enabledTypes: [HomeCardType] {
         items.filter(\.enabled).map(\.type)
     }
-    
+
     /// 检查某个卡片类型是否启用
+    /// Whether a given card type is enabled.
     func isEnabled(_ type: HomeCardType) -> Bool {
         items.first(where: { $0.type == type })?.enabled ?? true
     }
-    
+
     // MARK: - Persistence
-    
+    // MARK: - 持久化 / Persistence
+
     private static let userDefaultsKey = "homeLayoutPreference"
-    
+
     /// 从 UserDefaults 加载
+    /// Load from UserDefaults.
     static func load() -> HomeLayoutPreference {
         guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
               let decoded = try? JSONDecoder().decode(HomeLayoutPreference.self, from: data)
@@ -140,24 +155,29 @@ struct HomeLayoutPreference: Codable, Equatable {
             return .default
         }
         // 兼容：如果存储的 items 数量不对（新增/删除卡片类型），用默认覆盖
+        // Backwards-compat: if the stored items count mismatches HomeCardType.allCases
+        // (cards added/removed), merge with defaults instead of dropping data.
         if decoded.items.count != HomeCardType.allCases.count {
             return mergeWithDefault(decoded)
         }
         return decoded
     }
-    
+
     /// 保存到 UserDefaults
+    /// Save to UserDefaults.
     func save() {
         guard let data = try? JSONEncoder().encode(self) else { return }
         UserDefaults.standard.set(data, forKey: Self.userDefaultsKey)
     }
-    
+
     /// 重置为默认配置
+    /// Reset to default configuration.
     static func resetToDefault() {
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
     }
-    
+
     /// 合并已保存配置与默认配置：保留用户对已知类型的设置，补充新增类型
+    /// Merge saved config with default: preserve user choices for known types, add new ones.
     private static func mergeWithDefault(_ saved: HomeLayoutPreference) -> HomeLayoutPreference {
         var mergedItems: [HomeCardItem] = []
         let savedMap = Dictionary(uniqueKeysWithValues: saved.items.map { ($0.type, $0.enabled) })

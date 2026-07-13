@@ -18,7 +18,11 @@ import PencilKit
 /// PencilKit sheet used by the mistake registration flow.
 struct HandwritingSheet: View {
     @Environment(\.dismiss) private var dismiss
+    /// PencilKit 当前画板内容
+    /// Current PencilKit drawing content.
     @State private var drawing = PKDrawing()
+    /// 是否弹出"放弃当前画稿?"确认
+    /// Whether to show the "Discard your drawing?" confirmation.
     @State private var showingDiscardAlert = false
 
     /// 提交时回调,父级负责把 PNG Data 转 UIImage / 追加图片数组

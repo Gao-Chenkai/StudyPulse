@@ -1,12 +1,22 @@
+//
+//  StudyTimerCard.swift
+//  StudyPulse
+//
+//  Compact HomeView card that shows the current readiness-based
+//  Pomodoro recommendation and a Start / Pause / Resume button.
+//  主页紧凑卡片:展示基于身体状态(HRV)的番茄钟推荐 + 开始/暂停/继续按钮。
+//
 
 import SwiftUI
 
-/// Compact HomeView card that shows the current readiness-based
-/// Pomodoro recommendation and a Start / Pause / Resume button.
+/// 主页紧凑计时器卡片:基于当前身体状态给出推荐番茄钟时长,提供预设按钮快速开始。
+/// Compact home timer card: shows a readiness-based Pomodoro recommendation with preset buttons.
 struct StudyTimerCard: View {
     @ObservedObject private var timer = StudyTimerManager.shared
     @ObservedObject private var hrv = HealthKitManager.shared
     @EnvironmentObject private var envManager: AppEnvironmentManager
+    /// 是否显示全屏 StudyTimerView
+    /// Whether the full-screen `StudyTimerView` is presented.
     @State private var showingTimer = false
 
     var body: some View {
@@ -54,6 +64,7 @@ struct StudyTimerCard: View {
     }
 
     // MARK: - Recommendation (idle)
+    // MARK: - 推荐(空闲态)
 
     private var recommendationView: some View {
         VStack(spacing: 12) {
@@ -123,6 +134,7 @@ struct StudyTimerCard: View {
     }
 
     // MARK: - Active timer
+    // MARK: - 计时中视图
 
     private var activeTimerView: some View {
         VStack(spacing: 12) {
@@ -205,8 +217,11 @@ struct StudyTimerCard: View {
     }
 
     // MARK: - Helpers
+    // MARK: - 辅助函数
 
     private var presetDurations: [(seconds: Int, isRecommended: Bool)] {
+        // 番茄钟预设(分钟):20 / 25 / 35 / 45 / 50
+        // Pomodoro presets (min): 20 / 25 / 35 / 45 / 50.
         let recommended = timer.recommendedDurationSeconds
         let all: [Int] = [20 * 60, 25 * 60, 35 * 60, 45 * 60, 50 * 60]
         // Show 3 presets: recommended in the middle, flanked by closest others.
@@ -244,6 +259,8 @@ struct StudyTimerCard: View {
 
     /// Map a StudySuggestion to its StudyIntensity. Since the suggestion includes
     /// the intensity, we need to reverse-map from the suggestion's title/color.
+    /// 把 StudySuggestion 反向映射到 StudyIntensity。
+    /// 由于 StudySuggestion 携带了 intensity 字段,这里用 title 反向匹配(中英双字符串)。
     private func intensityFromSuggestion(_ suggestion: StudySuggestion) -> StudyIntensity {
         if suggestion.title == "Peak Performance".localized() || suggestion.title == "巅峰发挥日".localized() { return .peak }
         if suggestion.title == "Deep Focus".localized() || suggestion.title == "深度学习".localized()
@@ -258,6 +275,8 @@ struct StudyTimerCard: View {
     }
 
     private var intensityIcon: String {
+        // 5 个 intensity 各对应一个 SF Symbol
+        // One SF Symbol per intensity level.
         switch timer.recommendedIntensity {
         case .peak: return "bolt.heart.fill"
         case .deepFocus: return "brain.head.profile"
@@ -268,6 +287,8 @@ struct StudyTimerCard: View {
     }
 
     private var intensityColor: Color {
+        // 5 个 intensity 各对应一个色
+        // Color per intensity level: peak/deepFocus/steady/light/recovery.
         switch timer.recommendedIntensity {
         case .peak: return .green
         case .deepFocus: return .blue

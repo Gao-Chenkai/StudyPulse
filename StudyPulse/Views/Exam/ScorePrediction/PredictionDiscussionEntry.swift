@@ -3,17 +3,23 @@
 //  StudyPulse
 //
 //  Created for the Exam "预测" button feature.
+//  Exam "Predict" button feature — LLM-based discussion entry view.
 //
 
 import SwiftUI
 import SwiftStreamingMarkdown
 import os
 
+/// AI 讨论上下文(单科 / 综合)
+/// AI discussion context (single-subject or comprehensive).
 enum AIContext {
     case singleSubject(exam: Exam, history: [Grade], defaultResult: ScorePredictionResult, fullScore: Double, subjectMistakes: [MistakeNote])
     case comprehensive(target: ComprehensivePredictionTarget)
 }
 
+/// 预测页底部 AI 讨论入口(状态机:未配置 / 已加载 / 加载中 / 错误 / 未触发)
+/// AI discussion entry at the bottom of the prediction page
+/// (state machine: unconfigured / loaded / loading / error / idle).
 struct PredictionDiscussionEntryView: View {
     let context: AIContext
 
@@ -50,6 +56,7 @@ struct PredictionDiscussionEntryView: View {
             }
 
             // 状态 1: 未配置 LLM
+            // State 1: LLM not configured.
             if !envManager.llmConfig.isConfigured {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("未配置 LLM,无法使用 AI 预测".localized())
@@ -62,6 +69,7 @@ struct PredictionDiscussionEntryView: View {
                 }
             }
             // 状态 2: 已配置且已有结果 → 渲染 Markdown
+            // State 2: configured + result available → render Markdown.
             else if let text = aiPredictionText {
                 MarkdownView(
                     text: text.normalisingSingleDollarMath(),
@@ -91,6 +99,7 @@ struct PredictionDiscussionEntryView: View {
                 }
             }
             // 状态 3: 已配置,正在加载 → 显示流式累积
+            // State 3: configured + loading → show streaming accumulator.
             else if aiPredictionLoading {
                 Text(aiPredictionText ?? "Waiting...".localized())
                     .font(.caption.monospaced())
@@ -98,6 +107,7 @@ struct PredictionDiscussionEntryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             // 状态 4: 已配置,出错
+            // State 4: configured + errored.
             else if let err = aiPredictionError {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(err)
@@ -110,6 +120,7 @@ struct PredictionDiscussionEntryView: View {
                 }
             }
             // 状态 5: 已配置,未触发 → 显示"开始预测"按钮
+            // State 5: configured + idle → show "Start prediction" button.
             else {
                 Text(placeholderText)
                     .font(.caption)

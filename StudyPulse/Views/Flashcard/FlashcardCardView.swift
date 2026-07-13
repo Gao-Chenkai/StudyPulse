@@ -3,6 +3,7 @@
 //  StudyPulse
 //
 //  单张闪卡视图：支持 3D 翻牌动画 + Markdown 渲染
+//  Single flashcard view: supports 3D flip animation + Markdown rendering
 //
 //  Created by Chenkai Gao on 2026/6/27.
 //
@@ -11,8 +12,10 @@ import SwiftUI
 import SwiftStreamingMarkdown
 
 // MARK: - Flashcard Card View
+// MARK: - Flashcard card view
 
 /// 单张闪卡：点击或按钮触发翻面
+/// Single flashcard: tap or button triggers a flip.
 struct FlashcardCardView: View {
     let mistake: MistakeNote
     @Binding var isFlipped: Bool
@@ -20,12 +23,14 @@ struct FlashcardCardView: View {
     var body: some View {
         ZStack {
             // 正面：题目
+            // Front face: question
             FlashcardFaceView(mistake: mistake, side: .front)
                 .opacity(isFlipped ? 0 : 1)
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                 .accessibilityHidden(isFlipped)
 
             // 反面：错因 + 正确解法
+            // Back face: error reason + correct solution
             FlashcardFaceView(mistake: mistake, side: .back)
                 .opacity(isFlipped ? 1 : 0)
                 .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
@@ -56,6 +61,7 @@ struct FlashcardCardView: View {
     }
 
     /// 玻璃风背景（iOS 26 升级为 glassEffect；当前用 regularMaterial 兼容老版本）
+    /// Glass background — `glassEffect` on iOS 26, `regularMaterial` on older releases.
     @ViewBuilder
     private var faceBackground: some View {
         if #available(iOS 26.0, *) {
@@ -68,16 +74,20 @@ struct FlashcardCardView: View {
 }
 
 // MARK: - Card Side
+// MARK: - Card side
 
 /// 闪卡正反面枚举
+/// Flashcard side enum.
 enum FlashcardSide {
     case front  // 题目
     case back   // 错因 + 正确解法
 }
 
 // MARK: - Flashcard Face
+// MARK: - Flashcard face
 
 /// 闪卡正反面具体内容
+/// Front / back content for the flashcard.
 struct FlashcardFaceView: View {
     let mistake: MistakeNote
     let side: FlashcardSide
@@ -85,6 +95,7 @@ struct FlashcardFaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // 顶部标签
+            // Top tag row.
             HStack {
                 Label(side == .front ? "Question".localized() : "Answer".localized(),
                       systemImage: side == .front ? "doc.text" : "checkmark.seal.fill")
@@ -113,11 +124,13 @@ struct FlashcardFaceView: View {
             Divider()
 
             // 内容区
+            // Content area (scrollable Markdown).
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     switch side {
                     case .front:
                         // 正面：标题 + 题目 + 题目图片
+                        // Front: title + question + question images.
                         if !mistake.title.isEmpty {
                             Text(mistake.title)
                                 .font(.title3.weight(.bold))
@@ -139,6 +152,7 @@ struct FlashcardFaceView: View {
 
                     case .back:
                         // 反面：错因 + 正确解法
+                        // Back: error reason + correct solution.
                         if !mistake.errorReason.isEmpty {
                             sectionTitle("Error Reason".localized(), icon: "exclamationmark.triangle.fill", color: .orange)
                             MarkdownView(
@@ -164,6 +178,7 @@ struct FlashcardFaceView: View {
             }
 
             // 底部提示
+            // Bottom hint (tap to flip).
             HStack {
                 Image(systemName: "hand.tap")
                     .font(.caption2)

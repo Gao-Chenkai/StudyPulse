@@ -11,21 +11,31 @@ import Foundation
 import SwiftData
 import os
 
+/// 成绩 (Grade) Repository 默认实现。
+/// Default GradeRepository implementation backed by SwiftData.
+/// 纯 CRUD:无 widget sync / achievement 副作用(由 RepositoryContainer 编排)。
+/// Pure CRUD: no widget sync / achievement side effects (orchestrated by RepositoryContainer).
 @Observable @MainActor
 final class DefaultGradeRepository: GradeRepository {
     /// 全量成绩(按 date desc 排序)
+    /// All grades, sorted by date desc.
     var grades: [Grade] = []
     /// 按 active phase 过滤后的成绩缓存
+    /// Cached grades filtered by the active phase.
     var filteredGrades: [Grade] = []
 
     /// ModelContext:由 RepositoryContainer.setModelContainer 注入
+    /// ModelContext: injected by RepositoryContainer.setModelContainer.
     @ObservationIgnored
     private var modelContext: ModelContext?
 
     init() {}
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载所有成绩
+    /// Load all grades.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         await reloadFromSwiftData()
@@ -74,7 +84,10 @@ final class DefaultGradeRepository: GradeRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 新增一条成绩
+    /// Add a single grade.
     func add(_ grade: Grade) {
         var stored = grade
         if stored.phaseId == nil {
@@ -178,8 +191,10 @@ final class DefaultGradeRepository: GradeRepository {
     }
 
     // MARK: - Internals
+    // MARK: - 内部工具 / Internals
 
     /// 按 active phase 过滤(从外部 phase 切换时由容器调用,本类内部每次增删改后也会自动调)。
+    /// Recompute filteredGrades from the active phase (also called internally after every CRUD).
     func recomputeFiltered() {
         let activeId = AppEnvironmentManager.shared.activePhaseId
         if let id = activeId {

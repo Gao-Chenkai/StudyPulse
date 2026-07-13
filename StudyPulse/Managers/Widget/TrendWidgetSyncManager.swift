@@ -11,6 +11,10 @@ import os
 
 @MainActor
 enum TrendWidgetSyncManager {
+    /// 把成绩趋势数据同步到 widget 共享容器。
+    /// 优先使用用户在 widget 配置中选择的科目;否则选历史数据最多的科目。
+    /// Sync grade trend data to the widget shared container. Prefers the
+    /// user-selected subject; otherwise picks the subject with the most grades.
     static func syncTrend(grades: [Grade], subjects: [Subject]) {
         Log.widget.info("开始同步趋势 widget / Syncing trend widget: grades=\(grades.count, privacy: .public) subjects=\(subjects.count, privacy: .public)")
         let subjectScores = Dictionary(grouping: grades, by: \.subject)
@@ -37,6 +41,8 @@ enum TrendWidgetSyncManager {
         }
 
         let subjectGrades = subjectScores[bestSubject]?.sorted(by: { $0.date < $1.date }) ?? []
+        // fullScore 来自 Subject 配置;找不到时兜底 100(避免出现 >100% 折线)
+        // fullScore comes from Subject config; fall back to 100 to avoid >100% chart values.
         let fullScore = subjects.first(where: { $0.name == bestSubject })?.fullScore ?? 100
 
         let points = subjectGrades.map { grade in
@@ -48,6 +54,9 @@ enum TrendWidgetSyncManager {
             )
         }
 
+        // 只保留最近 20 个点(避免 UserDefaults 体积过大,也是 widget 折线最佳展示量)
+        // Keep only the 20 most recent points (limits UserDefaults size; also the
+        // sweet spot for a readable line chart in the widget).
         let stored = Array(points.suffix(20))
         TrendWidgetDataStore.save(points: stored)
         WidgetCenter.shared.reloadTimelines(ofKind: "TrendWidget")

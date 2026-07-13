@@ -5,12 +5,17 @@
 //  Dashboard card showing recovery readiness as a 4-axis radar / polygon
 //  chart (HRV, heart rate, recovery sleep, respiratory rate) and an
 //  integrated study suggestion derived from the same signals.
+//  仪表盘卡片:用 4 轴雷达 / 多边形图(HRV、心率、恢复睡眠、呼吸频率)
+//  展示恢复度,并从同一组信号中派生学习建议。
 //
 import SwiftUI
 import Charts
 import os
 
 // MARK: - HRV Status Card
+// MARK: - HRV 状态卡片
+/// 恢复雷达卡:HRV/HR/睡眠/呼吸 4 轴雷达 + 整合学习建议
+/// Recovery radar card: 4-axis radar (HRV/HR/Sleep/Respiratory) + integrated study suggestion.
 struct HRVStatusCard: View {
     @ObservedObject var hrvManager = HealthKitManager.shared
     @Environment(RepositoryContainer.self) private var container
@@ -132,6 +137,7 @@ struct HRVStatusCard: View {
     }
 
     // MARK: - Header
+    // MARK: - 顶部标题
     private var header: some View {
         HStack {
             Image(systemName: "heart.text.square.fill")
@@ -146,9 +152,12 @@ struct HRVStatusCard: View {
     }
 
     // MARK: - Axis values row
+    // MARK: - 各轴数值行
     /// Numeric readout for each of the four radar dimensions.
     /// Shown only at the highest detail level. The workout slot is
     /// rendered as a 3-ring fitness ring instead of a plain text tile.
+    /// 4 轴雷达各维度的数值读数,只在最高细节级别显示。
+    /// 运动那一格用 3 圈 fitness ring 渲染,而不是普通文本块。
     private var axisValuesRow: some View {
         let radar = BodyRadarValues.compute(
             hrv: hrvManager.readiness,
@@ -206,7 +215,10 @@ struct HRVStatusCard: View {
 
     /// Workout tile — small 3-ring fitness ring in the same visual
     /// language as the iOS Activity rings.
+    /// 运动 tile:小型 3 圈 fitness ring,沿用 iOS Activity ring 的视觉语言。
     private func workoutTile(minutes: Double?) -> some View {
+        // 每日运动目标:30 分钟即 100%
+        // Daily workout goal: 30 minutes → 100% progress.
         let goal = 30.0
         let progress = min(1.0, (minutes ?? 0) / goal)
         let color = FitnessRingView.colorFor(progress: progress)
@@ -533,7 +545,10 @@ struct HRVStatusCard: View {
     }
 
     // MARK: - Computed Properties
+    // MARK: - 计算属性
     private var accent: Color {
+        // 按 readiness category 取强调色
+        // Accent color per readiness category.
         switch hrvManager.readiness.category {
         case .excellent: return .green
         case .normal: return .blue
@@ -565,9 +580,11 @@ struct HRVStatusCard: View {
 }
 
 // MARK: - Body Radar Values
+// MARK: - 身体雷达数值
 
 /// Normalized values (0-1) for the 5 radar axes, plus the raw value
 /// strings and per-axis colors used by the card UI.
+/// 5 轴雷达的归一化数值(0-1),以及卡片 UI 使用的原始值字符串和每轴颜色。
 struct BodyRadarValues {
     let hrv: Double          // 0-1
     let heartRate: Double    // 0-1
@@ -690,10 +707,13 @@ struct BodyRadarValues {
 }
 
 // MARK: - Body Radar Chart (polygon)
+// MARK: - 身体雷达图(多边形)
 
 /// 5-axis radar / polygon chart. Pure SwiftUI `Path`s — no Charts
 /// framework dependency for the radar itself. Each axis has its own
 /// color so the data points and labels are easy to associate.
+/// 5 轴雷达/多边形图。纯 SwiftUI Path 绘制,雷达本身不依赖 Charts 框架。
+/// 每根轴有自己的颜色,数据点和标签易于对应。
 struct BodyRadarChart: View {
     let values: BodyRadarValues
 
@@ -779,10 +799,13 @@ struct BodyRadarChart: View {
     }
 
     // MARK: - Geometry helpers
+    // MARK: - 几何辅助
     /// Start at the top (12 o'clock) and go clockwise. With 5 axes this
     /// puts HRV at the top, Heart Rate on the right, Recovery Sleep at
     /// the bottom-right, Workout at the bottom-left, and Respiratory on
     /// the left.
+    /// 从 12 点钟方向起、顺时针排列。5 轴时:HRV 在正上,心率在右,
+    /// 恢复睡眠在右下,运动在左下,呼吸在左。
     private func angleFor(index: Int) -> Angle {
         .degrees(Double(index) * 360.0 / Double(dimensionCount) - 90)
     }
@@ -808,6 +831,7 @@ struct BodyRadarChart: View {
 
     /// Connect the five radar data points, each at its own radius
     /// (maxRadius × normalized value) along its axis direction.
+    /// 连接 5 个雷达数据点,每个点位于自己轴方向上 maxRadius × 归一化值处。
     private func dataPolygonPath(center: CGPoint, radius: CGFloat) -> Path {
         Path { path in
             for i in 0..<dimensionCount {
@@ -825,11 +849,15 @@ struct BodyRadarChart: View {
 }
 
 // MARK: - Fitness Ring View
+// MARK: - Fitness Ring 视图
 
 /// iOS Activity-ring style concentric progress ring. Single ring when
 /// `progress` is supplied (green color, gradients to red as the
 /// progress falls). Designed to be small (≈ 24-30 pt) so it fits as
 /// the workout axis tile in the recovery-radar card.
+/// iOS Activity-ring 风格的同心进度环。提供 progress 时显示单环
+/// (绿色,随进度下降向红色过渡)。设计为小型(约 24-30 pt)以便
+/// 嵌入恢复雷达卡中的运动轴 tile。
 struct FitnessRingView: View {
     let progress: Double      // 0-1
     var lineWidth: CGFloat = 4
@@ -869,7 +897,10 @@ struct FitnessRingView: View {
     }
 
     /// Color used by the surrounding tile to match the ring state.
+    /// 外层 tile 用来匹配 ring 状态的颜色。
     static func colorFor(progress: Double) -> Color {
+        // 进度阈值:<0.34 红,<0.7 橙,<1.0 蓝,其余绿
+        // Progress thresholds: <0.34 red, <0.7 orange, <1.0 blue, otherwise green.
         switch progress {
         case ..<0.34: return .red
         case ..<0.7:  return .orange

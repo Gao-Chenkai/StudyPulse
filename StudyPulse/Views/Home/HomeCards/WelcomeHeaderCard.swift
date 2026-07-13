@@ -4,6 +4,8 @@
 //
 //  主页顶部欢迎区:问候语 + "Ready to study!" 大标题 + 当前日期 + 头像按钮。
 // 点击头像跳到 Profile tab(selectedTab = 4)。
+//  Home top welcome region: greeting + "Ready to study!" headline + current date + avatar button.
+//  Tapping the avatar jumps to the Profile tab (selectedTab = 4).
 //
 //  Extracted from HomeView.swift during card-extraction refactor (2026-07-05).
 //
@@ -12,11 +14,14 @@ import SwiftUI
 
 /// 主页顶部欢迎区域。
 /// 接收一个 `selectedTab` 绑定,因为点击头像需要切换到 Profile tab。
+/// Home top welcome region.
+/// Receives a `selectedTab` binding because tapping the avatar needs to switch to the Profile tab.
 struct WelcomeHeaderCard: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
     @Environment(RepositoryContainer.self) private var container
     /// 异步加载的头像数据,避免 body 中同步读文件
+    /// Asynchronously loaded avatar data; avoids synchronous file I/O in body.
     @State private var avatarData: Data? = nil
 
     var body: some View {
@@ -56,6 +61,8 @@ struct WelcomeHeaderCard: View {
     }
 
     private func greetingText() -> String {
+        // 按时段返回问候语:<12 早、<18 午、其余晚
+        // Time-of-day greeting: <12 morning, <18 afternoon, otherwise evening.
         let hour = Calendar.current.component(.hour, from: Date())
         if hour < 12 {
             return "Good Morning".localized()
@@ -66,6 +73,8 @@ struct WelcomeHeaderCard: View {
         }
     }
 
+    /// 当前日期长格式字符串(本地化)
+    /// Current date in the long localized format.
     private func currentDateText() -> String {
         DateFormatters.fullDate.string(from: Date())
     }

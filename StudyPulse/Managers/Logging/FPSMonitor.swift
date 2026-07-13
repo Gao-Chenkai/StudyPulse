@@ -27,11 +27,11 @@ final class FPSMonitor: ObservableObject {
     /// 最近 120 帧的帧间隔（毫秒），供 PerformancePanel 画图
     @Published private(set) var recentFrameIntervalsMs: [Double] = []
 
-    private let maxSamples = 60
-    private let maxHistory = 120
-    private var timestamps: [CFTimeInterval] = []
-    private var displayLink: CADisplayLink?
-    private var isRunning = false
+    private let maxSamples = 60        // 60 帧 = 1 秒 @ 60Hz;窗口越长越平滑,但冷启动期偏长
+    private let maxHistory = 120       // Performance Panel 折线图最近帧间隔缓存长度
+    private var timestamps: [CFTimeInterval] = []  // 滚动窗口内的帧时间戳
+    private var displayLink: CADisplayLink?         // 系统帧驱动回调源
+    private var isRunning = false                  // start/stop 幂等保护
 
     private init() {}
 

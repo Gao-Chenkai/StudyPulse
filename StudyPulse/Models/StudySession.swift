@@ -2,19 +2,27 @@ import os
 
 import Foundation
 
+/// 单次已完成的专注计时会话，持久化用于趋势分析。
 /// A single completed study timer session, persisted for trend analysis.
 struct StudySession: Codable, Identifiable, Equatable, Sendable {
+    /// 唯一会话 id
     /// Unique session identifier.
     let id: UUID
+    /// 会话开始时间
     /// When the session started.
     let startDate: Date
+    /// 时长（秒）
     /// Duration in seconds.
     let durationSeconds: Int
+    /// 会话开始时所处的强度档位
     /// The intensity tier active when the session was started.
     let intensity: SessionIntensity
+    /// 是否自然完成（true）或被取消（false）
     /// Whether the session completed naturally (true) or was cancelled (false).
     let completed: Bool
 
+    /// 专注会话强度档位。
+    /// Focus session intensity tier.
     enum SessionIntensity: String, Codable, Equatable, Sendable, CaseIterable {
         case peak
         case deepFocus
@@ -22,6 +30,8 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
         case light
         case recovery
 
+        /// 本地化显示名
+        /// Localized display name.
         var displayName: String {
             switch self {
             case .peak: return "Peak Performance".localized()
@@ -32,6 +42,8 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
             }
         }
 
+        /// SF Symbol 图标
+        /// SF Symbol icon.
         var icon: String {
             switch self {
             case .peak: return "bolt.heart.fill"
@@ -42,6 +54,8 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
             }
         }
 
+        /// 6 位 hex (RRGGBB) 主色，用于 Live Activity / Dynamic Island。
+        /// 与 StudyTimerView / StudyTimerCard 中的取值保持一致。
         /// 6-digit hex (RRGGBB) for the Live Activity / Dynamic Island
         /// accent color. Mirrors the values used in StudyTimerView /
         /// StudyTimerCard.
@@ -55,6 +69,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
             }
         }
 
+        /// 推荐会话时长（秒），由强度档位决定。
         /// Recommended session duration in seconds based on the intensity tier.
         var recommendedDurationSeconds: Int {
             switch self {
@@ -67,6 +82,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
+    /// 从 `StudyIntensity`（算法层）映射到 `SessionIntensity`（持久化层）。
     /// Convert from `StudyIntensity` (algorithm) to `SessionIntensity` (persistence).
     static func fromAlgorithmIntensity(_ intensity: StudyIntensity) -> SessionIntensity {
         switch intensity {
@@ -79,12 +95,18 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+/// 把已完成的专注会话持久化到 `~/Documents/study_sessions.json`。
 /// Persists completed study sessions to ~/Documents/study_sessions.json.
 enum StudySessionStore {
+    /// 持久化文件名
+    /// Persistence file name.
     static let fileName = "study_sessions.json"
+    /// 最多保留 90 天的会话
     /// Keep at most 90 days of sessions.
     static let retentionDays = 90
 
+    /// 持久化文件 URL
+    /// Persistence file URL.
     static func fileURL() throws -> URL {
         let dir = try FileManager.default.url(
             for: .documentDirectory,
@@ -95,6 +117,8 @@ enum StudySessionStore {
         return dir.appendingPathComponent(fileName)
     }
 
+    /// 加载全部已保存的会话
+    /// Load all persisted sessions.
     static func load() -> [StudySession] {
         guard let url = try? fileURL(),
               FileManager.default.fileExists(atPath: url.path),
@@ -110,6 +134,8 @@ enum StudySessionStore {
         }
     }
 
+    /// 保存全部会话（自动剔除 retentionDays 之外的旧记录）
+    /// Save all sessions (auto-trims to retentionDays window).
     static func save(_ sessions: [StudySession]) {
         guard let url = try? fileURL() else {
             Log.app.error("StudySessionStore save failed: cannot resolve file URL")
@@ -130,6 +156,7 @@ enum StudySessionStore {
         }
     }
 
+    /// 追加一条会话并落盘
     /// Append a new session and persist.
     @discardableResult
     static func append(_ session: StudySession) -> [StudySession] {
@@ -139,6 +166,7 @@ enum StudySessionStore {
         return sessions
     }
 
+    /// 今日已完成专注分钟数
     /// Total completed minutes today.
     static func todayTotalMinutes() -> Int {
         let cal = Calendar.current
@@ -148,6 +176,7 @@ enum StudySessionStore {
             .reduce(0) { $0 + $1.durationSeconds / 60 }
     }
 
+    /// 滚动 N 天每日已完成专注分钟数（含今日）
     /// Total completed minutes over the last `days` (including today).
     static func rollingMinutes(days: Int) -> [(date: Date, minutes: Int)] {
         let cal = Calendar.current

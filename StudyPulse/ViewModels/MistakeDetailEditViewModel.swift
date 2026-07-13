@@ -4,6 +4,11 @@
 //
 //  Created by Antigravity on 2026/7/12.
 //
+//  错题详情编辑页 ViewModel。加载 `MistakeNote` 到表单状态,
+//  接管图片 / OCR / 录音 / AI 解析 sheet,变更写回 Repository。
+//  Mistake-detail edit page VM. Loads a `MistakeNote` into form state,
+//  owns image/OCR/voice/AI sheets, writes changes back to Repository.
+//
 
 import Foundation
 import SwiftUI
@@ -12,11 +17,13 @@ import UIKit
 
 @MainActor
 final class MistakeDetailEditViewModel: ObservableObject {
-    // MARK: - Dependencies
+    // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
+    /// 正在编辑的错题(只读引用,改动先存到本地表单)
+    /// The mistake being edited (read-only ref; edits live in local form).
     let mistakeSet: MistakeNote
 
-    // MARK: - Form States
+    // MARK: - 表单状态 / Form state
     @Published var editedTitle = ""
     @Published var selectedSubject = ""
     @Published var editedOriginalQuestion = ""
@@ -28,16 +35,17 @@ final class MistakeDetailEditViewModel: ObservableObject {
     @Published var editedDifficulty = 0
     @Published var editedTags: [String] = []
     @Published var audioFileName: String?
-    
+
+    /// 当前正在编辑的分区 / The section currently being edited.
     @Published var selectedSection: EditSection = .question
-    
-    // Image states
+
+    // MARK: - 图片状态 / Image state
     @Published var questionImages: [UIImage] = []
     @Published var reasonImages: [UIImage] = []
     @Published var wrongSolutionImages: [UIImage] = []
     @Published var correctSolutionImages: [UIImage] = []
-    
-    // OCR & Sheet states
+
+    // MARK: - OCR & 弹窗状态 / OCR & sheet state
     @Published var showingImagePicker = false
     @Published var showingPhotoCapture = false
     @Published var showingHandwritingSheet = false
@@ -48,13 +56,15 @@ final class MistakeDetailEditViewModel: ObservableObject {
     @Published var reviewEnabled = false
     @Published var showingAIAnalysis = false
 
-    // MARK: - Init
+    // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer, mistakeSet: MistakeNote) {
         self.container = container
         self.mistakeSet = mistakeSet
         initializeData()
     }
 
+    /// 把 `mistakeSet` 的字段拷贝到本地表单
+    /// Copy `mistakeSet` fields into local form state.
     private func initializeData() {
         editedTitle = mistakeSet.title
         selectedSubject = mistakeSet.subject
@@ -68,6 +78,8 @@ final class MistakeDetailEditViewModel: ObservableObject {
         editedTags = mistakeSet.tags
         audioFileName = mistakeSet.audioFileName
 
+        // Data → UIImage;compactMap 丢弃解码失败的数据
+        // Data → UIImage; compactMap drops failures.
         questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
         reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
         wrongSolutionImages = mistakeSet.wrongSolutionImages.compactMap { UIImage(data: $0) }
@@ -76,11 +88,14 @@ final class MistakeDetailEditViewModel: ObservableObject {
         reviewEnabled = mistakeSet.isInReviewQueue
     }
 
-    // MARK: - Computed Properties
+    // MARK: - 计算属性 / Computed properties
+    /// 启用的科目名列表(picker 用) / Enabled subject names (for picker).
     var availableSubjects: [String] {
         container.subjectRepo.subjects.filter { $0.enabled }.map { $0.name }
     }
 
+    /// 当前选中分区的文字绑定(路由到对应字段)
+    /// Text binding for the current section (routed to the matching field).
     var currentSectionTextBinding: Binding<String> {
         Binding(
             get: {
@@ -102,6 +117,8 @@ final class MistakeDetailEditViewModel: ObservableObject {
         )
     }
 
+    /// 当前选中分区的图片数组绑定
+    /// Image-array binding for the current section.
     var currentSectionImagesBinding: Binding<[UIImage]> {
         Binding(
             get: {
@@ -123,7 +140,9 @@ final class MistakeDetailEditViewModel: ObservableObject {
         )
     }
 
-    // MARK: - Actions
+    // MARK: - 操作 / Actions
+    /// 把图片追加到当前选中分区
+    /// Append an image to the current section.
     func addImageToCurrentSection(_ image: UIImage) {
         switch selectedSection {
         case .question: questionImages.append(image)
@@ -133,19 +152,23 @@ final class MistakeDetailEditViewModel: ObservableObject {
         }
     }
 
+    /// 触发 OCR:取当前分区的最后一张图片,识别文字并追加到该分区的文字字段
+    /// Trigger OCR: take the last image, recognize, append to text field.
     func triggerOCR() {
         let currentImages = currentSectionImagesBinding.wrappedValue
         guard let lastImage = currentImages.last else { return }
         isProcessingOCR = true
-        
+
         Task {
             do {
                 let recognizedText = try await OCRManager.recognizeText(in: lastImage)
                 if !recognizedText.isEmpty {
                     let currentText = currentSectionTextBinding.wrappedValue
                     if !currentText.isEmpty {
+                        // 已有内容 → 空行分隔追加 / Append with blank-line sep.
                         currentSectionTextBinding.wrappedValue = currentText + "\n\n" + recognizedText
                     } else {
+                        // 空白 → 直接填充 / Fill directly when empty.
                         currentSectionTextBinding.wrappedValue = recognizedText
                     }
                 }
@@ -157,6 +180,7 @@ final class MistakeDetailEditViewModel: ObservableObject {
         }
     }
 
+    /// 删除当前关联的录音 / Delete the attached voice memo.
     func deleteVoiceMemo() {
         if let filename = audioFileName {
             AudioStorage.delete(filename: filename)
@@ -164,6 +188,8 @@ final class MistakeDetailEditViewModel: ObservableObject {
         }
     }
 
+    /// 把当前表单写回 Repository:SRS 同步 + 通知重排
+    /// Write the form back: sync SRS state + reschedule notifications.
     func saveChanges() {
         var updatedMistake = mistakeSet
         updatedMistake.title = editedTitle
@@ -174,20 +200,26 @@ final class MistakeDetailEditViewModel: ObservableObject {
         updatedMistake.wrongSolution = editedWrongSolution
         updatedMistake.correctSolution = editedCorrectSolution
         updatedMistake.date = editedDate
+        // 难度裁剪到合法范围 / Clamp difficulty to legal range.
         updatedMistake.difficulty = max(0, min(DifficultyPicker.maxStars, editedDifficulty))
         updatedMistake.tags = editedTags
         updatedMistake.audioFileName = audioFileName
 
+        // UIImage → JPEG Data,0.8 是质量 / 体积折中值
+        // 0.8 is a quality / size trade-off.
         updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.wrongSolutionImages = wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
         updatedMistake.correctSolutionImages = correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
 
-        // Sync SRS
+        // 同步 SRS 状态 / Sync SRS state.
         if reviewEnabled && !updatedMistake.isInReviewQueue {
+            // 首次进入复习队列 → 用 initial() 初始化 / Initialize with .initial().
             updatedMistake.reviewState = .initial()
         } else if !reviewEnabled && updatedMistake.isInReviewQueue {
             if var state = updatedMistake.reviewState {
+                // 退出复习队列 → 把下次复习推到"永远不会"
+                // Push next review to "never".
                 state.nextReviewDate = Date.distantFuture
                 updatedMistake.reviewState = state
             }
@@ -195,7 +227,7 @@ final class MistakeDetailEditViewModel: ObservableObject {
 
         container.mistakeRepo.update(updatedMistake)
 
-        // Reschedule/cancel notification
+        // 重排 / 取消通知 / Reschedule or cancel the notification.
         if reviewEnabled {
             SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
         } else {

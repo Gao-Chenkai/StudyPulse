@@ -2,30 +2,40 @@
 //  TrendChartView.swift
 //  StudyPulse
 //
-//  根据用户在设置中选择的 ChartType（折线/柱状/饼图/散点/热力）渲染成绩趋势。
+//  根据用户在设置中选择的 ChartType(折线/柱状/饼图/散点/热力)渲染成绩趋势。
+//  Renders the grade trend according to the user's `ChartType` selection
+//  in settings (line / bar / pie / scatter / heatmap / histogram).
 //
 
 import SwiftUI
 import Charts
 
-/// 统一的成绩趋势图：按 chartType 自动切换渲染方式
+/// 统一的成绩趋势图:按 chartType 自动切换渲染方式
+/// Unified grade-trend chart that switches rendering style per `chartType`.
 struct TrendChartView: View {
-    /// 排序后的成绩（按日期升序）
+    /// 排序后的成绩(按日期升序)
+    /// Grades sorted ascending by date.
     let grades: [Grade]
-    /// 分数满分（用于饼图/热力图分段与 Y 轴范围）
+    /// 分数满分(用于饼图/热力图分段与 Y 轴范围)
+    /// Full score (used for pie/heatmap bucket thresholds and Y-axis range).
     let fullScore: Double
     /// 当前图表类型
+    /// Currently selected chart type.
     let chartType: ChartType
-    /// compact 模式：隐藏所有数字标注、简化坐标轴（用于 mini chart 等小尺寸场景）
+    /// compact 模式:隐藏所有数字标注、简化坐标轴(用于 mini chart 等小尺寸场景)
+    /// Compact mode: hides numeric annotations and simplifies axes (for mini charts and similar small layouts).
     var compact: Bool = false
-    /// 自定义主色（用于折线 / 柱状图等）
+    /// 自定义主色(用于折线 / 柱状图等)
+    /// Custom tint color (used for line / bar, etc.).
     var tintColor: Color = .accentColor
 
-    // MARK: - 触屏选中状态（用于"手指放到表上显示数据点"交互）
+    // MARK: - 触屏选中状态(用于"手指放到表上显示数据点"交互)
+    // MARK: - Touch selection state (for the "finger on chart shows data point" interaction)
     @State private var selectedGrade: Grade?
     @State private var selectedBucket: HistogramBucket?
     @State private var selectedBucketCount: Int = 0
-    /// 触摸 X 坐标（chart 自身坐标系），用于驱动详情卡片横向跟随手指
+    /// 触摸 X 坐标(chart 自身坐标系),用于驱动详情卡片横向跟随手指
+    /// Touch X coordinate (chart-local), used to drive the detail card to follow the finger horizontally.
     @State private var touchX: CGFloat?
 
     var body: some View {
@@ -51,6 +61,7 @@ struct TrendChartView: View {
     }
 
     // MARK: - Line Chart
+    // MARK: - 折线图
 
     @ChartContentBuilder
     private var lineMarks: some ChartContent {

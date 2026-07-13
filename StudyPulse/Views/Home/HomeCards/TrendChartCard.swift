@@ -4,6 +4,9 @@
 //
 //  主页"单科目趋势"图表卡。菜单选聚焦规则 → 选科目 → TrendChartView。
 // 选科 / 科目-成绩查询已迁入 HomeViewModel,本卡只负责 UI。
+//  Home "Single-Subject Trend" chart card. Menu selects a focus rule → picks a subject
+//  → renders TrendChartView. Subject selection and per-subject grade lookup have
+//  been moved into HomeViewModel; this card only handles UI.
 //
 //  Extracted from HomeView.swift during card-extraction refactor (2026-07-05).
 //
@@ -15,14 +18,23 @@ import Charts
 /// VM 根据规则选出一门科目,卡片渲染对应 TrendChartView + 三项统计。
 ///
 /// 由父 View 注入 `HomeViewModel`(VM 拥有选科状态);卡片只读取不写入。
+/// Single-subject trend chart card: user picks a focus rule from the Menu,
+/// the VM selects a subject per the rule, and the card renders the corresponding
+/// TrendChartView + 3 statistics tiles.
+///
+/// The parent View injects `HomeViewModel` (VM owns the chart subject selection);
+/// the card only reads, never writes.
 struct TrendChartCard: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
     /// 注入 HomeViewModel(图表选科逻辑已迁入)
+    /// Injected HomeViewModel (chart subject selection has been moved here).
     @ObservedObject var viewModel: HomeViewModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateChart = false
 
+    /// 图表区域高度:iPad/regular 用 260,iPhone 用 180
+    /// Chart area height: 260 on iPad / regular, 180 on iPhone.
     private var chartHeight: CGFloat {
         isIPad || sizeClass == .regular ? 260 : 180
     }
@@ -129,11 +141,17 @@ struct TrendChartCard: View {
 }
 
 // MARK: - 统计项视图
+// MARK: - Statistics Item View
 
 /// TrendChartCard 底部三段式统计 tile(平均/最高/最低)。
 ///
 /// 注:名字为 `ChartStatisticItem` 是为了避免与 HomeView 之前叫 `StatisticItem`
 /// 的全局类型产生歧义;旧名仍保留在 HomeView 删完之前,这里先新名站稳。
+/// 3-segment statistics tile at the bottom of TrendChartCard (average / highest / lowest).
+///
+/// Note: renamed to `ChartStatisticItem` to avoid ambiguity with the old global
+/// `StatisticItem` type that previously lived on HomeView; once HomeView is fully
+/// cleaned up, the new name is the one to keep.
 struct ChartStatisticItem: View {
     let title: String
     let value: String

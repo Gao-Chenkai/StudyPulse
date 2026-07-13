@@ -8,9 +8,12 @@
 import Foundation
 
 // MARK: - Widget Exam Data Model (Widget 考试数据模型)
+// MARK: - Widget Exam Data Model
 
-/// Widget 专用考试数据（轻量结构体，避免导入主 App 模型）
-/// 用于主 App 与 Widget 之间的数据共享
+/// Widget 专用考试数据(轻量结构体,避免导入主 App 模型)。
+/// 用于主 App 与 Widget 之间的数据共享。
+/// Lightweight exam data struct used by the widget extension. Shared
+/// between the main app and widgets via App Group UserDefaults.
 nonisolated struct ExamWidgetData: Codable {
     /// 考试名称
     let name: String
@@ -23,22 +26,28 @@ nonisolated struct ExamWidgetData: Codable {
 }
 
 // MARK: - App Group Configuration (App Group 配置)
+// MARK: - App Group Configuration
 
-/// App Group 配置常量（需要在 Xcode 开发者后台注册后使用）
+/// App Group 配置常量(需要在 Xcode 开发者后台注册后使用)。
+/// App Group configuration constants. The identifier must be registered
+/// in the Apple Developer portal before use.
 nonisolated enum AppGroupConfig {
-    /// App Group 标识符
+    /// App Group 标识符 / App Group identifier
     static let identifier = "group.com.chenkai.gao.studypulse"
-    
-    /// 共享 UserDefaults 中的考试数据 Key
+
+    /// 共享 UserDefaults 中的考试数据 Key / UserDefaults key for upcoming exams
     static let widgetExamsKey = "widgetUpcomingExams"
-    /// 共享 UserDefaults 中的更新时间 Key
+    /// 共享 UserDefaults 中的更新时间 Key / UserDefaults key for last sync timestamp
     static let widgetExamsTimestampKey = "widgetExamsTimestamp"
 }
 
 // MARK: - Widget Data Persistence (Widget 数据存储)
+// MARK: - Widget Data Persistence
 
-/// Widget 数据读写工具
-/// 通过 App Group 共享 UserDefaults 实现主 App 与 Widget 的数据同步
+/// Widget 数据读写工具。
+/// 通过 App Group 共享 UserDefaults 实现主 App 与 Widget 的数据同步。
+/// Read/write helpers that bridge the main app and widgets through the
+/// App Group shared UserDefaults.
 nonisolated enum WidgetDataStore {
     /// 保存即将到来的考试数据到共享 UserDefaults
     /// - Parameter exams: 考试数据列表

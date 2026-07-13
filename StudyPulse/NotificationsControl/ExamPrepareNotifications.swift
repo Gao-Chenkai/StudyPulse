@@ -9,13 +9,19 @@ import Foundation
 import os
 @preconcurrency import UserNotifications
 
+/// 考试倒计时通知管理器(单例)
+/// Exam countdown notification manager (singleton).
 class ExamPrepareNotifications {
+    /// 全局共享实例
+    /// Shared singleton instance.
     static let shared = ExamPrepareNotifications()
-    
+
+    /// 私有初始化,确保只存在一个实例
+    /// Private initializer to enforce singleton.
     private init() {}
-    
+
     /// Request notification authorization
-    /// 请求通知授权
+    /// 请求通知授权(alert + sound + badge)
     func requestAuthorization() {
         Log.notification.info("开始请求通知授权 / Requesting notification authorization")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -28,19 +34,26 @@ class ExamPrepareNotifications {
     }
 
     /// Schedule exam countdown notifications
+    /// 为考试调度倒计时通知(默认提前 1/3/5/10/30 天)
     /// - Parameters:
-    ///   - examName: Exam name
-    ///   - date: Exam date
-    ///   - days: 考前 N 天倒计时通知；nil = 使用默认 [1, 3, 5, 10, 30]
+    ///   - examName: 考试名 / Exam name
+    ///   - date: 考试日期(开始) / Exam date (start)
+    ///   - days: 考前 N 天倒计时通知;nil = 使用默认 [1, 3, 5, 10, 30]
     ///          空数组 = 关闭通知
-    ///           传入新值会先取消该考试旧的通知再重排
+    ///          传入新值会先取消该考试旧的通知再重排
+    ///          Days-before-exam countdown; `nil` = defaults to [1, 3, 5, 10, 30].
+    ///          Empty array = disable notifications.
+    ///          Passing a new value first cancels the exam's old notifications.
     /// 为考试调度倒计时通知
     func scheduleNotifications(for examName: String, date: Date, days: [Int]? = nil) {
+        // 默认按"距离考试天数"降序排,这样触发时间也是从远到近
+        // Default: descending by days-before-exam so triggers are also far-to-near.
         let effectiveDays = (days ?? [1, 3, 5, 10, 30]).sorted(by: >)
         Log.notification.info("开始为考试调度通知 / Scheduling notifications for exam: name=\(examName, privacy: .public) date=\(date, privacy: .public) days=\(effectiveDays, privacy: .public)")
         let center = UNUserNotificationCenter.current()
 
         // 先把旧通知清掉,避免和新的重复
+        // Drop any existing notifications for this exam to avoid duplicates.
         center.getPendingNotificationRequests { requests in
             let toRemove = requests.filter { $0.identifier.contains("Exam_\(examName)_") }
             let ids = toRemove.map { $0.identifier }
@@ -50,6 +63,7 @@ class ExamPrepareNotifications {
             }
 
             // 如果 days 为空数组,表示关闭通知
+            // If days is empty, the user wants notifications disabled for this exam.
             if effectiveDays.isEmpty {
                 Log.notification.info("考试通知已关闭 / Notifications disabled for exam: \(examName, privacy: .public)")
                 return
@@ -63,6 +77,8 @@ class ExamPrepareNotifications {
                     continue
                 }
 
+                // 已过期的触发点直接跳过(不会再被系统送达)
+                // Past trigger points would never fire — skip them.
                 if triggerDate < Date() {
                     Log.notification.debug("跳过过期触发点 / Skipping past trigger: exam=\(examName, privacy: .public) day=\(day, privacy: .public) triggerDate=\(triggerDate, privacy: .public)")
                     skipped += 1
@@ -79,6 +95,8 @@ class ExamPrepareNotifications {
                     repeats: false
                 )
 
+                // 标识符:Exam_<examName>_<day>Days(便于后续按前缀/包含清理)
+                // Identifier: Exam_<examName>_<day>Days (lets us clean up by prefix/contains).
                 let identifier = "Exam_\(examName)_\(day)Days"
                 let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
@@ -96,7 +114,8 @@ class ExamPrepareNotifications {
     }
 
     /// Cancel all notifications for a specific exam
-    /// 取消指定考试的所有通知
+    /// 取消指定考试的所有通知(按名称包含匹配)
+    /// Cancel all notifications for a specific exam (matched by name contains).
     func cancelNotifications(for examName: String) {
         Log.notification.info("开始取消考试通知 / Cancelling notifications for exam: \(examName, privacy: .public)")
         let center = UNUserNotificationCenter.current()

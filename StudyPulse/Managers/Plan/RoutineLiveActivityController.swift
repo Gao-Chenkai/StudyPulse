@@ -18,13 +18,13 @@ final class RoutineLiveActivityController {
     static let shared = RoutineLiveActivityController()
 
     @ObservationIgnored
-    private let log = Logger(subsystem: "app.StudyPulse", category: "RoutineLiveActivity")
+    private let log = Logger(subsystem: "app.StudyPulse", category: "RoutineLiveActivity")  // 专用 os.Logger
     @ObservationIgnored
-    private var pollTimer: Timer?
+    private var pollTimer: Timer?                            // 30s tick 定时器,更新 Live Activity
     @ObservationIgnored
-    private var activeRoutineId: UUID?
+    private var activeRoutineId: UUID?                      // 当前正在显示的 routine id
     @ObservationIgnored
-    private var lastEndDate: Date?
+    private var lastEndDate: Date?                          // 当前 instance 的结束时间
 
     private init() {}
 
@@ -166,6 +166,9 @@ final class RoutineLiveActivityController {
     }
 
     private func tierFor(remaining: Int) -> RoutineContentState.Tier {
+        // < 60s: critical(只剩最后 1 分钟)
+        // < 5min: warning
+        // else: steady
         if remaining < 60 { return .critical }
         if remaining < 5 * 60 { return .warning }
         return .steady

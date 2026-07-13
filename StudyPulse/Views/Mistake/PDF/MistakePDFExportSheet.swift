@@ -2,17 +2,27 @@
 //  MistakePDFExportSheet.swift
 //  StudyPulse
 //
-//  错题 PDF 导出选项 sheet：
-//  - 模式（按科目 / 按时间范围 / 按具体错题）三选一
+//  错题 PDF 导出选项 sheet:
+//  - 模式(按科目 / 按时间范围 / 按具体错题)三选一
 //  - 实时显示预计导出的错题数
-//  - 包含图片开关（默认开）
+//  - 包含图片开关(默认开)
 //
-//  按下 Generate 后回调到父视图（MistakeView），父视图负责创建
+//  按下 Generate 后回调到父视图(MistakeView),父视图负责创建
 //  snapshot + 启动进度 sheet。
+//
+//  Mistake PDF export options sheet:
+//  - Pick a mode (by subject / by date range / by individual mistakes)
+//  - Live preview of how many mistakes will be exported
+//  - Include-images toggle (on by default)
+//
+//  Pressing Generate calls back to the parent view (MistakeView) which
+//  is responsible for taking the snapshot and launching the progress sheet.
 //
 
 import SwiftUI
 
+/// PDF 导出模式
+/// PDF export mode.
 enum MistakeExportMode: String, CaseIterable, Identifiable {
     case bySubjects
     case byDateRange
@@ -20,6 +30,8 @@ enum MistakeExportMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// 本地化展示名
+    /// Localized display name.
     var displayName: String {
         switch self {
         case .bySubjects: return "By Subjects".localized()
@@ -29,31 +41,58 @@ enum MistakeExportMode: String, CaseIterable, Identifiable {
     }
 }
 
+/// 导出选项值对象(传递给 caller)
+/// Export options value object (passed back to the caller).
 struct MistakeExportOptions: Sendable {
+    /// 选中的错题范围
+    /// Selected mistake range.
     let selection: MistakePDFSelection
+    /// 是否包含题图
+    /// Whether to include images.
     let includeImages: Bool
 }
 
+/// 错题 PDF 导出 sheet:让用户选范围 → 实时预览数量 → 回调到 caller 启动生成。
+/// Mistake PDF export sheet: pick a range → live preview of the count
+/// → callback to the caller to start generation.
 struct MistakePDFExportSheet: View {
+    /// 生成回调(把导出选项交回父视图)
+    /// Generate callback (hands the export options back to the parent).
     let onGenerate: (MistakeExportOptions) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
 
+    /// 当前选中的导出模式
+    /// Currently selected export mode.
     @State private var mode: MistakeExportMode = .bySubjects
 
     // bySubjects
+    /// 选中的学科集合
+    /// Selected subject set.
     @State private var selectedSubjects: Set<String> = []
 
     // byDateRange
+    /// 选中的时间范围(预设)
+    /// Selected time range (preset).
     @State private var range: ReportTimeRange = .all
+    /// 自定义时间起点
+    /// Custom start date.
     @State private var customStart: Date = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+    /// 自定义时间终点
+    /// Custom end date.
     @State private var customEnd: Date = Date()
 
     // byMistakes
+    /// 手动选中的错题 ID
+    /// Manually selected mistake IDs.
     @State private var selectedMistakeIDs: Set<UUID> = []
+    /// 错题搜索文本(在 byMistakes 模式下)
+    /// Mistake search text (in byMistakes mode).
     @State private var mistakeSearchText: String = ""
 
     // Common
+    /// 是否包含题图
+    /// Whether to include images.
     @State private var includeImages: Bool = true
 
     var body: some View {
@@ -82,7 +121,7 @@ struct MistakePDFExportSheet: View {
         }
     }
 
-    // MARK: - Mode section
+    // MARK: - Mode section / 模式选择
 
     private var modeSection: some View {
         Section {
@@ -217,7 +256,7 @@ struct MistakePDFExportSheet: View {
         }
     }
 
-    // MARK: - Image toggle
+    // MARK: - Image toggle / 图片开关
 
     private var imageSection: some View {
         Section {
@@ -235,7 +274,7 @@ struct MistakePDFExportSheet: View {
         }
     }
 
-    // MARK: - Summary
+    // MARK: - Summary / 概览
 
     private var summarySection: some View {
         Section {
@@ -249,7 +288,7 @@ struct MistakePDFExportSheet: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Helpers / 辅助方法
 
     private func filteredMistakes(_ mistakes: [MistakeNote]) -> [MistakeNote] {
         let trimmed = mistakeSearchText.trimmingCharacters(in: .whitespacesAndNewlines)

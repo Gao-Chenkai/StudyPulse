@@ -20,10 +20,16 @@ import PencilKit
 /// iPad PencilKit drawing destination pushed via NavigationLink.
 struct HandwritingView: View {
     @Environment(\.dismiss) private var dismiss
+    /// PencilKit 当前画板内容
+    /// Current PencilKit drawing content.
     @State private var drawing = PKDrawing()
+    /// 是否弹出"放弃当前画稿?"确认
+    /// Whether to show the "Discard your drawing?" confirmation.
     @State private var showingDiscardAlert = false
 
     /// 提交时回调,父级负责把 PNG Data 转 UIImage / 追加图片数组
+    /// Called on submit with the rendered PNG Data. The parent converts
+    /// the data to a UIImage and appends it to the current section's images.
     let onDone: (Data) -> Void
 
     /// 当前画布上是否有未保存的笔迹

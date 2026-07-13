@@ -6,18 +6,25 @@
 //  ~/Documents/health_history.json. Used by `HealthKitManager` to
 //  build the user's 30-day personal baseline for the readiness
 //  algorithm.
+//  把过去 60 天的 `DailyHealthSnapshot` 持久化到
+//  ~/Documents/health_history.json。
+//  由 `HealthKitManager` 用来构建 30 天个人基线,作为 readiness 算法的输入。
 //
 
 import Foundation
 import os
 
+/// 健康历史快照持久化。
+/// Persistence for daily health snapshots.
 enum HealthHistoryStore {
     nonisolated static let fileName = "health_history.json"
     /// Keep the file small; 60 days is more than enough for a stable
     /// 30-day baseline with room to spare.
+    /// 文件保留窗口:60 天足以构建稳定的 30 天基线,且留有冗余。
     nonisolated static let retentionDays = 60
 
     // MARK: - File I/O
+    // MARK: - 文件读写 / File I/O
 
     nonisolated static func fileURL() throws -> URL {
         let dir = try FileManager.default.url(
@@ -52,6 +59,8 @@ enum HealthHistoryStore {
             Log.healthHistory.error("健康历史保存失败：无法解析文件 URL / Health history save failed: cannot resolve file URL")
             return
         }
+        // 先按保留窗口裁剪,再写盘;避免日志和实际写盘内容不一致。
+        // Trim to the retention window before writing so logs match what hits disk.
         let trimmed = trimToRetention(snapshots)
         let dropped = snapshots.count - trimmed.count
         if dropped > 0 {
@@ -69,6 +78,8 @@ enum HealthHistoryStore {
     /// Merge today's snapshot into the file (per-field fallback so
     /// partial updates don't clobber earlier readings) and return the
     /// post-write history.
+    /// 把今日的快照合并进文件(按字段回退,部分更新不会覆盖早期读数),
+    /// 并返回写盘后的完整历史。
     @discardableResult
     nonisolated static func upsert(snapshot: DailyHealthSnapshot) -> [DailyHealthSnapshot] {
         let existing = load()
@@ -105,6 +116,8 @@ enum HealthHistoryStore {
         return updated
     }
 
+    /// 按保留窗口裁剪,并按日期降序返回。
+    /// Trim to the retention window and return in descending date order.
     nonisolated static func trimToRetention(_ snapshots: [DailyHealthSnapshot]) -> [DailyHealthSnapshot] {
         let cutoff = Calendar.current.date(
             byAdding: .day, value: -retentionDays, to: Date()

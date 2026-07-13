@@ -6,7 +6,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// FileDocument wrapper for exporting logs via .fileExporter.
+/// `FileDocument` 包装,用于通过 `.fileExporter` 导出日志。
+/// `FileDocument` wrapper for exporting logs via `.fileExporter`.
 struct LogDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.log, .plainText] }
 
@@ -19,6 +20,8 @@ struct LogDocument: FileDocument {
     }
 
     init(configuration: ReadConfiguration) throws {
+        // 从系统读取配置中提取 regularFileContents,失败时抛 fileReadCorruptFile
+        // Extract regularFileContents from the read configuration; throw on failure.
         guard let data = configuration.file.regularFileContents,
               let content = String(data: data, encoding: .utf8) else {
             throw CocoaError(.fileReadCorruptFile)

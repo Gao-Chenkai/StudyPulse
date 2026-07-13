@@ -10,10 +10,18 @@ import Foundation
 import SwiftData
 import os
 
+/// 例程实例 (RoutineInstance) Repository 默认实现。SwiftData 持久化。
+/// Default RoutineInstanceRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
+    /// 全部实例（按 date desc）
+    /// All instances, sorted by date desc.
     var allInstances: [RoutineInstance] = []
+    /// 当日实例（dateKey == today）
+    /// Today's instances (dateKey == today).
     var todayInstances: [RoutineInstance] = []
+    /// 当前进行中的实例（startTime <= now < endTime）
+    /// Currently active instances (startTime <= now < endTime).
     var activeInstances: [RoutineInstance] = []
 
     @ObservationIgnored
@@ -22,7 +30,10 @@ final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
     init() {}
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载全部实例
+    /// Load all instances.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -37,10 +48,14 @@ final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 幂等 spawn：业务层已查 in-memory，这里再保险一次 SwiftData 查重
+    /// Idempotent spawn: business layer already checks in-memory, this re-checks SwiftData.
     @discardableResult
     func spawnIfMissing(_ instance: RoutineInstance) -> Bool {
         // 幂等检查:业务层先查 in-memory,这里再保险一次 SwiftData 查重
+        // Idempotency check: business layer first, then SwiftData fallback.
         if allInstances.contains(where: { $0.idempotencyKey == instance.idempotencyKey }) {
             return false
         }
@@ -107,7 +122,10 @@ final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
     }
 
     // MARK: - Internals
+    // MARK: - 内部工具 / Internals
 
+    /// 重新计算 todayInstances / activeInstances
+    /// Recompute todayInstances / activeInstances.
     func recomputeDerived() {
         let cal = Calendar.current
         let now = Date()

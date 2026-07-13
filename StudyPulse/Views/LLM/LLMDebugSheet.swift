@@ -9,9 +9,15 @@
 //  - 响应 / 错误
 //  - 一键复制为 JSON
 //
-//  仅当 `AppEnvironmentManager.debugModeEnabled == true` 时挂载入口按钮。
+//  DEBUG-only: shows the full debug info of the most recent LLM call.
+//  - URL / Model / Temperature
+//  - Full prompt (system + messages)
+//  - Thinking time (elapsed seconds)
+//  - Response / error
+//  - One-tap copy as JSON
 //
-//  Created for LLM DEBUG support (2026-07-11).
+//  仅当 `AppEnvironmentManager.debugModeEnabled == true` 时挂载入口按钮。
+//  Only mounts the entry button when `AppEnvironmentManager.debugModeEnabled == true`.
 //
 
 import SwiftUI
@@ -25,14 +31,21 @@ struct LLMDebugSheet: View {
 
     /// 自定义"最近一次"指针:为 nil 时顶部显示"最近调用"选择器(可切换不同 caller)。
     /// 传入非 nil 时,顶部隐藏选择器,只显示该 caller 的最近一次。
+    /// Custom "most recent" pointer: when nil, a caller picker is shown at
+    /// the top. When non-nil, the picker is hidden and only that caller's
+    /// most recent call is displayed.
     let filterCaller: String?
 
     /// 当一个页面上有多个 AI 功能时,传入此值可只显示本功能相关的最近一次。
+    /// Pass this to scope the panel to one caller's most recent call
+    /// (used when a page hosts multiple AI features).
     init(filterCaller: String? = nil) {
         self.filterCaller = filterCaller
     }
 
     /// 用户在 picker 里临时选择的 caller(用于 filterCaller == nil 时的浏览)
+    /// Caller selected by the user in the picker (for browsing when
+    /// `filterCaller == nil`).
     @State private var selectedCaller: String? = nil
 
     /// 按 caller 分组的最近调用(用于顶部 picker / 历史列表)
@@ -41,9 +54,13 @@ struct LLMDebugSheet: View {
         let groups = Dictionary(grouping: client.recentCalls) { $0.caller }
         return groups
             .map { (caller: $0.key, info: $0.value.last!) }
+            // 最新一组在前
+            // Newest group first.
             .sorted { $0.info.startTime > $1.info.startTime }
     }
 
+    /// 当前要展示的 call info(filterCaller > selectedCaller > 全局最近)
+    /// The call info to display (filterCaller > selectedCaller > global most-recent).
     private var displayInfo: LLMCallDebugInfo? {
         if let filterCaller {
             return client.recentCalls.last(where: { $0.caller == filterCaller })
@@ -85,7 +102,7 @@ struct LLMDebugSheet: View {
         }
     }
 
-    // MARK: - Empty
+    // MARK: - Empty / 空态
 
     private var emptyView: some View {
         VStack(spacing: 12) {
@@ -119,12 +136,14 @@ struct LLMDebugSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Content
+    // MARK: - Content / 内容区
 
     @ViewBuilder
     private func contentList(info: LLMCallDebugInfo) -> some View {
         List {
             // 顶部 caller picker(filterCaller 为 nil 时才有;列出本次会话所有 caller)
+            // Top caller picker (only when filterCaller == nil; lists every
+            // caller seen in this session).
             if filterCaller == nil && !callsByCaller.isEmpty {
                 Section {
                     ForEach(callsByCaller, id: \.caller) { entry in
@@ -258,7 +277,7 @@ struct LLMDebugSheet: View {
         .listStyle(.insetGrouped)
     }
 
-    // MARK: - Reusable rows
+    // MARK: - Reusable rows / 可复用行
 
     private func debugRow(label: String, value: String, accent: Color = .primary) -> some View {
         HStack(alignment: .firstTextBaseline) {
@@ -301,8 +320,10 @@ struct LLMDebugSheet: View {
         .padding(.vertical, 2)
     }
 
-    // MARK: - Helpers
+    // MARK: - Helpers / 辅助方法
 
+    /// 不同 message role 对应的 SF Symbol
+    /// SF Symbol used for each LLM message role.
     private func iconForRole(_ role: LLMRole) -> String {
         switch role {
         case .system: return "gearshape"
@@ -312,12 +333,16 @@ struct LLMDebugSheet: View {
         }
     }
 
+    /// 把 Date 格式化为 "yyyy-MM-dd HH:mm:ss" 本地时间字符串
+    /// Format a Date as "yyyy-MM-dd HH:mm:ss" local time string.
     private func timestampString(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return f.string(from: date)
     }
 
+    /// 简单的中文相对时间(如 "12s 前")
+    /// Simple relative time in Chinese (e.g. "12s 前").
     private func relativeTime(_ date: Date) -> String {
         let interval = Date().timeIntervalSince(date)
         if interval < 60 { return "\(Int(interval))s 前" }

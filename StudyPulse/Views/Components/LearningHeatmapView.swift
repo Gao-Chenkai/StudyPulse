@@ -17,9 +17,12 @@
 import SwiftUI
 
 // MARK: - Activity Level
+// MARK: - 活动强度档位
 
-/// 单日活动强度分档（5 档 + 空），用于颜色映射。
+/// 单日活动强度分档(5 档 + 空),用于颜色映射。
+/// 阈值:0 → none;1-2 → light;3-5 → medium;6-10 → strong;11+ → intense
 /// Activity intensity bucket used for color mapping.
+/// Thresholds: 0 → none; 1-2 → light; 3-5 → medium; 6-10 → strong; 11+ → intense.
 enum HeatmapActivityLevel: Int, CaseIterable {
     case none = 0       // 0
     case light = 1      // 1-2
@@ -38,7 +41,10 @@ enum HeatmapActivityLevel: Int, CaseIterable {
         }
     }
 
-    /// 颜色透明度（相对于主色）。0 = 纯灰底。
+    /// 颜色透明度(相对于主色)。0 = 纯灰底。
+    /// 档位透明度梯度:0 / 0.22 / 0.45 / 0.72 / 1.0
+    /// Opacity relative to the accent color. 0 = pure gray track.
+    /// Opacity gradient per level: 0 / 0.22 / 0.45 / 0.72 / 1.0.
     var opacity: Double {
         switch self {
         case .none:    return 0.0
@@ -51,8 +57,10 @@ enum HeatmapActivityLevel: Int, CaseIterable {
 }
 
 // MARK: - Heatmap Cell
+// MARK: - 热力图格子
 
-/// 单个格子对应的数据：日期 + 活动日志（可能为 nil，代表未记录）。
+/// 单个格子对应的数据:日期 + 活动日志(可能为 nil,代表未记录)。
+/// Data for a single heatmap cell: date + activity log (may be `nil` to mean "not recorded").
 struct HeatmapCell: Identifiable, Equatable {
     let date: Date
     let log: DailyActivityLog?
@@ -63,24 +71,31 @@ struct HeatmapCell: Identifiable, Equatable {
 }
 
 // MARK: - Learning Heatmap View
+// MARK: - 学习热力图视图
 
-/// 90 天学习热力图。GitHub 风格：列 = 周，行 = 周几；今天在最右列。
+/// 90 天学习热力图。GitHub 风格:列 = 周,行 = 周几;今天在最右列。
+/// 90-day learning heatmap. GitHub style: columns = weeks, rows = weekdays; today is in the rightmost column.
 struct LearningHeatmapView: View {
     @ObservedObject private var achievementManager = AchievementManager.shared
     @EnvironmentObject private var envManager: AppEnvironmentManager
 
-    /// 90 天滚动窗口（包含今天），共 13 周。
+    /// 90 天滚动窗口(包含今天),共 13 周。
+    /// 90-day rolling window (includes today) = 13 weeks.
     static let dayCount: Int = 90
     static let weekCount: Int = 13
 
-    /// 当前选中的格子（用于显示详情 sheet）。
+    /// 当前选中的格子(用于显示详情 sheet)。
+    /// Currently selected cell (used to show the day-detail sheet).
     @State private var selectedCell: HeatmapCell? = nil
 
     private var accent: Color { envManager.effectiveAccentColor }
     private var emptyColor: Color { Color(.tertiarySystemFill) }
 
-    /// 把 AchievementManager 的 logs 转换成 91 天（含今天）的格子数组。
-    /// 索引顺序：按列优先（先填满一列再下一列），保证 GitHub 风格"今天在最右下方"。
+    /// 把 AchievementManager 的 logs 转换成 91 天(含今天)的格子数组。
+    /// 索引顺序:按列优先(先填满一列再下一列),保证 GitHub 风格"今天在最右下方"。
+    /// Convert `AchievementManager`'s logs into a 91-cell array (including today).
+    /// Iteration order: column-major (fill one column before moving to the next),
+    /// which matches the GitHub "today is bottom-right" look.
     private var cells: [HeatmapCell] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
@@ -157,6 +172,7 @@ struct LearningHeatmapView: View {
     }
 
     // MARK: - Header
+    // MARK: - 顶部标题
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -187,9 +203,11 @@ struct LearningHeatmapView: View {
     }
 
     // MARK: - Grid
+    // MARK: - 网格
 
     private var grid: some View {
-        // 13 列 × 7 行；列从左到右（旧→新），行从上到下（周一→周日）。
+        // 13 列 × 7 行;列从左到右(旧→新),行从上到下(周一→周日)。
+        // 13 columns × 7 rows; columns L→R (oldest→newest), rows T→B (Monday→Sunday).
         let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: Self.weekCount)
 
         return HStack(alignment: .top, spacing: 8) {
@@ -220,6 +238,7 @@ struct LearningHeatmapView: View {
     }
 
     // MARK: - Legend
+    // MARK: - 色阶图例
 
     private var legend: some View {
         HStack(spacing: 6) {
@@ -244,13 +263,15 @@ struct LearningHeatmapView: View {
     }
 
     // MARK: - Helpers
+    // MARK: - 辅助函数
 
     private func color(for level: HeatmapActivityLevel) -> Color {
         if level == .none { return emptyColor }
         return accent.opacity(level.opacity)
     }
 
-    /// 周几短标签（1=周一 ... 7=周日）。
+    /// 周几短标签(1=周一 ... 7=周日)。
+    /// Short weekday label (1 = Monday ... 7 = Sunday).
     private func weekdayShortLabel(for row: Int) -> String {
         // 用 DateFormatter 拿周一/周三/周五/周日的短标签
         let symbols = Calendar.current.shortWeekdaySymbols  // ["Sun", "Mon", ..., "Sat"]
@@ -268,8 +289,10 @@ struct LearningHeatmapView: View {
 }
 
 // MARK: - Cell View
+// MARK: - 格子视图
 
 /// 单个热力图格子。带点击交互。
+/// A single heatmap cell. Tappable.
 private struct HeatmapCellView: View {
     let cell: HeatmapCell
     let accent: Color
@@ -306,8 +329,10 @@ private struct HeatmapCellView: View {
 }
 
 // MARK: - Day Detail Sheet
+// MARK: - 单日详情 sheet
 
-/// 单日详情 sheet：显示当日各项活动数据 + 时间线摘要。
+/// 单日详情 sheet:显示当日各项活动数据 + 时间线摘要。
+/// Per-day detail sheet: shows all activity data for the day + a timeline summary.
 private struct HeatmapDayDetailSheet: View {
     let cell: HeatmapCell
     let accent: Color
@@ -429,6 +454,7 @@ private struct HeatmapDayDetailSheet: View {
 }
 
 // MARK: - Preview
+// MARK: - 预览
 
 #Preview {
     ScrollView {

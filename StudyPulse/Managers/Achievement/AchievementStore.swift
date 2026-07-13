@@ -13,12 +13,15 @@ import Foundation
 import os
 
 /// `AchievementsSnapshot` 的文件持久化。
+/// File persistence for `AchievementsSnapshot`.
 enum AchievementStore {
     static let fileName = "achievements.json"
     /// logs 字段的滚动窗口。90 天足以覆盖成就回填和近期趋势分析。
+    /// Rolling window for the `logs` field. 90 days comfortably covers achievement backfill and recent-trend analysis.
     static let logsRetentionDays = 90
 
     // MARK: - File I/O
+    // MARK: - 文件读写 / File I/O
 
     static func fileURL() throws -> URL {
         let dir = try FileManager.default.url(
@@ -53,6 +56,7 @@ enum AchievementStore {
             return
         }
         // logs 单独做 90 天滚动；其他字段原样保存。
+        // Trim logs to the 90-day rolling window; other fields are saved as-is.
         var trimmed = snapshot
         let beforeCount = trimmed.logs.count
         trimmed.logs = trimLogsToRetention(trimmed.logs)
@@ -71,6 +75,8 @@ enum AchievementStore {
 
     /// 按日期（startOfDay）合并当日日志条目，返回合并后的 logs 数组。
     /// 同一日多次累加：mistakeReviews / gradesRecorded / focusMinutes 全部相加。
+    /// Merges a log entry into `logs` by date (startOfDay) and returns the merged array.
+    /// When the same day is updated multiple times, mistakeReviews / gradesRecorded / focusMinutes are all summed.
     @discardableResult
     static func upsertLog(_ log: DailyActivityLog, into logs: [DailyActivityLog]) -> [DailyActivityLog] {
         let cal = Calendar.current
@@ -96,6 +102,7 @@ enum AchievementStore {
     }
 
     /// 按日期降序返回最近的 N 条日志（含今日）。
+    /// Returns the most recent N logs in descending date order (today included).
     static func recentLogs(_ logs: [DailyActivityLog], days: Int) -> [DailyActivityLog] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
@@ -115,6 +122,7 @@ enum AchievementStore {
     }
 
     /// 删除持久化文件。仅供调试 / DataAdminView 使用。
+    /// Deletes the persisted file. Debug / DataAdminView use only.
     static func reset() {
         guard let url = try? fileURL() else { return }
         if FileManager.default.fileExists(atPath: url.path) {

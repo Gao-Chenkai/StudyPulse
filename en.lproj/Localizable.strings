@@ -1762,3 +1762,34 @@
 "Check Solution" = "Check Solution";
 "Save to Mistakes" = "Save to Mistakes";
 "Draft / Answer" = "Draft / Answer";
+
+// MARK: - Auto Mind Map (错题思维导图)
+"Auto Mind Map" = "Auto Mind Map";
+"Generating mind map..." = "Generating mind map...";
+"Extracting key topics and concepts..." = "Extracting key topics and concepts...";
+"Not enough mistake notes to generate a mind map. Please add some mistakes first." = "Not enough mistake notes to generate a mind map. Please add some mistakes first.";
+"AI Explain Concept" = "AI Explain Concept";
+"Local Fallback" = "Local Fallback";
+"AI Classified" = "AI Classified";
+"Main Node" = "Main Node";
+"Theme" = "Theme";
+"Concept" = "Concept";
+"Mistake" = "Mistake";
+"AI explain concept query" = "Explain the academic concept: \"%@\" in detail, summarizing key exam focus areas.";
+"More Tools" = "More Tools";
+
+// MARK: - LLM Waiting View Strings
+"AI正在结合历史数据..." = "AI is integrating historical data...";
+"AI正在提炼表达..." = "AI is refining expression...";
+"AI正在构建逻辑模型..." = "AI is building logical models...";
+"AI正在为您生成专属内容..." = "AI is generating exclusive content for you...";
+"正在分析您的薄弱考点..." = "Analyzing your weak test points...";
+"正在为您量身定制变式训练..." = "Customizing tailored exercises...";
+"正在提取错题中的核心概念..." = "Extracting core concepts from mistake notes...";
+"正在梳理知识脉络与关联..." = "Combing knowledge paths and relationships...";
+"正在绘制个性化知识拓扑结构..." = "Drawing personalized knowledge topology...";
+"正在解构错题的考查要点..." = "Deconstructing key points of the mistake...";
+"正在诊断您的思维误区..." = "Diagnosing cognitive misconceptions...";
+"正在撰写深度的正确解题思路..." = "Writing in-depth correct solving approaches...";
+"正在沉淀易错防坑指南..." = "Compiling mistake-prevention guidelines...";
+

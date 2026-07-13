@@ -10,13 +10,32 @@
 //  - 点击整个卡片或输入框 → 弹出 HomeAskSheet
 //  - 不参与长按分享(不能导出"输入框"图片)
 //
+//  Home AI-Ask entry card.
+//  - Display-only input-box style; placeholder text switches with context
+//    ("Not configured" / "Ask anything..." / some suggested questions).
+//  - Tap on the whole card or the input → presents HomeAskSheet.
+//  - Does NOT participate in long-press share (cannot export an "input box" image).
+//
 
 import SwiftUI
 
+/// 主页 AI 提问卡片:点击弹出 HomeAskSheet
+/// Home AI-Ask card: tap to present HomeAskSheet.
 struct HomeAskCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @EnvironmentObject private var envManager: AppEnvironmentManager
+    /// 是否正在显示 HomeAskSheet
+    /// Whether the HomeAskSheet is currently presented.
     @State private var showSheet: Bool = false
+
+    /// 卡片副标题(占位文本):AI 未配置时显示引导文案,否则显示「Ask anything...」
+    /// Card subtitle (placeholder text): shows onboarding hint when AI is unconfigured, otherwise "Ask anything...".
+    private var placeholder: String {
+        if !envManager.llmConfig.isConfigured {
+            return "未配置 AI · 前往设置".localized()
+        }
+        return "Ask anything...".localized()
+    }
 
     var body: some View {
         Button {
@@ -86,12 +105,5 @@ struct HomeAskCard: View {
             HomeAskSheet(container: container, envManager: envManager)
                 .environmentObject(envManager)
         }
-    }
-
-    private var placeholder: String {
-        if !envManager.llmConfig.isConfigured {
-            return "未配置 AI · 前往设置".localized()
-        }
-        return "Ask anything...".localized()
     }
 }

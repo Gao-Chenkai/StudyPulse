@@ -114,18 +114,24 @@ enum MistakePDFRenderer {
         drawAttributedString(attr, in: context)
     }
 
-    // MARK: - 核心：Core Text 分页绘制 NSAttributedString
+    // MARK: - Core Text 文本绘制 / Text rendering
+    // MARK: - 核心:Core Text 分页绘制 NSAttributedString
+    // MARK: - Core: paginated NSAttributedString drawing via Core Text
 
     /// 用 CTFramesetter 把 NSAttributedString 渲染到当前 PDF 上下文。
-    /// 当内容超出单页 contentRect 时，自动 beginPage 继续绘制。
+    /// 当内容超出单页 contentRect 时,自动 beginPage 继续绘制。
+    /// Render an NSAttributedString into the current PDF context using CTFramesetter.
+    /// Auto-begins a new page when content overflows the single-page contentRect.
     private static func drawAttributedString(
         _ attr: NSAttributedString,
         in context: UIGraphicsPDFRendererContext
     ) {
         let totalLength = attr.length
+        // 0 长度直接返回(空封面 / 空目录场景)
+        // Early return on empty content (empty cover / empty TOC).
         guard totalLength > 0 else { return }
 
-        let path = CGPath(rect: contentRect, transform: nil)
+        let path = CGPath(rect: contentRect, transform: nil)  // 单页内容区路径
         let framesetter = CTFramesetterCreateWithAttributedString(attr)
         var startIndex = 0
         var pageCount = 0
@@ -142,6 +148,8 @@ enum MistakePDFRenderer {
 
             // 翻转坐标系：UIGraphicsPDFRenderer 的 CGContext 用 UIKit 风格（左上原点），
             // Core Text 期望左下原点。在 beginPage() 后翻转一次即可。
+            // Flip the coordinate system: UIGraphicsPDFRenderer uses UIKit (origin top-left),
+            // Core Text expects bottom-left. Flip once after beginPage().
             context.cgContext.saveGState()
             context.cgContext.translateBy(x: 0, y: pageSize.height)
             context.cgContext.scaleBy(x: 1, y: -1)
@@ -161,8 +169,11 @@ enum MistakePDFRenderer {
         }
     }
 
-    // MARK: - 图片（多张时按 2 列网格排版，自动分页）
+    // MARK: - 图片(多张时按 2 列网格排版,自动分页)
+    // MARK: - Images (2-column grid, auto-paginated)
 
+    /// 将多张图片按 2 列网格排版,自动按 contentRect 高度分页。
+    /// Lay out images in a 2-column grid; auto-paginates when contentRect overflows.
     private static func drawImages(_ images: [UIImage], in context: UIGraphicsPDFRendererContext) {
         let columnsPerRow = 2
         let horizontalGap: CGFloat = 12
@@ -210,8 +221,11 @@ enum MistakePDFRenderer {
         }
     }
 
+    // MARK: - 构造 NSAttributedString / Build NSAttributedString
     // MARK: - 构造 NSAttributedString
 
+    /// 构造封面页的 NSAttributedString(标题 + 用户 + 概览 + 模式 + 按科目 + 时间戳)。
+    /// Build the cover page's NSAttributedString.
     private static func buildCoverAttributedString(snapshot: MistakePDFSnapshot) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let labelColor = UIColor.label
@@ -307,6 +321,8 @@ enum MistakePDFRenderer {
         return result
     }
 
+    /// 构造目录页的 NSAttributedString(每行:编号 + 科目 + 日期 + 标题)。
+    /// Build the TOC page's NSAttributedString (per line: number + subject + date + title).
     private static func buildTOCAttributedString(snapshot: MistakePDFSnapshot) -> NSAttributedString {
         let result = NSMutableAttributedString()
 
@@ -428,7 +444,9 @@ enum MistakePDFRenderer {
         return (result, images)
     }
 
-    /// 构造单个段落（标题 + 正文）。
+    /// 构造单个段落(标题 + 正文)。空白 body 时插入一个 8pt 占位,保持段落节奏。
+    /// Build a single section (header + body). Empty bodies get an 8pt placeholder
+    /// to keep consistent section spacing.
     private static func buildSection(
         title: String,
         body: String,

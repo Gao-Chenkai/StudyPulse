@@ -12,27 +12,37 @@ import os
 
 @Observable @MainActor
 final class DefaultSubjectRepository: SubjectRepository {
+    /// 全部科目（按 name asc）
+    /// All subjects, sorted by name asc.
     var subjects: [Subject] = []
 
     @ObservationIgnored
     private var modelContext: ModelContext?
 
     /// SubjectRecord by name 缓存;首次 saveSubjects 时填充,后续复用,避免每次 fetch 全表。
+    /// Cached SubjectRecord by name; populated on first saveSubjects, reused afterwards
+    /// to avoid fetching the full table on every save.
     @ObservationIgnored
     private var subjectEntitiesByName: [String: SubjectRecord] = [:]
 
     /// 跨域引用:initializeDefaultSubjects 依赖 profile 字段
+    /// Cross-domain ref: initializeDefaultSubjects reads profile fields.
     @ObservationIgnored
     weak var profileRef: (any ProfileRepository)?
 
     init() {}
 
+    /// 容器在 init 时调用,注入 ProfileRepository weak 引用。
+    /// Called by the container on init; injects ProfileRepository weak ref.
     func setProfileRef(_ repo: any ProfileRepository) {
         self.profileRef = repo
     }
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载全部科目
+    /// Load all subjects.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -48,7 +58,10 @@ final class DefaultSubjectRepository: SubjectRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 把当前 `subjects` 数组 upsert 进 SwiftData（增删改 + 同步缓存）
+    /// Upsert the current `subjects` array into SwiftData (CRUD + cache sync).
     func saveSubjects() {
         guard let context = modelContext else { return }
         do {
@@ -129,7 +142,10 @@ final class DefaultSubjectRepository: SubjectRepository {
     }
 
     // MARK: - Query helpers
+    // MARK: - 查询工具 / Query helpers
 
+    /// 获取某科目的满分
+    /// Get the full score for a subject.
     func fullScore(for subjectName: String) -> Double {
         if let subject = subjects.first(where: { $0.name == subjectName }) {
             return subject.fullScore
@@ -137,6 +153,8 @@ final class DefaultSubjectRepository: SubjectRepository {
         return 100
     }
 
+    /// 获取某科目的本地化显示名
+    /// Get the localized display name for a subject.
     func displayName(for subjectName: String) -> String {
         if let subject = subjects.first(where: { $0.name == subjectName }) {
             return subject.displayName.isEmpty ? subjectName : subject.displayName

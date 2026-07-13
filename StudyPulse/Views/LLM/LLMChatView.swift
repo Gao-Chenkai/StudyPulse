@@ -5,19 +5,29 @@
 //  AI 助手对话页:多轮对话 + Markdown 流式渲染。
 //  对话历史仅 in-memory,离开页面或按 toolbar 的"清空"按钮释放。
 //
+//  AI assistant chat screen: multi-turn conversation with streamed
+//  Markdown rendering. Conversation history is in-memory only and is
+//  released on view disappearance or via the "clear" toolbar button.
+//
 //  UI 统一(2026-07-11):使用共享 ChatBubble + ChatInputBar,
 //  跟 AIDiscussionSheet / HomeAskSheet 保持一致的输入框样式和气泡外观。
-//
-//  Created for LLM BYOK integration (2026-07-11).
+//  UI unification (2026-07-11): uses the shared ChatBubble + ChatInputBar,
+//  keeping style consistent with AIDiscussionSheet / HomeAskSheet.
 //
 
 import SwiftUI
 import SwiftStreamingMarkdown
 
+/// AI 助手对话页(单页入口,无上下文绑定)。
+/// LLM assistant chat screen (standalone entry, no external context binding).
 struct LLMChatView: View {
     @EnvironmentObject private var envManager: AppEnvironmentManager
     @StateObject private var viewModel = LLMChatViewModel()
+    /// 输入框文本
+    /// Input bar text.
     @State private var inputText: String = ""
+    /// 输入框焦点状态
+    /// Input focus state.
     @FocusState private var inputFocused: Bool
 
     var body: some View {
@@ -63,7 +73,7 @@ struct LLMChatView: View {
         return !trimmed.isEmpty && !viewModel.isStreaming && envManager.llmConfig.isConfigured
     }
 
-    // MARK: - Messages List
+    // MARK: - Messages List / 消息列表
 
     private var messagesList: some View {
         ScrollViewReader { proxy in
@@ -88,6 +98,7 @@ struct LLMChatView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 16)
                     // 驱动 bubble 进出场的 transition
+                    // Drives bubble enter/exit transitions.
                     .animation(.spring(response: 0.35, dampingFraction: 0.78), value: viewModel.messages.count)
                 }
             }
@@ -100,6 +111,8 @@ struct LLMChatView: View {
             }
         }
     }
+
+    // MARK: - Empty State / 空态
 
     private var emptyState: some View {
         VStack(spacing: 16) {
@@ -133,8 +146,12 @@ struct LLMChatView: View {
         }
     }
 
+    // MARK: - Helpers / 辅助方法
+
     private func scrollToBottom(proxy: ScrollViewProxy) {
         guard let last = viewModel.messages.last else { return }
+        // 150ms 缓出,让流式追加时不出现硬切
+        // 150ms ease-out avoids hard cuts during streaming appends.
         withAnimation(.easeOut(duration: 0.15)) {
             proxy.scrollTo(last.id, anchor: .bottom)
         }
@@ -143,6 +160,8 @@ struct LLMChatView: View {
     private func send() {
         let text = inputText
         inputText = ""
+        // 清空输入框后立刻把消息交给 viewModel
+        // Hand off the message to the view model right after clearing the input.
         viewModel.sendUserMessage(text, config: envManager.llmConfig, envManager: envManager)
     }
 }

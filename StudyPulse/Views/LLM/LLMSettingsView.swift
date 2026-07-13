@@ -9,27 +9,54 @@
 //  - 自定义 System Prompt 追加
 //  - "Test Connection" 按钮
 //
-//  Created for LLM BYOK integration (2026-07-11).
+//  Settings → LLM configuration page:
+//  - Enable toggle
+//  - Base URL / API Key / Model inputs
+//  - Temperature slider
+//  - Custom System Prompt appendix
+//  - "Test Connection" button
 //
 
 import SwiftUI
 
+/// Settings → LLM 配置页:Byok(自带 Key) 模式下的端点 / 鉴权 / 模型 / Prompt 设置。
+/// Settings → LLM configuration page: endpoint / auth / model / prompt
+/// settings for the BYOK (bring-your-own-key) mode.
 struct LLMSettingsView: View {
     @EnvironmentObject private var envManager: AppEnvironmentManager
 
+    /// Base URL 输入(临时,onChange 即写回 envManager)
+    /// Base URL input (temporary, written back to envManager on change).
     @State private var baseURLInput: String = ""
+    /// API Key 输入(临时,onChange 即写回 envManager)
+    /// API Key input (temporary, written back to envManager on change).
     @State private var apiKeyInput: String = ""
+    /// 模型名输入
+    /// Model name input.
     @State private var modelInput: String = ""
+    /// System Prompt 追加段
+    /// System prompt appendix.
     @State private var appendixInput: String = ""
+    /// Temperature(0...2,默认 0.7)
+    /// Temperature (0...2, default 0.7).
     @State private var temperature: Double = 0.7
     /// DEBUG 专用:全局覆盖系统 prompt(仅当 debugModeEnabled 时显示)
+    /// DEBUG-only: global system-prompt override (only shown in DEBUG mode).
     @State private var overrideInput: String = ""
 
+    /// 是否正在测试连接
+    /// Whether a test-connection request is in flight.
     @State private var isTesting = false
+    /// 测试结果 alert 文本
+    /// Test-result alert text.
     @State private var testAlertMessage: String? = nil
+    /// 最近一次测试是否成功(决定 alert 标题)
+    /// Whether the most recent test succeeded (drives the alert title).
     @State private var testAlertSucceeded: Bool = false
 
     /// 是否已经保存了 API Key(用于决定显示 SecureField 还是占位文字)
+    /// Whether an API Key is already saved (decides whether to show the
+    /// SecureField or the masked placeholder).
     private var hasSavedAPIKey: Bool {
         !(envManager.preferences.llmAPIKey?.isEmpty ?? true)
     }
@@ -238,8 +265,11 @@ struct LLMSettingsView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Helpers / 辅助方法
 
+    /// 从 `envManager.preferences` 拉一份初始值填到本地 @State(只跑一次)
+    /// Pull initial values from `envManager.preferences` into local @State
+    /// (runs once on appear).
     private func syncFromPreferences() {
         let prefs = envManager.preferences
         baseURLInput = prefs.llmBaseURL ?? ""
@@ -248,12 +278,16 @@ struct LLMSettingsView: View {
         temperature = prefs.llmTemperature
     }
 
+    /// 把 API Key 脱敏:保留末 4 位
+    /// Mask the API key: keep the last 4 characters.
     private func maskedKey(_ key: String) -> String {
         guard key.count > 4 else { return "•" + String(repeating: "•", count: max(key.count, 4)) }
         let suffix = key.suffix(4)
         return "••••••••\(suffix)"
     }
 
+    /// 真正发一次 minimal 请求来验证端点 / Key / 模型
+    /// Send a minimal request to verify endpoint / key / model.
     @MainActor
     private func runTestConnection() async {
         isTesting = true

@@ -1,43 +1,30 @@
+//  StudyTimerActivityAttributes.swift
+//  StudyPulse
+//
+//  番茄钟 Live Activity 属性 / Pomodoro Live Activity attributes.
+//  由主 App 与 Widget 扩展(target)共用。
+//  Shared between the main app and the widget extension target.
 
 @preconcurrency import ActivityKit
 import Foundation
 
-/// Live Activity attributes for the StudyPulse Pomodoro timer.
-/// Shared between the main app (which starts/updates/ends the activity)
-/// and the widget extension (which renders the Lock Screen & Dynamic Island UI).
+/// 番茄钟 Live Activity 属性(主 App + Widget 共用)。
+/// Pomodoro Live Activity attributes (shared by main app + widget).
 nonisolated struct StudyTimerActivityAttributes: ActivityAttributes, Sendable {
-    /// Static: set once when the activity starts.
+    /// 动态状态(活动期间更新)/ Dynamic state — updated during the activity.
     public struct ContentState: Codable, Hashable, Sendable {
-        /// Remaining seconds in the countdown.
-        var remainingSeconds: Int
-        /// Total session duration in seconds.
-        var totalSeconds: Int
-        /// Label for the intensity tier (e.g. "Deep Focus", "Light Review").
-        var intensityLabel: String
-        /// SF Symbol name for the intensity icon.
-        var intensityIcon: String
-        /// 6-digit hex (RRGGBB) for the tier accent color — the widget
-        /// extension uses this so it can render the correct theme without
-        /// re-deriving the tier from the SF Symbol.
-        var colorHex: String
-        /// Raw tier key (e.g. "peak", "deepFocus", "steady", "light",
-        /// "recovery", "paused", "completed", "ended") — the widget
-        /// extension uses this to choose copy & decorative ornaments.
-        var tier: String
-        /// Target time as an ISO 8601 string — the activity uses this
-        /// so the Lock Screen countdown stays accurate without pushes.
-        var targetEndISO: String
+        var remainingSeconds: Int  // 剩余秒数 / Remaining seconds.
+        var totalSeconds: Int  // 会话总时长(秒) / Total session duration (seconds).
+        var intensityLabel: String  // 强度等级显示名 / Intensity tier label.
+        var intensityIcon: String  // 强度 SF Symbol / Intensity SF Symbol.
+        var colorHex: String  // 6 位 hex 主题色 / 6-digit hex tier color.
+        var tier: String  // tier 原始键 / Raw tier key.
+        var targetEndISO: String  // 目标结束时间(ISO 8601) / Target end time (ISO 8601).
     }
 
-    /// Stored once at activity start: the displayed label / icon for the
-    /// tier, so the widget does not have to re-derive them.
-    var intensityLabel: String
-    /// Stored once at activity start: the SF Symbol name for the tier.
-    var intensityIcon: String
-    /// 6-digit hex (RRGGBB) for the tier accent color.
-    var colorHex: String
-    /// Raw tier key (see ContentState.tier).
-    var tier: String
-    /// Total session duration in minutes (used for the widget subtitle).
-    var totalMinutes: Int
+    var intensityLabel: String  // 活动开始时记录一次 / Stored once at start.
+    var intensityIcon: String  // 活动开始时记录一次 / Stored once at start.
+    var colorHex: String  // 6 位 hex 主题色 / 6-digit hex tier color.
+    var tier: String  // tier 原始键 / Raw tier key.
+    var totalMinutes: Int  // 会话总时长(分钟) / Total session duration (minutes).
 }

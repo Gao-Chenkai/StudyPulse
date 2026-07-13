@@ -8,13 +8,22 @@
 import SwiftUI
 
 // MARK: - 头像显示组件
+// MARK: - Avatar Display Component
+
+/// 用户头像:有 data 走图片,否则走首字符 + 哈希色背景。
+/// User avatar: renders the image when `avatarData` is provided,
+/// otherwise falls back to the user's initial over a stable color
+/// (hashed from the username).
 struct AvatarView: View {
     let username: String
     let avatarData: Data?
     var size: CGFloat = 80
+    /// 是否绘制边框
+    /// Whether to draw a border ring.
     var showBorder: Bool = true
-    
+
     /// 根据用户名生成稳定的颜色
+    /// Stable color derived from the username hash.
     private var backgroundColor: Color {
         let colors: [Color] = [
             .blue, .purple, .pink, .red, .orange,
@@ -23,8 +32,9 @@ struct AvatarView: View {
         let hash = abs(username.hashValue)
         return colors[hash % colors.count]
     }
-    
-    /// 提取用户名的首字符（支持中文和英文）
+
+    /// 提取用户名的首字符(支持中文和英文)
+    /// Extracts the first character of the username (supports CJK and Latin).
     private var initial: String {
         let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
         if let firstChar = trimmed.first {
@@ -81,6 +91,10 @@ struct AvatarView: View {
 }
 
 // MARK: - 头像选择器
+// MARK: - Avatar Picker
+
+/// 头像编辑页:从相册选 / 拍照 / 移除。
+/// Avatar editor screen: choose from library / take photo / remove.
 struct AvatarEditView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) var dismiss
@@ -92,6 +106,7 @@ struct AvatarEditView: View {
     var body: some View {
         VStack(spacing: 24) {
             // 头像预览
+            // Avatar preview
             AvatarView(
                 username: container.profileRepo.profile.username,
                 avatarData: avatarData,
@@ -173,6 +188,8 @@ struct AvatarEditView: View {
     }
 
     private func resizeImage(_ image: UIImage, targetSize: CGSize) -> UIImage? {
+        // 头像输出统一 400x400,JPEG 0.8(磁盘占位小,质量也够用)
+        // Avatars are normalized to 400x400 JPEG q=0.8 (small disk footprint, plenty of quality).
         let size = image.size
         let widthRatio = targetSize.width / size.width
         let heightRatio = targetSize.height / size.height

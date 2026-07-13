@@ -11,23 +11,31 @@ import Foundation
 import SwiftData
 
 // MARK: - PlantState (value-type mirror)
+// MARK: - PlantState 值类型镜像 / value-type mirror
 
 /// 值类型镜像，便于跨 actor 传递与单测。
 /// Value-type mirror of the SwiftData record; safe to pass around.
 nonisolated struct PlantState: Codable, Equatable, Sendable {
     /// 当前阶段（持久化以 rawValue 存）
+    /// Current stage (persisted as rawValue).
     var currentStage: PlantStage
     /// 阶段切换历史（最近 50 条）
+    /// Stage transition history (most recent 50).
     var history: [PlantStageTransition]
     /// 最近一次阶段更新时间
+    /// Last stage update timestamp.
     var lastUpdated: Date
     /// Debug 强制覆盖（nil = 跟随 derive 逻辑；非 nil = Debug 锁定到该阶段）
+    /// Debug force override (nil = follow derive; non-nil = lock to this stage).
     var forceOverride: PlantStage?
     /// 上一次 recordActivity 触达的时间
+    /// Last recordActivity timestamp.
     var lastActivityAt: Date?
     /// Debug 模拟 streak（nil = 不覆盖）
+    /// Debug simulated streak (nil = no override).
     var simulatedStreak: Int?
     /// Debug 模拟 lastActiveDate（nil = 不覆盖）
+    /// Debug simulated lastActiveDate (nil = no override).
     var simulatedLastActiveDate: Date?
 
     init(currentStage: PlantStage = .seed,
@@ -48,25 +56,34 @@ nonisolated struct PlantState: Codable, Equatable, Sendable {
 }
 
 // MARK: - PlantStateRecord (SwiftData)
+// MARK: - PlantStateRecord 持久化 / SwiftData record
 
 @Model
 final class PlantStateRecord {
     @Attribute(.unique) var id: UUID
     /// 持久化以 rawValue 字符串
+    /// Persisted as the PlantStage rawValue string.
     var currentStageRaw: String
     /// 历史 JSON 编码（避免嵌套 @Model）
+    /// History JSON-encoded (avoids nested @Model).
     var historyData: Data?
+    /// 最近一次阶段更新时间
+    /// Last stage update timestamp.
     var lastUpdated: Date
     /// Debug 强制覆盖 rawValue（nil = 不覆盖）
+    /// Debug force override rawValue (nil = no override).
     var forceOverrideRaw: String?
     /// 上一次 recordActivity 触达时间
+    /// Last recordActivity timestamp.
     var lastActivityAt: Date?
     /// 上一次 derive 输入快照（用于 reborn 判定：previouslyWithered）
     /// Previous derive stage (used to detect withered → reborn).
     var previousStageRaw: String
     /// Debug 模拟：临时把 streak 覆盖为这个值（nil = 不覆盖）
+    /// Debug simulated streak override (nil = no override).
     var simulatedStreakOverride: Int?
     /// Debug 模拟：临时把 lastActiveDate 覆盖为这个值（nil = 不覆盖）
+    /// Debug simulated lastActiveDate override (nil = no override).
     var simulatedLastActiveDate: Date?
 
     init(
@@ -125,6 +142,7 @@ final class PlantStateRecord {
     }
 
     /// 暴露 previousStage 用于下次 derive 计算 previouslyWithered。
+    /// Expose previousStage so the next derive call can compute previouslyWithered.
     var previousStage: PlantStage {
         PlantStage(rawValue: previousStageRaw) ?? .seed
     }

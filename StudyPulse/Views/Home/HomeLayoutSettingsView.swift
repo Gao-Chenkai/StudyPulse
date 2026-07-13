@@ -8,9 +8,13 @@
 import SwiftUI
 
 // MARK: - HomeLayoutSettingsView
+// MARK: - 主页布局设置视图
 
 /// 主页卡片布局设置：拖拽排序 + 开关控制显示/隐藏
+/// Home card layout settings: drag to reorder + toggle to show/hide.
 struct HomeLayoutSettingsView: View {
+    /// 当前编辑中的布局条目(可拖拽、可切换 enabled)。
+    /// In-progress layout items being edited (draggable, toggleable `enabled`).
     @State private var items: [HomeCardItem] = HomeLayoutPreference.load().items
     @Environment(\.dismiss) private var dismiss
 
@@ -70,6 +74,9 @@ struct HomeLayoutSettingsView: View {
         }
     }
     
+    /// 给定一个 `HomeCardItem`,返回一个安全的 `Binding<Bool>` 用于开关控件;
+    /// 设置后立即写回 `HomeLayoutPreference`。
+    /// For a given `HomeCardItem`, returns a safe `Binding<Bool>` for the toggle control; immediately writes back to `HomeLayoutPreference` on change.
     private func binding(for item: HomeCardItem) -> Binding<Bool> {
         Binding(
             get: {
@@ -83,7 +90,9 @@ struct HomeLayoutSettingsView: View {
             }
         )
     }
-    
+
+    /// 把当前 `items` 持久化到 `HomeLayoutPreference`(UserDefaults)。
+    /// Persist the current `items` to `HomeLayoutPreference` (UserDefaults).
     private func save() {
         let pref = HomeLayoutPreference(items: items)
         pref.save()

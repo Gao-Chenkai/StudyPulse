@@ -17,13 +17,18 @@
 import Foundation
 import SwiftUI
 
-/// 主页 AI 提问的"按需数据抓取"层
+/// 主页 AI 提问的"按需数据抓取"层。
+/// 在调用 LLM 之前按类别从 app 各数据源拉取数据并序列化为 Markdown。
+/// On-demand data fetcher for the Home Ask AI. Pulls data from the
+/// app's repositories per category and serialises it as Markdown before
+/// feeding it to the LLM.
 @MainActor
 struct HomeAskDataProvider {
-    let container: RepositoryContainer
-    let hrvManager: HealthKitManager
-    let profile: UserProfile
+    let container: RepositoryContainer   // 主数据访问入口 / Repository facade
+    let hrvManager: HealthKitManager    // HealthKit / HRV 数据 / HealthKit & HRV data
+    let profile: UserProfile             // 当前用户档案 / Current user profile
 
+    // MARK: - 4 类抓取入口 / 4 fetch entry points
     // MARK: - 4 类抓取入口
 
     /// 抓取 `body` 类数据(HRV / RHR / 睡眠 / 呼吸 / 锻炼 + 30 天基线)
@@ -91,7 +96,10 @@ struct HomeAskDataProvider {
         return out
     }
 
-    /// 抓取 `trends` 类数据(本周 / 本月 周报摘要)
+    /// 抓取 `trends` 类数据(本周 / 本月 周报摘要)。
+    /// 包含周报/月报 + 本地自动趋势分析摘要。
+    /// Fetch `trends` data: weekly + monthly report summaries, plus the
+    /// local auto-trend text summary.
     func fetchTrends() -> String {
         var out = "## 趋势\n"
         let now = Date()
@@ -161,7 +169,10 @@ struct HomeAskDataProvider {
         return out
     }
 
-    /// 抓取 `review` 类数据(错题 / 待复习闪卡)
+    /// 抓取 `review` 类数据(错题 / 待复习闪卡)。
+    /// 包括错题统计、按学科分布、待加强题 + SRS 今日/未来 7 天待复习数。
+    /// Fetch `review` data: mistake counts, per-subject distribution, weak
+    /// items (<60% mastery), and SRS today/7-day due counts.
     func fetchReview() -> String {
         var out = "## 复习\n"
         let mistakes = container.mistakeRepo.mistakeSets
@@ -199,14 +210,19 @@ struct HomeAskDataProvider {
         return out
     }
 
+    // MARK: - 路由抓取主入口 / Router-driven fetch entry
     // MARK: - 路由抓取主入口
 
-    /// 按路由结果抓取所有选中类别的数据
-    /// - Returns: 每个类别的 Markdown 片段(按 body / grades / trends / review 顺序)
+    /// 按路由结果抓取所有选中类别的数据。
+    /// - Returns: 每个类别的 Markdown 片段(按 body / grades / trends / review 顺序)。
+    /// Fetch every selected category in router order.
+    /// - Returns: One Markdown section per category, in the order the router selected.
     func fetch(categories: [HomeAskRouterLLM.Category]) -> [String] {
         var sections: [String] = []
         for cat in categories {
             let block: String
+            // switch 派发:把 category 枚举映射到对应的 fetchXxx()
+            // Dispatch: route each category to its corresponding fetcher.
             switch cat {
             case .body:   block = fetchBody()
             case .grades: block = fetchGrades()

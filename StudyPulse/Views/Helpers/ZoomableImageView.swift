@@ -4,12 +4,20 @@
 //
 //  Created by Chenkai Gao on 2026/6/5.
 //
+//  可缩放图片查看器。点击图片进入全屏,支持双指缩放与双击缩放/还原。
+//  Tappable image viewer. Tapping the image enters fullscreen with pinch
+//  zoom and double-tap to zoom / reset.
+//
 
 import SwiftUI
 import UIKit
 
+/// 缩略图:点按进入全屏缩放器。
+/// Thumbnail: tap to enter the fullscreen zoom view.
 struct ZoomableImageView: View {
     let image: UIImage
+    /// 是否显示全屏缩放器
+    /// Whether the fullscreen zoom view is presented.
     @State private var showFullscreen = false
 
     var body: some View {
@@ -25,6 +33,8 @@ struct ZoomableImageView: View {
     }
 }
 
+/// 全屏缩放 + 关闭按钮。
+/// Fullscreen zoom view with a dismiss button.
 private struct FullscreenZoomableView: View {
     let image: UIImage
     @Environment(\.dismiss) private var dismiss
@@ -55,6 +65,8 @@ private struct FullscreenZoomableView: View {
     }
 }
 
+/// UIScrollView 包装,实现 1x–5x 缩放 + 双击缩放到点击处。
+/// UIScrollView wrapper that implements 1x–5x zoom + double-tap-to-zoom.
 private struct ZoomableScrollView: UIViewRepresentable {
     let image: UIImage
 
@@ -62,6 +74,8 @@ private struct ZoomableScrollView: UIViewRepresentable {
         let scrollView = UIScrollView()
         scrollView.backgroundColor = .black
         scrollView.delegate = context.coordinator
+        // 缩放范围 1x – 5x,搭配双击缩放
+        // Zoom range 1x – 5x, paired with double-tap-to-zoom.
         scrollView.maximumZoomScale = 5.0
         scrollView.minimumZoomScale = 1.0
         scrollView.showsHorizontalScrollIndicator = false
@@ -75,6 +89,7 @@ private struct ZoomableScrollView: UIViewRepresentable {
         imageView.isUserInteractionEnabled = true
         scrollView.addSubview(imageView)
 
+        // 双击手势
         // Double-tap gesture
         let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
         doubleTap.numberOfTapsRequired = 2

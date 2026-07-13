@@ -11,75 +11,91 @@ import Foundation
 import os
 
 /// 管理全局应用环境：语言和主题
+/// Manages global app environment: language, theme, accent, glass, and phase.
 @MainActor
 class AppEnvironmentManager: ObservableObject {
     static let shared = AppEnvironmentManager()
-    
+
+    // UserDefaults 键名 / UserDefaults key for the preferences blob
     private let defaultsKey = "appPreferences"
-    
+
     @Published var preferences: AppPreferences {
         didSet {
             save()
             // 任何偏好变更都可能影响 debug 子开关 → 同步到 LogStore
+            // Any preference change can flip a debug sub-toggle → sync to LogStore.
             applyDebugStateToLogStore()
         }
     }
-    
+
     /// 当前有效的 SwiftUI ColorScheme（nil = 跟随系统）
+    /// Currently effective SwiftUI `ColorScheme` (nil = follow system).
     var effectiveColorScheme: ColorScheme? {
         preferences.colorScheme.toSwiftColorScheme()
     }
 
     /// 当前有效的语言代码
+    /// Currently effective language code.
     var effectiveLanguage: String? {
         preferences.appLanguage
     }
 
     /// 当前主色（用于 AccentColor / 折线 / 进度条）
+    /// Currently active accent (used for AccentColor / charts / progress bars).
     var effectiveAccent: ThemeAccent {
         ThemeAccent.resolve(preferences.accentPaletteId)
     }
 
     /// 当前主色对应的 `Color`
+    /// `Color` representation of the currently active accent.
     var effectiveAccentColor: Color {
         effectiveAccent.color
     }
 
     // MARK: - Theme Shop (主题 / 皮肤商店)
+    // MARK: - 主题商店 / Theme Shop
 
     /// 当前装备的主色预设（与 `effectiveAccent` 保持一致；后者保留以兼容旧调用点）。
+    /// Currently equipped accent palette (matches `effectiveAccent`; the latter is kept for legacy call sites).
     var effectiveAccentPalette: AccentPalette {
         ThemeShopCatalog.accentPalette(forId: preferences.accentPaletteId)
     }
 
     /// 当前装备的卡片皮肤。
+    /// Currently equipped card skin.
     var effectiveCardSkin: CardSkin {
         ThemeShopCatalog.cardSkin(forId: preferences.cardSkinId)
     }
 
     /// 当前装备的计时器动画。
+    /// Currently equipped timer animation.
     var effectiveTimerAnimation: TimerAnimation {
         ThemeShopCatalog.timerAnimation(forId: preferences.timerAnimationId)
     }
 
     /// 主色对应的 `Color`（直接读 `effectiveAccentPalette.color`）。
+    /// `Color` for the accent (reads `effectiveAccentPalette.color` directly).
     var effectiveAccentPaletteColor: Color {
         effectiveAccentPalette.color
     }
 
     /// 全局是否启用 iOS 26 glassEffect 卡片
+    /// Whether iOS 26 glassEffect cards are enabled globally.
     var glassEffectEnabled: Bool {
         preferences.glassEffectEnabled
     }
 
     /// 当前激活的 study phase id（nil = 全部数据）
+    /// Currently active study phase id (nil = all data).
     var activePhaseId: UUID? {
         preferences.activePhaseId
     }
 
     // MARK: - Debug Mode 透传属性
+    // MARK: - Debug 模式透传 / Debug pass-through
 
     /// Debug 模式总开关
+    /// Master debug mode toggle.
     var debugModeEnabled: Bool {
         get { preferences.debugModeEnabled }
         set {
@@ -89,21 +105,25 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 是否处于 verbose 日志收集模式
+    /// Whether verbose log capture is enabled.
     var debugVerboseLogging: Bool {
         preferences.debugVerboseLogging
     }
 
     /// 是否在主页面右上角显示 FPS / 内存浮窗
+    /// Whether to show the FPS / memory overlay in the top-right corner.
     var debugFPSOverlay: Bool {
         preferences.debugFPSOverlay
     }
 
     /// 是否对 .debugLayoutBounds() 修饰的 view 显示边界
+    /// Whether to outline views that have `.debugLayoutBounds()` applied.
     var debugLayoutBounds: Bool {
         preferences.debugLayoutBounds
     }
 
     /// 是否对 .debugInspect() 修饰的 view 启用长按检视
+    /// Whether to enable long-press inspect on views that have `.debugInspect()` applied.
     var debugLongPressInspect: Bool {
         preferences.debugLongPressInspect
     }
@@ -121,43 +141,51 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 切换主色预设
+    /// Switch the accent palette.
     func setAccentPalette(_ accent: ThemeAccent) {
         Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
         preferences.accentPaletteId = accent.rawValue
     }
 
     /// 通过主色预设 id 装备（主题商店入口；与 `setAccentPalette` 行为一致，写同一字段）。
+    /// Equip an accent palette by id (theme shop entry; same as `setAccentPalette`).
     func setAccentPaletteId(_ id: String) {
         Log.preferences.info("切换主色 (商店) / Accent change (shop): -> \(id, privacy: .public)")
         preferences.accentPaletteId = id
     }
 
     /// 装备卡片皮肤。
+    /// Equip a card skin.
     func setCardSkinId(_ id: String) {
         Log.preferences.info("切换卡片皮肤 / Card skin change: -> \(id, privacy: .public)")
         preferences.cardSkinId = id
     }
 
     /// 装备计时器动画。
+    /// Equip a timer animation.
     func setTimerAnimationId(_ id: String) {
         Log.preferences.info("切换计时器动画 / Timer animation change: -> \(id, privacy: .public)")
         preferences.timerAnimationId = id
     }
 
     /// 切换玻璃效果开关
+    /// Toggle the glass effect switch.
     func setGlassEffectEnabled(_ enabled: Bool) {
         Log.preferences.info("切换玻璃效果 / Glass effect: -> \(enabled, privacy: .public)")
         preferences.glassEffectEnabled = enabled
     }
 
     // MARK: - LLM (BYOK 大模型) 透传属性
+    // MARK: - LLM 透传 / LLM pass-through
 
     /// 当前 LLM 配置快照(只读)。调用方按需构造 `LLMPrompt`。
+    /// Current LLM config snapshot (read-only). Callers build `LLMPrompt` as needed.
     var llmConfig: LLMConfig {
         LLMConfig.from(preferences)
     }
 
     /// LLM 总开关
+    /// LLM master toggle.
     var llmEnabled: Bool {
         get { preferences.llmEnabled }
         set {
@@ -167,6 +195,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置 LLM baseURL。`nil` / 空字符串视作未配置。
+    /// Set the LLM baseURL. `nil` / empty string is treated as unconfigured.
     func setLLMBaseURL(_ url: String?) {
         let normalized: String?
         if let url, !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -179,6 +208,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置 LLM API Key。`nil` / 空字符串视作清空。
+    /// Set the LLM API key. `nil` / empty string clears it.
     func setLLMAPIKey(_ key: String?) {
         let normalized: String?
         if let key, !key.isEmpty { normalized = key } else { normalized = nil }
@@ -187,6 +217,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置 LLM 模型 id
+    /// Set the LLM model id.
     func setLLMModel(_ model: String?) {
         let normalized: String?
         if let model, !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -199,6 +230,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置 LLM 自定义系统 prompt 追加
+    /// Set the LLM system prompt appendix.
     func setLLMSystemPromptAppendix(_ appendix: String?) {
         let normalized: String?
         if let appendix, !appendix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -210,6 +242,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置 LLM 采样温度(0.0-2.0,内部 clamp)
+    /// Set the LLM sampling temperature (0.0–2.0, clamped internally).
     func setLLMTemperature(_ temperature: Double) {
         let clamped = max(0, min(2, temperature))
         preferences.llmTemperature = clamped
@@ -217,6 +250,8 @@ class AppEnvironmentManager: ObservableObject {
 
     /// 设置 DEBUG 模式专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
     /// `nil` / 空字符串 → 清空覆盖,回退到默认 + appendix。
+    /// DEBUG-only: globally override the LLM system prompt (visible in DEBUG only).
+    /// `nil` / empty string clears the override, falling back to default + appendix.
     func setLLMDebugOverrideSystemPrompt(_ override: String?) {
         let normalized: String?
         if let override, !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -229,6 +264,7 @@ class AppEnvironmentManager: ObservableObject {
     }
 
     /// 设置当前激活的 study phase（nil = 全部数据）
+    /// Set the currently active study phase (nil = all data).
     func setActivePhaseId(_ id: UUID?) {
         Log.preferences.info("切换 phase / Active phase change: -> \(id?.uuidString ?? "all", privacy: .public)")
         preferences.activePhaseId = id

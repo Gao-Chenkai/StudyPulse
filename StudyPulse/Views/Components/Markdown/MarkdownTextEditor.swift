@@ -10,12 +10,21 @@
 //  view's `inputAccessoryView`, giving it the same Notes-style
 //  positioning above the keyboard.
 //
+//  MarkdownEditorView 使用的光标感知 UITextView 包装。
+//  系统 SwiftUI TextEditor 不暴露 selectedRange,所以需要
+//  UIViewRepresentable,键盘附件工具栏才能在当前光标处插入/
+//  包裹文本。附件以 inputAccessoryView 形式挂到 textView,
+//  实现 Notes 风格:浮在键盘上方。
+//
 
 import SwiftUI
 import UIKit
 
 // MARK: - Cursor-aware Markdown Text Editor
+// MARK: - 光标感知 Markdown 编辑器
 
+/// 把 `UITextView` 包装为 SwiftUI View,暴露 text 和 selectedRange
+/// 为 binding,并把 markdown 键盘附件工具栏挂为 inputAccessoryView。
 /// A `UITextView` wrapper that exposes its `text` and `selectedRange`
 /// as SwiftUI bindings, and installs the markdown keyboard accessory
 /// toolbar as its `inputAccessoryView`.
@@ -34,6 +43,7 @@ struct MarkdownTextEditor: UIViewRepresentable {
         view.text = text
         view.selectedRange = clampedRange(selectedRange, in: text)
 
+        // 安装 markdown 键盘附件
         // Install the markdown keyboard accessory
         let toolbar = MarkdownKeyboardToolbar(
             text: $text,
@@ -55,8 +65,11 @@ struct MarkdownTextEditor: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
-        // 当用户正在使用中文拼音或 IME 输入法处于“标记文本（Marked Text）”组合状态时，
-        // 切勿修改 uiView.text 或 uiView.selectedRange，否则一定会中断/吞除拼音或候选词。
+        // 当用户使用中文拼音或 IME 处于"标记文本(Marked Text)"组合状态时,
+        // 切勿修改 uiView.text 或 uiView.selectedRange,否则一定会中断/吞除拼音或候选词。
+        // When the user is composing with a Chinese pinyin IME or any IME is in a "marked text"
+        // composing state, never modify `uiView.text` or `uiView.selectedRange`, otherwise
+        // the pinyin / candidate will be eaten.
         guard uiView.markedTextRange == nil else { return }
         if uiView.text != text {
             uiView.text = text
@@ -84,6 +97,9 @@ struct MarkdownTextEditor: UIViewRepresentable {
         }
     }
 
+    /// 把外部传入的 NSRange 夹紧到 text 内的合法范围,
+    /// 防止在文本刚刚缩短(例如工具栏包裹后游标越界)时
+    /// 程序设置选区导致崩溃。
     /// Clamp an external `NSRange` to the valid range within `text` so
     /// that programmatically setting the selection cannot crash when
     /// the text was just shortened (e.g. after the toolbar wrapped
@@ -97,6 +113,8 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: MarkdownTextEditor
+        /// 在底层 UIView 生命周期内一直持有,
+        /// 让键盘附件保持存活。
         /// Retained for the lifetime of the underlying UIView so the
         /// keyboard accessory stays alive.
         var hostController: UIHostingController<MarkdownKeyboardToolbar>?
@@ -107,6 +125,8 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
+            // 拼音组合中不要回写 selectedRange,避免打断 IME。
+            // Don't write back selectedRange during IME composing to avoid disrupting the IME.
             if textView.markedTextRange == nil {
                 parent.selectedRange = textView.selectedRange
             }
@@ -122,7 +142,11 @@ struct MarkdownTextEditor: UIViewRepresentable {
 }
 
 // MARK: - Markdown Keyboard Toolbar
+// MARK: - Markdown 键盘附件工具栏
 
+/// 横向、可滚动的键盘附件,带常用 markdown 语法的快速插入按钮。
+/// 背景是圆角胶囊,使用 iOS 26+ 的真实 `glassEffect` 材质,
+/// 旧系统回退到 `.regularMaterial`。
 /// A horizontal, scrolling keyboard accessory with quick-insert buttons
 /// for common markdown syntax. The background is a capsule ("rounded
 /// rect with both sides fully rounded") that uses the real iOS 26
@@ -132,8 +156,14 @@ struct MarkdownKeyboardToolbar: View {
     @Binding var text: String
     @Binding var selectedRange: NSRange
 
+    /// 玻璃胶囊高度(60pt)
+    /// Glass capsule height (60pt).
     private let glassHeight: CGFloat = 60
+    /// 玻璃下方留白(12pt),让玻璃看起来"浮"在键盘上方
+    /// Gap below the glass (12pt) so the glass appears to float above the keyboard.
     private let bottomGap: CGFloat = 12
+    /// 玻璃左右缩进(12pt)
+    /// Left/right margin (12pt).
     private let horizontalMargin: CGFloat = 12
 
     var body: some View {
@@ -183,7 +213,10 @@ struct MarkdownKeyboardToolbar: View {
     }
 
     // MARK: - Button
+    // MARK: - 按钮
 
+    /// 单个工具栏按钮(SF Symbol + 点击执行的动作)
+    /// Single toolbar button (SF Symbol + tap action).
     @ViewBuilder
     private func toolbarButton(_ systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -196,8 +229,11 @@ struct MarkdownKeyboardToolbar: View {
         .buttonStyle(.plain)
     }
 
-    /// 把"无序 / 有序 / 待办"三种列表合并到一个按钮：
-    /// 点击 `list.bullet` 弹出 iOS 原生菜单，三选一后插入对应 markdown。
+    /// 把"无序 / 有序 / 待办"三种列表合并到一个按钮:
+    /// 点击 `list.bullet` 弹出 iOS 原生菜单,三选一后插入对应 markdown。
+    /// Combine "bullet / numbered / checklist" into one button: tap
+    /// `list.bullet` to bring up the native iOS menu, then pick one
+    /// to insert the matching markdown.
     @ViewBuilder
     private var listMenuButton: some View {
         Menu {
@@ -226,8 +262,11 @@ struct MarkdownKeyboardToolbar: View {
         .menuStyle(.button)
     }
 
-    /// 把"行内公式 / 行间公式"合并到一个按钮：
-    /// 点击 `function` 弹出 iOS 原生菜单，二选一后插入 `$…$` 或 `$$…$$`。
+    /// 把"行内公式 / 行间公式"合并到一个按钮:
+    /// 点击 `function` 弹出 iOS 原生菜单,二选一后插入 `$…$` 或 `$$…$$`。
+    /// Combine "inline / block math" into one button: tap `function`
+    /// to bring up the native iOS menu, then pick one to insert
+    /// `$…$` (inline) or `$$…$$` (block).
     @ViewBuilder
     private var mathMenuButton: some View {
         Menu {
@@ -251,6 +290,10 @@ struct MarkdownKeyboardToolbar: View {
         .menuStyle(.button)
     }
 
+    // 文本操作 helper 之前作为 `private func` 写在这里。
+    // 它们被抽到 `MarkdownFormatting` 中,这样 iPad 菜单栏命令
+    // (`MarkdownCommands`)就能调用与屏幕工具栏相同的代码路径
+    // —— 保持两个入口行为一致。
     // Text manipulation helpers used to live here as `private func`
     // methods. They were extracted to `MarkdownFormatting` so the
     // iPad menu-bar commands (`MarkdownCommands`) can call the same

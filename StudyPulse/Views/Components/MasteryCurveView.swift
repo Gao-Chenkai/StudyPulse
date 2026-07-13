@@ -15,14 +15,17 @@ import SwiftUI
 import Charts
 
 /// 错题详情页顶部的掌握度曲线图。
+/// Mastery curve chart at the top of the mistake-detail page.
 struct MasteryCurveView: View {
     let history: [MasteryHistoryEntry]
     let currentScore: Double
     let exposureCount: Int
     let createdAt: Date
-    /// 自定义主色（默认用全局主色）
+    /// 自定义主色(默认用全局主色)
+    /// Custom tint color (defaults to the global accent color).
     var tintColor: Color = .accentColor
-    /// 单卡片下，强制撑满父宽度
+    /// 单卡片下,强制撑满父宽度
+    /// Force the chart to fill its parent's width in the single-card case.
     var fillWidth: Bool = true
 
     @State private var selectedEntry: MasteryHistoryEntry?
@@ -64,6 +67,7 @@ struct MasteryCurveView: View {
     }
 
     // MARK: - Header (current score + exposure)
+    // MARK: - 头部(当前分 + 复习次数)
 
     @ViewBuilder
     private var header: some View {
@@ -96,6 +100,7 @@ struct MasteryCurveView: View {
     }
 
     // MARK: - Chart
+    // MARK: - 图表
 
     @ViewBuilder
     private var chart: some View {
@@ -195,6 +200,7 @@ struct MasteryCurveView: View {
     }
 
     // MARK: - Empty / Legend
+    // MARK: - 空状态 / 图例
 
     @ViewBuilder
     private var emptyState: some View {
@@ -236,6 +242,7 @@ struct MasteryCurveView: View {
     }
 
     // MARK: - Helpers
+    // MARK: - 辅助函数
 
     private func nearestEntry(to date: Date) -> MasteryHistoryEntry? {
         history.min { lhs, rhs in
@@ -247,6 +254,8 @@ struct MasteryCurveView: View {
         date.formatted(.dateTime.month(.abbreviated).day())
     }
 
+    /// 掌握度分对应的颜色阈值:<0.25 红,<0.5 橙,<0.75 蓝,其余绿
+    /// Color thresholds per mastery score: <0.25 red, <0.5 orange, <0.75 blue, otherwise green.
     private func scoreColor(score: Double) -> Color {
         switch score {
         case ..<0.25:  return .red
@@ -257,6 +266,8 @@ struct MasteryCurveView: View {
     }
 
     private func scoreTagline(_ score: Double) -> String {
+        // 5 段文本分桶:Struggling / Building / Familiar / Confident / Mastered
+        // 5-bucket text labeling: Struggling / Building / Familiar / Confident / Mastered.
         switch score {
         case ..<0.2:  return "Struggling".localized()
         case ..<0.4:  return "Building".localized()
@@ -268,8 +279,10 @@ struct MasteryCurveView: View {
 }
 
 // MARK: - Plot Point
+// MARK: - 绘图点
 
-/// 内部绘图点（起点 + 历次 review）
+/// 内部绘图点(起点 + 历次 review)
+/// Internal plot point (origin + each review).
 private struct MasteryPlotPoint: Identifiable {
     let id: String
     let timestamp: Date
@@ -277,7 +290,8 @@ private struct MasteryPlotPoint: Identifiable {
     let isStart: Bool
 
     init(timestamp: Date, score: Double, isStart: Bool) {
-        // 给一个稳定 id，相同 (timestamp, score, isStart) 视为同一点
+        // 给一个稳定 id,相同 (timestamp, score, isStart) 视为同一点
+        // Stable id so identical (timestamp, score, isStart) are treated as the same point.
         self.id = "\(timestamp.timeIntervalSince1970)-\(score)-\(isStart ? 1 : 0)"
         self.timestamp = timestamp
         self.score = score

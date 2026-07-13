@@ -2,13 +2,21 @@
 //  ScorePredictionEngine.swift
 //  StudyPulse
 //
-//  本地纯 Swift 实现的成绩预测引擎。
+//  本地纯 Swift 实现的成绩预测引擎 / Local pure-Swift score-prediction engine.
+//
 //  v1.4 起默认使用 **二元加权线性回归**(bivariate WLS):
 //      score = α + β·date + γ·cumulative_exposure
 //    配合 EWMA(指数加权移动平均)在 60 天硬截窗口内拟合;
 //    平均掌握度(mastery)用于按 (1 - 0.4·mastery) 缩窄 95% 预测区间;
 //    残差 > 3σ 的最近一次考试会被标记为离群点(outlier)并在 UI 中提示用户。
 //  预留 `CoreMLScorePredictor` 接入点供未来替换为机器学习模型。
+//
+//  Key formulas:
+//    • 3 变量 WLS:  score = α + β·x + γ·e, weights w_i = exp(−Δdays/halfLife)
+//      Solve X'WX · θ = X'Wy via Cramer's rule 3×3 closed form.
+//    • 95% PI:  ŷ ± t_{n−p, .025} · s · sqrt(1 + leverage)
+//    • mastery 缩窄 CI:  halfWidth *= (1 − 0.4 · avgMastery)
+//    • 离群点:  |r_last| > 3σ  →  标记 + UI 提示
 //
 //  Created for the Exam "预测" button feature.
 //
@@ -202,17 +210,22 @@ protocol ScorePredictor: Sendable {
 // MARK: - 3 变量加权最小二乘(Cramer's rule 闭式解)
 
 /// 3 变量加权最小二乘闭式求解器(给 score = α + β·x + γ·e)。
+/// Closed-form 3-variable weighted least-squares solver (for score = α + β·x + γ·e).
 /// 求解 A · θ = b,其中:
 ///   A = X'WX(3×3 设计矩阵),θ = [α, β, γ]ᵀ,b = X'Wy
 ///   X = [1, x, e]ᵀ(行),W = diag(w)
-/// 设计矩阵:
+/// 设计矩阵 / Design matrix:
 ///   [ Σw,   Σw·x, Σw·e   ]
 ///   [ Σw·x, Σw·x²,Σw·x·e ]
 ///   [ Σw·e, Σw·x·e,Σw·e² ]
 ///
 /// 使用 Cramer's rule 3×3 闭式 + 3×3 解析求逆(adjugate)以计算
 /// "x_new' · (X'WX)⁻¹ · x_new" (leverage,用于预测区间)。
+/// Uses Cramer's rule (3×3 closed form) + analytic 3×3 inverse via adjugate
+/// to compute "x_new' · (X'WX)⁻¹ · x_new" (leverage, used in the prediction
+/// interval).
 /// 全部为 O(n) 计算,无矩阵库依赖。
+/// All O(n) computations; no matrix library dependency.
 enum WeightedLeastSquares3 {
     /// 11 个加权一阶 / 二阶矩,集中计算一次以避免重复遍历
     struct Sums {
@@ -317,8 +330,12 @@ enum WeightedLeastSquares3 {
     ///   x_new = [1, xNew, eNew]
     ///   adjᵀ = adj(对称矩阵的转置仍 = adj 本身,因为 adj[i][j] = -M_ji / ...,
     ///         实际计算时按 cofactor 矩阵的转置取)
+    /// Leverage at point (xNew, eNew):
+    ///   h = x_new' · A⁻¹ · x_new = x_new' · adj(A)ᵀ · x_new / detA
+    /// Used in the 95% PI formula:  ŷ ± t · s · sqrt(1 + h)
     static func leverage(xNew: Double, eNew: Double, adj: [Double], detA: Double) -> Double {
-        // adj 是 row-major 的 3×3 矩阵
+        // adj 是 row-major 的 3×3 矩阵(cofactor 矩阵,未转置)
+        // adj is row-major 3×3 (cofactor matrix, not transposed)
         // x_new = [1, xNew, eNew]
         // x_newᵀ · adj = [1·adj[0,0] + xNew·adj[1,0] + eNew·adj[2,0],
         //                 1·adj[0,1] + xNew·adj[1,1] + eNew·adj[2,1],
@@ -328,9 +345,11 @@ enum WeightedLeastSquares3 {
         // 我们的 adj 数组实际上是:adj[3i+j] = cofactor[i][j](cofactor 未转置)
         // 严格说 A⁻¹ = adj(A)ᵀ / detA,这里 cofactor 矩阵的转置就是 adj(A)。
         // 为简洁,我们直接计算 x_new' · cofactor · x_new / detA,等价。
+        // Strictly A⁻¹ = adj(A)ᵀ / detA; we just compute x_new' · cofactor · x_new / detA (equivalent).
         let t0 = 1.0 * adj[0] + xNew * adj[3] + eNew * adj[6]
         let t1 = 1.0 * adj[1] + xNew * adj[4] + eNew * adj[7]
         let t2 = 1.0 * adj[2] + xNew * adj[5] + eNew * adj[8]
+        // xTAx = x_newᵀ · (cofactor · x_new)  —— 标量二次型
         let xTAx = 1.0 * t0 + xNew * t1 + eNew * t2
         return xTAx / detA
     }
@@ -339,6 +358,7 @@ enum WeightedLeastSquares3 {
 // MARK: - EWMA 线性回归预测器(默认实现)
 
 /// EWMA 加权的(2 变量或 3 变量)最小二乘线性回归预测器。
+/// EWMA-weighted 2- or 3-variable least-squares linear regression predictor.
 /// 公式:
 ///   x = 距首条成绩的天数
 ///   e = 截至该成绩日期的累计错题复习次数(cumulative exposure)
@@ -585,7 +605,10 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         // 10. mastery 缩窄 CI(v1.4 新增)
         //     halfWidth *= (1 - masteryMaxShrink · avgMastery)
         //     mastery 越高 → CI 越窄(更确定);mastery 0 → 不缩窄
+        //     Mastery-shrunk CI (v1.4): halfWidth *= (1 − masteryMaxShrink · avgMastery)
+        //     mastery=0 → multiplier 1.0 (no shrink); mastery=1.0 → 0.6 (40% narrower)
         // v1.5:错题数据不足时,clampedMastery 强制为 0(不缩窄)
+        // v1.5: when mistake data is too sparse, force clampedMastery=0 (no shrink)
         let rawMastery = hasEnoughMistakeData ? ctx.averageMastery : 0
         let clampedMastery = max(0.0, min(1.0, rawMastery))
         let ciMultiplier = 1.0 - masteryMaxShrink * clampedMastery
@@ -598,6 +621,8 @@ struct LinearRegressionScorePredictor: ScorePredictor {
         }
 
         // 11. 离群点检测:最近一次考试(weight 最大)残差是否 > 3σ
+        // Outlier detection: is the most-recent exam's residual > 3σ?
+        // 公式 / Formula: z = r_last / s_resid,  if |z| > outlierSigma (default 3) → warn
         var outlierWarning: OutlierWarning? = nil
         if df > 0, let lastResidual = residuals.last {
             let sResid = (sse / Double(df)).squareRoot()

@@ -21,6 +21,8 @@ nonisolated final class ImageCache {
     private let lock = NSLock()
     
     private init() {
+        // countLimit 是 NSCache 的近似 LRU 上限;50 张 ≈ 50MB 内存预算
+        // countLimit is the approximate LRU cap of NSCache; 50 images ≈ 50MB budget.
         cache.countLimit = 50  // 最多缓存 50 张
     }
     
@@ -75,17 +77,24 @@ nonisolated final class ImageCache {
     ///   - data: 原始图片数据
     ///   - maxDimension: 最大边长（默认 300px）
     /// - Returns: 缩放后的缩略图
+    /// Generate a thumbnail with a fixed max dimension to reduce memory.
+    /// - Parameters:
+    ///   - data: Original image data.
+    ///   - maxDimension: Max edge length (default 300px).
+    /// - Returns: The scaled thumbnail, or nil if decode fails.
     static func thumbnail(from data: Data, maxDimension: CGFloat = 300) -> UIImage? {
         guard let original = UIImage(data: data) else { return nil }
         // 如果原图已小于最大尺寸，直接返回
+        // If the original is already small enough, return it as-is (no re-render).
         guard original.size.width > maxDimension || original.size.height > maxDimension else {
             return original
         }
-        
-        // 按比例缩放
+
+        // 按比例缩放(取较小比例,保证长边 == maxDimension)
+        // Scale uniformly; min() ratio ensures the longer edge equals maxDimension.
         let ratio = min(maxDimension / original.size.width, maxDimension / original.size.height)
         let newSize = CGSize(width: original.size.width * ratio, height: original.size.height * ratio)
-        
+
         let renderer = UIGraphicsImageRenderer(size: newSize)
         return renderer.image { _ in
             original.draw(in: CGRect(origin: .zero, size: newSize))

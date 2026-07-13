@@ -26,21 +26,19 @@ final class ExamReviewNotifications {
     private init() {}
 
     // MARK: - Public API
+    // MARK: - 对外 API / Public API
 
-    /// 为某场考试调度考后复盘提醒。
-    /// Schedule the post-exam review reminder for a single exam.
-    ///
+    /// 为某场考试调度考后复盘提醒。/ Schedule the post-exam review reminder.
     /// 触发时间:`(examEndDate ?? examDate) + 1 day` 的 09:00 本地时间。
-    /// 跳过:已复盘 / 触发时间 ≤ now。
     /// Trigger: 09:00 local time the day after (examEndDate ?? examDate).
-    /// Skips: already-reviewed exams and past triggers.
+    /// 跳过:已复盘 / 触发时间 ≤ now。/ Skips: already-reviewed and past triggers.
     nonisolated func schedule(for exam: Exam) {
-        // 已复盘的不再推
+        // 已复盘的不再推 / Skip exams already reviewed.
         guard exam.examReview == nil else {
             logger.debug("跳过已复盘的考试 / Skipping already-reviewed exam: id=\(exam.id.uuidString, privacy: .public)")
             return
         }
-
+        // 触发时间 ≤ now 直接跳过 / Skip if the trigger is already in the past.
         guard let triggerDate = computeTriggerDate(for: exam), triggerDate > Date() else {
             logger.debug("跳过过期触发点 / Skipping past review trigger: id=\(exam.id.uuidString, privacy: .public)")
             return
@@ -48,19 +46,20 @@ final class ExamReviewNotifications {
 
         let content = UNMutableNotificationContent()
         content.title = "Review Reminder".localized()
+        // 引导用户复盘的 prompt 模板 / Prompt template guiding the review capture.
         content.body = String(
             format: "%@ — fill out your review: what was tested, what went wrong, what you learned, next strategy.".localized(),
             exam.name
         )
         content.sound = .default
-        content.userInfo = [
-            "examId": exam.id.uuidString,
-            "type": "examReview"
-        ]
+        // userInfo 携带 examId,通知点击后路由到对应复盘页
+        // userInfo carries examId so a tap routes to its review.
+        content.userInfo = ["examId": exam.id.uuidString, "type": "examReview"]
 
         let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-
+        // 标识符:ExamReview_<examId> —— 与 Exam_<name>_<day>Days / SRS_ 区分
+        // Identifier: ExamReview_<examId>; distinguishable from Exam_<name>_<day>Days / SRS_.
         let identifier = "\(Self.identifierPrefix)\(exam.id.uuidString)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
@@ -73,21 +72,17 @@ final class ExamReviewNotifications {
         }
     }
 
-    /// 取消某场考试的复盘提醒(已复盘 / 考试被删时调用)
-    /// Cancel the review reminder for a single exam.
+    /// 取消某场考试的复盘提醒(已复盘 / 考试被删时调用)/ Cancel the review reminder.
     nonisolated func cancel(for examId: UUID) {
         let identifier = "\(Self.identifierPrefix)\(examId.uuidString)"
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
         logger.info("取消复盘通知 / Cancelled exam review notification: id=\(examId.uuidString, privacy: .public)")
     }
 
-    /// 重新调度所有未复盘的考试的通知(启动时调用,处理 phase 切换 / 日期编辑)
-    /// Reschedule review notifications for all unreviewed exams.
-    /// Called on app launch to handle phase switches / date edits.
+    /// 重新调度所有未复盘的考试的通知(启动时调用)/ Reschedule review notifications for all unreviewed exams.
     nonisolated func rescheduleAll(exams: [Exam]) {
         let center = UNUserNotificationCenter.current()
-
-        // 1. 先清空所有 ExamReview_ 前缀的待发通知
+        // 1) 先清空所有 ExamReview_ 前缀的待发通知 / Clear all pending requests with the prefix.
         center.getPendingNotificationRequests { requests in
             let ids = requests
                 .filter { $0.identifier.hasPrefix(Self.identifierPrefix) }
@@ -96,8 +91,7 @@ final class ExamReviewNotifications {
                 center.removePendingNotificationRequests(withIdentifiers: ids)
                 self.logger.info("清空旧的复盘通知 / Removed old exam review notifications: count=\(ids.count, privacy: .public)")
             }
-
-            // 2. 重新调度每场未复盘的考试
+            // 2) 重新调度每场未复盘的考试 / Re-schedule every unreviewed exam.
             let now = Date()
             var scheduled = 0
             var skipped = 0
@@ -117,8 +111,7 @@ final class ExamReviewNotifications {
         }
     }
 
-    /// 取消所有 ExamReview_ 通知(批量清空用,目前未使用,保留以备调试)
-    /// Cancel all exam review notifications. Currently unused, kept for debugging.
+    /// 取消所有 ExamReview_ 通知(目前未使用,保留以备调试)/ Cancel all (kept for debugging).
     nonisolated func cancelAll() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
@@ -133,16 +126,20 @@ final class ExamReviewNotifications {
     }
 
     // MARK: - Private
+    // MARK: - 内部实现 / Private
 
+    /// 通知标识符前缀,与 Exam_<name>_<day>Days / SRS_ 区分 / Identifier prefix.
     nonisolated private static let identifierPrefix = "ExamReview_"
 
-    /// 算出"考后次日 09:00"的可触发 Date。
-    /// Compute the trigger date (09:00 the day after the exam ends).
+    /// 算出"考后次日 09:00"的可触发 Date / Compute the trigger date.
     nonisolated private func computeTriggerDate(for exam: Exam) -> Date? {
+        // 优先用 examEndDate,没有则用 examDate / Prefer examEndDate; fall back to examDate.
         let baseDate = exam.examEndDate ?? exam.examDate
         guard let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: baseDate) else {
             return nil
         }
+        // 重组为次日 09:00 本地时间;Calendar 负责 DST / 跨月等边界
+        // Rebuild as next-day 09:00 local time; Calendar handles DST / month rollovers.
         var components = Calendar.current.dateComponents([.year, .month, .day], from: nextDay)
         components.hour = 9
         components.minute = 0

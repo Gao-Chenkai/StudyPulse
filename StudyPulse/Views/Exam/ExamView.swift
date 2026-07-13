@@ -4,10 +4,14 @@
 //
 //  Created by Chenkai Gao on 2026/3/23.
 //
+//  考试列表主视图:列表 / 月历两种模式,可新建/编辑/删除/预测
+//  Exam list root view: list or calendar mode, with create / edit / delete / predict.
+//
 
 import SwiftUI
 
 /// 考试列表主视图
+/// Exam list root view.
 struct ExamView: View {
     @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel: ExamViewModel
@@ -121,6 +125,7 @@ struct ExamView: View {
     }
 
     // MARK: - 内容
+    // MARK: - Content
 
     @ViewBuilder
     private var listContent: some View {
@@ -222,7 +227,10 @@ struct ExamView: View {
     }
 
     // MARK: - 视图模式切换
+    // MARK: - View mode toggle
 
+    /// 列表 / 月历 切换的菜单
+    /// Menu for toggling between list and calendar mode.
     private var viewModeMenu: some View {
         Menu {
             Picker("View Mode".localized(), selection: $viewModel.viewMode) {
@@ -242,8 +250,10 @@ struct ExamView: View {
 }
 
 // MARK: - 预测目标
+// MARK: - Prediction target
 
 /// 触发 ScorePredictionSheet 的目标（Identifiable 用于 sheet(item:) 绑定）
+/// Target for the ScorePredictionSheet (Identifiable so it can drive `sheet(item:)`).
 struct PredictionTarget: Identifiable {
     let id = UUID()
     let exam: Exam
@@ -252,8 +262,10 @@ struct PredictionTarget: Identifiable {
 }
 
 // MARK: - 过去考试 Sheet
+// MARK: - Past exams sheet
 
 /// 过去考试列表 Sheet
+/// Bottom sheet listing past (already-occurred) exams.
 struct PastExamsSheet: View {
     let pastExams: [Any]
     let onSelectExam: (Exam) -> Void
@@ -325,6 +337,7 @@ struct PastExamsSheet: View {
     }
     
     /// 过去考试行通用标签
+    /// Generic row label used by both single and comprehensive past exams.
     private func pastExamLabel(name: String, subject: String, date: Date, mastery: Int) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -351,18 +364,26 @@ struct PastExamsSheet: View {
 }
 
 // MARK: - 子视图：普通考试行
+// MARK: - Subview: single-subject exam row
 
+/// 列表 / 月历都用的普通考试行(包含天数倒计 / 掌握度 / 预测按钮)
+/// Single-subject exam row used by both list and calendar (countdown, mastery, predict button).
 struct ExamRowView: View {
     let exam: Exam
     /// 点击"预测"按钮的回调
+    /// Callback for tapping the "Predict" button.
     var onPredict: (() -> Void)? = nil
     @State private var animateIn = false
 
+    /// 距离考试还有几天(已过期则 0)
+    /// Days remaining until the exam (clamped to 0 for past exams).
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: exam.examDate)
         return max(0, components.day ?? 0)
     }
 
+    /// 时间进度(0~1):基于 30 天窗口
+    /// Time progress (0–1) — based on a 30-day window.
     private var timeProgress: Double {
         min(Double(daysRemaining) / 30.0, 1.0)
     }
@@ -428,6 +449,7 @@ struct ExamRowView: View {
             }
 
             // 预测按钮：放在进度条下方,显眼易找
+            // Predict button: placed below the progress bars for visibility.
             if let onPredict = onPredict {
                 Button {
                     onPredict()
@@ -510,10 +532,14 @@ struct ExamRowView: View {
 }
 
 // MARK: - 子视图：综合考试行
+// MARK: - Subview: comprehensive exam row
 
+/// 综合考试行(紫色主题),点击"预测"弹总分预测
+/// Comprehensive exam row (purple theme); predict button opens the total-score sheet.
 struct ComprehensiveExamRowView: View {
     let exam: comprehensiveExam
     /// 点击"预测"按钮的回调
+    /// Callback for tapping the "Predict" button.
     var onPredict: (() -> Void)? = nil
     @State private var animateIn = false
     
@@ -591,6 +617,7 @@ struct ComprehensiveExamRowView: View {
             }
 
             // 预测按钮(综合考试,预测总分)
+            // Predict button (comprehensive exam → predicts total score).
             if let onPredict = onPredict {
                 Button {
                     onPredict()
@@ -685,8 +712,10 @@ struct ComprehensiveExamRowView: View {
 }
 
 // MARK: - 视图模式
+// MARK: - View mode
 
 /// 考试页面视图模式：列表 / 月历
+/// Exam page view mode: list or calendar.
 enum ExamViewMode: String, CaseIterable, Identifiable, Codable {
     case list
     case calendar

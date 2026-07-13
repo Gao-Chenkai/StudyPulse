@@ -2,7 +2,7 @@
 //  StudyReadinessAlgorithm.swift
 //  StudyPulse
 //
-//  Multi-dimensional study-readiness algorithm.
+//  多维"学习准备度"算法 / Multi-dimensional study-readiness algorithm.
 //
 //  HRV is the primary signal of autonomic recovery. The algorithm
 //  scores every available signal (HRV, last-night sleep, resting
@@ -11,18 +11,31 @@
 //  plus a list of per-signal reasoning lines the user can see in the
 //  suggestion card.
 //
-//  Each signal is calibrated against TWO references:
-//    1. The user's personal 30-day mean / stddev (preferred when there
-//       are at least 7 daily samples).
-//    2. An age-adjusted reference range from `AgeReference` (used as
-//       a fallback, so cold-start users with no history still get
-//       age-appropriate scores).
+//  每个信号都会被两层"参考"校准 / Each signal is calibrated against two references:
+//    1. 用户的 30 天个人均值 / stddev (首选,至少 7 个日样本才用)
+//       The user's personal 30-day mean / stddev (preferred when ≥ 7 daily samples).
+//    2. 年龄分段参考区间 / Age-adjusted reference range from `AgeReference`
+//       (兜底,新用户没历史时也能给出年龄适宜的分数)
+//       (fallback for cold-start users with no history).
 //
-//  Five intensities × five focus areas yield up to 25 distinct
-//  recommendations; the algorithm makes a subset reachable in
-//  practice (HRV acts as a hard override) and falls back to a neutral
-//  "steady / balanced" recommendation for any combination that the
-//  scoring rules do not explicitly cover.
+//  5 个 intensity × 5 个 focus 理论可组合 25 种结果,但实际可达
+//  集合由评分规则控制(HRV 作为硬 override);任何规则没明确覆盖的
+//  组合都回退到中性"稳态 + 均衡"建议。
+//  5 intensities × 5 focus areas yield up to 25 distinct recommendations;
+//  the scoring rules make a subset reachable in practice (HRV acts as a
+//  hard override) and the makeSuggestion `default` branch falls back to
+//  a neutral "steady / balanced" suggestion for any combination the rules
+//  do not explicitly cover.
+//
+//  关键公式速查 / Key formulas:
+//    • 校准分数(个人基线): z = (v − μ) / σ → clamp([-2, +2]) → score = (z + 2) / 4
+//      Calibration (personal baseline): z = (v − μ) / σ, clamp z ∈ [−2, +2], score = (z+2)/4
+//    • 校准分数(年龄参考): 分段线性, peak = 1 at `mid`, 0 at `low` / `high`
+//      Calibration (age reference): piecewise linear around `mid`
+//    • totalStress = Σ (hrvStress + sleepStress + rhrStress + rrStress + activityStress + exerciseStress)
+//    • intensity 由 totalStress + hrvStress 决定 / intensity is decided by hrvStress + totalStress
+//    • mastery-shrunk CI: halfWidth *= (1 − 0.4 · avgMastery) (radar 路径使用)
+//      Mastery-shrunk CI: halfWidth *= (1 − 0.4 · avgMastery) (radar path only)
 //
 
 import Foundation
@@ -30,27 +43,30 @@ import SwiftUI
 
 // MARK: - Public Types
 
-/// Five intensity buckets produced by the algorithm. `peak` and
-/// `deepFocus` push the user toward hard material; `light` and
-/// `recovery` pull back to material the body can absorb.
+/// 5 个强度档位 / Five intensity buckets produced by the algorithm.
+/// `peak` 和 `deepFocus` 把用户推向难题;`light` 和 `recovery` 拉回到身体能吸收的强度。
+/// `peak` and `deepFocus` push toward hard material; `light` and `recovery`
+/// pull back to material the body can absorb.
 enum StudyIntensity: String, Equatable {
-    case peak        // 巅峰发挥
-    case deepFocus   // 深度学习
-    case steady      // 稳态节奏
-    case light       // 轻量复习
-    case recovery    // 恢复为主
+    case peak        // 巅峰发挥 / peak performance
+    case deepFocus   // 深度学习 / deep focus
+    case steady      // 稳态节奏 / steady pace
+    case light       // 轻量复习 / light review
+    case recovery    // 恢复为主 / recovery-focused
 }
 
-/// Focus area recommended for a given intensity. Pairs with intensity
-/// to drive a unique (title, description, icon, color) combination.
+/// 与 intensity 配对的"焦点"维度,共同决定 (title, description, icon, color) 组合。
+/// Focus area paired with intensity to drive a unique
+/// (title, description, icon, color) combination.
 enum StudyFocus: Equatable {
-    case hardestSubjectFirst  // 先攻克难题
-    case balancedCurriculum   // 均衡推进
-    case reviewFamiliar       // 复习熟悉内容
-    case mistakesAndBasics    // 错题 + 基础
-    case restAndBreathe       // 休息 + 呼吸
+    case hardestSubjectFirst  // 先攻克难题 / attack the hardest first
+    case balancedCurriculum   // 均衡推进 / balanced curriculum
+    case reviewFamiliar       // 复习熟悉内容 / review familiar material
+    case mistakesAndBasics    // 错题 + 基础 / mistakes and basics
+    case restAndBreathe       // 休息 + 呼吸 / rest and breathe
 }
 
+/// 雷达建议卡片的一行;一组 `StudySuggestion` 由 `recommend(...)` 产出。
 /// One row shown in the study-suggestions card.
 struct StudySuggestion: Identifiable {
     let id = UUID()
@@ -273,10 +289,15 @@ struct BodyReadinessContext {
 
 extension StudyReadinessAlgorithm {
     /// 给 LLM 构造 `BodyReadinessContext`。
+    /// Build a `BodyReadinessContext` for LLM consumption.
     ///
     /// 这一步会触发一次本地 `recommend(...)` 把本地建议一并产出,再把 4 个
     /// `calibrated(...)` 调用结果也保存下来,prompt 工厂可直接读字段;
     /// 不需要 LLM 路径再算一遍校准分数,避免本地 / LLM 看到不同的"参考值"。
+    /// Triggers one local `recommend(...)` call to produce the local suggestion,
+    /// and snapshots 4 `calibrated(...)` results so the prompt factory can
+    /// read them as fields; the LLM path never re-computes calibrations,
+    /// avoiding the local / LLM "different reference value" inconsistency.
     @MainActor
     static func buildBodyReadinessContext(
         hrvEnabled: Bool,
@@ -335,23 +356,34 @@ extension StudyReadinessAlgorithm {
 
 // MARK: - Algorithm
 
+/// 纯函数集合:把健康信号 → 学习建议。无状态、无 SwiftUI 依赖,
+/// 便于单测和未来迁移到 Widget / Shortcuts。
 /// Pure functions that turn health signals into a study recommendation.
 /// No state, no SwiftUI dependencies on the view side — easy to test
 /// or to call from widgets / shortcuts in the future.
 enum StudyReadinessAlgorithm {
 
+    /// 个人基线被采信的最小样本数(默认 7 天);低于此值回退到年龄参考。
     /// Number of personal-baseline samples required before we trust it
     /// more than the age-adjusted reference. Anything below this falls
     /// back to the age-adjusted comparison.
     nonisolated static let minPersonalSamples = 7
 
+    /// 综合 HRV + 身体状态,产出当日的 (intensity, focus) 建议。
     /// Compute the recommendation from HRV + body status. Returns `nil`
     /// when no signal is usable (e.g. monitoring disabled or both data
     /// sources still empty).
     ///
+    /// 算法流程 / Algorithm flow (5 steps):
+    ///   1. 把每个信号压成 −1 / 0 / +1 stress (HRV 走类别映射,其他走 `calibrated` + `scoreToStress`)
+    ///   2. 累加 → `totalStress ∈ [−6, +6]`
+    ///   3. 由 (hrvStress, totalStress) 决策 `intensity` (peak / deepFocus / steady / light / recovery)
+    ///   4. 按 `intensity` 选 `focus` (hardest / balanced / review / mistakes / rest)
+    ///   5. 生成可读 reasoning 列表交给 UI 展示
+    ///
     /// - Parameters:
     ///   - hrvEnabled / hrvOnboardingCompleted / isAuthorized: gate
-    ///     flags from `HealthKitManager`.
+    ///     flags from `HealthKitManager`. 任一为 false → 立即返回 nil。
     ///   - hrv: the latest `HRVReadiness` snapshot.
     ///   - bodyStatus: today's vitals + sleep + exercise.
     ///   - baselines: the user's 30-day personal baselines (optional;
@@ -436,6 +468,8 @@ enum StudyReadinessAlgorithm {
         }()
 
         // --- 2. Total stress ----------------------------------------------
+        // totalStress ∈ [−6, +6] 理论区间;6 个信号各贡献 −1 / 0 / +1
+        // totalStress ∈ [−6, +6] theoretical; each of 6 signals contributes −1 / 0 / +1
         let totalStress = hrvStress + sleepStress + rhrStress
             + rrStress + activityStress + exerciseStress
 
@@ -447,6 +481,15 @@ enum StudyReadinessAlgorithm {
         // have HRV positive AND at least two other body signals also
         // at -1 (i.e. totalStress <= -3) — a single good HRV is not
         // enough.
+        //
+        // 分档决策表 / Intensity decision table:
+        //   hrvStress ≥ 1  →  totalStress ≥ 3 ? recovery : light     (HRV low → 至少 light)
+        //   hrvStress ≤ 0  →  按 totalStress 分档:                     (HRV 正常 / 优秀)
+        //     totalStress ≤ −3 → peak         (需 HRV 优秀 + ≥2 个其他积极)
+        //     totalStress ≤ −1 → deepFocus    (HRV 优秀 或 多数信号积极)
+        //     totalStress =  0 → steady       (中性)
+        //     totalStress ≤  2 → light        (≥1 个信号有压力)
+        //     else            → recovery      (≥3 个信号有压力)
         let intensity: StudyIntensity
         if hrvStress >= 1 {
             intensity = totalStress >= 3 ? .recovery : .light
@@ -510,40 +553,56 @@ enum StudyReadinessAlgorithm {
 
     // MARK: - Calibration helpers
 
+    /// 把单个信号值映射到 0-1 分数;首选个人 30 天基线,否则回落到年龄参考区间。
     /// Map a single signal value to a 0-1 score, preferring the user's
     /// personal 30-day baseline when there are enough samples, and
     /// falling back to the age-adjusted reference range.
     ///
-    /// - Personal path: z = (value - mean) / stddev; clamp(z) to
-    ///   [-2, +2]; map [-2, +2] → [0, 1].
-    /// - Age path: piecewise linear against the `low`/`mid`/`high`
-    ///   endpoints, peaking at `mid`.
+    /// 公式 / Formulas:
+    ///   • 个人基线路径 / Personal path:
+    ///       z = (value − mean) / stddev,  stddev 至少 0.0001 避免除零
+    ///           (z is clamped to [−2, +2] to bound outliers)
+    ///       score = (z + 2) / 4  (即 [−2σ, +2σ] 线性映射到 [0, 1])
+    ///   • 年龄参考路径 / Age path:
+    ///       在 (low, mid, high) 上分段线性, peak=1 at mid, 0 at low / high
+    ///       piecewise linear around `mid`; 0 at `low` and `high`, peak at `mid`
+    ///
+    /// - Parameters:
+    ///   - value: 当下信号值(为 nil 时返回中性 0.5)
+    ///   - baseline: 个人 30 天均值 / stddev(样本数 ≥ `minPersonalSamples` 时才用)
+    ///   - range: 年龄参考区间(age-adjusted fallback)
+    /// - Returns: 校准后的 0-1 分数 + 用了哪个参考 + 参考值本身
     nonisolated static func calibrated(
         value: Double?,
         baseline: PersonalBaselineStats?,
         range: AgeReference.Range
     ) -> CalibratedValue {
         guard let v = value else {
+            // 无信号 → 中性 0.5(让 UI 显示"暂无数据",不参与 stress 计数)
+            // No signal → neutral 0.5 (UI shows "no data", not counted toward stress)
             return CalibratedValue(score: 0.5, comparedTo: .ageAdjusted, referenceValue: range.mid)
         }
         if let b = baseline, b.sampleCount >= minPersonalSamples {
+            // 个人基线路径:z-score 归一化 → 0-1
+            // Personal baseline path: z-score normalization → [0, 1]
             let safeStd = max(b.stdDev, 0.0001)
             let z = (v - b.mean) / safeStd
-            let clamped = max(-2, min(2, z))
+            let clamped = max(-2, min(2, z))  // 限幅 ±2σ,避免极端值污染
             return CalibratedValue(
-                score: (clamped + 2) / 4,
+                score: (clamped + 2) / 4,    // (−2,+2) → (0,1)
                 comparedTo: .personal,
                 referenceValue: b.mean
             )
         }
-        // Age-adjusted piecewise linear around the `mid` target.
+        // 年龄参考路径:在 [low, mid, high] 上分段线性
+        // Age-adjusted path: piecewise linear around `mid`; score peaks at `mid`
         let score: Double
         if v <= range.low || v >= range.high {
-            score = 0
+            score = 0                       // 超出参考区间 → 0
         } else if v <= range.mid {
-            score = (v - range.low) / (range.mid - range.low)
+            score = (v - range.low) / (range.mid - range.low)  // 升段
         } else {
-            score = (range.high - v) / (range.high - range.mid)
+            score = (range.high - v) / (range.high - range.mid) // 降段
         }
         return CalibratedValue(
             score: max(0, min(1, score)),

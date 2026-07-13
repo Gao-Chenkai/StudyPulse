@@ -7,7 +7,12 @@
 //  - 失败时显示错误信息 + 关闭按钮
 //  - 成功后右下角 "Insert into Correct Solution" 按钮把内容塞回 caller 的绑定
 //
-//  Created for LLM BYOK integration (2026-07-11).
+//  Mistake AI analysis sheet: streams a Markdown analysis from the LLM
+//  based on the mistake content.
+//  - When LLM is not configured: shows "Configure LLM in Settings first".
+//  - On failure: shows the error and a close button.
+//  - On success: an "Insert into Correct Solution" button on the right
+//    pushes the analysis back into the caller's binding.
 //
 
 import SwiftUI
@@ -15,26 +20,55 @@ import SwiftStreamingMarkdown
 
 /// 错题 AI 解析 sheet。
 /// 通过 `onInsert` 回调让 caller 决定如何把生成内容写回数据模型。
+/// Mistake AI analysis sheet.
+/// The `onInsert` callback lets the caller decide how to write the
+/// generated content back into the data model.
 struct MistakeAIAnalysisSheet: View {
+    /// 学科
+    /// Subject.
     let subject: String
+    /// 错题标题
+    /// Mistake title.
     let title: String
+    /// 原题内容
+    /// Original question content.
     let question: String
+    /// 用户的错误解法
+    /// User's wrong solution.
     let wrongSolution: String
+    /// 标准正确解法
+    /// Standard correct solution.
     let correctSolution: String
+    /// 错因
+    /// Error reason.
     let reason: String
     /// 用户点击"Insert into Correct Solution"时回调,内容是 LLM 生成的"正确思路"段
+    /// Called when the user taps "Insert into Correct Solution" with the
+    /// LLM-generated "correct approach" text.
     let onInsert: (String) -> Void
     /// 流式分析成功结束后回调,传入完整 LLM 输出(供"深入探讨" sheet 作为初始消息)
+    /// Called after a successful stream with the full LLM output
+    /// (used as the initial message by the "deep discussion" sheet).
     var onAnalysisComplete: ((String) -> Void)? = nil
     /// 用户点击"深入探讨"时回调,传入用于讨论的上下文(含原错题信息) + 上一次的 AI 输出
+    /// Called when the user taps "Deep discussion", passing the discussion
+    /// context (original mistake info) and the previous AI output.
     var onDiscuss: ((_ context: String, _ lastAnalysis: String) -> Void)? = nil
 
     @EnvironmentObject private var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
 
+    /// 当前流式任务句柄(用于取消 / 重新生成)
+    /// Handle of the in-flight stream task (for cancel / re-generate).
     @State private var streamTask: Task<Void, Never>? = nil
+    /// 流式累积的 LLM 输出
+    /// Streamed LLM output accumulated so far.
     @State private var streamedText: String = ""
+    /// 错误信息(若有)
+    /// Error message, if any.
     @State private var errorMessage: String? = nil
+    /// 是否处于加载中(首字未到)
+    /// Whether we are still loading (first token not yet received).
     @State private var isLoading: Bool = false
 
     var body: some View {
@@ -88,7 +122,7 @@ struct MistakeAIAnalysisSheet: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Subviews / 子视图
 
     private var notConfiguredView: some View {
         VStack(spacing: 16) {
@@ -129,13 +163,21 @@ struct MistakeAIAnalysisSheet: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.4)
-            Text("Analyzing...".localized())
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        AIWaitingView(
+            title: "Analyzing...".localized(),
+            messages: [
+                "AI正在结合历史数据...".localized(),
+                "AI正在提炼表达...".localized(),
+                "正在解构错题的考查要点...".localized(),
+                "正在诊断您的思维误区...".localized(),
+                "正在撰写深度的正确解题思路...".localized(),
+                "正在沉淀易错防坑指南...".localized()
+            ],
+            onCancel: {
+                streamTask?.cancel()
+                dismiss()
+            }
+        )
     }
 
     private var contentView: some View {
@@ -180,7 +222,7 @@ struct MistakeAIAnalysisSheet: View {
         }
     }
 
-    // MARK: - Stream
+    // MARK: - Stream / 流式
 
     private func startAnalysis() {
         streamTask?.cancel()

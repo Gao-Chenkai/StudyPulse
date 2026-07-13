@@ -6,9 +6,18 @@
 // 给出 3 条最高优先级建议。建议生成已迁入 HomeViewModel.generateSuggestions(...)
 // (底层调用 SuggestionEngine);卡片本身只负责渲染。
 //
+//  Home "Study Suggestions" card: produces the top-3 highest-priority suggestions
+//  based on grades / mistakes / exams / body status. Suggestion generation has
+//  been moved into HomeViewModel.generateSuggestions(...) (calls SuggestionEngine
+//  underneath); this card only renders.
+//
 //  LLM BYOK 增强(2026-07-11):当 `AppPreferences.llmEnabled == true` 时,
 //  卡片额外调用 `LLMClient.stream` 拉取 3 条 AI 建议并流式覆盖本地结果;
 //  失败时静默回退到本地建议 + 显示 "AI 建议不可用"。
+//  LLM BYOK enhancement (2026-07-11): when `AppPreferences.llmEnabled == true`,
+//  the card additionally calls `LLMClient.stream` to fetch 3 AI suggestions and
+//  stream-overrides the local result; on failure it silently falls back to
+//  local suggestions + shows "AI suggestions unavailable".
 //
 //  Extracted from HomeView.swift during card-extraction refactor (2026-07-05).
 //
@@ -18,31 +27,43 @@ import SwiftUI
 /// 主页"学习建议"卡片。
 /// 由父 View 注入 `HomeViewModel`(VM 暴露 `generateSuggestions(limit:)`)。
 /// 卡片观察 `HealthKitManager.shared` 的 `bodyStatus`,身体状态变化时刷新建议。
+/// Home "Study Suggestions" card.
+/// The parent View injects `HomeViewModel` (VM exposes `generateSuggestions(limit:)`).
+/// The card observes `HealthKitManager.shared.bodyStatus` and refreshes suggestions
+/// when the body status changes.
 struct StudySuggestionsCard: View {
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject private var healthManager = HealthKitManager.shared
     @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 本地建议(由 `HomeViewModel.generateSuggestions` 产生,作为 fallback)
+    /// Local suggestions (produced by `HomeViewModel.generateSuggestions`, used as fallback).
     @State private var localSuggestions: [StudySuggestion] = []
     /// AI 建议(流式累积,任意时刻可被本地覆盖以回退)
+    /// AI suggestions (streamed-accumulated; can be overwritten by nil to fall back).
     @State private var aiSuggestions: [StudySuggestion]? = nil
     /// 当前 LLM 流式任务;进入卡片/重新加载前 cancel 旧任务
+    /// Current LLM streaming task; cancel any in-flight task before entering / reloading.
     @State private var aiTask: Task<Void, Never>? = nil
     /// AI 错误信息(用于显示"AI 建议不可用"小灰字)
+    /// AI error message (shown as the small grey "AI suggestions unavailable" hint).
     @State private var aiErrorMessage: String? = nil
     /// AI 加载中(用于显示 progress chip)
+    /// Whether AI suggestions are currently loading (drives the progress chip).
     @State private var aiLoading: Bool = false
 
     /// 冷却时长(秒):默认 40 分钟,跟雷达卡片同。
     /// Cooldown duration (seconds). Same 40-minute rate limit as the body-radar card.
     private static let suggestionsAICooldownSeconds: TimeInterval = 40 * 60
     /// 距下次可自动请求的剩余秒数;Timer 每秒刷新一次。
+    /// Remaining seconds until the next auto-request is allowed; the timer refreshes it every second.
     @State private var cooldownRemainingSeconds: Int = 0
     /// 每秒刷新倒计时的定时器
+    /// Per-second countdown refresh timer.
     @State private var cooldownTimer: Timer? = nil
 
     /// 当前展示的建议(优先 AI,失败/未启用时本地)
+    /// Suggestions currently displayed (prefer AI, fall back to local on failure / disabled).
     private var displayed: [StudySuggestion] {
         aiSuggestions ?? localSuggestions
     }
@@ -115,6 +136,8 @@ struct StudySuggestionsCard: View {
 
     // MARK: - AI chip
 
+    /// 标题右侧的「AI」徽标(已成功拿到 AI 建议时)
+    /// "AI" badge on the right of the title (shown when AI suggestions are ready).
     private var aiChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "sparkles")
@@ -128,6 +151,8 @@ struct StudySuggestionsCard: View {
         .foregroundColor(.teal)
     }
 
+    /// 标题右侧的「AI」加载中徽标(请求进行中时)
+    /// "AI" loading badge on the right of the title (shown while the request is in flight).
     private var aiLoadingChip: some View {
         HStack(spacing: 4) {
             ProgressView().scaleEffect(0.55)
@@ -144,6 +169,8 @@ struct StudySuggestionsCard: View {
 
     /// 拉取最新 3 条本地建议 + 可选的 AI 建议。
     /// 失败时静默回退到本地版本。
+    /// Fetch the latest 3 local suggestions + optional AI suggestions.
+    /// On failure it silently falls back to the local version.
     private func reload() {
         // 1) 本地建议总是先就位
         localSuggestions = viewModel.generateSuggestions(limit: 3)
@@ -205,12 +232,17 @@ struct StudySuggestionsCard: View {
     }
 
     // MARK: - 冷却辅助
+    // MARK: - Cooldown Helpers
 
+    /// 当前是否允许发起一次 LLM 请求(距离上次已过完冷却期)。
+    /// Whether a new LLM request is allowed right now (cooldown elapsed since the last request).
     private func canRequestNow() -> Bool {
         guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else { return true }
         return Date().timeIntervalSince(last) >= Self.suggestionsAICooldownSeconds
     }
 
+    /// 重新计算剩余冷却秒数,用于 UI 倒计时(当前未直接展示,留作可观察值)。
+    /// Recompute remaining cooldown seconds for the UI countdown (not directly shown yet, kept as observable).
     private func updateCooldownRemaining() {
         guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else {
             cooldownRemainingSeconds = 0
@@ -221,6 +253,8 @@ struct StudySuggestionsCard: View {
         cooldownRemainingSeconds = Int(remaining.rounded())
     }
 
+    /// 启动每秒刷新的冷却倒计时(只在仍有剩余时间时启动)
+    /// Start the per-second countdown timer (only if there's time remaining).
     private func startCooldownTimer() {
         updateCooldownRemaining()
         guard cooldownRemainingSeconds > 0 else { return }
@@ -235,6 +269,8 @@ struct StudySuggestionsCard: View {
         }
     }
 
+    /// 停止冷却倒计时定时器
+    /// Stop the cooldown countdown timer.
     private func stopCooldownTimer() {
         cooldownTimer?.invalidate()
         cooldownTimer = nil
@@ -242,8 +278,10 @@ struct StudySuggestionsCard: View {
 }
 
 // MARK: - 建议行视图
+// MARK: - Suggestion Row View
 
 /// 单条学习建议行(展开/收起描述)。
+/// Single study-suggestion row (expand / collapse the description).
 struct SuggestionRowView: View {
     let suggestion: StudySuggestion
     @State private var isExpanded = false
@@ -292,8 +330,10 @@ struct SuggestionRowView: View {
 }
 
 // MARK: - 优先级指示器
+// MARK: - Priority Indicator
 
 /// SuggestionRowView 右上角小色块(HIGH / MED / LOW)。
+/// Small colored chip in the top-right of SuggestionRowView (HIGH / MED / LOW).
 struct PriorityIndicator: View {
     let priority: StudySuggestion.Priority
 
@@ -320,6 +360,8 @@ struct PriorityIndicator: View {
     }
 
     private var color: Color {
+        // 优先级颜色:HIGH 红 / MED 橙 / LOW 绿
+        // Priority colors: HIGH red / MED orange / LOW green.
         switch priority {
         case .high: return .red
         case .medium: return .orange

@@ -3,11 +3,15 @@
 //  StudyPulse
 //
 //  Created for the Exam "预测" button feature.
+//  Exam "Predict" button feature — single-subject score prediction view.
 //
 
 import SwiftUI
 import Charts
 
+/// 单科预测内容视图(离群点警告 + CI 柱图 + 关键统计 + AI 入口 + 详情按钮)
+/// Single-subject prediction content view
+/// (outlier warning + CI bar chart + key stats + AI entry + detail button).
 struct SingleSubjectPredictionContent: View {
     let exam: Exam
     let history: [Grade]
@@ -21,25 +25,31 @@ struct SingleSubjectPredictionContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             // 离群点警告(若最近一次考试残差 > 3σ)
+            // Outlier warning (only when the most recent exam's residual exceeds 3σ).
             if let warning = result.outlierWarning {
                 outlierWarningCard(warning: warning)
             }
 
             // v1.5:数据不足横幅(n<3 / yHat 撞边界 / CI 撑满)
+            // v1.5: low-confidence banner (n<3 / yHat clamped / CI hits full range).
             if result.isLowConfidence {
                 lowConfidenceCard(result: result)
             }
 
             // 95% CI 柱状图
+            // 95% CI bar chart.
             ciBarChartCard(result: result)
 
             // 关键统计
+            // Key stats.
             statsCard(result: result)
 
             // 历史样本
+            // History samples used for the prediction.
             historyCard(result: result)
 
             // AI 预测按钮 + 折叠结果
+            // AI prediction button + collapsible result.
             PredictionDiscussionEntryView(context: .singleSubject(
                 exam: exam,
                 history: history,
@@ -49,13 +59,16 @@ struct SingleSubjectPredictionContent: View {
             ))
 
             // 详情入口
+            // Detail entry button.
             detailButton
         }
     }
 
     // MARK: - 子卡片
+    // MARK: - Sub-cards
 
     /// 95% 置信区间柱状图
+    /// 95% confidence interval bar chart.
     @ViewBuilder
     private func ciBarChartCard(result: ScorePredictionResult) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -74,6 +87,7 @@ struct SingleSubjectPredictionContent: View {
             }
 
             // 主柱状图
+            // Main bar mark (the CI rectangle).
             Chart {
                 RectangleMark(
                     xStart: .value("Side", "CI"),
@@ -85,6 +99,7 @@ struct SingleSubjectPredictionContent: View {
                 .cornerRadius(6)
 
                 // 预测点水平线
+                // Predicted-score horizontal rule.
                 RuleMark(y: .value("Predicted", result.predicted))
                     .foregroundStyle(envManager.effectiveAccentColor)
                     .lineStyle(StrokeStyle(lineWidth: 2.5))
@@ -100,6 +115,7 @@ struct SingleSubjectPredictionContent: View {
                     }
 
                 // 最近一次实际分数参考线
+                // Last-actual-score reference line.
                 if let last = result.lastActual {
                     RuleMark(y: .value("Last", last))
                         .foregroundStyle(Color(.systemGray))
@@ -117,6 +133,7 @@ struct SingleSubjectPredictionContent: View {
             .padding(.top, 4)
 
             // 区间文本
+            // Interval text (lower → predicted → upper).
             HStack(spacing: 6) {
                 Text("\(Int(result.lowerBound.rounded()))")
                     .font(.title3.weight(.bold))
@@ -150,6 +167,7 @@ struct SingleSubjectPredictionContent: View {
     }
 
     /// 关键统计
+    /// Key statistics card.
     @ViewBuilder
     private func statsCard(result: ScorePredictionResult) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -237,6 +255,7 @@ struct SingleSubjectPredictionContent: View {
     }
 
     /// 离群点警告卡
+    /// Outlier warning card.
     @ViewBuilder
     private func outlierWarningCard(warning: OutlierWarning) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -280,6 +299,7 @@ struct SingleSubjectPredictionContent: View {
     }
 
     /// 数据不足横幅
+    /// Low-confidence banner shown when the prediction isn't reliable.
     @ViewBuilder
     private func lowConfidenceCard(result: ScorePredictionResult) -> some View {
         HStack(alignment: .top, spacing: 10) {
@@ -326,6 +346,7 @@ struct SingleSubjectPredictionContent: View {
     }
 
     /// 历史样本列表
+    /// List of historical samples used in the prediction.
     @ViewBuilder
     private func historyCard(result: ScorePredictionResult) -> some View {
         let recent = result.dataRange.map { range in
@@ -382,6 +403,7 @@ struct SingleSubjectPredictionContent: View {
     }
 
     /// 详情按钮
+    /// Detail entry button (opens ScorePredictionDetailView).
     @ViewBuilder
     private var detailButton: some View {
         Button {
@@ -409,7 +431,10 @@ struct SingleSubjectPredictionContent: View {
 }
 
 // MARK: - 预测详情页
+// MARK: - Prediction detail page
 
+/// 预测详情:输入目标分 → 计算 gap → 推荐错题
+/// Prediction detail: input a target score, compute the gap, recommend mistakes to review.
 struct ScorePredictionDetailView: View {
     let exam: Exam
     let history: [Grade]

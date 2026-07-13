@@ -2,10 +2,13 @@
 //  TagGraphEdges.swift
 //  StudyPulse
 //
+//  标签图谱的"边"渲染辅助:
+//  - 边在两点之间画成直线(可换微弯曲线)
+//  - 描边宽度和透明度按"共同错题数"对数缩放
+//
 //  Edge Path rendering helpers for the tag graph.
 //  - Edges drawn as straight or slightly curved lines between two points.
 //  - Stroke width and opacity are scaled by edge weight (shared-mistake count).
-//
 //
 
 import SwiftUI
@@ -13,8 +16,14 @@ import SwiftUI
 /// 渲染一组边(force-directed graph 的连线)。
 /// A simple Path-based renderer for graph edges.
 struct TagGraphEdges: View {
+    /// 节点名(小写)→ 位置
+    /// Node name (lowercased) → position.
     let positions: [String: CGPoint]
+    /// 待渲染的边集合
+    /// Edge list to render.
     let edges: [TagGraphLayout.Edge]
+    /// 连线颜色
+    /// Line color.
     var lineColor: Color = .purple
 
     var body: some View {

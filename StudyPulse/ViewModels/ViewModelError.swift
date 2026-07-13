@@ -2,26 +2,19 @@
 //  ViewModelError.swift
 //  StudyPulse
 //
-//  统一 ViewModel 错误类型。所有 ViewModel 抛错 / 错误提示都走此类型,
-// 避免 View 内散落 String? 错误消息。
-//
-//  Created for MVVM refactor (2026-07-05).
-//
-
 import Foundation
 
-/// ViewModel 统一错误类型。
-/// 视图层只需把 `errorDescription` 显示给用户,不必关心来源。
+/// ViewModel 统一错误类型 / Unified ViewModel error type.
 enum ViewModelError: LocalizedError {
-    /// 数据尚未就绪(例如初始加载期间被访问)
+    /// 数据尚未就绪 / Data not ready
     case dataNotReady
-    /// 预测计算失败(底层算法抛错等)
+    /// 预测计算失败 / Prediction failed
     case predictionFailed(String)
-    /// 导出 / 分享失败(报告渲染、PDF 生成等)
+    /// 导出 / 分享失败 / Export / share failed
     case exportFailed(String)
-    /// 数据校验失败(用户输入非法)
+    /// 数据校验失败 / Validation failed
     case validationFailed(String)
-    /// 其它业务错误
+    /// 其它业务错误 / Other business error
     case other(String)
 
     var errorDescription: String? {

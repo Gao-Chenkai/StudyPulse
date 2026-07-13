@@ -20,7 +20,7 @@ import os
 final class DailyGoalReminder {
     static let shared = DailyGoalReminder()
 
-    nonisolated private static let identifierPrefix = "DailyGoal_"
+    nonisolated private static let identifierPrefix = "DailyGoal_"  // 通知 identifier 前缀,便于批量清除
     nonisolated private let logger = Logger(subsystem: "app.StudyPulse.notifications", category: "DailyGoal")
 
     private init() {}

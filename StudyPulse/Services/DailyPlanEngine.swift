@@ -12,9 +12,13 @@ import Foundation
 import SwiftUI
 
 // MARK: - Daily Plan Context
+// MARK: - 今日计划上下文 / Daily plan context
 
 /// 「今日计划」生成上下文。所有输入由调用方(HomeViewModel)提供,
 /// engine 自身不做 IO / 不依赖环境。
+/// `DailyPlan` generation context. All inputs are supplied by the caller
+/// (e.g. `HomeViewModel`); the engine itself does no I/O and has no
+/// environment dependencies.
 struct DailyPlanContext {
     let grades: [Grade]
     let mistakeSets: [MistakeNote]
@@ -50,8 +54,11 @@ struct DailyPlanContext {
 }
 
 // MARK: - Daily Plan Item
+// MARK: - 今日计划项 / Daily plan item
 
 /// 今日计划中的一条建议项。View 层根据 `kind` 决定图标 / 颜色 / 跳转目标。
+/// One suggested item in today's plan. The view layer picks icon /
+/// color / navigation target from `kind`.
 nonisolated struct DailyPlanItem: Identifiable, Equatable, Hashable {
     let id: UUID
     let kind: Kind
@@ -61,19 +68,39 @@ nonisolated struct DailyPlanItem: Identifiable, Equatable, Hashable {
     let sourceRef: SourceRef
 
     /// 排序/分类用
+    /// Sort / categorize the plan item.
     enum Kind: Equatable, Hashable {
-        case urgentExam           // 今天/明天有考试
-        case srsReview            // SRS 到期错题
-        case overdueTask          // 已过期未完成待办
-        case todayTask            // 今日到期待办
-        case routineActive        // 当前进行中的例程
-        case routineUpcoming      // 即将开始的例程
-        case recovery             // HRV 低/恢复建议
-        case strongSubject        // 强势科建议(数据少时的兜底)
-        case placeholder          // 全部为空时的占位
+        /// 今天/明天有考试
+        /// Exam in the next 1-2 days.
+        case urgentExam
+        /// SRS 到期错题
+        /// SRS-overdue mistakes.
+        case srsReview
+        /// 已过期未完成待办
+        /// Overdue uncompleted task.
+        case overdueTask
+        /// 今日到期待办
+        /// Task due today.
+        case todayTask
+        /// 当前进行中的例程
+        /// Routine currently active.
+        case routineActive
+        /// 即将开始的例程
+        /// Routine starting soon.
+        case routineUpcoming
+        /// HRV 低/恢复建议
+        /// Recovery suggestion (low HRV).
+        case recovery
+        /// 强势科建议(数据少时的兜底)
+        /// Strong-subject suggestion (fallback when data is thin).
+        case strongSubject
+        /// 全部为空时的占位
+        /// Placeholder when the list is empty.
+        case placeholder
     }
 
     /// 跳转目标(给 View 层用)
+    /// Navigation target (for the view layer).
     enum SourceRef: Equatable, Hashable {
         case exam(id: UUID)
         case mistake(id: UUID)
@@ -130,11 +157,14 @@ nonisolated struct DailyPlanItem: Identifiable, Equatable, Hashable {
 }
 
 // MARK: - DailyPlanEngine
+// MARK: - 今日计划引擎 / Daily plan engine
 
 /// 今日计划生成器。纯函数,无副作用。
+/// Daily plan generator. Pure function, side-effect free.
 enum DailyPlanEngine {
 
     // MARK: - Score constants
+    // MARK: - 评分常量 / Score constants
 
     private static let baseWeightUrgentExam: Double = 100
     private static let baseWeightSrsReview: Double = 60
@@ -146,8 +176,10 @@ enum DailyPlanEngine {
     private static let baseWeightStrongSubject: Double = 20
 
     // MARK: - Generate
+    // MARK: - 生成 / Generate
 
     /// 生成按 score 降序排序的 plan 列表,最多 `max` 条。
+    /// Generate the daily plan sorted by score desc, capped at `max` items.
     static func generate(
         from context: DailyPlanContext,
         max: Int = 3
@@ -209,12 +241,18 @@ enum DailyPlanEngine {
     }
 
     // MARK: - Helpers
+    // MARK: - 工具方法 / Helpers
 
     /// HRV 当前因子(影响 score 缩放)
+    /// Current HRV factor (multiplies the plan score).
     /// - 高恢复(>= normal)→ 1.2
+    ///   High recovery (>= normal) → 1.2
     /// - normal / insufficient / loading → 1.0
+    ///   normal / insufficient / loading → 1.0
     /// - low → 0.6(降低硬任务权重)
+    ///   low → 0.6 (down-weights hard tasks)
     /// - 不可用(noAuthorization/queryFailed)→ 1.0
+    ///   unavailable (noAuthorization / queryFailed) → 1.0
     static func currentHRVFactor(context: DailyPlanContext) -> Double {
         guard let cat = context.hrvReadiness?.category else { return 1.0 }
         switch cat {
@@ -229,7 +267,9 @@ enum DailyPlanEngine {
     }
 
     /// 计算单条 item 的 score(供 test 验证)
+    /// Compute a single item's score (used by tests for verification).
     /// 公式:`baseWeight * urgencyMultiplier * hrvFactor`
+    /// Formula: `baseWeight * urgencyMultiplier * hrvFactor`.
     static func scoreFor(
         kind: DailyPlanItem.Kind,
         daysFromNow: Double,
@@ -261,8 +301,10 @@ enum DailyPlanEngine {
     }
 
     // MARK: - Signal extractors
+    // MARK: - 信号提取器 / Signal extractors
 
     /// 紧急考试(今天/明天,最多 3 条,合并显示)
+    /// Urgent exams (today/tomorrow, up to 3, merged into one plan item).
     static func urgentExams(context: DailyPlanContext) -> [DailyPlanItem] {
         let cal = Calendar.current
         let now = context.now
@@ -305,6 +347,7 @@ enum DailyPlanEngine {
     }
 
     /// SRS 到期错题
+    /// SRS-overdue mistakes (single summary item, no per-mistake detail).
     static func srsReviewItem(context: DailyPlanContext) -> DailyPlanItem? {
         let overview = SRSAlgorithm.overview(from: context.mistakeSets)
         guard overview.dueCount > 0 else { return nil }
@@ -324,6 +367,7 @@ enum DailyPlanEngine {
     }
 
     /// 待办:过期 + 今日到期(各取 1 条,合并到一张 plan)
+    /// Pending tasks: overdue + due-today (one of each, merged into the plan).
     static func pendingTasks(context: DailyPlanContext) -> [DailyPlanItem] {
         let cal = Calendar.current
         let now = context.now
@@ -366,6 +410,7 @@ enum DailyPlanEngine {
     }
 
     /// 例程:进行中 / 即将开始(30 分钟内)各 1 条
+    /// Routines: active + starting-within-30-min, one of each.
     static func routineItems(context: DailyPlanContext) -> [DailyPlanItem] {
         let now = context.now
         let active = context.routineInstances.filter { $0.startTime <= now && $0.endTime > now }
@@ -399,6 +444,7 @@ enum DailyPlanEngine {
     }
 
     /// HRV 恢复建议(当 readiness 为 low)
+    /// Recovery suggestion (only when readiness is `low`).
     static func recoveryItem(context: DailyPlanContext) -> DailyPlanItem? {
         guard let cat = context.hrvReadiness?.category, cat == .low else { return nil }
         return DailyPlanItem(
@@ -411,6 +457,8 @@ enum DailyPlanEngine {
     }
 
     /// 强势科建议(数据 >= 2 个 subject 时;且其他候选不足 max 时)
+    /// Strong-subject suggestion (only when >= 2 subjects have data
+    /// and the current candidate list has room for it).
     static func strongSubjectItem(context: DailyPlanContext, candidatesCount: Int) -> DailyPlanItem? {
         let aggregates = SubjectAggregator.aggregate(grades: context.grades, includeRecentCount: false)
         guard let strong = SuggestionEngine.findStrongSubject(aggregates: aggregates) else { return nil }

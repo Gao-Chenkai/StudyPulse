@@ -5,6 +5,16 @@
 //  全局 phase 切换器(胶囊 pill),放在各主页面 toolbar 顶部。
 //  Global phase switcher pill shown in each main page's toolbar.
 //
+//  - 胶囊颜色:未选 phase 灰,选了之后用 effectiveAccentColor
+//  - 第一项"全部数据"用于清空当前 phase
+//  - 已归档 phase 名字后面会标 "· Archived"
+//  - 数据按 phaseRepo.phases 的当前顺序(降序)
+//
+//  - Capsule color: gray when no phase is active, otherwise `effectiveAccentColor`.
+//  - First item "All Data" clears the active phase.
+//  - Archived phases get a "· Archived" suffix.
+//  - Phases are listed in `phaseRepo.phases` order (descending).
+//
 
 import SwiftUI
 
@@ -18,6 +28,7 @@ struct PhaseSelectorView: View {
     var body: some View {
         Menu {
             // 全部数据选项
+            // "All Data" option
             Button {
                 container.activatePhase(nil)
             } label: {
@@ -32,7 +43,8 @@ struct PhaseSelectorView: View {
 
             if !container.phaseRepo.phases.isEmpty {
                 Divider()
-                // 按 startDate 降序(最新优先)
+                // 按 phaseRepo.phases 当前顺序(已是降序)
+                // In the existing order of `phaseRepo.phases` (already descending).
                 ForEach(container.phaseRepo.phases) { phase in
                     Button {
                         container.activatePhase(phase)

@@ -42,9 +42,10 @@ class OCRManager {
         }
         
         // 配置文字识别请求
+        // Configure the text recognition request.
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate  // 高精度模式
-        request.usesLanguageCorrection = true // 启用语言校正
+        request.recognitionLevel = .accurate  // 高精度模式(.accurate 比 .fast 更准但更慢)
+        request.usesLanguageCorrection = true // 启用系统语言校正(纠错 + 标点)
         
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         

@@ -2,9 +2,15 @@ import AppIntents
 
 /// Registers all StudyPulse shortcuts with the system so they appear in
 /// the Shortcuts app, Spotlight, and are invocable via Siri.
+/// 把 StudyPulse 的所有 Shortcut 注册到系统,使其出现在 Shortcuts App、
+/// Spotlight 搜索中,并可通过 Siri 调用。
 struct StudyPulseShortcuts: AppShortcutsProvider {
 
+    /// Siri 唤起短语集合 —— 每条都映射到对应的 AppIntent
+    /// Siri invocation phrases — each maps to the corresponding `AppIntent`.
     static var appShortcuts: [AppShortcut] {
+        // MARK: - Log Score
+        // MARK: - 记录成绩 / Log Score
         AppShortcut(
             intent: AddGradeIntent(),
             phrases: [
@@ -18,6 +24,8 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             systemImageName: "plus.circle.fill"
         )
 
+        // MARK: - Record Mistake
+        // MARK: - 记录错题 / Record Mistake
         AppShortcut(
             intent: RecordMistakeIntent(),
             phrases: [
@@ -29,6 +37,8 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             systemImageName: "exclamationmark.triangle.fill"
         )
 
+        // MARK: - Upcoming Exams
+        // MARK: - 即将到来的考试 / Upcoming Exams
         AppShortcut(
             intent: CheckUpcomingExamsIntent(),
             phrases: [
@@ -40,6 +50,8 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             systemImageName: "list.clipboard.fill"
         )
 
+        // MARK: - Subject Average
+        // MARK: - 学科平均分 / Subject Average
         AppShortcut(
             intent: CheckSubjectAverageIntent(),
             phrases: [
@@ -50,6 +62,8 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             systemImageName: "chart.bar.fill"
         )
 
+        // MARK: - Study Readiness
+        // MARK: - 学习就绪度 / Study Readiness
         AppShortcut(
             intent: CheckReadinessIntent(),
             phrases: [
@@ -60,6 +74,8 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             systemImageName: "heart.fill"
         )
 
+        // MARK: - Body Status
+        // MARK: - 身体状态 / Body Status
         AppShortcut(
             intent: CheckBodyStatusIntent(),
             phrases: [

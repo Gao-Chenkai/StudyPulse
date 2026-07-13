@@ -11,9 +11,11 @@
 import Foundation
 
 /// 每日励志语录。基于"dayOfYear % count"轮换,跨年自动重置。
+/// Daily motivational quote. Rotates by `dayOfYear % count`, auto-resets on new year.
 enum QuoteProvider {
 
     /// 14 句励志语录(本地化 key 占位)
+    /// 14 motivational quotes (localization key placeholders).
     static let all: [String] = [
         "Quote 1".localized(),
         "Quote 2".localized(),
@@ -32,6 +34,7 @@ enum QuoteProvider {
     ]
 
     /// 今日语录(基于传入日期,默认今天)
+    /// Today's quote (based on the given date, default = today).
     static func dailyQuote(for date: Date = Date()) -> String {
         guard !all.isEmpty else { return "" }
         let calendar = Calendar.current

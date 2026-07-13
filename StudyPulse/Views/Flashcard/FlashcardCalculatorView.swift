@@ -6,6 +6,10 @@
 //  - 支持 + - × ÷ 基本运算，AC、+/-、%、小数点
 //  - 玻璃质感背景，浮于卡片之上
 //  - 拖动手势可在 iPad 上自由拖动位置
+//  Flashcard floating mini-calculator.
+//  - + - × ÷, AC, +/-, %, decimal point
+//  - Glass background, floats over the card
+//  - Drag gesture repositions it on iPad
 //
 //  Created by Chenkai Gao on 2026/6/27.
 //
@@ -15,22 +19,28 @@ import Combine
 import SwiftUI
 
 // MARK: - Calculator Engine
+// MARK: - Calculator engine
 
 /// 计算器引擎（@MainActor ObservableObject）
+/// Calculator engine (@MainActor ObservableObject).
 @MainActor
 final class CalculatorEngine: ObservableObject {
     /// 主显示区（当前输入或结果）
+    /// Main display (current input or result).
     @Published var display: String = "0"
     /// 表达式行（显示 "1 + 2" 这样的当前操作）
+    /// Expression line (e.g. "1 + 2" — current pending operation).
     @Published var expression: String = ""
 
     private var accumulator: Double?
     private var pendingOp: String?
     private var isTyping: Bool = false
     /// 输入上限（数字字符数），防止溢出
+    /// Input cap (digit count) — prevents overflow.
     private let maxInputLength: Int = 12
 
     /// 处理一次按键
+    /// Handle one button press.
     func input(_ token: String) {
         switch token {
         case "AC":
@@ -57,15 +67,18 @@ final class CalculatorEngine: ObservableObject {
 
         default:
             // 数字 0-9
+            // Digit 0-9.
             inputDigit(token)
         }
     }
 
     /// 重置
+    /// Reset.
     func reset() {
         input("AC")
     }
 
+    // MARK: - Operations
     // MARK: - Operations
 
     private func inputDigit(_ digit: String) {
@@ -110,12 +123,14 @@ final class CalculatorEngine: ObservableObject {
 
     private func inputOperator(_ op: String) {
         // 连续按操作符：替换上一个
+        // Consecutive operators: replace the previous one.
         if !isTyping, pendingOp != nil {
             pendingOp = op
             expression = formatExpression(acc: accumulator, op: op, current: nil)
             return
         }
         // 已有挂起运算：先算
+        // There's a pending op: compute it first.
         if let acc = accumulator, let prev = pendingOp, isTyping, let cur = Double(display) {
             let result = Self.compute(a: acc, b: cur, op: prev)
             display = Self.format(result)
@@ -139,6 +154,7 @@ final class CalculatorEngine: ObservableObject {
         isTyping = false
     }
 
+    // MARK: - Helpers
     // MARK: - Helpers
 
     private func formatExpression(acc: Double?, op: String?, current: Double?) -> String {
@@ -166,6 +182,7 @@ final class CalculatorEngine: ObservableObject {
     }
 
     /// 数字格式化：整数去掉小数点，超长截断到 maxInputLength
+    /// Number formatter: drop decimals for integers, truncate past maxInputLength.
     private static func format(_ value: Double) -> String {
         if value.isNaN || value.isInfinite { return "Error" }
         if value.truncatingRemainder(dividingBy: 1) == 0 &&
@@ -174,6 +191,7 @@ final class CalculatorEngine: ObservableObject {
         }
         let str = String(value)
         // 截断超长
+        // Truncate overlong strings.
         if str.count > 12 {
             return String(str.prefix(12))
         }
@@ -182,16 +200,21 @@ final class CalculatorEngine: ObservableObject {
 }
 
 // MARK: - Flashcard Calculator View
+// MARK: - Flashcard calculator view
 
 /// 浮层简易计算器面板
+/// Floating mini-calculator panel.
 struct FlashcardCalculatorView: View {
     @StateObject private var engine = CalculatorEngine()
     /// 关闭回调（由父视图注入）
+    /// Close callback (injected by the parent).
     let onClose: () -> Void
 
     /// 当前拖动偏移
+    /// Current drag offset.
     @State private var dragOffset: CGSize = .zero
     /// 是否正在拖动
+    /// Whether the user is currently dragging.
     @GestureState private var isDragging: Bool = false
 
     private let buttons: [[CalcButton]] = [
@@ -282,6 +305,7 @@ struct FlashcardCalculatorView: View {
                 }
                 .onEnded { value in
                     // 限制拖动范围：左/上/右/下分别不超过容器一半
+                    // Clamp drag range: at most half-container on every side.
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         dragOffset = CGSize(
                             width: clamp(value.translation.width, min: -200, max: 200),
@@ -293,6 +317,7 @@ struct FlashcardCalculatorView: View {
     }
 
     /// 玻璃质感背景（iOS 26 升级为 glassEffect）
+    /// Glass background — upgraded to `glassEffect` on iOS 26.
     @ViewBuilder
     private var panelBackground: some View {
         if #available(iOS 26.0, *) {
@@ -309,8 +334,10 @@ struct FlashcardCalculatorView: View {
 }
 
 // MARK: - Calc Button
+// MARK: - Calc button
 
 /// 按钮类型
+/// Calculator button kind.
 enum CalcButtonKind {
     case digit
     case op       // +-×÷
@@ -319,6 +346,7 @@ enum CalcButtonKind {
 }
 
 /// 按钮模型
+/// Calculator button model.
 struct CalcButton: Identifiable {
     let id: String
     let label: String
@@ -342,6 +370,7 @@ struct CalcButton: Identifiable {
 }
 
 /// 按钮视图
+/// Calculator button view.
 struct CalcButtonView: View {
     let button: CalcButton
     let onTap: () -> Void

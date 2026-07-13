@@ -15,6 +15,7 @@ import SwiftStreamingMarkdown
 import os
 
 // MARK: - 复盘段落（与 ExamReview 字段对应）
+// MARK: - Review section (maps 1:1 to ExamReview fields)
 
 /// 复盘编辑器中的 4 个段落(与 `ExamReview` 字段一一对应)
 /// Four review sections, one per `ExamReview` field.
@@ -52,7 +53,10 @@ private enum ReviewSection: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Exam Review View
+// MARK: - Exam review view
 
+/// 考试复盘编辑器(4 段 Markdown)
+/// Exam review editor (4-section Markdown).
 struct ExamReviewView: View {
     let exam: Exam
 
@@ -60,23 +64,28 @@ struct ExamReviewView: View {
     @Environment(\.presentationMode) var presentationMode
 
     /// 4 段 Markdown 文本(初值取自已有复盘)
+    /// 4-section Markdown text (seeded from any existing review).
     @State private var whatWasTested: String
     @State private var whatWentWrong: String
     @State private var whatLearned: String
     @State private var nextStrategy: String
 
     /// 关联的错题 id 集合(同 subject 范围内多选)
+    /// Set of linked mistake IDs (multi-select within the same subject).
     @State private var linkedMistakeIds: Set<UUID>
 
     /// 顶部 segmented Picker 当前选中的段落
+    /// Top picker — currently selected review section.
     @State private var selectedSection: ReviewSection = .tested
 
     /// 一键生成错题的反馈
+    /// One-click "generate mistake note" feedback.
     @State private var showingGenerateAlert = false
     @State private var generateAlertMessage = ""
     @State private var didGenerateNote = false
 
     /// 关联错题列表(同 subject)
+    /// Linked-mistake list (same subject, newest first).
     private var relatedMistakes: [MistakeNote] {
         container.mistakeRepo.mistakeSets
             .filter { $0.subject == exam.subject }
@@ -84,6 +93,7 @@ struct ExamReviewView: View {
     }
 
     /// 当前 draft 是否为空(全空 + 无关联错题)
+    /// Whether the current draft is empty (all 4 sections empty + no linked mistakes).
     private var draftIsEmpty: Bool {
         whatWasTested.isEmpty &&
         whatWentWrong.isEmpty &&
@@ -136,8 +146,10 @@ struct ExamReviewView: View {
     }
 
     // MARK: - Sections
+    // MARK: - Sections
 
     /// 顶部模板提示(列出 4 段填写引导,首次进入时给个 visible cue)
+    /// Top template hint — lists 4 section prompts as a visible cue on first open.
     private var templateSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
@@ -157,6 +169,7 @@ struct ExamReviewView: View {
     }
 
     /// 复盘 4 段编辑器(顶部 picker 切换)
+    /// 4-section editor (top picker switches between sections).
     private var editorSection: some View {
         Section(header: Text(selectedSection.title.localized())) {
             Picker("Section".localized(), selection: $selectedSection) {
@@ -171,6 +184,7 @@ struct ExamReviewView: View {
             .pickerStyle(.menu)
 
             // 切换段落时强制重建 UIViewRepresentable,避免 binding 切换异常
+            // Force-rebuild the UIViewRepresentable when switching sections to avoid binding glitches.
             Group {
                 switch selectedSection {
                 case .tested:
@@ -189,6 +203,7 @@ struct ExamReviewView: View {
     }
 
     /// 关联同科目错题多选
+    /// Multi-select for related mistakes (same subject).
     private var linkedMistakesSection: some View {
         Section {
             if relatedMistakes.isEmpty {
@@ -235,6 +250,7 @@ struct ExamReviewView: View {
     }
 
     /// 一键生成错题
+    /// One-click "generate mistake note" section.
     private var generateSection: some View {
         Section {
             Button {
@@ -260,7 +276,10 @@ struct ExamReviewView: View {
     }
 
     // MARK: - Logic
+    // MARK: - Logic
 
+    /// 顶部 4 段填写引导文本
+    /// Top 4-section prompt text.
     private var templateHint: String {
         """
         • \(ReviewSection.tested.title.localized()): 列出考试涉及到的考点、题型、难度。
@@ -271,6 +290,7 @@ struct ExamReviewView: View {
     }
 
     /// 把当前 draft 写回 DataManager,并 dismiss
+    /// Persist the current draft back to the DataManager and dismiss.
     private func saveReview() {
         let review = ExamReview(
             reviewedAt: Date(),
@@ -286,8 +306,10 @@ struct ExamReviewView: View {
     }
 
     /// 用当前 draft 生成一张 MistakeNote,自动入 SRS 队列
+    /// Generate a MistakeNote from the current draft and auto-enrol in the SRS queue.
     private func generateMistakeNote() {
         // 标题去重:已有"复盘:<examName>"则追加日期后缀
+        // De-dupe title: append a date suffix if "复盘:<examName>" already exists.
         let baseTitle = "复盘:\(exam.name)"
         var title = baseTitle
         let sameTitle = container.mistakeRepo.mistakeSets.filter { $0.title.hasPrefix(baseTitle) }
@@ -318,6 +340,7 @@ struct ExamReviewView: View {
         )
         container.addMistake(note)
         // 调度 SRS 复习通知(沿用 NewMistakeSetView 的做法)
+        // Reschedule SRS review notifications (same approach as NewMistakeSetView).
         SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
 
         didGenerateNote = true
@@ -329,6 +352,7 @@ struct ExamReviewView: View {
     }
 }
 
+// MARK: - Preview
 // MARK: - Preview
 
 #Preview {

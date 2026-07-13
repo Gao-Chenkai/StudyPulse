@@ -4,6 +4,12 @@
 //
 //  Created by Chenkai Gao on 2026/3/21.
 //
+//  纯相机版图片选择器(sourceType 永远 .camera)。
+//  用于错题图片拍摄等强相机场景。
+//
+//  Camera-only variant of `ImagePicker` (source type is always `.camera`).
+//  Used for mistake-note photo capture, where the camera is required.
+//
 
 import SwiftUI
 
@@ -12,6 +18,8 @@ import UIKit
 import AVFoundation
 #endif
 
+/// 纯相机版图片选择器。
+/// Camera-only image picker.
 struct PhotoCaptureView: UIViewControllerRepresentable {
     @Environment(\.presentationMode) var presentationMode
     @Binding var capturedImage: UIImage?

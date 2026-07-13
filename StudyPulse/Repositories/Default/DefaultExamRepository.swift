@@ -10,20 +10,35 @@ import Foundation
 import SwiftData
 import os
 
+/// 考试 (单科 + 综合) Repository 默认实现。
+/// Default ExamRepository implementation backed by SwiftData.
 @Observable @MainActor
 final class DefaultExamRepository: ExamRepository {
+    /// 全部单科考试
+    /// All single-subject exams.
     var examSets: [Exam] = []
+    /// 全部综合考试
+    /// All comprehensive exams.
     var comprehensiveExamSets: [comprehensiveExam] = []
+    /// 按当前激活 phase 过滤后的单科考试
+    /// Single-subject exams filtered by the active phase.
     var filteredExamSets: [Exam] = []
+    /// 按当前激活 phase 过滤后的综合考试
+    /// Comprehensive exams filtered by the active phase.
     var filteredComprehensiveExamSets: [comprehensiveExam] = []
 
+    /// SwiftData ModelContext（容器在 init 时注入）
+    /// SwiftData ModelContext (injected by the container on init).
     @ObservationIgnored
     private var modelContext: ModelContext?
 
     init() {}
 
     // MARK: - Lifecycle
+    // MARK: - 生命周期 / Lifecycle
 
+    /// 加载所有考试到内存
+    /// Load all exams into memory.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
@@ -45,7 +60,10 @@ final class DefaultExamRepository: ExamRepository {
     }
 
     // MARK: - CRUD
+    // MARK: - 增删改查 / CRUD
 
+    /// 批量新增考试
+    /// Batch add exams.
     func add(single: [Exam], comprehensive: [comprehensiveExam]) {
         let activeId = AppEnvironmentManager.shared.activePhaseId
         let storedSingle: [Exam] = single.map { e in
@@ -177,7 +195,10 @@ final class DefaultExamRepository: ExamRepository {
     }
 
     // MARK: - 复盘 & Checklist
+    // MARK: - 复盘 & 清单 / Review & Checklist
 
+    /// 更新或清除某场考试的复盘
+    /// Update or clear a single exam's review.
     func updateExamReview(_ examId: UUID, review: ExamReview?) {
         guard let index = examSets.firstIndex(where: { $0.id == examId }) else {
             Log.data.warning("ExamRepository updateExamReview: not found id=\(examId.uuidString, privacy: .public)")
@@ -211,7 +232,10 @@ final class DefaultExamRepository: ExamRepository {
     }
 
     // MARK: - Internals
+    // MARK: - 内部工具 / Internals
 
+    /// 重新计算 filteredExamSets / filteredComprehensiveExamSets
+    /// Recompute the filtered exam arrays from the active phase.
     func recomputeFiltered() {
         let activeId = AppEnvironmentManager.shared.activePhaseId
         if let id = activeId {

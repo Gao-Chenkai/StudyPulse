@@ -2,16 +2,18 @@
 //  PreferencesView.swift
 //  StudyPulse
 //
-//  Created by Chenkai Gao on 2026/6/5.
+//  偏好设置页：主题色 / 玻璃效果 / 外观 / 语言 / 重启。
+//  Preferences: theme color, glass effect, appearance, language, restart.
 //
 
 import SwiftUI
 
-/// 应用偏好设置界面：语言与主题
+/// 应用偏好设置界面：语言、主题色、玻璃效果、外观模式。
+/// Preferences screen: language, theme color, glass effect, appearance mode.
 struct PreferencesView: View {
     @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) var dismiss
-    
+
     var body: some View {
         NavigationStack {
             Form {

@@ -9,22 +9,37 @@
 //  Tag input: type a new tag + Enter / "," to commit. Also shows
 //  autocomplete suggestions from `suggestedTags`.
 //
+//  分隔符:",",";" 也算提交(支持一次粘贴多个标签)
+//  去重:大小写不敏感
+//  Suggestions:大小写不敏感 + 不含已选 + 含当前输入子串
+//  Delimiters: "," / ";" both commit (supports pasting multiple tags).
+//  Dedup: case-insensitive.
+//  Suggestions: case-insensitive, exclude already-selected, contain current input.
+//
 
 import SwiftUI
 
+/// 标签输入控件:TextField + 已选胶囊 + 自动联想建议。
+/// Tag input control: TextField + selected pills + autocomplete suggestions.
 struct TagEditorView: View {
     @Binding var tags: [String]
     /// 全库所有已存在的标签,用于自动联想
+    /// All existing tags in the library, used for autocomplete.
     var suggestedTags: [String] = []
     /// 表头文案
+    /// Header label.
     var label: String = "Tags".localized()
     /// 表头内嵌输入框 placeholder
+    /// Placeholder for the inline input field.
     var placeholder: String = "Add Tag".localized()
 
     @State private var input: String = ""
+    /// 输入框焦点状态(用于触发自动聚焦等)
+    /// Input field focus state (used to trigger autofocus, etc.).
     @FocusState private var inputFocused: Bool
 
     /// 当前输入匹配的(大小写不敏感、不在已选)建议
+    /// Suggestions that match the current input (case-insensitive, exclude already-selected).
     private var suggestions: [String] {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()

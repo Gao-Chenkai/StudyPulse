@@ -3,6 +3,7 @@
 //  StudyPulse
 //
 //  全屏闪卡复习模式：Anki 风格翻牌 + 4 档自评
+//  Full-screen flashcard review mode: Anki-style flip + 4-bucket self-rating.
 //
 //  Created by Chenkai Gao on 2026/6/27.
 //
@@ -12,8 +13,10 @@ import PencilKit
 import os
 
 // MARK: - Session Stats
+// MARK: - Session stats
 
 /// 一次复习 session 的统计
+/// Per-session review statistics.
 struct FlashcardSessionStats: Equatable {
     var reviewed: Int = 0
     var again: Int = 0
@@ -48,8 +51,10 @@ struct FlashcardSessionStats: Equatable {
 }
 
 // MARK: - Flashcard Filter
+// MARK: - Flashcard filter
 
 /// FlashcardStudyView 的过滤模式
+/// Filter mode for FlashcardStudyView.
 enum FlashcardFilter: Equatable {
     /// 默认：复习所有 due 错题
     case dueQueue
@@ -87,8 +92,10 @@ enum FlashcardFilter: Equatable {
 }
 
 // MARK: - Flashcard Study View
+// MARK: - Flashcard study view
 
 /// 全屏闪卡复习入口
+/// Full-screen flashcard study entry.
 struct FlashcardStudyView: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
@@ -103,6 +110,7 @@ struct FlashcardStudyView: View {
     var body: some View {
         ZStack {
             // 背景渐变
+            // Background gradient.
             LinearGradient(
                 colors: [Color.purple.opacity(0.18), Color.blue.opacity(0.12), Color(.systemBackground)],
                 startPoint: .topLeading,
@@ -152,6 +160,7 @@ struct FlashcardStudyView: View {
     }
 
     /// 浮于右上角的「计算器」开关按钮
+    /// Floating top-right calculator toggle.
     private var calculatorFAB: some View {
         Button {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -178,6 +187,7 @@ struct FlashcardStudyView: View {
         .padding(.trailing, 16)
     }
 
+    // MARK: - Sub-views
     // MARK: - Sub-views
 
     @ViewBuilder

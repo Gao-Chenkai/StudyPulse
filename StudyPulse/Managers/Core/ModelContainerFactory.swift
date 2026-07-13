@@ -176,6 +176,7 @@ enum ModelContainerFactory {
     nonisolated(unsafe) private static var _sharedContainer: ModelContainer?
 
     // MARK: - Debug Helpers
+    // MARK: - 调试辅助 / Debug helpers
 
     /// 返回各 @Model 实体的当前记录数（供 Debug → State & Cache 展示）
     /// Record count per registered @Model type, used by Debug → State & Cache.
@@ -228,6 +229,7 @@ enum ModelContainerFactory {
     }
 
     // MARK: - Migration
+    // MARK: - 数据迁移 / Migration
 
     /// 是否已经完成 JSON → SwiftData 迁移
     /// Whether the JSON → SwiftData migration has finished.
@@ -269,7 +271,7 @@ enum ModelContainerFactory {
 
         var counts: [(String, Int)] = []
 
-        // subjects
+        // subjects / 学科
         if let subjects: [Subject] = DataFileIO.load(url: docs.appendingPathComponent("subjects.json")) {
             for s in subjects {
                 context.insert(SubjectRecord(from: s))
@@ -277,7 +279,7 @@ enum ModelContainerFactory {
             counts.append(("subjects", subjects.count))
         }
 
-        // grades
+        // grades / 成绩
         if let grades: [Grade] = DataFileIO.load(url: docs.appendingPathComponent("grades.json")) {
             for g in grades {
                 context.insert(GradeRecord(from: g))
@@ -285,7 +287,7 @@ enum ModelContainerFactory {
             counts.append(("grades", grades.count))
         }
 
-        // mistakes
+        // mistakes / 错题
         if let mistakes: [MistakeNote] = DataFileIO.load(url: docs.appendingPathComponent("mistakes.json")) {
             for m in mistakes {
                 context.insert(MistakeNoteRecord(from: m))
@@ -293,7 +295,7 @@ enum ModelContainerFactory {
             counts.append(("mistakes", mistakes.count))
         }
 
-        // exams (single subject)
+        // exams (single subject) / 考试 (单科)
         if let exams: [Exam] = DataFileIO.load(url: docs.appendingPathComponent("exams.json")) {
             for e in exams {
                 context.insert(ExamRecord(from: e))
@@ -301,7 +303,7 @@ enum ModelContainerFactory {
             counts.append(("exams", exams.count))
         }
 
-        // comprehensiveExams
+        // comprehensiveExams / 综合考试
         if let comps: [comprehensiveExam] = DataFileIO.load(url: docs.appendingPathComponent("comprehensiveExams.json")) {
             for e in comps {
                 context.insert(ComprehensiveExamRecord(from: e))
@@ -309,7 +311,7 @@ enum ModelContainerFactory {
             counts.append(("comprehensiveExams", comps.count))
         }
 
-        // tasks (homework / reading material)
+        // tasks (homework / reading material) / 任务 (作业 / 阅读材料)
         if let tasks: [TaskItem] = DataFileIO.load(url: docs.appendingPathComponent("tasks.json")) {
             for t in tasks {
                 context.insert(TaskItemRecord(from: t))
@@ -317,7 +319,7 @@ enum ModelContainerFactory {
             counts.append(("tasks", tasks.count))
         }
 
-        // profile (单例)
+        // profile (单例) / profile (singleton)
         if let profile: UserProfile = DataFileIO.load(url: docs.appendingPathComponent("profile.json")) {
             context.insert(UserProfileRecord(from: profile))
             counts.append(("profile", 1))
@@ -336,6 +338,7 @@ enum ModelContainerFactory {
     }
 
     // MARK: - Plant Seed
+    // MARK: - Plant 播种 / Plant seed
 
     /// 首次启动时插入一条 seed PlantStateRecord。
     /// Idempotent: 通过 `plantSeedDoneKey` 跳过；已经存在 record 也跳过。
@@ -343,9 +346,11 @@ enum ModelContainerFactory {
     @MainActor
     static func migratePlantStateIfNeeded(context: ModelContext) {
         // 已经播种过就跳过
+        // Already seeded → skip.
         if UserDefaults.standard.bool(forKey: plantSeedDoneKey) { return }
 
         // 已经存在 record 也跳过（覆盖安装或老 build 升级上来）
+        // If a record already exists, skip too (re-install / upgrade from an older build).
         let descriptor = FetchDescriptor<PlantStateRecord>()
         if let existing = try? context.fetch(descriptor), !existing.isEmpty {
             UserDefaults.standard.set(true, forKey: plantSeedDoneKey)

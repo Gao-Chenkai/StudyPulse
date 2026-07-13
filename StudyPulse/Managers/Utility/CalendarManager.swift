@@ -18,7 +18,7 @@ import EventKit
 /// 使用 EventKit 框架把考试写入系统日历,把作业 / 阅读材料写入系统提醒事项
 class CalendarManager {
     static let shared = CalendarManager()
-    private let eventStore = EKEventStore()
+    private let eventStore = EKEventStore()  // EventKit 事件存储,所有 API 都基于此单例
 
     /// Request calendar access
     /// - Returns: Whether the user granted access
@@ -64,15 +64,21 @@ class CalendarManager {
 		let event = EKEvent(eventStore: eventStore)
 		event.title = "Exam: \(examName)"
 		event.notes = note ?? "Subject: \(subject)\nFrom StudyPulse"
+		// 若未指定 startTime 则使用 examDate 作为全天事件起点
+		// If startTime is nil, treat examDate as the all-day event start.
 		let effectiveStart = startTime ?? examDate
 		event.startDate = effectiveStart
 		if let endTime = endTime, endTime > effectiveStart {
 			event.endDate = endTime
 		} else {
+			// 默认 2 小时时长;考试信息不全时的兜底
+			// Default 2-hour duration as a fallback when exam time is missing.
 			event.endDate = Calendar.current.date(byAdding: .hour, value: 2, to: effectiveStart) ?? effectiveStart
 		}
 		event.isAllDay = (startTime == nil)
 
+		// 提前 24h 提醒(相对偏移 -86400 秒)
+		// Alert 24h before via a relative-offset alarm.
 		let alarm = EKAlarm(relativeOffset: -86400)
 		event.alarms = [alarm]
 

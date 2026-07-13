@@ -24,13 +24,26 @@ import Foundation
 import SwiftData
 
 // MARK: - Subject
+// MARK: - 科目 / Subject
 
+/// 科目持久化实体。镜像 `Subject` 值类型。
+/// Subject persistence entity. Mirrors the `Subject` value type.
 @Model
 final class SubjectRecord {
+    /// 唯一稳定 id
+    /// Unique stable id.
     @Attribute(.unique) var id: UUID
+    /// 内部标识名（如 "Mathematics"）
+    /// Internal identifier name (e.g. "Mathematics").
     var name: String
+    /// 是否启用
+    /// Whether this subject is enabled.
     var enabled: Bool
+    /// 科目满分
+    /// Subject full score.
     var fullScore: Double
+    /// 显示名（如 "数学"）
+    /// Display name (e.g. "数学").
     var displayName: String
 
     init(id: UUID, name: String, enabled: Bool, fullScore: Double, displayName: String) {
@@ -63,26 +76,51 @@ final class SubjectRecord {
 }
 
 // MARK: - Grade
+// MARK: - 成绩 / Grade
 
+/// 成绩持久化实体。镜像 `Grade` 值类型。
+/// Grade persistence entity. Mirrors the `Grade` value type.
 @Model
 final class GradeRecord {
     // 索引: 业务高频过滤字段;SwiftData 编译器会为这些字段建 B-Tree
     // 让 SortDescriptor(\.date, order: .reverse) / subject == X 等谓词走索引
+    // Indexes: high-frequency filter fields; SwiftData builds B-Tree indexes so
+    // SortDescriptor(\.date, order: .reverse) / subject == X predicates are fast.
     #Index<GradeRecord>([\.subject, \.date], [\.phaseId], [\.date])
 
     @Attribute(.unique) var id: UUID
+    /// 科目名称
+    /// Subject name.
     var subject: String
+    /// 实际得分
+    /// Actual score.
     var score: Double
+    /// 赋分时的卷面分（如浙江高考赋分制）
+    /// Raw score before rank-based assignment (e.g. Zhejiang gaokao).
     var rawScore: Double?
+    /// 排名
+    /// Ranking (optional).
     var ranking: Int?
+    /// 重要程度 1-5
+    /// Importance 1-5 stars.
     var importance: Int
     /// 卷面图片（兼容旧数据，外部存储避免占内存）
+    /// Exam paper image (legacy, external storage to keep memory small).
     @Attribute(.externalStorage) var image: Data?
+    /// 图片文件名（新方案）
+    /// Image file name (new scheme).
     var imageFileName: String?
+    /// 录入日期
+    /// Record date.
     var date: Date
+    /// 考试名称
+    /// Exam name.
     var examName: String
+    /// 该条成绩的满分（nil = 用科目默认）
+    /// Full score for this grade (nil = use subject default).
     var fullScore: Double?
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    /// Owning phase id (links to StudyPhaseRecord.id); nil = uncategorized.
     var phaseId: UUID?
 
     init(
@@ -149,42 +187,80 @@ final class GradeRecord {
 }
 
 // MARK: - MistakeNote
+// MARK: - 错题笔记 / Mistake Note
 
+/// 错题笔记持久化实体。镜像 `MistakeNote` 值类型。
+/// Mistake note persistence entity. Mirrors `MistakeNote` value type.
 @Model
 final class MistakeNoteRecord {
     // 索引: SRS 队列 / 科目过滤 / 日期排序
+    // Indexes: SRS queue / subject filter / date sort.
     #Index<MistakeNoteRecord>([\.subject], [\.date], [\.phaseId], [\.srsNextReviewDate])
 
     @Attribute(.unique) var id: UUID
+    /// 题目标题
+    /// Mistake title.
     var title: String
+    /// 所属科目
+    /// Owning subject.
     var subject: String
+    /// 原题内容
+    /// Original question text.
     var originalQuestion: String
+    /// 题目来源
+    /// Source of the question.
     var source: String
+    /// 录入日期
+    /// Recorded date.
     var date: Date
+    /// 错误原因
+    /// Error reason.
     var errorReason: String
+    /// 错误解法
+    /// Wrong solution.
     var wrongSolution: String
+    /// 正确解法
+    /// Correct solution.
     var correctSolution: String
 
     // SRS 状态（拍平为基本字段）
+    // SRS state (flattened into primitive fields)
+    /// 连续答对次数
+    /// Consecutive correct count.
     var srsRepetitions: Int
+    /// 难度系数 SM-2 EF
+    /// SM-2 ease factor.
     var srsEaseFactor: Double
+    /// 当前复习间隔（天）
+    /// Current review interval (days).
     var srsIntervalDays: Int
+    /// 下次复习日期
+    /// Next review date.
     var srsNextReviewDate: Date?
+    /// 上次复习日期
+    /// Last review date.
     var srsLastReviewDate: Date?
+    /// 累计 Again 次数
+    /// Total lapse count.
     var srsLapses: Int
 
     // 4 段图片（拍平为 [Data]）
+    // Four image sections (flattened into [Data])
     @Attribute(.externalStorage) var questionImagesData: [Data]
     @Attribute(.externalStorage) var reasonImagesData: [Data]
     @Attribute(.externalStorage) var wrongSolutionImagesData: [Data]
     @Attribute(.externalStorage) var correctSolutionImagesData: [Data]
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    /// Owning phase id (links to StudyPhaseRecord.id); nil = uncategorized.
     var phaseId: UUID?
     /// 曝光次数：详情页 / 闪卡被打开的累计次数
+    /// Exposure count: total opens of the detail page / flashcard.
     var exposureCount: Int = 0
     /// 当前掌握度（0-1）
+    /// Current mastery score (0-1).
     var masteryScore: Double = 0.0
     /// 掌握度历史（JSON 编码 [MasteryHistoryEntry]）
+    /// Mastery history (JSON-encoded [MasteryHistoryEntry]).
     var masteryHistoryData: Data?
     /// 手写答题历史（JSON 编码 [HandwritingAnswerEntry]）
     /// Handwriting history (JSON-encoded [HandwritingAnswerEntry]).
@@ -340,34 +416,61 @@ final class MistakeNoteRecord {
 }
 
 // MARK: - Exam (单科)
+// MARK: - 考试(单科) / Exam (single subject)
 
+/// 单科考试持久化实体。镜像 `Exam` 值类型。
+/// Single-subject exam persistence entity. Mirrors the `Exam` value type.
 @Model
 final class ExamRecord {
     // 索引: examDate 用于"未来 N 天的考试"查询排序
+    // Indexes: examDate for "upcoming exams in N days" query/sort.
     #Index<ExamRecord>([\.examDate], [\.phaseId])
 
     @Attribute(.unique) var id: UUID
+    /// 考试名称
+    /// Exam name.
     var name: String
+    /// 考试开始日期
+    /// Exam start date.
     var examDate: Date
+    /// 考试结束日期（多日考试）
+    /// Exam end date (for multi-day exams).
     var examEndDate: Date?
+    /// 重要程度 1-5
+    /// Importance 1-5 stars.
     var importance: Int
+    /// 科目名称
+    /// Subject name.
     var subject: String
+    /// 考试别称
+    /// Exam alias (e.g. "midterm").
     var examName: String
+    /// 掌握程度 0-100
+    /// Mastery degree 0-100.
     var masteryDegree: Int
-    /// 拍平 timeSlot
+    /// 拍平 timeSlot 起始时间
+    /// Flattened timeSlot start.
     var timeSlotStart: Date?
+    /// 拍平 timeSlot 结束时间
+    /// Flattened timeSlot end.
     var timeSlotEnd: Date?
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    /// Owning phase id; nil = uncategorized.
     var phaseId: UUID?
     /// 考前待办清单（JSON 编码 [ExamChecklistItem]）
+    /// Pre-exam checklist (JSON-encoded [ExamChecklistItem]).
     var checklistData: Data?
     /// 考场学校（SwiftData 轻量迁移需要 inline 默认值,否则老 store 打不开）
+    /// Exam school (inline default required for SwiftData lightweight migration).
     var locationSchool: String = ""
     /// 教室 / 考场号
+    /// Classroom / exam room.
     var locationClassroom: String = ""
     /// 座位号
+    /// Seat number.
     var locationSeat: String = ""
     /// 考前 N 天倒计时通知（JSON 编码 [Int]）；nil = 字段未写入（默认计划）
+    /// Pre-exam countdown days (JSON-encoded [Int]); nil = not set (use default).
     var countdownNotifyDaysData: Data?
     /// 考后复盘内容（JSON 编码 ExamReview）；nil = 尚未复盘
     /// Post-exam review content (JSON-encoded ExamReview). nil = not yet reviewed.
@@ -483,24 +586,43 @@ final class ExamRecord {
 }
 
 // MARK: - ComprehensiveExam (综合)
+// MARK: - 综合考试 / Comprehensive Exam
 
+/// 综合考试持久化实体。镜像 `comprehensiveExam` 值类型。
+/// Comprehensive exam persistence entity. Mirrors `comprehensiveExam` value type.
 @Model
 final class ComprehensiveExamRecord {
     // 索引: examDate 用于"未来 N 天的综合考试"查询排序
+    // Indexes: examDate for "upcoming comprehensive exams in N days".
     #Index<ComprehensiveExamRecord>([\.examDate], [\.phaseId])
 
     @Attribute(.unique) var id: UUID
+    /// 考试名称
+    /// Exam name.
     var name: String
+    /// 考试开始日期
+    /// Exam start date.
     var examDate: Date
+    /// 考试结束日期
+    /// Exam end date.
     var examEndDate: Date?
+    /// 重要程度 1-5
+    /// Importance 1-5 stars.
     var importance: Int
-    /// 拍平 [String]
+    /// 拍平 [String] 科目列表
+    /// Flattened [String] subject list.
     var subjects: [String]
+    /// 考试别称
+    /// Exam alias.
     var examName: String
+    /// 掌握程度 0-100
+    /// Mastery degree 0-100.
     var masteryDegree: Int
     /// 拍平 subjectTimeSlots：JSON 编码后存
+    /// Flattened subjectTimeSlots: JSON-encoded.
     var subjectTimeSlotsData: Data?
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    /// Owning phase id; nil = uncategorized.
     var phaseId: UUID?
 
     init(
@@ -570,36 +692,52 @@ final class ComprehensiveExamRecord {
 }
 
 // MARK: - TaskItem (作业 / 阅读材料)
+// MARK: - 待办 / Task Item
 
+/// 作业 / 阅读材料持久化实体。镜像 `TaskItem` 值类型。
+/// Task item persistence entity. Mirrors `TaskItem` value type.
 @Model
 final class TaskItemRecord {
     // 索引: dueDate 用于按时间排序;isCompleted 用于过滤未完成任务
+    // Indexes: dueDate for time sort; isCompleted for filtering open tasks.
     #Index<TaskItemRecord>([\.dueDate], [\.phaseId], [\.isCompleted])
 
     @Attribute(.unique) var id: UUID
     /// 任务标题
+    /// Task title.
     var title: String
     /// TaskType 拍平为 rawValue
+    /// TaskType flattened to rawValue.
     var typeRaw: String
     /// 截止日期
+    /// Due date.
     var dueDate: Date
     /// 提醒时间
+    /// Reminder date.
     var reminderDate: Date
     /// 关联科目
+    /// Related subject.
     var subject: String
     /// 重要程度 1-5
+    /// Importance 1-5.
     var importance: Int
     /// 备注
+    /// Notes.
     var notes: String
     /// 是否已完成
+    /// Whether completed.
     var isCompleted: Bool
     /// 关联 EKReminder 标识
+    /// Linked EKReminder identifier.
     var reminderEventId: String?
     /// 关联 EKReminder 所在 calendar
+    /// EKReminder's calendar identifier.
     var reminderCalendarId: String?
     /// 创建时间
+    /// Created at.
     var createdAt: Date
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
+    /// Owning phase id; nil = uncategorized.
     var phaseId: UUID?
 
     init(
@@ -671,30 +809,72 @@ final class TaskItemRecord {
 }
 
 // MARK: - UserProfile (单例)
+// MARK: - 用户资料(单例) / User Profile (singleton)
 
+/// 用户资料持久化实体。镜像 `UserProfile` 值类型（单例）。
+/// User profile persistence entity. Mirrors `UserProfile` (singleton).
 @Model
 final class UserProfileRecord {
     @Attribute(.unique) var id: UUID
+    /// 用户名
+    /// Username.
     var username: String
+    /// 年龄
+    /// Age.
     var age: Int
+    /// 教育水平（旧字段）
+    /// Education level (legacy).
     var educationLevel: String
+    /// 教育体系（旧字段）
+    /// Education system (legacy).
     var educationSystem: String
+    /// 地区（旧字段）
+    /// Region (legacy).
     var region: String
     /// 拍平 [Subject]
+    /// Flattened [Subject].
     var selectedSubjectsData: Data?
+    /// 主题模式
+    /// Theme mode.
     var theme: String
+    /// 头像文件名
+    /// Avatar file name.
     var avatarFileName: String?
+    /// 真实姓名
+    /// Real name.
     var realName: String
+    /// 年级
+    /// Grade (e.g. 高一).
     var grade: String
+    /// 班级
+    /// Class name.
     var className: String
+    /// 学校
+    /// School name.
     var schoolName: String
+    /// 学号
+    /// Student id.
     var studentId: String
+    /// 入学年份
+    /// Enrollment year.
     var enrollmentYear: Int
+    /// 考试年份
+    /// Exam year.
     var examYear: Int
+    /// 教育阶段
+    /// Education stage.
     var educationStage: String
+    /// 地区代码
+    /// Region code.
     var regionCode: String
+    /// 性别
+    /// Gender.
     var gender: String
+    /// 目标学校
+    /// Target school.
     var targetSchool: String
+    /// 目标总分
+    /// Target total score.
     var targetScore: Double
 
     init(
@@ -800,23 +980,33 @@ final class UserProfileRecord {
 }
 
 // MARK: - Study Phase (学期 / 假期阶段)
+// MARK: - 学期 / 假期阶段 / Study Phase
 
+/// 学期 / 假期阶段持久化实体。镜像 `StudyPhase` 值类型。
+/// Study phase persistence entity. Mirrors `StudyPhase` value type.
 @Model
 final class StudyPhaseRecord {
     @Attribute(.unique) var id: UUID
     /// 阶段名称,如 "2026 春季学期" / "2026 暑假" / "高考冲刺"
+    /// Phase name (e.g. "2026 Spring Semester", "2026 Summer Break").
     var name: String
     /// 阶段开始日期
+    /// Phase start date.
     var startDate: Date
     /// 阶段结束日期
+    /// Phase end date.
     var endDate: Date
     /// 是否已归档
+    /// Whether archived.
     var isArchived: Bool
     /// 归档时间
+    /// Archive timestamp.
     var archivedAt: Date?
     /// 目标列表(JSON 编码 [PhaseGoal],以 [Data] 形式存)
+    /// Goal list (JSON-encoded [PhaseGoal], stored as [Data]).
     var goalsData: Data?
     /// 创建时间
+    /// Created at.
     var createdAt: Date
 
     init(
@@ -872,30 +1062,42 @@ final class StudyPhaseRecord {
 }
 
 // MARK: - Routine Record (例程模板)
+// MARK: - 例程模板 / Routine Record
 
+/// 例程模板持久化实体。镜像 `Routine` 值类型。
+/// Routine template persistence entity. Mirrors `Routine` value type.
 @Model
 final class RoutineRecord {
     #Index<RoutineRecord>([\.enabled], [\.createdAt])
 
     @Attribute(.unique) var id: UUID
     /// 例程标题
+    /// Routine title.
     var title: String
     /// RoutineType 拍平为 rawValue
+    /// RoutineType flattened to rawValue.
     var typeRaw: String
     /// 关联科目(可空)
+    /// Related subject (optional).
     var subject: String?
     /// 触发的星期集合(Calendar.weekday: 1=周日 ... 7=周六)
     /// 拍平为 [Int]
+    /// Active weekdays (Calendar.weekday: 1=Sun ... 7=Sat), flattened to [Int].
     var weekdays: [Int]
     /// 当日窗口开始时间(时:分部分有效)
+    /// Day-window start time (hour/minute part is significant).
     var startTime: Date
     /// 当日窗口结束时间(时:分部分有效)
+    /// Day-window end time (hour/minute part is significant).
     var endTime: Date
     /// 是否启用
+    /// Whether enabled.
     var enabled: Bool
     /// 创建时间
+    /// Created at.
     var createdAt: Date
     /// 归属阶段 ID
+    /// Owning phase id.
     var phaseId: UUID?
 
     init(
@@ -955,7 +1157,10 @@ final class RoutineRecord {
 }
 
 // MARK: - Routine Instance Record (例程在某天的实例)
+// MARK: - 例程实例 / Routine Instance Record
 
+/// 例程实例持久化实体。镜像 `RoutineInstance` 值类型。
+/// Routine instance persistence entity. Mirrors `RoutineInstance` value type.
 @Model
 final class RoutineInstanceRecord {
     #Index<RoutineInstanceRecord>([\.routineId], [\.dateKey], [\.date])
@@ -963,28 +1168,40 @@ final class RoutineInstanceRecord {
     @Attribute(.unique) var id: UUID
     /// idempotency key(routineId + yyyyMMdd),业务层用
     /// 由 routineId + dateKey 复合组成;这里用 @Attribute(.unique) + 重复字段组合查重
+    /// Idempotency key (routineId + yyyyMMdd); used to dedupe spawns.
     var idempotencyKey: String
     /// 所属 routine id
+    /// Owning routine id.
     var routineId: UUID
     /// 所属 routine 标题(冗余)
+    /// Owning routine title (denormalized).
     var title: String
     /// 例程类型
+    /// Routine type.
     var typeRaw: String
     /// 关联科目(冗余)
+    /// Related subject (denormalized).
     var subject: String?
     /// 当日窗口开始时间
+    /// Day-window start time.
     var startTime: Date
     /// 当日窗口结束时间
+    /// Day-window end time.
     var endTime: Date
     /// 当日起点
+    /// Day anchor (start-of-day).
     var date: Date
     /// 当日 yyyyMMdd
+    /// Day key (yyyyMMdd).
     var dateKey: String
     /// 是否已完成
+    /// Whether completed.
     var isCompleted: Bool
     /// 完成时间
+    /// Completion timestamp.
     var completedAt: Date?
     /// spawn 时错题数量快照
+    /// Mistake count snapshot at spawn time.
     var spawnedMistakeCount: Int
 
     init(

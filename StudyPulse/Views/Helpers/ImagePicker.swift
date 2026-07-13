@@ -4,6 +4,10 @@
 //
 //  Created by Chenkai Gao on 2026/3/21.
 //
+//  UIImagePickerController 的 SwiftUI 包装:支持相册 / 相机两种来源。
+//  SwiftUI wrapper around `UIImagePickerController`; supports both
+//  photo library and camera as the source type.
+//
 
 import SwiftUI
 
@@ -11,9 +15,15 @@ import SwiftUI
 import UIKit
 #endif
 
+/// `UIImagePickerController` 的 SwiftUI 包装。
+/// SwiftUI wrapper around `UIImagePickerController`.
 struct ImagePicker: UIViewControllerRepresentable {
     @Environment(\.presentationMode) var presentationMode
+    /// 来源(相册 / 相机)。相机在不可用时自动降级为相册。
+    /// Source (library / camera). Falls back to library when the camera is unavailable.
     var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    /// 选图后的可选回调(binding + closure 同时给出,调用方可二选一)
+    /// Optional callback after picking (binding + closure both exposed; caller picks one).
     var onImagePicked: ((UIImage?) -> Void)? = nil
     @Binding var image: UIImage?
     

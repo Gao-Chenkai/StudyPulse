@@ -11,9 +11,12 @@
 import Foundation
 
 // MARK: - LLM Error (LLM 错误类型)
+// MARK: - LLM Error
 
 /// LLM 调用过程中可能抛出的错误。
 /// 用于上层做"AI 失败 → 回退到本地"的统一入口。
+/// Errors that may be thrown by an LLM call. Callers catch this type
+/// to implement the "AI failed → fall back to local" pattern.
 enum LLMError: Error, LocalizedError, Equatable {
     /// 用户未在 `LLMSettingsView` 配置 baseURL / APIKey / model
     case notConfigured

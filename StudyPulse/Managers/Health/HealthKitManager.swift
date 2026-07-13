@@ -12,7 +12,9 @@ import Combine
 import os
 
 // MARK: - HRV Readiness Result
+// MARK: - HRV Readiness 结果 / HRV readiness result
 /// The outcome of HRV-based readiness assessment
+/// HRV-based readiness 评估的结果。
 struct HRVReadiness: Equatable {
     let zScore: Double?
 
@@ -24,58 +26,80 @@ struct HRVReadiness: Equatable {
 
     enum Category: String, Equatable {
         case loading = "loading"          // 启动期 bootstrap 占位 / placeholder during bootstrap
-        case excellent = "excellent"
-        case normal = "normal"
-        case low = "low"
-        case insufficient = "insufficient"
-        case noAuthorization = "noAuthorization"
-        case queryFailed = "queryFailed"
+        case excellent = "excellent"       // 优秀 / excellent
+        case normal = "normal"             // 正常 / normal
+        case low = "low"                   // 偏低 / low
+        case insufficient = "insufficient" // 数据不足 / insufficient
+        case noAuthorization = "noAuthorization" // 未授权 / no authorization
+        case queryFailed = "queryFailed"   // 查询失败 / query failed
 
     }
 }
 
 // MARK: - HRV Detail Level Preference
+// MARK: - HRV 详情级别 / HRV detail level
+/// HRV 卡片详情显示级别。
+/// HRV card detail display level.
 enum HRVDetailLevel: String, CaseIterable {
-    case suggestionOnly = "suggestionOnly"      // 仅建议
-    case dataAndSuggestion = "dataAndSuggestion" // 数据及建议
-    case chartAndData = "chartAndData"           // 折线图及数据及建议
+    case suggestionOnly = "suggestionOnly"      // 仅建议 / suggestion only
+    case dataAndSuggestion = "dataAndSuggestion" // 数据及建议 / data and suggestion
+    case chartAndData = "chartAndData"           // 折线图及数据及建议 / chart, data, and suggestion
 }
 
 // MARK: - Body Status Result
+// MARK: - 身体状态结果 / Body status result
 /// Snapshot of today's vital signs, last night's sleep, and today's
 /// exercise minutes, used to tailor study suggestions based on the
 /// student's physical state.
+/// 今日生命体征、昨夜睡眠、今日运动的快照,
+/// 用来基于学生身体状态生成个性化学习建议。
 struct BodyStatus: Equatable {
     /// Most recent resting heart rate (bpm). `nil` if unavailable.
+    /// 最近一次静息心率 (bpm),若不可用则为 `nil`。
     let restingHeartRate: Double?
     /// Most recent heart rate reading (bpm). `nil` if unavailable.
+    /// 最近一次心率 (bpm),若不可用则为 `nil`。
     let latestHeartRate: Double?
     /// Most recent respiratory rate (breaths/min). `nil` if unavailable.
+    /// 最近一次呼吸频率 (次/分),若不可用则为 `nil`。
     let respiratoryRate: Double?
     /// Hours of sleep last night (total). `nil` if no sleep sample was
     /// found. Kept for the user-facing "hours slept" label / sleep
     /// quality bucket — NOT used for the "recovery sleep" radar axis.
+    /// 昨夜总睡眠小时数,无样本则为 `nil`。
+    /// 仅用于"睡眠时长"标签和分桶,不用于"恢复性睡眠"雷达轴。
     let lastNightSleepHours: Double?
     /// Deep sleep (N3 / slow-wave sleep) hours last night. The
     /// physically most restorative stage. `nil` if no stage breakdown
     /// is available.
+    /// 昨夜深度睡眠 (N3 / 慢波) 小时数,身体最关键的恢复阶段,
+    /// 无分阶段数据则为 `nil`。
     let deepSleepHours: Double?
     /// REM sleep hours last night. The cognitively restorative stage
     /// responsible for memory consolidation. `nil` if no stage
     /// breakdown is available.
+    /// 昨夜 REM 睡眠小时数,负责记忆巩固的认知恢复阶段,
+    /// 无分阶段数据则为 `nil`。
     let remSleepHours: Double?
     /// Categorical quality bucket for last night's sleep.
+    /// 昨夜睡眠的定性质量分桶。
     let sleepQuality: SleepQuality
     /// Minutes of brisk exercise recorded today (Apple Exercise Time,
     /// the "green ring"). `nil` if HealthKit has no reading.
+    /// 今日已记录的 Apple Exercise Time 锻炼分钟数(绿色"锻炼"环),
+    /// HealthKit 无数据则为 `nil`。
     let exerciseMinutesToday: Double?
     /// Whether any of the signals has fresh data and can be acted on.
+    /// 是否有任一信号含新鲜数据可用。
     let isUsable: Bool
 
     /// Restorative sleep = deep (N3) + REM. This is the value the
     /// algorithm and the recovery-radar chart use for the "Recovery
     /// Sleep" axis, because it reflects the brain- and body-recovery
     /// stages of sleep, not just time-in-bed.
+    /// 恢复性睡眠 = 深度睡眠 (N3) + REM。
+    /// 算法和恢复雷达图都用这个值作为"恢复性睡眠"轴,
+    /// 因为它反映的是大脑和身体的恢复阶段,而非仅睡眠时长。
     var restorativeSleepHours: Double? {
         switch (deepSleepHours, remSleepHours) {
         case let (d?, r?): return d + r
@@ -86,15 +110,16 @@ struct BodyStatus: Equatable {
     }
 
     enum SleepQuality: String, Equatable {
-        case unknown
-        case poor       // < 6h
-        case short      // 6h - 7h
-        case good       // 7h - 9h
-        case excellent  // >= 9h
+        case unknown      // 未知 / unknown
+        case poor         // < 6h
+        case short        // 6h - 7h
+        case good         // 7h - 9h
+        case excellent    // >= 9h
     }
 }
 
 // MARK: - HealthKit Manager
+// MARK: - HealthKit 管理器 / HealthKit manager
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -113,12 +138,15 @@ final class HealthKitManager: ObservableObject {
     )
 
     /// Number of raw HealthKit samples found in the latest query (for diagnostics).
+    /// 最近一次查询中拿到的原始 HealthKit 样本数（供诊断用）。
     @Published var lastSampleCount: Int = 0
 
     /// Daily HRV values for trend chart (most recent first).
+    /// 折线图用的每日 HRV 序列（最新在前）。
     @Published var dailyHRVHistory: [DailyHRV] = []
 
     /// Controls how much detail the HRV card shows.
+    /// 控制 HRV 卡片显示的细节级别。
     @Published var hrvDetailLevel: HRVDetailLevel {
         didSet { UserDefaults.standard.set(hrvDetailLevel.rawValue, forKey: "hrv_detail_level") }
     }
@@ -172,6 +200,7 @@ final class HealthKitManager: ObservableObject {
 
     /// All HealthKit types we read from. Authorizing once covers HRV
     /// and the body status types together.
+    /// 我们要读取的全部 HealthKit 类型。一次授权同时覆盖 HRV 与身体状态类型。
     private var readTypes: Set<HKObjectType> {
         var types: Set<HKObjectType> = []
         if let hrv = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
@@ -345,6 +374,8 @@ final class HealthKitManager: ObservableObject {
     /// when no samples match; never returns nil. Used by
     /// `refreshReadiness` for both the initial 14-day pull and the
     /// incremental `[lastQueryEndDate, now)` delta.
+    /// 在 `[start, end)` 区间内取 HRV (SDNN) 样本。无样本时返回空数组,绝不返回 nil。
+    /// `refreshReadiness` 既用它做首次 14 天全量查询,也用它做增量 delta。
     private func fetchHRVSamples(start: Date, end: Date) async -> [HKQuantitySample] {
         Log.healthKit.debug("获取 HRV 样本 / Fetching HRV samples: start=\(start, privacy: .public) end=\(end, privacy: .public)")
         guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
@@ -369,6 +400,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Fetch the most recent heart-rate reading (any kind) within the past day.
+    /// 取过去 24h 内最近一次心率（任意类型）。
     private func fetchLatestHeartRate() async -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return nil }
         let end = Date()
@@ -386,6 +418,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Fetch the most recent resting heart-rate reading within the past 7 days.
+    /// 取过去 7 天内最近一次静息心率。
     private func fetchRestingHeartRate() async -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) else { return nil }
         let end = Date()
@@ -403,6 +436,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Fetch the most recent respiratory-rate reading within the past day.
+    /// 取过去 24h 内最近一次呼吸频率。
     private func fetchLatestRespiratoryRate() async -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: .respiratoryRate) else { return nil }
         let end = Date()
@@ -496,6 +530,9 @@ final class HealthKitManager: ObservableObject {
     /// activity ring). Returns `nil` when no samples exist for today.
     /// Apple Exercise Time is the number of minutes of brisk activity
     /// recorded by the Apple Watch or a connected source.
+    /// 累加今日 Apple Exercise Time（绿色"锻炼"圆环）样本。
+    /// 今日无样本时返回 `nil`。
+    /// Apple Exercise Time 来自 Apple Watch 或其他来源记录的剧烈活动分钟数。
     private func fetchTodayExerciseMinutes() async -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: .appleExerciseTime) else {
             return nil
@@ -614,7 +651,8 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Fetch today's first HRV sample for the daily history snapshot.
+    /// Fetch the first HRV sample of today for the daily history snapshot.
+    /// 取今日第一个 HRV 样本，用于每日历史快照。
     private func fetchTodayHRV() async -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
             return nil
@@ -745,6 +783,8 @@ final class HealthKitManager: ObservableObject {
 
 
     private func extractDailyHRV(from samples: [HKQuantitySample]) -> [DailyHRV] {
+        // 把同一天(按 startOfDay 聚合)的多条 HK 样本压缩成一条;同 key 只保留第一条。
+        // Collapse multiple same-day HK samples into one (startOfDay bucket, first sample wins).
         var map: [String: (Date, Double)] = [:]
         let cal = Calendar.current
         for s in samples {
@@ -755,13 +795,18 @@ final class HealthKitManager: ObservableObject {
         return map.values.sorted { $0.0 > $1.0 }.map { DailyHRV(date: $0.0, value: $0.1) }
     }
 
+   /// 折线图上的一个数据点 (date, value)。
+   /// A single point on the HRV trend chart (date, value).
    struct DailyHRV { let date: Date; let value: Double }
 
     // MARK: - Intent Health Cache
+    // MARK: - Intent 健康缓存 / Intent health cache
 
     /// Writes the latest readiness + body-status snapshot so background
     /// App Intents can surface health-aware study suggestions without
     /// opening the app.
+    /// 把最新的 readiness + body status 快照写盘,供后台 App Intent
+    /// 在不打开 app 的情况下也能给出健康相关的学习建议。
     private func writeIntentHealthCache() {
         let qualityStr: String = switch bodyStatus.sleepQuality {
         case .unknown: "unknown"

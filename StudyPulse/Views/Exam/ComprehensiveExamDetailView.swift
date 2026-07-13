@@ -4,27 +4,39 @@
 //
 //  综合考试详情页(替换简陋的"Comprehensive Exam: 名称"占位)。
 //  Sections: 概览 / 科目时间表 / 重要程度与掌握度 / 添加到日历 / 分享 / 预测 / 关联错题
+//  Comprehensive exam detail page (replaces the bare "Comprehensive Exam: name" placeholder).
+//  Sections: Overview / Subject schedule / Importance & mastery / Add to calendar / Share / Prediction / Related mistakes
 //
 
 import SwiftUI
 
+/// 综合考试详情页
+/// Comprehensive exam detail page.
 struct ComprehensiveExamDetailView: View {
     let exam: comprehensiveExam
 
     @Environment(RepositoryContainer.self) private var container
+    /// 控制日历写入结果弹窗
+    /// Controls the calendar write result alert.
     @State private var showingCalendarAlert = false
+    /// 弹窗消息文本
+    /// Alert message text.
     @State private var calendarAlertMessage = ""
     /// 综合考试预测目标(非空时弹出 ComprehensiveScorePredictionSheet)
+    /// Comprehensive exam prediction target (non-nil triggers ComprehensiveScorePredictionSheet).
     @State private var comprehensivePredictionTarget: ComprehensivePredictionTarget? = nil
 
     // MARK: - 派生数据
+    // MARK: - Derived data
 
     /// 始终从 examRepo 拿最新的 comprehensiveExam(确保状态实时同步)
+    /// Always read the latest comprehensiveExam from examRepo (keeps state in sync).
     private var currentExam: comprehensiveExam {
         container.examRepo.comprehensiveExamSets.first(where: { $0.id == exam.id }) ?? exam
     }
 
     /// 各科目的错题(去重,按时间倒序)
+    /// Mistakes per subject (deduplicated, newest first).
     private var relatedMistakes: [MistakeNote] {
         let subjectSet = Set(currentExam.subject)
         return container.mistakeRepo.mistakeSets
@@ -33,6 +45,7 @@ struct ComprehensiveExamDetailView: View {
     }
 
     /// 综合掌握度颜色
+    /// Color of the comprehensive mastery indicator.
     private var masteryColor: Color {
         switch currentExam.masteryDegree {
         case 0..<30: return .red
@@ -43,10 +56,12 @@ struct ComprehensiveExamDetailView: View {
     }
 
     // MARK: - 主体
+    // MARK: - Body
 
     var body: some View {
         Form {
             // MARK: - 概览
+            // MARK: - Overview
             Section {
                 LabeledContent("Exam Name".localized(), value: currentExam.name)
                     .foregroundColor(Color(.label))
@@ -76,6 +91,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 科目时间表
+            // MARK: - Subject schedule
             Section {
                 ForEach(currentExam.subject, id: \.self) { subject in
                     HStack {
@@ -106,6 +122,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 重要程度 & 掌握度
+            // MARK: - Importance & mastery
             Section {
                 HStack {
                     Text("Importance".localized())
@@ -135,6 +152,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 添加到日历
+            // MARK: - Add to calendar
             Section {
                 Button(action: { addToCalendar() }) {
                     HStack {
@@ -152,6 +170,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 预测
+            // MARK: - Prediction
             Section {
                 Button {
                     openPrediction()
@@ -178,6 +197,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 分享
+            // MARK: - Share
             Section {
                 ShareLink(
                     item: shareText,
@@ -199,6 +219,7 @@ struct ComprehensiveExamDetailView: View {
             .listRowBackground(Color(.secondarySystemGroupedBackground))
 
             // MARK: - 关联错题
+            // MARK: - Related mistakes
             Section {
                 if relatedMistakes.isEmpty {
                     HStack {
@@ -278,7 +299,10 @@ struct ComprehensiveExamDetailView: View {
     }
 
     // MARK: - 行为
+    // MARK: - Actions
 
+    /// 写入综合考试到系统日历(全天事件)
+    /// Write the comprehensive exam to the system calendar (all-day event).
     private func addToCalendar() {
         Task {
             do {
@@ -303,6 +327,8 @@ struct ComprehensiveExamDetailView: View {
         }
     }
 
+    /// 拉取各科历史 + 错题 → 跑预测 → 弹出综合预测 Sheet
+    /// Pull each subject's grades + mistakes, run the predictor, then present the sheet.
     private func openPrediction() {
         let predictor = ScorePredictorFactory.active
         let allSubjects = currentExam.subject
@@ -341,7 +367,10 @@ struct ComprehensiveExamDetailView: View {
     }
 
     // MARK: - 分享文本
+    // MARK: - Share text
 
+    /// 生成可分享的纯文本(emoji + 字段,适配 WeChat/Mail/IM)
+    /// Build a shareable plain-text summary (emoji + fields, fits WeChat / Mail / IM).
     private var shareText: String {
         var lines: [String] = []
         lines.append("📚 " + currentExam.name + " (" + "Comprehensive".localized() + ")")
@@ -359,9 +388,11 @@ struct ComprehensiveExamDetailView: View {
 }
 
 // MARK: - ExamTimeSlot 的格式化便捷方法
+// MARK: - ExamTimeSlot formatting helpers
 
 extension ExamTimeSlot {
     /// 形如 "09:00 - 11:00" 的本地化范围字符串
+    /// Localized range string shaped like "09:00 - 11:00".
     var formattedRange: String {
         let fmt = DateFormatter()
         fmt.dateFormat = "HH:mm"

@@ -87,7 +87,7 @@ final class LLMClient: ObservableObject {
     /// 整体请求超时(秒);`stream` 与 `complete` 通用。
     private let timeoutSeconds: TimeInterval = 60
 
-    private let session: URLSession
+    private let session: URLSession   // 网络会话(可注入以做单测)
 
     /// 最近一次调用的调试信息(给 LLMDebugSheet 显示)。每次 complete / stream 都会更新。
     /// Most-recent call's debug info. Updated on every complete / stream.
@@ -95,7 +95,7 @@ final class LLMClient: ObservableObject {
     /// 最近的若干条调用历史(最多保留 20 条,新调用 push 到末尾)。
     /// Recent call history (newest last, capped at 20).
     @Published private(set) var recentCalls: [LLMCallDebugInfo] = []
-    private let recentCallsLimit = 20
+    private let recentCallsLimit = 20  // 防止 LLM Debug 面板无限增长
 
     private init(session: URLSession? = nil) {
         if let session {
@@ -120,6 +120,7 @@ final class LLMClient: ObservableObject {
         caller: String = "complete"
     ) async throws -> String {
         try validateConfig(config)
+        printPromptToConsole(prompt: prompt, config: config, caller: caller)
         let url = try buildURL(baseURL: config.baseURL)
         let body = try buildBody(prompt: prompt, config: config, stream: false)
         var request = URLRequest(url: url)
@@ -199,6 +200,7 @@ final class LLMClient: ObservableObject {
         onDelta: @MainActor (String) -> Void
     ) async throws -> String {
         try validateConfig(config)
+        printPromptToConsole(prompt: prompt, config: config, caller: caller)
         let url = try buildURL(baseURL: config.baseURL)
         let body = try buildBody(prompt: prompt, config: config, stream: true)
         var request = URLRequest(url: url)
@@ -334,11 +336,38 @@ final class LLMClient: ObservableObject {
         _ = model
     }
 
+    private func printPromptToConsole(
+        prompt: LLMPrompt,
+        config: LLMConfig,
+        caller: String
+    ) {
+        let systemPrompt = effectiveSystem(prompt: prompt, config: config)
+        var messageBlocks = ""
+        for (index, msg) in prompt.messages.enumerated() {
+            messageBlocks += "[\(index + 1)] [\(msg.role.rawValue.uppercased())]:\n\(msg.content)\n"
+        }
+        let output = """
+        ==================== LLM REQUEST PROMPT START [\(caller)] ====================
+        Model: \(config.model ?? "nil")
+        Temperature: \(config.temperature)
+        Base URL: \(config.baseURL ?? "nil")
+        -------------------- SYSTEM PROMPT --------------------
+        \(systemPrompt)
+        ---------------------- MESSAGES ----------------------
+        \(messageBlocks)==================== LLM REQUEST PROMPT END ====================
+        """
+        print(output)
+    }
+
     private func buildURL(baseURL: String?) throws -> URL {
         guard let raw = baseURL else { throw LLMError.invalidURL }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 去除末尾的 "/",避免 appedingPathComponent 把请求变成 "//v1"
+        // Strip a trailing slash so appendingPathComponent doesn't produce "//v1".
         let cleaned = trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
         guard let base = URL(string: cleaned) else { throw LLMError.invalidURL }
+        // 强制走 OpenAI 兼容的 chat completions 路径
+        // Always use the OpenAI-compatible /v1/chat/completions path.
         return base.appendingPathComponent("/v1/chat/completions")
     }
 

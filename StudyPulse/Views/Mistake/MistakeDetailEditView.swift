@@ -2,25 +2,41 @@
 //  MistakeDetailEditView.swift
 //  StudyPulse
 //
-//  Created by Chenkai Gao on 2026/3/21.
+//  错题详情/编辑页:展示 + 编辑错题的所有字段。
+//  iPhone / iPad 共享(usesInternalNavigationStack 控制是否自己挂 NavigationStack)。
+//  在 iPad 上的 split-view 用 no-stack 模式,在 iPhone sheet 上用 with-stack 模式。
+//
+//  Mistake detail / edit page: display and edit every field of a mistake.
+//  Shared between iPhone and iPad (`usesInternalNavigationStack` decides
+//  whether to host its own NavigationStack).
+//  iPad split-view uses the no-stack mode; iPhone sheets use with-stack.
 //
 
 import SwiftUI
 
+/// 错题详情/编辑页(view ↔ edit 切换),由 `MistakeView` 推入。
+/// Mistake detail / edit page (view ↔ edit toggle), pushed by `MistakeView`.
 struct MistakeDetailEditView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject private var envManager: AppEnvironmentManager
 
+    /// 是否自己挂 NavigationStack(iPad split-view 上为 false)
+    /// Whether to host its own NavigationStack (false in iPad split-view).
     let usesInternalNavigationStack: Bool
-    
+
+    /// 内部 ViewModel,封装了"view / edit 切换 + draft 状态 + 保存"逻辑
+    /// Internal view model encapsulating the view/edit toggle,
+    /// draft state and save logic.
     @StateObject private var viewModel: MistakeDetailEditViewModel
 
     init(container: RepositoryContainer, mistakeSet: MistakeNote, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
         self._viewModel = StateObject(wrappedValue: MistakeDetailEditViewModel(container: container, mistakeSet: mistakeSet))
     }
-    
+
+    /// 当前设备是否为 iPad
+    /// Whether the current device is an iPad.
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
@@ -37,27 +53,37 @@ struct MistakeDetailEditView: View {
 
     @ViewBuilder
     private var formContent: some View {
+        // 三大分区:basic info / content editor / images
+        // Three top-level sections: basic info / content editor / images.
         Form {
             basicInfoSection
             contentEditorSection
             imagesSection
         }
+        // 平台/外观自适应
+        // Platform / appearance adaptive form styling.
         .adaptiveForm()
         .navigationTitle("Edit Mistake".localized())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
+        // 系统照片选择器 → 追加到当前选中 section 的图片数组
+        // System photo picker → appended to the current section's image array.
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerWithCompletion(onDismiss: { image in
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
+        // 相机拍照 → 同上
+        // Camera capture → same as above.
         .sheet(isPresented: $viewModel.showingPhotoCapture) {
             PhotoCaptureWithCompletion(onDismiss: { image in
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
         }
+        // PencilKit 手写 → 转成 UIImage 追加
+        // PencilKit hand-drawn → converted to UIImage and appended.
         .sheet(isPresented: $viewModel.showingHandwritingSheet) {
             HandwritingSheet { pngData in
                 if !pngData.isEmpty, let image = UIImage(data: pngData) {
@@ -66,16 +92,23 @@ struct MistakeDetailEditView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
+        // 语音备忘录 → 只关联文件名,播放/删除走 viewModel
+        // Voice memo → only links the file name; playback/deletion goes through viewModel.
         .sheet(isPresented: $viewModel.showingAudioRecordingSheet) {
             VoiceMemoRecordingSheet { filename in
                 viewModel.audioFileName = filename
             }
         }
+        // OCR 失败 alert
+        // OCR failure alert.
         .alert("OCR Error".localized(), isPresented: $viewModel.showingOCRAlert) {
             Button("OK".localized()) { }
         } message: {
             Text(viewModel.ocrErrorMessage)
         }
+        // AI 解析 sheet:"Insert into Correct Solution" 把 AI 输出塞进正解字段
+        // AI analysis sheet: "Insert into Correct Solution" injects the AI
+        // output into the correct-solution field (append or replace).
         .sheet(isPresented: $viewModel.showingAIAnalysis) {
             MistakeAIAnalysisSheet(
                 subject: viewModel.selectedSubject,
@@ -94,9 +127,14 @@ struct MistakeDetailEditView: View {
             )
             .environmentObject(envManager)
         }
+        // 在 iOS 26+ 上让 navigation bar 背景透明,避免和 form 重叠
+        // On iOS 26+ make the nav-bar background transparent to avoid
+        // overlapping the form.
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
         .debugLayoutBoundsAuto()
+        // OCR 全屏 loading 蒙层
+        // Full-screen OCR loading overlay.
         .overlay {
             if viewModel.isProcessingOCR {
                 ProgressView("Recognizing text...".localized())
@@ -109,10 +147,13 @@ struct MistakeDetailEditView: View {
     }
 }
 
-// MARK: - Sections
+// MARK: - Sections / 分组
 private extension MistakeDetailEditView {
     
     var basicInfoSection: some View {
+        // 基础信息:标题 / 学科 / 来源 / 难度 / 标签 / 日期 / 语音 / SRS
+        // Basic info: title / subject / source / difficulty / tags /
+        // date / voice memo / SRS toggle.
         Section(header: Text("Basic Info".localized())) {
             HStack {
                 Text("Title".localized())
@@ -122,6 +163,8 @@ private extension MistakeDetailEditView {
 
             Picker("Subject".localized(), selection: $viewModel.selectedSubject) {
                 Text("Select".localized()).tag("")
+                // 只显示启用中的学科
+                // Only show enabled subjects.
                 ForEach(container.subjectRepo.subjects.filter { $0.enabled }, id: \.name) { subject in
                     Text(subject.name.localized()).tag(subject.name)
                 }
@@ -133,8 +176,12 @@ private extension MistakeDetailEditView {
                     .multilineTextAlignment(.trailing)
             }
 
+            // 1-5 星难度自评
+            // 1-5 star self-rated difficulty.
             DifficultyPicker(difficulty: $viewModel.editedDifficulty)
 
+            // 标签编辑器(带建议)
+            // Tag editor (with suggestions).
             TagEditorView(
                 tags: $viewModel.editedTags,
                 suggestedTags: container.mistakeRepo.allTags()
@@ -142,6 +189,8 @@ private extension MistakeDetailEditView {
 
             DatePicker("Date".localized(), selection: $viewModel.editedDate, displayedComponents: .date)
 
+            // 语音备忘录:有则显示删除按钮,没有则显示录音按钮
+            // Voice memo: show delete if attached, otherwise show the record button.
             HStack {
                 Text("Voice Memo".localized())
                 Spacer()
@@ -166,6 +215,8 @@ private extension MistakeDetailEditView {
                 }
             }
 
+            // SRS 开关:开启后,这条错题会进闪卡流水线
+            // SRS toggle: when on, this mistake joins the flashcard pipeline.
             Toggle(isOn: $viewModel.reviewEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Spaced Repetition".localized())
@@ -176,9 +227,13 @@ private extension MistakeDetailEditView {
             }
         }
     }
-    
+
     var contentEditorSection: some View {
+        // 内容编辑器:四段可切换,共用一个 MarkdownEditor
+        // Content editor: four switchable sections, sharing one MarkdownEditor.
         Section(header: Text(viewModel.selectedSection.title)) {
+            // 段间切换 segmented picker
+            // Section switcher (segmented picker).
             Picker("Section", selection: $viewModel.selectedSection) {
                 ForEach(EditSection.allCases) { section in
                     Text(section.title).tag(section)
@@ -186,6 +241,9 @@ private extension MistakeDetailEditView {
             }
             .pickerStyle(.segmented)
 
+            // 切换段时给 editor 一个新 id 强制重建,避免跨段内容粘连
+            // When switching sections, give the editor a new id to force
+            // a rebuild and prevent content from leaking between sections.
             Group {
                 switch viewModel.selectedSection {
                 case .question:

@@ -2,25 +2,37 @@
 //  AISimilarQuestionFlowView.swift
 //  StudyPulse
 //
-//  Created for AI Similar Question feature.
+//  AI 变式题 flow:出同类题 → 选手写/打字作答 → 判分 → 错题入库。
+//  AI "similar question" flow: generate a similar problem → accept a
+//  hand-written / typed answer → grade → optionally save the failed
+//  answer as a new mistake.
 //
 
 import SwiftUI
 import PencilKit
 import SwiftStreamingMarkdown
 
+/// LLM 一次返回的变式题 + 标准解法对。
+/// One "similar question + standard solution" pair returned by the LLM.
 struct SimilarQuestionResult: Codable {
+    /// 题目文本
+    /// Question text.
     let question: String
+    /// 标准解法
+    /// Standard solution.
     let correctSolution: String
 }
 
 /// 答题方式:手写(PencilKit)或打字(Markdown)。
+/// Answer mode: hand-written (PencilKit) or typed (Markdown).
 private enum AnswerMode: String, CaseIterable, Identifiable {
     case typing = "Typing"
     case handwriting = "Handwriting"
 
     var id: String { rawValue }
 
+    /// 本地化标题
+    /// Localized title.
     var title: String {
         switch self {
         case .typing: return "Markdown 作答".localized()
@@ -28,6 +40,8 @@ private enum AnswerMode: String, CaseIterable, Identifiable {
         }
     }
 
+    /// SF Symbol 图标
+    /// SF Symbol for the mode.
     var systemImage: String {
         switch self {
         case .typing: return "keyboard"
@@ -36,41 +50,75 @@ private enum AnswerMode: String, CaseIterable, Identifiable {
     }
 }
 
+/// AI 变式题 flow(从错题详情 → "同类题" 入口打开)。
+/// "Generate a similar problem" flow (opened from a mistake's
+/// "similar question" entry).
 struct AISimilarQuestionFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject private var envManager: AppEnvironmentManager
 
+    /// 用作 generation 种子的原错题
+    /// Original mistake used as the generation seed.
     let originalMistake: MistakeNote
 
+    /// 是否正在等待 LLM 返回首字
+    /// Whether we are still waiting for the first LLM token.
     @State private var isLoading = true
+    /// LLM 错误信息
+    /// LLM error message.
     @State private var errorMessage: String? = nil
 
+    /// LLM 生成的同类题文本
+    /// LLM-generated similar-question text.
     @State private var generatedQuestion: String = ""
+    /// LLM 给出的标准解法
+    /// LLM-provided standard solution.
     @State private var generatedSolution: String = ""
 
-    // 模式选择
+    // 模式选择 / Mode selection
+    /// 当前作答模式
+    /// Current answer mode.
     @State private var answerMode: AnswerMode = .typing
+    /// 打字模式的作答文本
+    /// Typed answer text.
     @State private var typedAnswer: String = ""
+    /// 是否显示正解/解析区
+    /// Whether the "correct solution" panel is shown.
     @State private var showingSolution = false
+    /// 手写模式的 PencilKit 画板数据
+    /// PencilKit drawing data in hand-written mode.
     @State private var drawing = PKDrawing()
 
-    // AI 判分状态
+    // AI 判分状态 / AI grading state
+    /// 是否正在判分
+    /// Whether grading is in flight.
     @State private var isGrading = false
+    /// 判分错误
+    /// Grading error message.
     @State private var gradingError: String? = nil
+    /// 判分结构化结果
+    /// Grading structured result.
     @State private var gradingResult: SimilarQuestionGradingLLM.GradingResult? = nil
+    /// 流式判分累积的原始文本
+    /// Streamed raw grading text accumulated so far.
     @State private var gradingStreamedText: String = ""
 
     var body: some View {
         NavigationStack {
             Group {
                 if isLoading {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text("AI 正在构思变式题...".localized())
-                            .foregroundColor(.secondary)
-                    }
+                    AIWaitingView(
+                        title: "AI 正在构思变式题...".localized(),
+                        messages: [
+                            "AI正在结合历史数据...".localized(),
+                            "AI正在提炼表达...".localized(),
+                            "正在分析您的薄弱考点...".localized(),
+                            "正在为您量身定制变式训练...".localized(),
+                            "正在构建学术难度模型...".localized()
+                        ],
+                        onCancel: { dismiss() }
+                    )
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -125,48 +173,58 @@ struct AISimilarQuestionFlowView: View {
 
                 // 答题/草稿区
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: answerMode.systemImage)
-                            .foregroundColor(.orange)
-                        Text("Draft / Answer".localized())
-                            .font(.headline)
-                        Spacer()
-                        Picker("Mode", selection: $answerMode) {
-                            ForEach(AnswerMode.allCases) { mode in
-                                Text(mode.title).tag(mode)
-                            }
+                // 头部:图标 + 标题 + 作答模式分段控件
+                // Header: icon + title + answer-mode segmented control.
+                HStack {
+                    Image(systemName: answerMode.systemImage)
+                        .foregroundColor(.orange)
+                    Text("Draft / Answer".localized())
+                        .font(.headline)
+                    Spacer()
+                    // 作答方式切换
+                    // Answer-mode switcher.
+                    Picker("Mode", selection: $answerMode) {
+                        ForEach(AnswerMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
                         }
-                        .pickerStyle(.segmented)
-                        .fixedSize()
                     }
-
-                    switch answerMode {
-                    case .handwriting:
-                        handwritingCanvas
-                    case .typing:
-                        typingEditor
-                    }
-                }
-                .padding(.horizontal)
-
-                // 判分结果区(打字模式 + 已判分后展示)
-                if answerMode == .typing, let result = gradingResult {
-                    gradingResultSection(result)
-                        .padding(.horizontal)
-                } else if answerMode == .typing, isGrading {
-                    gradingLoadingSection
-                        .padding(.horizontal)
-                } else if answerMode == .typing, let gradingError = gradingError {
-                    gradingErrorSection(gradingError)
-                        .padding(.horizontal)
+                    .pickerStyle(.segmented)
+                    .fixedSize()
                 }
 
-                // 解析区(查看正解 / 标准解法)
-                if showingSolution {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                // 根据模式渲染手写 / 打字
+                // Render handwriting / typing based on the mode.
+                switch answerMode {
+                case .handwriting:
+                    handwritingCanvas
+                case .typing:
+                    typingEditor
+                }
+            }
+            .padding(.horizontal)
+
+            // 判分结果区(只在打字模式下展示;手写模式走"自评分"逻辑)
+            // Grading result region (only in typing mode; handwriting uses
+            // a self-grade flow instead).
+            if answerMode == .typing, let result = gradingResult {
+                gradingResultSection(result)
+                    .padding(.horizontal)
+            } else if answerMode == .typing, isGrading {
+                gradingLoadingSection
+                    .padding(.horizontal)
+            } else if answerMode == .typing, let gradingError = gradingError {
+                gradingErrorSection(gradingError)
+                    .padding(.horizontal)
+            }
+
+            // 解析区:用户主动展开时,显示正解 + "Done / Save to Mistakes" 按钮
+            // Solution region: when expanded by the user, shows the
+            // correct solution plus "Done" / "Save to Mistakes" buttons.
+            if showingSolution {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
                             Text("Correct Solution".localized())
                                 .font(.headline)
                         }
@@ -206,7 +264,7 @@ struct AISimilarQuestionFlowView: View {
         }
     }
 
-    // MARK: - Answer Input
+    // MARK: - Answer Input / 作答输入
 
     @ViewBuilder
     private var handwritingCanvas: some View {
@@ -272,7 +330,7 @@ struct AISimilarQuestionFlowView: View {
         }
     }
 
-    // MARK: - Grading UI
+    // MARK: - Grading UI / 判分 UI
 
     @ViewBuilder
     private func gradingResultSection(_ result: SimilarQuestionGradingLLM.GradingResult) -> some View {
@@ -375,8 +433,13 @@ struct AISimilarQuestionFlowView: View {
         .cornerRadius(12)
     }
 
-    // MARK: - Generate
+    // MARK: - Generate / 出题
 
+    /// 调 LLM 出同类题,响应可能是 JSON `[{question, correctSolution}]`
+    /// 或纯文本,这里统一做一次规范化解析
+    /// Call the LLM to generate a similar question. The response may be
+    /// JSON (`[{question, correctSolution}]`) or plain text; both are
+    /// handled by the normalizer below.
     private func generate() {
         isLoading = true
         errorMessage = nil
@@ -414,7 +477,7 @@ struct AISimilarQuestionFlowView: View {
         }
     }
 
-    // MARK: - Grading
+    // MARK: - Grading / 判分
 
     private func startGrading() {
         gradingResult = nil
@@ -453,8 +516,11 @@ struct AISimilarQuestionFlowView: View {
         }
     }
 
-    // MARK: - Persist
+    // MARK: - Persist / 持久化
 
+    /// 把这次变式题的结果保存为新的错题(仅在用户主动 "Save to Mistakes" 时调用)
+    /// Save the current similar-question result as a new mistake (only
+    /// when the user explicitly taps "Save to Mistakes").
     private func saveAsNewMistake() {
         let newMistake = MistakeNote(
             title: "【AI变式】" + originalMistake.title,

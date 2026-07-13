@@ -14,6 +14,7 @@ import PencilKit
 import UIKit
 
 // MARK: - Flashcard Handwriting Canvas
+// MARK: - Flashcard handwriting canvas
 
 /// 闪卡手写答题画布
 /// SwiftUI wrapper around `PKCanvasView` for flashcard handwriting answers.
@@ -79,6 +80,7 @@ struct FlashcardHandwritingCanvasView: View {
                 .clipShape(Rectangle())  // 保持直角,父容器用 RoundedRectangle 裁剪
 
             // 底部操作栏
+            // Bottom action bar.
             HStack(spacing: 10) {
                 Button(role: .destructive) {
                     onClear()
@@ -132,6 +134,7 @@ struct FlashcardHandwritingCanvasView: View {
     }
 }
 
+// MARK: - UIViewRepresentable
 // MARK: - UIViewRepresentable
 
 /// 可拖动的白板画布（无边记风格）。
@@ -205,6 +208,7 @@ struct DraggableCanvasRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: UIScrollView, context: Context) {
         guard let canvas = context.coordinator.canvas else { return }
         // 仅当外部 binding 与 canvas 内部的 drawing 显著不同时才回写
+        // Only re-write the canvas when the binding actually differs.
         if canvas.drawing.dataRepresentation() != drawing.dataRepresentation() {
             canvas.drawing = drawing
         }
@@ -237,6 +241,7 @@ struct DraggableCanvasRepresentable: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             // 同步到 binding
+            // Push the canvas state back into the SwiftUI binding.
             drawing = canvasView.drawing
         }
     }

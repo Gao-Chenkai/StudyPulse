@@ -27,11 +27,11 @@ final class LagMonitor: NSObject {
     /// 允许连续丢失的帧数。= 3 表示连续丢帧超过 3 帧才报告。
     private let allowedMissedFrames: Int = 3
 
-    // MARK: - 状态
-    private var displayLink: CADisplayLink?
-    private var lastTimestamp: CFTimeInterval = 0
-    private var lastReportTime: CFTimeInterval = 0
-    private var isRunning = false
+    // MARK: - 状态 / Internal State
+    private var displayLink: CADisplayLink?           // CADisplayLink 帧驱动回调源
+    private var lastTimestamp: CFTimeInterval = 0     // 上一帧到达时间(用于计算 delta)
+    private var lastReportTime: CFTimeInterval = 0    // 上一次报告卡顿的墙钟,用于冷却判定
+    private var isRunning = false                     // 监测启停幂等保护
 
     private override init() {
         super.init()

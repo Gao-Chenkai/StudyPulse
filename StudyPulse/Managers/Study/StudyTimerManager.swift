@@ -65,12 +65,12 @@ final class StudyTimerManager: ObservableObject {
 
     // MARK: - Live Activity handle
 
-    private var currentActivity: Activity<StudyTimerActivityAttributes>?
+    private var currentActivity: Activity<StudyTimerActivityAttributes>?  // 当前 Live Activity 句柄(nil = 无)
 
-    // MARK: - Internal timer
+    // MARK: - 内部定时器 / Internal timer
 
-    private var internalTimer: Timer?
-    private var targetEndDate: Date?
+    private var internalTimer: Timer?        // 1Hz 倒计时心跳
+    private var targetEndDate: Date?         // 倒计时目标结束时间(暂停时为 nil,resume 时重算)
 
     private init() {
         sessions = StudySessionStore.load()
@@ -203,7 +203,8 @@ final class StudyTimerManager: ObservableObject {
         let remaining = max(0, Int(target.timeIntervalSinceNow))
         remainingSeconds = remaining
 
-        // Update the Live Activity every 5 ticks to reduce overhead.
+        // 每 5 帧(≈5s)推一次 Live Activity,降低系统 IPC 开销
+        // Push the Live Activity every ~5 ticks (≈5s) to reduce IPC overhead.
         if remaining % 5 == 0 {
             updateLiveActivity()
         }

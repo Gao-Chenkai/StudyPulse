@@ -1769,3 +1769,34 @@
 "Save to Mistakes" = "儲存到錯題本";
 "Draft / Answer" = "草稿 / 作答";
 
+// MARK: - Auto Mind Map (错题思维导图)
+"Auto Mind Map" = "智能思維導圖";
+"Generating mind map..." = "正在生成思維導圖...";
+"Extracting key topics and concepts..." = "正在提煉核心考點與知識結構...";
+"Not enough mistake notes to generate a mind map. Please add some mistakes first." = "暫無足夠錯題用於生成思維導圖。請先添加一些錯題。";
+"AI Explain Concept" = "AI 講解這個知識點";
+"Local Fallback" = "本地規則視圖";
+"AI Classified" = "AI 智能歸類";
+"Main Node" = "中心節點";
+"Theme" = "分類主題";
+"Concept" = "核心知識點";
+"Mistake" = "具體錯題";
+"AI explain concept query" = "詳細講解知識點：「%@」，總結其在考試中的核心考點與常見避坑指南。";
+"More Tools" = "更多工具";
+
+// MARK: - LLM Waiting View Strings
+"AI正在结合历史数据..." = "AI正在結合歷史數據…";
+"AI正在提炼表达..." = "AI正在提煉表達…";
+"AI正在构建逻辑模型..." = "AI正在構建邏輯模型…";
+"AI正在为您生成专属内容..." = "AI正在為您生成專屬內容…";
+"正在分析您的薄弱考点..." = "正在分析您的薄弱考點…";
+"正在为您量身定制变式训练..." = "正在為您量身定制變式訓練…";
+"正在提取错题中的核心概念..." = "正在提取錯題中的核心概念…";
+"正在梳理知识脉络与关联..." = "正在梳理知識脈絡與關聯…";
+"正在绘制个性化知识拓扑结构..." = "正在繪製個性化知識拓撲結構…";
+"正在解构错题的考查要点..." = "正在解構錯題的考查要點…";
+"正在诊断您的思维误区..." = "正在診斷您的思維誤區…";
+"正在撰写深度的正确解题思路..." = "正在撰寫深度的正確解題思路…";
+"正在沉淀易错防坑指南..." = "正在沉澱易錯防坑指南…";
+
+
