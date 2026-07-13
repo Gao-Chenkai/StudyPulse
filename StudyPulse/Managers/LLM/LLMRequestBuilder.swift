@@ -191,6 +191,121 @@ enum SimilarQuestionLLM {
     }
 }
 
+// MARK: - 8b) AI Similar Question Grading (AI 变式题判分)
+
+/// AI 变式题判分 prompt 工厂。
+/// 把"AI 变式题 + 标准解法 + 用户的 Markdown 作答"一起喂给 LLM,让 LLM 给出
+/// 评分、扣分点和订正建议。判分结果会作为"用户是否答对"的依据反馈到原题掌握度。
+enum SimilarQuestionGradingLLM {
+    static let defaultSystem: String = """
+        你是严格的学科阅卷老师。学生对一道 AI 生成的变式题提交了 Markdown 格式的作答,
+        你需要对照"标准解法"判分,并给出可操作的订正建议。
+        输出使用 Markdown,严格使用以下结构(每个 ## 标题独占一行,顺序固定):
+
+        ## 评分
+        - 得分: <0-100 的整数,只写数字>
+        - 是否正确: <是 / 否>(得分 ≥ 80 视为正确)
+
+        ## 缺失/错误步骤
+        <2-6 条 bullet,按"关键步骤"逐项对照,指出学生漏掉 / 写错的点;
+        若作答完全正确,这一段写"- 无明显问题"。>
+
+        ## 订正建议
+        <2-5 句,具体到该题的关键步骤,告诉学生应该怎么补;允许使用 Markdown 列表。>
+
+        严禁输出解释、客套话、JSON、代码块语言标签。
+        不要重复原题或标准解法全文;只引用与扣分相关的关键步骤。
+        """
+
+    /// 构造 prompt。
+    /// - Parameters:
+    ///   - subject: 学科(可空)
+    ///   - question: AI 生成的变式题题干
+    ///   - correctSolution: AI 给出的标准解法
+    ///   - userAnswer: 学生的 Markdown 作答
+    static func makePrompt(
+        subject: String,
+        question: String,
+        correctSolution: String,
+        userAnswer: String
+    ) -> LLMPrompt {
+        let user = """
+        学科:\(subject.isEmpty ? "(未填)" : subject)
+
+        --- 变式题题干 ---
+        \(question.isEmpty ? "(空)" : question)
+
+        --- 标准解法 ---
+        \(correctSolution.isEmpty ? "(空)" : correctSolution)
+
+        --- 学生作答(可能为空或包含不完整步骤) ---
+        \(userAnswer.isEmpty ? "(空)" : userAnswer)
+        """
+        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+    }
+
+    /// 解析 LLM 输出为结构化的判分结果。解析失败 → 返回 `nil`,UI 端应回退到本地提示。
+    /// 仅提取"评分"段;其余 Markdown 文本(`gradingDetail`)原样返回,直接渲染。
+    static func parse(_ output: String) -> GradingResult? {
+        let sections = parseSections(output)
+        guard let evaluation = sections["评分"] else { return nil }
+        // 提取 0-100 的整数
+        let scoreRegex = try? NSRegularExpression(pattern: "(\\d{1,3})", options: [])
+        let nsEvaluation = evaluation as NSString
+        let range = NSRange(location: 0, length: nsEvaluation.length)
+        var score: Int? = nil
+        if let match = scoreRegex?.firstMatch(in: evaluation, options: [], range: range),
+           match.numberOfRanges > 1 {
+            let r = match.range(at: 1)
+            if r.location != NSNotFound {
+                score = Int(nsEvaluation.substring(with: r))
+            }
+        }
+        guard let score, (0...100).contains(score) else { return nil }
+        let isCorrect = score >= 80
+        // 拼接除"评分"段外的所有 section 作为可读详情
+        let detail = sections
+            .filter { $0.key != "评分" }
+            .map { (key, value) in "## \(key)\n\(value)" }
+            .joined(separator: "\n\n")
+        return GradingResult(score: score, isCorrect: isCorrect, detail: detail)
+    }
+
+    /// 判分结果。`score` 0-100,`isCorrect` 由 score >= 80 推断,`detail` 包含
+    /// "缺失/错误步骤"和"订正建议"两段(原样 Markdown,直接交给 `MarkdownView` 渲染)。
+    struct GradingResult: Equatable {
+        let score: Int
+        let isCorrect: Bool
+        let detail: String
+    }
+
+    // MARK: - Helpers
+
+    /// 解析 `## 标题\n...\n## 标题\n...` 这种 section 结构。
+    private static func parseSections(_ output: String) -> [String: String] {
+        var result: [String: String] = [:]
+        let lines = output.components(separatedBy: .newlines)
+        var currentTitle: String? = nil
+        var currentBody: [String] = []
+        for raw in lines {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("## ") {
+                if let t = currentTitle {
+                    result[t] = currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+                }
+                currentTitle = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                currentBody = []
+            } else if currentTitle != nil {
+                currentBody.append(raw)
+            }
+        }
+        if let t = currentTitle {
+            result[t] = currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+        }
+        return result
+    }
+}
+
 // MARK: - 3) Weekly Report Summary (周报 AI 总结)
 
 /// 周/月报 AI 总结 prompt 工厂。
@@ -742,5 +857,120 @@ enum BodyRadarLLM {
         case .red: return "red"
         default: return "other"
         }
+    }
+}
+
+// MARK: - 10) AI Quiz Generation (AI 自测出题)
+
+/// AI 自测出题 prompt 工厂
+enum QuizGenerationLLM {
+    static let defaultSystem: String = """
+        你是严格而专业的学科教育命题专家。基于用户提供的参考内容（如该科目的历史错题或指定的章节知识点），生成 5 到 10 道具有针对性的自测题目。
+        要求：
+        1. 题目类型必须包含“选择题 (multiple_choice)”和“填空题 (fill_in_the_blank)”。
+        2. 出题必须考查核心知识点，题目难度合理。
+        3. 选择题必须包含 4 个选项，每个选项必须以 "A. ", "B. ", "C. ", "D. " 开头。
+        4. 填空题的题干中必须使用“_____”（五个下划线）来指示空格位置。填空题的选项为 null 或空数组。
+        5. 严格使用以下 JSON 数组格式输出，不要包含任何 Markdown 代码块标签（如 ```json），直接输出 JSON：
+        [
+          {
+            "type": "multiple_choice",
+            "question": "<题干内容，支持 Markdown / LaTeX 数学公式>",
+            "options": ["A. <选项A内容>", "B. <选项B内容>", "C. <选项C内容>", "D. <选项D内容>"],
+            "correctAnswer": "<正确选项，例如 A/B/C/D 中的一个字符>",
+            "solution": "<本题的详细步骤解析，支持 Markdown / LaTeX>"
+          },
+          {
+            "type": "fill_in_the_blank",
+            "question": "<题干内容（填空位置用 _____ 表示），支持 Markdown / LaTeX>",
+            "options": null,
+            "correctAnswer": "<正确填空文本，若有多种正确形式可用斜杠 / 隔开>",
+            "solution": "<本题的详细步骤解析，支持 Markdown / LaTeX>"
+          }
+        ]
+        """
+
+    /// 构造自测出题 prompt
+    static func makePrompt(
+        subject: String,
+        scope: String, // "mistakes" 或 "chapter"
+        referenceMistakes: [MistakeNote],
+        chapterTopic: String,
+        count: Int
+    ) -> LLMPrompt {
+        var contextStr = ""
+        if scope == "mistakes" {
+            contextStr = "自测范围：基于该学科的错题\n参考错题列表（共\(referenceMistakes.count)道）：\n"
+            for (idx, m) in referenceMistakes.enumerated() {
+                contextStr += """
+                \(idx + 1). 错题标题: \(m.title)
+                   原题干: \(m.originalQuestion)
+                   正确解法: \(m.correctSolution)
+                   我的错因分析: \(m.errorReason)
+                
+                """
+            }
+        } else {
+            contextStr = "自测范围：基于指定的章节/知识点\n章节知识点描述：\(chapterTopic)\n"
+        }
+
+        let user = """
+        学科：\(subject)
+        题目数量：\(count) 道题
+        \(contextStr)
+        请根据上述背景生成 \(count) 道题目（选择题与填空题混合，各占一部分）。
+        """
+        
+        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+    }
+}
+
+// MARK: - 10b) AI Quiz Grading (AI 自测判分)
+
+/// AI 自测判分 prompt 工厂
+enum QuizGradingLLM {
+    static let defaultSystem: String = """
+        你是严谨认真的学科阅卷老师。用户完成了一套 AI 生成的自测卷，你需要根据“题目”、“标准正确答案及解析”以及“用户实际作答”进行打分和评估。
+        要求：
+        1. 评分满分为 100 分。将 100 分平分到每道题（例如 10 道题，每题 10 分）。
+        2. 选择题：完全匹配才得分。例如正确答案是 A，用户选 A 则得满分，否则得 0 分。
+        3. 填空题：对比标准答案，如果意思完全正确或数学/化学等式等价，应给满分或相应的分数。
+        4. 如果单题得分率为 80% 或以上，判定该题 isCorrect = true，否则 isCorrect = false。
+        5. 为每道题提供具体的“feedback”（评分依据、指出哪里写错、应如何订正，支持 Markdown）。
+        6. 严格使用以下 JSON 格式输出，不要包含任何 Markdown 代码块标签（如 ```json），直接输出 JSON：
+        {
+          "totalScore": <整卷总得分，0-100的整数>,
+          "results": [
+            {
+              "index": <题目序号，从 0 开始的整数>,
+              "score": <该题得分，整数>,
+              "isCorrect": <是否正确，布尔值>,
+              "feedback": "<单题的判分理由与订正建议，支持 Markdown / LaTeX>"
+            }
+          ]
+        }
+        """
+
+    /// 构造自测判分 prompt
+    static func makePrompt(
+        subject: String,
+        questions: [QuizQuestion],
+        userAnswers: [UUID: String]
+    ) -> LLMPrompt {
+        var userText = "学科：\(subject)\n\n"
+        for (idx, q) in questions.enumerated() {
+            let answer = userAnswers[q.id] ?? "(未作答)"
+            userText += """
+            --- 题目 \(idx + 1) ---
+            类型: \(q.type == "multiple_choice" ? "选择题" : "填空题")
+            题干: \(q.question)
+            \(q.type == "multiple_choice" ? "选项: \(q.options?.joined(separator: ", ") ?? "")\n" : "")标准答案: \(q.correctAnswer)
+            解析: \(q.solution)
+            用户作答: \(answer)
+            
+            """
+        }
+        
+        return LLMPrompt(system: defaultSystem, messages: [.user(userText)])
     }
 }

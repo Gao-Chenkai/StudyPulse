@@ -67,11 +67,17 @@ struct MistakeListToolbarTrailing: ToolbarContent {
     let onShowTagGraph: () -> Void
     let onShowPDFExport: () -> Void
     let onShowNewMistake: () -> Void
+    let onShowAIQuiz: () -> Void
     let container: RepositoryContainer
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             HStack(spacing: 12) {
+                Button(action: onShowAIQuiz) {
+                    Image(systemName: "sparkles.rectangle.stack")
+                }
+                .accessibilityLabel("AI Quiz".localized())
+
                 if hasTags {
                     Button(action: onShowTagGraph) {
                         Image(systemName: "circle.hexagongrid")

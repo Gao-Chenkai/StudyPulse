@@ -55,6 +55,9 @@ struct MarkdownTextEditor: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
+        // 当用户正在使用中文拼音或 IME 输入法处于“标记文本（Marked Text）”组合状态时，
+        // 切勿修改 uiView.text 或 uiView.selectedRange，否则一定会中断/吞除拼音或候选词。
+        guard uiView.markedTextRange == nil else { return }
         if uiView.text != text {
             uiView.text = text
         }
@@ -66,6 +69,19 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
+    }
+
+    static func dismantleUIView(_ uiView: UITextView, coordinator: Coordinator) {
+        if uiView.isFirstResponder {
+            uiView.resignFirstResponder()
+        }
+        uiView.inputAccessoryView = nil
+        if let host = coordinator.hostController {
+            host.willMove(toParent: nil)
+            host.view.removeFromSuperview()
+            host.removeFromParent()
+            coordinator.hostController = nil
+        }
     }
 
     /// Clamp an external `NSRange` to the valid range within `text` so
@@ -91,10 +107,13 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
-            parent.selectedRange = textView.selectedRange
+            if textView.markedTextRange == nil {
+                parent.selectedRange = textView.selectedRange
+            }
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
+            guard textView.markedTextRange == nil else { return }
             if parent.selectedRange != textView.selectedRange {
                 parent.selectedRange = textView.selectedRange
             }

@@ -11,10 +11,63 @@ import UniformTypeIdentifiers
 /// 错题列表主视图
 struct MistakeView: View {
     @Environment(RepositoryContainer.self) private var container
+    @EnvironmentObject private var envManager: AppEnvironmentManager
     @StateObject private var viewModel: MistakeViewModel
+    @State private var showingAIQuizSetup = false
 
     init(container: RepositoryContainer) {
         _viewModel = StateObject(wrappedValue: MistakeViewModel.makeDefault(container: container))
+    }
+
+    // MARK: - AI Quiz Card
+
+    @ViewBuilder
+    private var aiQuizCard: some View {
+        if viewModel.searchText.isEmpty {
+            Button {
+                showingAIQuizSetup = true
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [.teal, .blue],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "sparkles.rectangle.stack")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("AI 智能自测".localized())
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text("基于错题/指定章节进行 AI 智能出题，自测并自动阅卷。".localized())
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+                .glassCard(enabled: envManager.preferences.glassEffectEnabled)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+        }
     }
 
     // MARK: - Empty State
@@ -47,6 +100,8 @@ struct MistakeView: View {
                 }
 
                 srsBanner
+
+                aiQuizCard
 
                 tagSection
 
@@ -237,6 +292,7 @@ struct MistakeView: View {
                     onShowTagGraph: { viewModel.showingTagGraph = true },
                     onShowPDFExport: { viewModel.showingPDFExportSheet = true },
                     onShowNewMistake: { viewModel.showingNewMistakeSet = true },
+                    onShowAIQuiz: { showingAIQuizSetup = true },
                     container: container
                 )
             }
@@ -251,6 +307,13 @@ struct MistakeView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+        }
+        .sheet(isPresented: $showingAIQuizSetup) {
+            AIQuizSetupView()
+                .environment(container)
+                .environmentObject(envManager)
+                .interactiveDismissDisabled(true)
+                .adaptiveSheet()
         }
     }
 }
