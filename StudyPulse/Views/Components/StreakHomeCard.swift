@@ -19,7 +19,7 @@ import SwiftUI
 /// Home "Streak" card: shows current streak length + today's 3 goal bars.
 struct StreakHomeCard: View {
     @ObservedObject private var achievementManager = AchievementManager.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// 今日目标配置(从 AchievementManager 快照中取)
     /// Today's goal configuration (from `AchievementManager`'s snapshot).

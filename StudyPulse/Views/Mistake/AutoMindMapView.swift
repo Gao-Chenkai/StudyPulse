@@ -17,7 +17,6 @@ struct AutoMindMapView: View {
     // MARK: - Dependencies / 依赖项
     
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - View Parameters / 外部传入参数
@@ -131,14 +130,14 @@ struct AutoMindMapView: View {
             .task {
                 // 自动载入思维导图数据
                 // Auto-trigger generation pipeline on view task.
-                await viewModel.generate(config: envManager.llmConfig)
+                await viewModel.generate(config: container.envManager.llmConfig)
             }
             // 绑定 AI 提问通道 Sheet
             // Present HomeAsk sheet when showingHomeAsk is triggered.
             .sheet(isPresented: $showingHomeAsk) {
                 if let question = homeAskQuestion {
-                    HomeAskSheet(container: container, envManager: envManager, initialQuestion: question)
-                        .environmentObject(envManager)
+                    HomeAskSheet(container: container, envManager: container.envManager, initialQuestion: question)
+                        .environment(container)
                 }
             }
         }
@@ -267,11 +266,11 @@ struct AutoMindMapView: View {
                 .background(
                     Capsule()
                         .fill(LinearGradient(
-                            colors: [envManager.effectiveAccentColor, envManager.effectiveAccentColor.opacity(0.8)],
+                            colors: [container.envManager.effectiveAccentColor, container.envManager.effectiveAccentColor.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ))
-                        .shadow(color: envManager.effectiveAccentColor.opacity(0.35), radius: 10, x: 0, y: 5)
+                        .shadow(color: container.envManager.effectiveAccentColor.opacity(0.35), radius: 10, x: 0, y: 5)
                 )
             
         case .theme(let name):
@@ -289,7 +288,7 @@ struct AutoMindMapView: View {
                 )
                 .overlay(
                     Capsule()
-                        .stroke(envManager.effectiveAccentColor.opacity(0.55), lineWidth: 1.8)
+                        .stroke(container.envManager.effectiveAccentColor.opacity(0.55), lineWidth: 1.8)
                 )
                 .contextMenu {
                     contextMenuOptions(for: name)
@@ -321,7 +320,7 @@ struct AutoMindMapView: View {
             // Leaf Node (Mistake): supports tap navigation and long-press AI explanation.
             NavigationLink(
                 destination: MistakeSetDetailView(mistakeSet: note)
-                    .environmentObject(envManager)
+                    .environment(container)
             ) {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -398,8 +397,8 @@ struct AutoMindMapView: View {
             // B. 节点图例卡片
             // B. Color-coded legend card.
             VStack(alignment: .leading, spacing: 6) {
-                legendItem(title: "Main Node".localized(), color: envManager.effectiveAccentColor, isRoot: true)
-                legendItem(title: "Theme".localized(), color: envManager.effectiveAccentColor)
+                legendItem(title: "Main Node".localized(), color: container.envManager.effectiveAccentColor, isRoot: true)
+                legendItem(title: "Theme".localized(), color: container.envManager.effectiveAccentColor)
                 legendItem(title: "Concept".localized(), color: .purple)
                 legendItem(title: "Mistake".localized(), color: .red)
             }
@@ -481,10 +480,10 @@ struct AutoMindMapView: View {
         
         switch level {
         case 1:
-            strokeColor = envManager.effectiveAccentColor.opacity(0.4)
+            strokeColor = container.envManager.effectiveAccentColor.opacity(0.4)
             strokeWidth = 2.0
         case 2:
-            strokeColor = envManager.effectiveAccentColor.opacity(0.3)
+            strokeColor = container.envManager.effectiveAccentColor.opacity(0.3)
             strokeWidth = 1.5
         case 3:
             strokeColor = Color.purple.opacity(0.25)

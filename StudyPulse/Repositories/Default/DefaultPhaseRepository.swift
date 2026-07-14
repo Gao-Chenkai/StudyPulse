@@ -34,7 +34,14 @@ final class DefaultPhaseRepository: PhaseRepository {
     @ObservationIgnored
     weak var taskRef: (any TaskRepository)?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读/写 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read/write `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     /// 由容器调用,注入其它 4 个 repo 的 weak 引用以支持跨域 phaseId 操作。
     /// Called by the container; injects weak refs to the other 4 repos
@@ -74,14 +81,14 @@ final class DefaultPhaseRepository: PhaseRepository {
     /// 当前激活的 phase
     /// Currently active phase.
     var activePhase: StudyPhase? {
-        guard let id = AppEnvironmentManager.shared.activePhaseId else { return nil }
+        guard let id = envManager.activePhaseId else { return nil }
         return phases.first(where: { $0.id == id })
     }
 
     /// phase 过滤是否开启（activePhaseId != nil）
     /// Whether phase filtering is on (activePhaseId != nil).
     var phaseFilterEnabled: Bool {
-        AppEnvironmentManager.shared.activePhaseId != nil
+        envManager.activePhaseId != nil
     }
 
     /// 是否存在 phaseId == nil 的"未归类"数据
@@ -160,8 +167,8 @@ final class DefaultPhaseRepository: PhaseRepository {
         // 3. 从内存列表中移除
         phases.removeAll { $0.id == phase.id }
         // 4. 如果当前激活的 phase 被删了,清空 activePhaseId
-        if AppEnvironmentManager.shared.activePhaseId == phase.id {
-            AppEnvironmentManager.shared.setActivePhaseId(nil)
+        if envManager.activePhaseId == phase.id {
+            envManager.setActivePhaseId(nil)
         }
         Log.data.info("PhaseRepository deleted: name=\(phase.name, privacy: .public)")
     }
@@ -174,7 +181,7 @@ final class DefaultPhaseRepository: PhaseRepository {
     }
 
     func activate(_ phase: StudyPhase?) {
-        AppEnvironmentManager.shared.setActivePhaseId(phase?.id)
+        envManager.setActivePhaseId(phase?.id)
     }
 
     // MARK: - 跨域 phaseId 工具

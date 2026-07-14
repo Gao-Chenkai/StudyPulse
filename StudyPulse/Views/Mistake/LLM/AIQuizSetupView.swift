@@ -19,7 +19,6 @@ import os
 struct AIQuizSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 选中的学科(内部 key)
     /// Selected subject (internal key).
@@ -136,7 +135,6 @@ struct AIQuizSetupView: View {
             }
         }
         .environment(container)
-        .environmentObject(envManager)
     }
 
     @ViewBuilder
@@ -432,7 +430,7 @@ struct AIQuizSetupView: View {
     }
 
     private func startGeneratingQuiz() {
-        guard envManager.llmConfig.isConfigured else {
+        guard container.envManager.llmConfig.isConfigured else {
             showingLLMAlert = true
             return
         }
@@ -463,7 +461,7 @@ struct AIQuizSetupView: View {
             do {
                 let jsonString = try await LLMClient.shared.complete(
                     prompt: prompt,
-                    config: envManager.llmConfig,
+                    config: container.envManager.llmConfig,
                     caller: "QuizGeneration"
                 )
 

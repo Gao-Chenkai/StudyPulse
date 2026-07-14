@@ -37,7 +37,6 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct StudyPulseApp: App {
     @State private var container: RepositoryContainer = RepositoryContainer()
-    @StateObject private var envManager = AppEnvironmentManager.shared
     @StateObject private var hrvManager = HealthKitManager.shared
     @StateObject private var timerManager = StudyTimerManager.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -83,10 +82,9 @@ struct StudyPulseApp: App {
         WindowGroup {
             ContentView()
                 .environment(container)
-                .environmentObject(envManager)
                 .environmentObject(hrvManager)
                 .environmentObject(timerManager)
-                .preferredColorScheme(envManager.effectiveColorScheme)
+                .preferredColorScheme(container.envManager.effectiveColorScheme)
                 .task {
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
                     await container.asyncInit()

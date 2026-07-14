@@ -15,7 +15,6 @@ import SwiftStreamingMarkdown
 /// user answer, standard answer and AI feedback.
 struct AIQuizResultView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 学科(内部 key,如 "math")
     /// Subject internal key (e.g. "math").

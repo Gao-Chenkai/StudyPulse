@@ -41,7 +41,7 @@ struct AIDiscussionSheet: View {
     /// Dismiss callback.
     let onDismiss: () -> Void
 
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel = AIDiscussionViewModel()
     /// 当前输入框文本
     /// Current input bar text.
@@ -103,7 +103,7 @@ struct AIDiscussionSheet: View {
 
     private var canSend: Bool {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !viewModel.isStreaming && envManager.llmConfig.isConfigured
+        return !trimmed.isEmpty && !viewModel.isStreaming && container.envManager.llmConfig.isConfigured
     }
 
     // MARK: - Messages List / 消息列表
@@ -151,7 +151,7 @@ struct AIDiscussionSheet: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            if !envManager.llmConfig.isConfigured {
+            if !container.envManager.llmConfig.isConfigured {
                 Image(systemName: "brain")
                     .font(.system(size: 56))
                     .foregroundColor(.secondary)
@@ -192,7 +192,7 @@ struct AIDiscussionSheet: View {
         inputText = ""
         // 清空输入框后立刻把消息交给 viewModel
         // Hand off the text to the view model right after clearing the input.
-        viewModel.sendUserMessage(text, config: envManager.llmConfig)
+        viewModel.sendUserMessage(text, config: container.envManager.llmConfig)
     }
 }
 

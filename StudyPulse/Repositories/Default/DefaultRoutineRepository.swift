@@ -29,7 +29,14 @@ final class DefaultRoutineRepository: RoutineRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
@@ -57,7 +64,7 @@ final class DefaultRoutineRepository: RoutineRepository {
     func add(_ routine: Routine) {
         var stored = routine
         if stored.phaseId == nil {
-            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+            stored.phaseId = envManager.activePhaseId
         }
         if let context = modelContext {
             context.insert(RoutineRecord(from: stored))
@@ -72,7 +79,7 @@ final class DefaultRoutineRepository: RoutineRepository {
 
     func add(_ newRoutines: [Routine]) {
         guard !newRoutines.isEmpty else { return }
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         let stored: [Routine] = newRoutines.map { r in
             var s = r
             if s.phaseId == nil { s.phaseId = activeId }
@@ -141,7 +148,7 @@ final class DefaultRoutineRepository: RoutineRepository {
     /// 重新计算 filteredRoutines
     /// Recompute filteredRoutines from the active phase.
     func recomputeFiltered() {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         if let id = activeId {
             filteredRoutines = routines.filter { $0.phaseId == id }
         } else {

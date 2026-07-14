@@ -32,8 +32,6 @@ struct ComprehensivePredictionTarget: Identifiable {
 struct ComprehensivePredictionContent: View {
     let target: ComprehensivePredictionTarget
 
-    @EnvironmentObject var envManager: AppEnvironmentManager
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // 总分卡

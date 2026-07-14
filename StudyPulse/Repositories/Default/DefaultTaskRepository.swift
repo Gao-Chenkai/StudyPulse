@@ -18,7 +18,14 @@ final class DefaultTaskRepository: TaskRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     // MARK: - Lifecycle
 
@@ -47,7 +54,7 @@ final class DefaultTaskRepository: TaskRepository {
             stored.reminderCalendarId = nil
         }
         if stored.phaseId == nil {
-            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+            stored.phaseId = envManager.activePhaseId
         }
         if let context = modelContext {
             context.insert(TaskItemRecord(from: stored))
@@ -62,7 +69,7 @@ final class DefaultTaskRepository: TaskRepository {
 
     func add(_ newTasks: [TaskItem]) {
         guard !newTasks.isEmpty else { return }
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         let stored: [TaskItem] = newTasks.map { t in
             var s = t
             if s.phaseId == nil { s.phaseId = activeId }
@@ -224,7 +231,7 @@ final class DefaultTaskRepository: TaskRepository {
     // MARK: - Internals
 
     func recomputeFiltered() {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         if let id = activeId {
             filteredTaskItems = taskItems.filter { $0.phaseId == id }
         } else {

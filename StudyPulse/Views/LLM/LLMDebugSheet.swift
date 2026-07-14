@@ -26,7 +26,7 @@ import SwiftUI
 /// DEBUG-mode panel showing the most recent LLM call's URL / prompt / thinking time / response.
 struct LLMDebugSheet: View {
     @ObservedObject private var client = LLMClient.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 
     /// 自定义"最近一次"指针:为 nil 时顶部显示"最近调用"选择器(可切换不同 caller)。
@@ -351,13 +351,13 @@ struct LLMDebugSheet: View {
         return "\(Int(interval / 86400))d 前"
     }
 
-    /// 根据 `envManager.preferences.debugOverrideSystemPrompt` 显示 override 实际状态。
+    /// 根据 `container.envManager.preferences.debugOverrideSystemPrompt` 显示 override 实际状态。
     /// Reads the override directly from the injected `AppEnvironmentManager`
     /// (do NOT instantiate `AppPreferences()` here — that returns an empty
     /// default-initialized struct and the override is always reported as
     /// "未设置").
     private func overrideStatusText(info: LLMCallDebugInfo) -> String {
-        let override = envManager.preferences.debugOverrideSystemPrompt
+        let override = container.envManager.preferences.debugOverrideSystemPrompt
         if let override, !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "DEBUG 自定义系统提示:已生效(完全替换默认 + appendix)".localized()
         }

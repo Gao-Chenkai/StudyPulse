@@ -11,7 +11,7 @@ import SwiftUI
 /// 应用偏好设置界面：语言、主题色、玻璃效果、外观模式。
 /// Preferences screen: language, theme color, glass effect, appearance mode.
 struct PreferencesView: View {
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -47,30 +47,30 @@ struct PreferencesView: View {
                 HStack(spacing: 14) {
                     ForEach(ThemeAccent.allCases) { accent in
                         Button {
-                            envManager.setAccentPalette(accent)
+                            container.envManager.setAccentPalette(accent)
                         } label: {
                             VStack(spacing: 6) {
                                 ZStack {
                                     Circle()
                                         .fill(accent.color)
                                         .frame(width: 36, height: 36)
-                                    if envManager.effectiveAccent == accent {
+                                    if container.envManager.effectiveAccent == accent {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 14, weight: .bold))
                                             .foregroundColor(.white)
                                     }
                                     Circle()
                                         .strokeBorder(
-                                            envManager.effectiveAccent == accent
+                                            container.envManager.effectiveAccent == accent
                                                 ? Color.primary.opacity(0.4)
                                                 : Color.primary.opacity(0.1),
-                                            lineWidth: envManager.effectiveAccent == accent ? 2 : 1
+                                            lineWidth: container.envManager.effectiveAccent == accent ? 2 : 1
                                         )
                                         .frame(width: 40, height: 40)
                                 }
                                 Text(accent.localizedDisplayName)
                                     .font(.caption2)
-                                    .foregroundColor(envManager.effectiveAccent == accent ? .primary : .secondary)
+                                    .foregroundColor(container.envManager.effectiveAccent == accent ? .primary : .secondary)
                                     .lineLimit(1)
                             }
                         }
@@ -91,8 +91,8 @@ struct PreferencesView: View {
             footer: Text("Enable iOS 26 glass effect on supported cards (requires iOS 26+). Falls back to material on older systems.".localized())
         ) {
             Toggle(isOn: Binding(
-                get: { envManager.glassEffectEnabled },
-                set: { envManager.setGlassEffectEnabled($0) }
+                get: { container.envManager.glassEffectEnabled },
+                set: { container.envManager.setGlassEffectEnabled($0) }
             )) {
                 Label("Enable Glass Effect".localized(), systemImage: "drop.fill")
             }
@@ -107,8 +107,8 @@ struct PreferencesView: View {
             footer: Text("Choose your preferred color scheme.".localized())
         ) {
             Picker("Theme".localized(), selection: Binding(
-                get: { envManager.preferences.colorScheme },
-                set: { envManager.setColorScheme($0) }
+                get: { container.envManager.preferences.colorScheme },
+                set: { container.envManager.setColorScheme($0) }
             )) {
                 ForEach(ColorSchemeOption.allCases, id: \.self) { option in
                     HStack {
@@ -132,8 +132,8 @@ struct PreferencesView: View {
             footer: Text("App language can be changed here independently of the system language.".localized())
         ) {
             Picker("App Language".localized(), selection: Binding(
-                get: { envManager.preferences.appLanguage },
-                set: { envManager.setLanguage($0) }
+                get: { container.envManager.preferences.appLanguage },
+                set: { container.envManager.setLanguage($0) }
             )) {
                 ForEach(AppPreferences.Language.allLocalized, id: \.code) { lang in
                     Text(lang.displayName)
@@ -167,5 +167,4 @@ struct PreferencesView: View {
 
 #Preview {
     PreferencesView()
-        .environmentObject(AppEnvironmentManager.shared)
 }

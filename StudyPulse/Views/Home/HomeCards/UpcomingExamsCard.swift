@@ -18,7 +18,6 @@ import SwiftUI
 /// Previously read `container.examRepo.filteredExamSets` and computed the 14-day window inline.
 struct UpcomingExamsCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 14 天窗口内、按日期正序排列的考试列表(now ~ now+14d)。
     /// Exams within the 14-day window (now ~ now+14d), sorted ascending by exam date.

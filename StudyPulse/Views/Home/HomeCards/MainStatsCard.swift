@@ -23,7 +23,6 @@ import SwiftUI
 struct MainStatsCard: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     /// 平均分文本缓存(随 grades 变化重算,避免每次 body reduce 所有 grades)
     /// Cached average score text (recomputed on grades change to avoid reducing all grades in every body pass).
     @State private var cachedAverageText: String = "N/A"
@@ -107,7 +106,7 @@ struct MainStatsCard: View {
         }
         .onChange(of: container.gradeRepo.grades) { _, _ in recomputeStats() }
         .onChange(of: container.examRepo.filteredExamSets) { _, _ in recomputeStats() }
-        .debugLayoutBounds(envManager.debugLayoutBounds)
+        .debugLayoutBounds(container.envManager.debugLayoutBounds)
     }
 
     /// 集中计算 average / upcoming count,避免 body 中多次 reduce
@@ -140,7 +139,7 @@ struct StatItemView: View {
     let value: String
     let icon: String
     let color: Color
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         VStack(spacing: 12) {
@@ -163,7 +162,7 @@ struct StatItemView: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .debugInspect(value, label: "\(title) value")
-                    .debugLayoutBounds(envManager.debugLayoutBounds)
+                    .debugLayoutBounds(container.envManager.debugLayoutBounds)
 
                 Text(title)
                     .font(.system(size: 13, weight: .medium))

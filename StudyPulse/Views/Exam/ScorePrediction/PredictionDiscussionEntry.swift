@@ -23,7 +23,7 @@ enum AIContext {
 struct PredictionDiscussionEntryView: View {
     let context: AIContext
 
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// `Date` → `yyyy-MM-dd` 字符串(给 LLM 用)
     /// `Date` → `yyyy-MM-dd` string (for LLM).
@@ -53,7 +53,7 @@ struct PredictionDiscussionEntryView: View {
                     ProgressView().scaleEffect(0.7).padding(.leading, 2)
                 }
                 Spacer()
-                if envManager.llmConfig.isConfigured {
+                if container.envManager.llmConfig.isConfigured {
                     Text("BYOK".localized())
                         .font(.caption2)
                         .padding(.horizontal, 6)
@@ -65,7 +65,7 @@ struct PredictionDiscussionEntryView: View {
 
             // 状态 1: 未配置 LLM
             // State 1: LLM not configured.
-            if !envManager.llmConfig.isConfigured {
+            if !container.envManager.llmConfig.isConfigured {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("未配置 LLM,无法使用 AI 预测".localized())
                         .font(.caption)
@@ -204,7 +204,7 @@ struct PredictionDiscussionEntryView: View {
         aiPredictionError = nil
         aiPredictionLoading = true
 
-        let config = envManager.llmConfig
+        let config = container.envManager.llmConfig
         let prompt: LLMPrompt
 
         switch context {

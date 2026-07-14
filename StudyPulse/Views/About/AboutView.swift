@@ -64,7 +64,6 @@ struct AboutView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $showDebug) {
                 DebugView()
-                    .environmentObject(AppEnvironmentManager.shared)
             }
         }
     }

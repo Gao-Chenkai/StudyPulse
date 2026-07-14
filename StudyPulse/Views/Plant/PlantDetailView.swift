@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PlantDetailView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.colorScheme) private var colorScheme
     @State private var plantManager = PlantManager.shared
     @ObservedObject private var achievementManager = AchievementManager.shared
@@ -20,7 +20,7 @@ struct PlantDetailView: View {
                 PlantCanvasView(
                     stage: plantManager.currentStage,
                     petalColor: selectedPetalColor,
-                    accent: envManager.effectiveAccentColor
+                    accent: container.envManager.effectiveAccentColor
                 )
                 .frame(width: 240, height: 300)
                 .padding(.top, 12)
@@ -58,7 +58,7 @@ struct PlantDetailView: View {
     // MARK: - Helpers
 
     private var selectedPetalColor: Color {
-        PetalColorCatalog.resolve(envManager.preferences.plantPetalColorId).resolved(colorScheme: colorScheme)
+        PetalColorCatalog.resolve(container.envManager.preferences.plantPetalColorId).resolved(colorScheme: colorScheme)
     }
 
     private var statsRow: some View {
@@ -140,7 +140,7 @@ struct PlantDetailView: View {
             HStack(spacing: 12) {
                 ForEach(PetalColorCatalog.all) { petal in
                     Button {
-                        envManager.preferences.plantPetalColorId = petal.id
+                        container.envManager.preferences.plantPetalColorId = petal.id
                     } label: {
                         Circle()
                             .fill(petal.resolved(colorScheme: colorScheme))
@@ -148,9 +148,9 @@ struct PlantDetailView: View {
                             .overlay(
                                 Circle()
                                     .strokeBorder(
-                                        envManager.preferences.plantPetalColorId == petal.id
+                                        container.envManager.preferences.plantPetalColorId == petal.id
                                             ? Color.primary : Color.primary.opacity(0.15),
-                                        lineWidth: envManager.preferences.plantPetalColorId == petal.id ? 2.5 : 1
+                                        lineWidth: container.envManager.preferences.plantPetalColorId == petal.id ? 2.5 : 1
                                     )
                             )
                     }
@@ -165,8 +165,8 @@ struct PlantDetailView: View {
     private var masterToggleSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: Binding(
-                get: { envManager.preferences.plantCardEnabled },
-                set: { envManager.preferences.plantCardEnabled = $0 }
+                get: { container.envManager.preferences.plantCardEnabled },
+                set: { container.envManager.preferences.plantCardEnabled = $0 }
             )) {
                 Text("plant.card.toggle".localized())
             }
@@ -203,6 +203,6 @@ struct PlantDetailView: View {
 #Preview {
     NavigationStack {
         PlantDetailView()
-            .environmentObject(AppEnvironmentManager.shared)
+            .environment(RepositoryContainer())
     }
 }

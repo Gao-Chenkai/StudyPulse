@@ -32,7 +32,6 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @StateObject private var viewModel: HomeViewModel
     @ObservedObject private var hrvManager = HealthKitManager.shared
 
@@ -552,7 +551,7 @@ struct UnregisteredExamsReminderCard: View {
 // MARK: - 每日励志卡片
 struct DailyQuoteCard: View {
     let quote: String
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         VStack(spacing: 0) {
@@ -560,7 +559,7 @@ struct DailyQuoteCard: View {
             VStack(spacing: 16) {
                 Image(systemName: "quote.bubble.fill")
                     .font(.system(size: 28))
-                    .foregroundColor(envManager.effectiveAccentPalette.color.opacity(0.6))
+                    .foregroundColor(container.envManager.effectiveAccentPalette.color.opacity(0.6))
 
                 Text(quote)
                     .font(.system(size: 15, weight: .medium, design: .serif))

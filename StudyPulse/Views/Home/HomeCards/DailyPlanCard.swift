@@ -21,7 +21,6 @@ import SwiftUI
 /// Data source: HomeViewModel.dailyPlan (derived by DailyPlanEngine).
 struct DailyPlanCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var animateIn = false
 
     /// items 由 HomeView 传入(单一数据源,避免再次重算)

@@ -23,7 +23,6 @@ import SwiftUI
 /// Home AI-Ask card: tap to present HomeAskSheet.
 struct HomeAskCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     /// 是否正在显示 HomeAskSheet
     /// Whether the HomeAskSheet is currently presented.
     @State private var showSheet: Bool = false
@@ -31,7 +30,7 @@ struct HomeAskCard: View {
     /// 卡片副标题(占位文本):AI 未配置时显示引导文案,否则显示「Ask anything...」
     /// Card subtitle (placeholder text): shows onboarding hint when AI is unconfigured, otherwise "Ask anything...".
     private var placeholder: String {
-        if !envManager.llmConfig.isConfigured {
+        if !container.envManager.llmConfig.isConfigured {
             return "未配置 AI · 前往设置".localized()
         }
         return "Ask anything...".localized()
@@ -60,7 +59,7 @@ struct HomeAskCard: View {
                         Text("Ask AI".localized())
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.primary)
-                        if envManager.llmConfig.isConfigured {
+                        if container.envManager.llmConfig.isConfigured {
                             HStack(spacing: 2) {
                                 Image(systemName: "sparkles")
                                     .font(.system(size: 9, weight: .bold))
@@ -92,7 +91,7 @@ struct HomeAskCard: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
-                        envManager.llmConfig.isConfigured
+                        container.envManager.llmConfig.isConfigured
                             ? Color.teal.opacity(0.25)
                             : Color.secondary.opacity(0.15),
                         lineWidth: 1
@@ -101,8 +100,7 @@ struct HomeAskCard: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showSheet) {
-            HomeAskSheet(container: container, envManager: envManager)
-                .environmentObject(envManager)
+            HomeAskSheet(container: container, envManager: container.envManager)
         }
     }
 }

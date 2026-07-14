@@ -19,7 +19,7 @@ struct TodoRowView: View {
     /// 点击作业/阅读行的完成按钮时的回调
     var onToggleCompletion: (() -> Void)? = nil
     @State private var animateIn = false
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     private var daysRemaining: Int {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: entry.date)

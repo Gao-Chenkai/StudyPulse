@@ -29,7 +29,14 @@ final class DefaultGradeRepository: GradeRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
@@ -91,7 +98,7 @@ final class DefaultGradeRepository: GradeRepository {
     func add(_ grade: Grade) {
         var stored = grade
         if stored.phaseId == nil {
-            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+            stored.phaseId = envManager.activePhaseId
         }
         if let context = modelContext {
             context.insert(GradeRecord(from: stored))
@@ -104,7 +111,7 @@ final class DefaultGradeRepository: GradeRepository {
     }
 
     func add(_ newGrades: [Grade]) {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         let stored: [Grade] = newGrades.map { g in
             var s = g
             if s.phaseId == nil { s.phaseId = activeId }
@@ -196,7 +203,7 @@ final class DefaultGradeRepository: GradeRepository {
     /// 按 active phase 过滤(从外部 phase 切换时由容器调用,本类内部每次增删改后也会自动调)。
     /// Recompute filteredGrades from the active phase (also called internally after every CRUD).
     func recomputeFiltered() {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         if let id = activeId {
             filteredGrades = grades.filter { $0.phaseId == id }
         } else {

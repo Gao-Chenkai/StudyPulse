@@ -94,13 +94,13 @@ extension View {
 // MARK: - Container 修饰符（顶 banner + 右上角浮窗）
 
 struct DebugModeContainerModifier: ViewModifier {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showDebugConsole: Bool = false
 
     func body(content: Content) -> some View {
         content
             .safeAreaInset(edge: .top, spacing: 0) {
-                if envManager.isDebugModeActive {
+                if container.envManager.isDebugModeActive {
                     DebugBannerView {
                         showDebugConsole = true
                     }
@@ -108,17 +108,17 @@ struct DebugModeContainerModifier: ViewModifier {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if envManager.debugModeEnabled && envManager.debugFPSOverlay {
+                if container.envManager.debugModeEnabled && container.envManager.debugFPSOverlay {
                     DebugFPSOverlayView()
-                        .padding(.top, envManager.isDebugModeActive ? 36 : 8)
+                        .padding(.top, container.envManager.isDebugModeActive ? 36 : 8)
                         .padding(.trailing, 12)
                         .allowsHitTesting(true)
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: envManager.isDebugModeActive)
+            .animation(.easeInOut(duration: 0.25), value: container.envManager.isDebugModeActive)
             .navigationDestination(isPresented: $showDebugConsole) {
                 DebugView()
-                    .environmentObject(envManager)
+                    .environment(container)
             }
     }
 }
@@ -153,18 +153,18 @@ extension View {
 }
 
 private struct DebugLayoutBoundsAutoModifier: ViewModifier {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     func body(content: Content) -> some View {
-        content.debugLayoutBounds(envManager.debugLayoutBounds)
+        content.debugLayoutBounds(container.envManager.debugLayoutBounds)
     }
 }
 
 private struct DebugInspectAutoModifier<T>: ViewModifier {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     let value: T
     let label: String
     func body(content: Content) -> some View {
-        if envManager.debugLongPressInspect {
+        if container.envManager.debugLongPressInspect {
             content.debugInspect(value, label: label)
         } else {
             content
@@ -178,7 +178,7 @@ private struct DebugInspectAutoModifier<T>: ViewModifier {
 /// Attach this to any AI view; in DEBUG mode a 🔧 button appears that opens `LLMDebugSheet`.
 /// - Parameter caller: 调用方标签,传入后在调试面板里只显示同 caller 的最近一次。
 struct LLMDebugButtonModifier: ViewModifier {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @ObservedObject private var client = LLMClient.shared
     @State private var showDebug: Bool = false
     let caller: String?
@@ -186,7 +186,7 @@ struct LLMDebugButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if envManager.debugModeEnabled {
+                if container.envManager.debugModeEnabled {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
                             showDebug = true
@@ -209,7 +209,7 @@ struct LLMDebugButtonModifier: ViewModifier {
             }
             .sheet(isPresented: $showDebug) {
                 LLMDebugSheet(filterCaller: caller)
-                    .environmentObject(envManager)
+                    .environment(container)
             }
     }
 }
@@ -236,7 +236,7 @@ extension View {
 /// In DEBUG mode, shows a small footer with the most-recent LLM call info for this caller.
 struct LLMCallIndicator: View {
     @ObservedObject private var client = LLMClient.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showDebug: Bool = false
     let caller: String
 
@@ -250,7 +250,7 @@ struct LLMCallIndicator: View {
 
     var body: some View {
         Group {
-            if envManager.debugModeEnabled {
+            if container.envManager.debugModeEnabled {
                 if let info = latestForCaller {
                     Button {
                         showDebug = true
@@ -299,7 +299,7 @@ struct LLMCallIndicator: View {
         }
         .sheet(isPresented: $showDebug) {
             LLMDebugSheet(filterCaller: caller)
-                .environmentObject(envManager)
+                .environment(container)
         }
     }
 

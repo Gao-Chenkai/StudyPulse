@@ -24,7 +24,6 @@ struct GradeChartView: View {
     let grades: [Grade]
     let subject: String
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     /// 当前 subject 下的成绩(按日期升序)
@@ -50,8 +49,8 @@ struct GradeChartView: View {
             TrendChartView(
                 grades: filteredGrades,
                 fullScore: fullScore,
-                chartType: envManager.preferences.chartType,
-                tintColor: envManager.effectiveAccentColor
+                chartType: container.envManager.preferences.chartType,
+                tintColor: container.envManager.effectiveAccentColor
             )
             .frame(height: chartHeight)
             .padding()

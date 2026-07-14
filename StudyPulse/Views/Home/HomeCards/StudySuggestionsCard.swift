@@ -34,7 +34,7 @@ import SwiftUI
 struct StudySuggestionsCard: View {
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject private var healthManager = HealthKitManager.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// 本地建议(由 `HomeViewModel.generateSuggestions` 产生,作为 fallback)
     /// Local suggestions (produced by `HomeViewModel.generateSuggestions`, used as fallback).
@@ -75,9 +75,9 @@ struct StudySuggestionsCard: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
 
-                if envManager.llmConfig.isConfigured && aiSuggestions != nil {
+                if container.envManager.llmConfig.isConfigured && aiSuggestions != nil {
                     aiChip
-                } else if envManager.llmConfig.isConfigured && aiLoading {
+                } else if container.envManager.llmConfig.isConfigured && aiLoading {
                     aiLoadingChip
                 }
 
@@ -105,7 +105,7 @@ struct StudySuggestionsCard: View {
                     ForEach(displayed.prefix(3), id: \.id) { suggestion in
                         SuggestionRowView(suggestion: suggestion)
                     }
-                    if envManager.llmConfig.isConfigured && aiErrorMessage != nil && aiSuggestions == nil {
+                    if container.envManager.llmConfig.isConfigured && aiErrorMessage != nil && aiSuggestions == nil {
                         Text(aiErrorMessage ?? "")
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -115,7 +115,7 @@ struct StudySuggestionsCard: View {
             }
 
             // DEBUG 模式:卡片底部显示 LLM 调用指示器(让用户能看出刚刚的请求来自哪个卡片)
-            if envManager.llmConfig.isConfigured {
+            if container.envManager.llmConfig.isConfigured {
                 LLMCallIndicator(caller: "StudySuggestions")
             }
         }
@@ -176,7 +176,7 @@ struct StudySuggestionsCard: View {
         localSuggestions = viewModel.generateSuggestions(limit: 3)
 
         // 2) 如果 LLM 未配置 / 未启用,直接展示本地版本
-        guard envManager.llmConfig.isConfigured else {
+        guard container.envManager.llmConfig.isConfigured else {
             aiSuggestions = nil
             aiErrorMessage = nil
             aiLoading = false
@@ -203,7 +203,7 @@ struct StudySuggestionsCard: View {
 
     @MainActor
     private func streamAI() async {
-        let config = envManager.llmConfig
+        let config = container.envManager.llmConfig
         let context = viewModel.buildSuggestionsContext()
         let prompt = StudySuggestionsLLM.makePrompt(context)
         var accumulated = ""
@@ -226,7 +226,7 @@ struct StudySuggestionsCard: View {
             aiErrorMessage = "AI 建议不可用,显示本地版本".localized()
         }
         // 成功 / 失败 / 取消都重置冷却起点
-        envManager.preferences.lastStudySuggestionsAIRequestTime = Date()
+        container.envManager.preferences.lastStudySuggestionsAIRequestTime = Date()
         updateCooldownRemaining()
         aiLoading = false
     }
@@ -237,14 +237,14 @@ struct StudySuggestionsCard: View {
     /// 当前是否允许发起一次 LLM 请求(距离上次已过完冷却期)。
     /// Whether a new LLM request is allowed right now (cooldown elapsed since the last request).
     private func canRequestNow() -> Bool {
-        guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else { return true }
+        guard let last = container.envManager.preferences.lastStudySuggestionsAIRequestTime else { return true }
         return Date().timeIntervalSince(last) >= Self.suggestionsAICooldownSeconds
     }
 
     /// 重新计算剩余冷却秒数,用于 UI 倒计时(当前未直接展示,留作可观察值)。
     /// Recompute remaining cooldown seconds for the UI countdown (not directly shown yet, kept as observable).
     private func updateCooldownRemaining() {
-        guard let last = envManager.preferences.lastStudySuggestionsAIRequestTime else {
+        guard let last = container.envManager.preferences.lastStudySuggestionsAIRequestTime else {
             cooldownRemainingSeconds = 0
             return
         }

@@ -55,7 +55,7 @@ struct MistakeAIAnalysisSheet: View {
     /// context (original mistake info) and the previous AI output.
     var onDiscuss: ((_ context: String, _ lastAnalysis: String) -> Void)? = nil
 
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 
     /// 当前流式任务句柄(用于取消 / 重新生成)
@@ -74,7 +74,7 @@ struct MistakeAIAnalysisSheet: View {
     var body: some View {
         NavigationStack {
             Group {
-                if !envManager.llmConfig.isConfigured {
+                if !container.envManager.llmConfig.isConfigured {
                     notConfiguredView
                 } else if let errorMessage {
                     errorView(errorMessage)
@@ -229,7 +229,7 @@ struct MistakeAIAnalysisSheet: View {
         streamedText = ""
         errorMessage = nil
         isLoading = true
-        let config = envManager.llmConfig
+        let config = container.envManager.llmConfig
         let prompt = MistakeAnalysisLLM.makePrompt(
             subject: subject,
             title: title,

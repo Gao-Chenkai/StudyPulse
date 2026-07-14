@@ -25,7 +25,6 @@ import UniformTypeIdentifiers
 /// Mistake home screen (mounted on the main tab), drives `MistakeViewModel`.
 struct MistakeView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// 主 ViewModel(过滤 / 分组 / SRS / 搜索)
     /// Main view model (filter / grouping / SRS / search).
@@ -284,7 +283,6 @@ struct MistakeView: View {
                     contextTitle: "My Mistakes".localized()
                 )
                 .environment(container)
-                .environmentObject(envManager)
             }
     }
 
@@ -366,7 +364,6 @@ struct MistakeView: View {
         .sheet(isPresented: $showingAIQuizSetup) {
             AIQuizSetupView()
                 .environment(container)
-                .environmentObject(envManager)
                 .interactiveDismissDisabled(true)
                 .adaptiveSheet()
         }

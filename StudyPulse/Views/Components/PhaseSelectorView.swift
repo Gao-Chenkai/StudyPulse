@@ -23,7 +23,6 @@ import SwiftUI
 /// to switch. Embedded in each main page's toolbar.
 struct PhaseSelectorView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
 
     var body: some View {
         Menu {
@@ -35,7 +34,7 @@ struct PhaseSelectorView: View {
                 Label {
                     Text("All Data".localized())
                 } icon: {
-                    Image(systemName: envManager.activePhaseId == nil
+                    Image(systemName: container.envManager.activePhaseId == nil
                          ? "checkmark.circle.fill"
                          : "circle")
                 }
@@ -59,7 +58,7 @@ struct PhaseSelectorView: View {
                                 }
                             }
                         } icon: {
-                            Image(systemName: envManager.activePhaseId == phase.id
+                            Image(systemName: container.envManager.activePhaseId == phase.id
                                  ? "checkmark.circle.fill"
                                  : "circle")
                         }
@@ -76,23 +75,23 @@ struct PhaseSelectorView: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .bold))
             }
-            .foregroundColor(envManager.activePhaseId == nil
+            .foregroundColor(container.envManager.activePhaseId == nil
                              ? Color.secondary
-                             : envManager.effectiveAccentColor)
+                             : container.envManager.effectiveAccentColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
                 Capsule()
-                    .fill(envManager.activePhaseId == nil
+                    .fill(container.envManager.activePhaseId == nil
                           ? Color.secondary.opacity(0.12)
-                          : envManager.effectiveAccentColor.opacity(0.15))
+                          : container.envManager.effectiveAccentColor.opacity(0.15))
             )
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        envManager.activePhaseId == nil
+                        container.envManager.activePhaseId == nil
                             ? Color.secondary.opacity(0.25)
-                            : envManager.effectiveAccentColor.opacity(0.35),
+                            : container.envManager.effectiveAccentColor.opacity(0.35),
                         lineWidth: 0.5
                     )
             )

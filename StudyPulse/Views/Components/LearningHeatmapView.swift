@@ -77,7 +77,7 @@ struct HeatmapCell: Identifiable, Equatable {
 /// 90-day learning heatmap. GitHub style: columns = weeks, rows = weekdays; today is in the rightmost column.
 struct LearningHeatmapView: View {
     @ObservedObject private var achievementManager = AchievementManager.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// 90 天滚动窗口(包含今天),共 13 周。
     /// 90-day rolling window (includes today) = 13 weeks.
@@ -88,7 +88,7 @@ struct LearningHeatmapView: View {
     /// Currently selected cell (used to show the day-detail sheet).
     @State private var selectedCell: HeatmapCell? = nil
 
-    private var accent: Color { envManager.effectiveAccentColor }
+    private var accent: Color { container.envManager.effectiveAccentColor }
     private var emptyColor: Color { Color(.tertiarySystemFill) }
 
     /// 把 AchievementManager 的 logs 转换成 91 天(含今天)的格子数组。
@@ -464,5 +464,5 @@ private struct HeatmapDayDetailSheet: View {
         .padding()
     }
     .background(Color(.systemGroupedBackground))
-    .environmentObject(AppEnvironmentManager.shared)
+    .environment(RepositoryContainer())
 }

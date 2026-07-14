@@ -25,7 +25,14 @@ final class DefaultMistakeRepository: MistakeRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
@@ -55,7 +62,7 @@ final class DefaultMistakeRepository: MistakeRepository {
     func add(_ mistake: MistakeNote) {
         var stored = mistake
         if stored.phaseId == nil {
-            stored.phaseId = AppEnvironmentManager.shared.activePhaseId
+            stored.phaseId = envManager.activePhaseId
         }
         if let context = modelContext {
             context.insert(MistakeNoteRecord(from: stored))
@@ -215,7 +222,7 @@ final class DefaultMistakeRepository: MistakeRepository {
     /// 重新计算 filteredMistakeSets
     /// Recompute filteredMistakeSets from the active phase.
     func recomputeFiltered() {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         if let id = activeId {
             filteredMistakeSets = mistakeSets.filter { $0.phaseId == id }
         } else {

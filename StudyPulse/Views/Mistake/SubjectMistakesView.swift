@@ -30,7 +30,6 @@ struct SubjectMistakesView: View {
     @State private var showingAutoMindMap = false
 
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     init(subject: String, mistakes: [MistakeNote]) {
         self.subject = subject
@@ -90,7 +89,6 @@ struct SubjectMistakesView: View {
                 contextTitle: subject
             )
             .environment(container)
-            .environmentObject(envManager)
         }
     }
 
@@ -207,5 +205,4 @@ struct SubjectMistakesView: View {
         SubjectMistakesView(subject: "Mathematics", mistakes: mistakes)
     }
     .environment(container)
-    .environmentObject(AppEnvironmentManager.shared)
 }

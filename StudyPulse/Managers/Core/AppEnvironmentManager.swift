@@ -5,7 +5,6 @@
 //  Created by Chenkai Gao on 2026/6/5.
 //
 
-import Combine
 import SwiftUI
 import Foundation
 import os
@@ -13,13 +12,14 @@ import os
 /// 管理全局应用环境：语言和主题
 /// Manages global app environment: language, theme, accent, glass, and phase.
 @MainActor
-class AppEnvironmentManager: ObservableObject {
+@Observable
+final class AppEnvironmentManager {
     static let shared = AppEnvironmentManager()
 
     // UserDefaults 键名 / UserDefaults key for the preferences blob
     private let defaultsKey = "appPreferences"
 
-    @Published var preferences: AppPreferences {
+    var preferences: AppPreferences {
         didSet {
             save()
             // 任何偏好变更都可能影响 debug 子开关 → 同步到 LogStore

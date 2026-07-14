@@ -52,7 +52,6 @@ struct SubjectScoreCard: View {
     /// New: receives the display mode from the parent.
     let displayMode: String
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     /// 入场动画
     /// Entry animation.
     @State private var animateIn = false
@@ -255,7 +254,7 @@ struct miniChartView: View {
     /// 科目满分(用于按比例显示颜色)
     /// Subject full score (used for proportional color mapping).
     var fullScore: Double = 100
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     private var history: [Grade] {
         // 合并所有 series 的成绩(这里通常只有一个 subject)
@@ -288,9 +287,9 @@ struct miniChartView: View {
                 TrendChartView(
                     grades: grades,
                     fullScore: fullScore,
-                    chartType: envManager.preferences.chartType,
+                    chartType: container.envManager.preferences.chartType,
                     compact: true,
-                    tintColor: envManager.effectiveAccentColor
+                    tintColor: container.envManager.effectiveAccentColor
                 )
             }
         }

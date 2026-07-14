@@ -20,7 +20,7 @@ struct ScorePredictionHeaderCard: View {
     let date: Date
     let engineName: String
 
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -33,9 +33,9 @@ struct ScorePredictionHeaderCard: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
-                        Capsule().fill(envManager.effectiveAccentColor.opacity(0.15))
+                        Capsule().fill(container.envManager.effectiveAccentColor.opacity(0.15))
                     )
-                    .foregroundColor(envManager.effectiveAccentColor)
+                    .foregroundColor(container.envManager.effectiveAccentColor)
             }
             HStack {
                 Label(date.formatted(date: .abbreviated, time: .omitted),
@@ -70,7 +70,6 @@ struct ScorePredictionSheet: View {
     let onDismiss: () -> Void
 
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var showingDetail = false
     @State private var didLog = false
 
@@ -186,8 +185,6 @@ struct ScorePredictionSheet: View {
 struct ComprehensiveScorePredictionSheet: View {
     let target: ComprehensivePredictionTarget
     let onDismiss: () -> Void
-
-    @EnvironmentObject var envManager: AppEnvironmentManager
 
     var body: some View {
         NavigationStack {

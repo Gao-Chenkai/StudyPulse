@@ -14,7 +14,6 @@ import os
 
 struct DebugCacheView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @EnvironmentObject private var hrvManager: HealthKitManager
 
     // Diagnostics snapshot
@@ -144,21 +143,21 @@ struct DebugCacheView: View {
             HStack {
                 Text("Active Phase".localized())
                 Spacer()
-                Text(envManager.activePhaseId?.uuidString.prefix(8).description ?? "all")
+                Text(container.envManager.activePhaseId?.uuidString.prefix(8).description ?? "all")
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
             HStack {
                 Text("Glass Effect".localized())
                 Spacer()
-                Text(envManager.glassEffectEnabled ? "ON" : "OFF")
+                Text(container.envManager.glassEffectEnabled ? "ON" : "OFF")
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(envManager.glassEffectEnabled ? .green : .secondary)
+                    .foregroundStyle(container.envManager.glassEffectEnabled ? .green : .secondary)
             }
             HStack {
                 Text("Accent".localized())
                 Spacer()
-                Text(envManager.effectiveAccent.rawValue)
+                Text(container.envManager.effectiveAccent.rawValue)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -378,7 +377,7 @@ struct DebugCacheView: View {
             }
             statusIsError = !((statusIsError == false))
         case .resetPreferences:
-            envManager.preferences = AppPreferences()
+            container.envManager.preferences = AppPreferences()
             statusMessage = "App preferences have been reset.".localized()
             statusIsError = false
         case .recomputeAchievements:

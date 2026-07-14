@@ -28,7 +28,6 @@ import os
 struct ExamDetailView: View {
     let examId: UUID
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     @State private var showingReviewEditor = false
@@ -258,13 +257,11 @@ struct ExamDetailView: View {
         .sheet(isPresented: $showingReviewEditor) {
             ExamReviewEditView(exam: exam)
                 .environment(container)
-                .environmentObject(envManager)
                 .adaptiveSheet()
         }
         .sheet(isPresented: $showingChecklistEditor) {
             ExamChecklistEditView(exam: exam)
                 .environment(container)
-                .environmentObject(envManager)
                 .adaptiveSheet()
         }
         .alert("Delete Exam".localized(), isPresented: $showingDeleteConfirm) {
@@ -581,7 +578,6 @@ struct ExamDetailView: View {
         .sheet(isPresented: $showAI) {
             ScorePredictionView(exam: exam)
                 .environment(container)
-                .environmentObject(envManager)
                 .adaptiveSheet()
         }
     }
@@ -633,5 +629,4 @@ private enum ExamDetailPreview {
         ExamDetailView(examId: examId)
     }
     .environment(container)
-    .environmentObject(AppEnvironmentManager.shared)
 }

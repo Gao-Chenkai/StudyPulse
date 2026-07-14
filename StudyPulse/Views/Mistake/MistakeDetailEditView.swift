@@ -19,7 +19,6 @@ import SwiftUI
 struct MistakeDetailEditView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 是否自己挂 NavigationStack(iPad split-view 上为 false)
     /// Whether to host its own NavigationStack (false in iPad split-view).
@@ -144,7 +143,7 @@ struct MistakeDetailEditView: View {
                     }
                 }
             )
-            .environmentObject(envManager)
+            .environment(container)
         }
         // 在 iOS 26+ 上让 navigation bar 背景透明,避免和 form 重叠
         // On iOS 26+ make the nav-bar background transparent to avoid
@@ -379,9 +378,9 @@ private extension MistakeDetailEditView {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
-                            Capsule().fill(Color.teal.opacity(envManager.llmConfig.isConfigured ? 0.18 : 0.08))
+                            Capsule().fill(Color.teal.opacity(container.envManager.llmConfig.isConfigured ? 0.18 : 0.08))
                         )
-                        .foregroundColor(envManager.llmConfig.isConfigured ? .teal : .secondary)
+                        .foregroundColor(container.envManager.llmConfig.isConfigured ? .teal : .secondary)
                     }
                     .accessibilityLabel("AI Analysis".localized())
 

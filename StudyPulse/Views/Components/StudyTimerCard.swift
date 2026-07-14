@@ -14,7 +14,7 @@ import SwiftUI
 struct StudyTimerCard: View {
     @ObservedObject private var timer = StudyTimerManager.shared
     @ObservedObject private var hrv = HealthKitManager.shared
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     /// 是否显示全屏 StudyTimerView
     /// Whether the full-screen `StudyTimerView` is presented.
     @State private var showingTimer = false

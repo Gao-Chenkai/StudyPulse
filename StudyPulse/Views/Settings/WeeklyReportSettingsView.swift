@@ -10,7 +10,6 @@ import os
 
 struct WeeklyReportSettingsView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var weeklyEnabled = WeeklyReportManager.isWeeklyEnabled
     @State private var monthlyEnabled = WeeklyReportManager.isMonthlyEnabled
     @State private var isSaving = false
@@ -132,10 +131,10 @@ struct WeeklyReportSettingsView: View {
 
         // 如果 LLM 已配置,尝试拉取 AI 总结;失败静默回退到本地版本
         var aiSummary: String? = nil
-        if envManager.llmConfig.isConfigured {
+        if container.envManager.llmConfig.isConfigured {
             let prompt = WeeklyReportLLM.makePrompt(reportData)
             do {
-                aiSummary = try await LLMClient.shared.complete(prompt: prompt, config: envManager.llmConfig, caller: "WeeklyReport")
+                aiSummary = try await LLMClient.shared.complete(prompt: prompt, config: container.envManager.llmConfig, caller: "WeeklyReport")
             } catch {
                 Log.report.warning("AI summary failed: \(error.localizedDescription)")
                 aiSummary = nil

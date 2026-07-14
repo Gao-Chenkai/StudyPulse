@@ -8,7 +8,7 @@
 //
 //  用法：
 //      VStack { ... }
-//          .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+//          .cardSkin(container.envManager.effectiveCardSkin, glassEnabled: container.envManager.glassEffectEnabled)
 //
 //  替换原：
 //      .background(Color(.systemBackground))
@@ -40,10 +40,10 @@ extension View {
 /// 从环境对象自动获取属性并渲染的修饰符
 @MainActor
 private struct EnvironmentCardSkinModifier: ViewModifier {
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     
     func body(content: Content) -> some View {
-        content.cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        content.cardSkin(container.envManager.effectiveCardSkin, glassEnabled: container.envManager.glassEffectEnabled)
     }
 }
 

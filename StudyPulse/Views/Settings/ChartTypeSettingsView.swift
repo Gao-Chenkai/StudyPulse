@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct ChartTypeSettingsView: View {
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     private var currentType: ChartType {
-        envManager.preferences.chartType
+        container.envManager.preferences.chartType
     }
 
     var body: some View {
@@ -19,7 +19,7 @@ struct ChartTypeSettingsView: View {
             Section {
                 ForEach(ChartType.allCases) { type in
                     Button {
-                        envManager.preferences.chartType = type
+                        container.envManager.preferences.chartType = type
                     } label: {
                         ChartTypeRow(
                             type: type,
@@ -83,6 +83,5 @@ private struct ChartTypeRow: View {
 #Preview {
     NavigationStack {
         ChartTypeSettingsView()
-            .environmentObject(AppEnvironmentManager.shared)
     }
 }

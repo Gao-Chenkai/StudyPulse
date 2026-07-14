@@ -30,7 +30,6 @@ struct MistakeSetDetailView: View {
     /// Injected mistake (uses the id to fetch the latest copy from the repo).
     let mistakeSet: MistakeNote
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     /// 是否弹出编辑 sheet
     /// Whether to present the edit sheet.
     @State private var showingEditSheet = false
@@ -62,7 +61,7 @@ struct MistakeSetDetailView: View {
         List {
             // 顶部 header 区块:掌握度曲线 + 错题基本字段
             // Top header block: mastery curve + basic fields.
-            MistakeSetHeaderSection(mistake: liveMistake, tintColor: envManager.effectiveAccentColor)
+            MistakeSetHeaderSection(mistake: liveMistake, tintColor: container.envManager.effectiveAccentColor)
 
             // 主体内容:原题 / 错因 / 错解 / 正解 四段 Markdown
             // Main content: 4 markdown sections (question / reason / wrong / correct).
@@ -77,7 +76,7 @@ struct MistakeSetDetailView: View {
         .toolbar {
             MistakeDetailToolbar(
                 liveMistake: liveMistake,
-                isLLMConfigured: envManager.llmConfig.isConfigured,
+                isLLMConfigured: container.envManager.llmConfig.isConfigured,
                 onEdit: { showingEditSheet = true },
                 onQuickReview: { showingQuickReview = true },
                 onAIAnalysis: { showingAIAnalysis = true },
@@ -150,7 +149,6 @@ struct MistakeSetDetailView: View {
                     }
                 }
             )
-            .environmentObject(envManager)
             .adaptiveSheet()
         }
         // "深入探讨" sheet:在 AI 解析之上多轮对话
@@ -162,7 +160,6 @@ struct MistakeSetDetailView: View {
                 initialAssistantMessage: lastAIAnalysis,
                 onDismiss: { showingAIDiscussion = false }
             )
-            .environmentObject(envManager)
             .adaptiveSheet(detents: [.large])
         }
         // AI 同类题 flow
@@ -170,7 +167,6 @@ struct MistakeSetDetailView: View {
         .sheet(isPresented: $showingAISimilarQuestion) {
             AISimilarQuestionFlowView(originalMistake: liveMistake)
                 .environment(container)
-                .environmentObject(envManager)
                 .adaptiveSheet()
         }
         // 快速复习:以全屏 cover 形式弹闪卡
@@ -409,5 +405,4 @@ struct SuggestedMistakeCard: View {
         MistakeSetDetailView(mistakeSet: m)
     }
     .environment(RepositoryContainer())
-    .environmentObject(AppEnvironmentManager.shared)
 }

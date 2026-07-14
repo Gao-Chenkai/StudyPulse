@@ -10,21 +10,21 @@
 //
 
 import Foundation
-import Combine
 
 /// 单例:持有当前待消费的 IntentAction。
 /// Singleton holding the pending `IntentAction`.
 /// App Intents (background) 写入,ContentView (MainActor) 读取并消费。
 /// App Intents (background) write it; ContentView (MainActor) reads and consumes.
 @MainActor
-final class IntentActionStore: ObservableObject {
+@Observable
+final class IntentActionStore {
     /// 共享实例
     /// Shared instance.
     static let shared = IntentActionStore()
 
     /// 当前待消费的 IntentAction
     /// The pending IntentAction to be consumed.
-    @Published var pendingIntentAction: IntentAction? = nil
+    var pendingIntentAction: IntentAction? = nil
 
     private init() {}
 

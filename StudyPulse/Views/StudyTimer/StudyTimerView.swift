@@ -17,7 +17,7 @@ import os
 
 struct StudyTimerView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @ObservedObject private var timer = StudyTimerManager.shared
     @ObservedObject private var hrv = HealthKitManager.shared
 
@@ -32,7 +32,7 @@ struct StudyTimerView: View {
     }
 
     private var activeAnimation: TimerAnimation {
-        envManager.effectiveTimerAnimation
+        container.envManager.effectiveTimerAnimation
     }
 
     var body: some View {

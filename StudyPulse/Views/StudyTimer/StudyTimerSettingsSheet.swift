@@ -222,12 +222,12 @@ enum StudyTimerRecommendation {
 /// 不承担解锁选择 — 展示当前已装备的 + 已解锁的 + 一个跳主题商店的入口。
 /// Debug 模式下放行所有条目。
 struct StudyTimerQuickThemeSheet: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var showThemeShop = false
 
     private var activeAnimation: TimerAnimation {
-        envManager.effectiveTimerAnimation
+        container.envManager.effectiveTimerAnimation
     }
 
     private var unlockedAnimations: [TimerAnimation] {
@@ -236,7 +236,7 @@ struct StudyTimerQuickThemeSheet: View {
             ThemeShopCatalog.isUnlocked(
                 unlockAchievementId: anim.unlockAchievementId,
                 achievementIds: achievementSet,
-                isDebugMode: envManager.debugModeEnabled
+                isDebugMode: container.envManager.debugModeEnabled
             )
         }
     }
@@ -301,7 +301,7 @@ struct StudyTimerQuickThemeSheet: View {
                 ForEach(unlockedAnimations) { anim in
                     Button {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                            envManager.setTimerAnimationId(anim.id)
+                            container.envManager.setTimerAnimationId(anim.id)
                         }
                     } label: {
                         themeTile(anim)

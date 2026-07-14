@@ -16,7 +16,6 @@ import SwiftUI
 /// Previously read `container.gradeRepo.grades` inline and did sort + prefix(5) on the spot.
 struct RecentGradesCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 最近 5 条成绩(按日期倒序,日期相同则维持原顺序)。
     /// The 5 most recent grades (date descending; stable for equal dates).

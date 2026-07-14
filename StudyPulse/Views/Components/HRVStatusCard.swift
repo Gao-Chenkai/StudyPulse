@@ -26,7 +26,6 @@ import os
 struct HRVStatusCard: View {
     @ObservedObject var hrvManager = HealthKitManager.shared
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @State private var animateIn = false
 
     // LLM 增强雷达建议
@@ -290,7 +289,6 @@ struct HRVStatusCard: View {
                 initialAssistantMessage: lastAIFullText ?? localSuggestion?.description,
                 onDismiss: { showDiscussion = false }
             )
-            .environmentObject(envManager)
             .adaptiveSheet(detents: [.large])
         }
     }
@@ -298,7 +296,7 @@ struct HRVStatusCard: View {
     /// 建议底部的 AI 状态 / 操作栏
     @ViewBuilder
     private var suggestionFooter: some View {
-        let configured = envManager.llmConfig.isConfigured
+        let configured = container.envManager.llmConfig.isConfigured
         HStack(spacing: 8) {
             // AI chip / 冷却倒计时
             if configured {
@@ -414,7 +412,7 @@ struct HRVStatusCard: View {
         aiSuggestion = nil
         lastAIFullText = nil
 
-        guard envManager.llmConfig.isConfigured else { return }
+        guard container.envManager.llmConfig.isConfigured else { return }
         guard let local = localSuggestion else { return }
 
         // 冷却中 → 不发请求,但刷新倒计时让用户看到剩余时间
@@ -435,7 +433,7 @@ struct HRVStatusCard: View {
         aiSuggestion = nil
         lastAIFullText = nil
 
-        guard envManager.llmConfig.isConfigured else { return }
+        guard container.envManager.llmConfig.isConfigured else { return }
         guard let local = localSuggestion else { return }
         runLLMRequest(fallback: local)
     }
@@ -454,7 +452,7 @@ struct HRVStatusCard: View {
         )
         lastBodyReadinessContext = context
 
-        let config = envManager.llmConfig
+        let config = container.envManager.llmConfig
         let prompt = BodyRadarLLM.makePrompt(context)
         aiLoading = true
         aiTask = Task {
@@ -477,7 +475,7 @@ struct HRVStatusCard: View {
                 Log.llm.error("BodyRadarLLM stream failed: \(error.localizedDescription, privacy: .public)")
             }
             // 成功 / 失败 / 取消都重置冷却起点 —— 一次请求就消耗一次配额
-            envManager.preferences.lastRadarAIRequestTime = Date()
+            container.envManager.preferences.lastRadarAIRequestTime = Date()
             updateCooldownRemaining()
             aiLoading = false
         }
@@ -487,13 +485,13 @@ struct HRVStatusCard: View {
 
     /// 是否在冷却中(且未强制)
     private func canRequestNow() -> Bool {
-        guard let last = envManager.preferences.lastRadarAIRequestTime else { return true }
+        guard let last = container.envManager.preferences.lastRadarAIRequestTime else { return true }
         return Date().timeIntervalSince(last) >= Self.radarAICooldownSeconds
     }
 
     /// 计算并写入 `cooldownRemainingSeconds`(供 UI 倒计时显示)
     private func updateCooldownRemaining() {
-        guard let last = envManager.preferences.lastRadarAIRequestTime else {
+        guard let last = container.envManager.preferences.lastRadarAIRequestTime else {
             cooldownRemainingSeconds = 0
             return
         }

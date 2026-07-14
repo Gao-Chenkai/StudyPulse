@@ -15,7 +15,7 @@ import SwiftUI
 import os
 
 struct DebugView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         List {
@@ -86,9 +86,9 @@ struct DebugView: View {
                 LabeledContent("OS".localized(),
                     value: ProcessInfo.processInfo.operatingSystemVersionString)
                 LabeledContent("App Language".localized(),
-                    value: envManager.effectiveLanguage ?? "auto")
+                    value: container.envManager.effectiveLanguage ?? "auto")
                 LabeledContent("Accent".localized(),
-                    value: envManager.effectiveAccent.rawValue)
+                    value: container.envManager.effectiveAccent.rawValue)
             } header: {
                 Text("debug.buildInfo".localized())
             }
@@ -129,7 +129,7 @@ struct DebugView: View {
 #Preview {
     NavigationStack {
         DebugView()
-            .environmentObject(AppEnvironmentManager.shared)
+            .environment(RepositoryContainer())
     }
 }
 #endif

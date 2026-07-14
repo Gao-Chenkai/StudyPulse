@@ -16,7 +16,6 @@ import SwiftStreamingMarkdown
 /// AI self-test answering page (pushed by AIQuizSetupView in the quiz step).
 struct AIQuizView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 学科
     /// Subject.
@@ -437,7 +436,7 @@ struct AIQuizView: View {
             do {
                 let jsonString = try await LLMClient.shared.complete(
                     prompt: prompt,
-                    config: envManager.llmConfig,
+                    config: container.envManager.llmConfig,
                     caller: "QuizGrading"
                 )
 
@@ -492,7 +491,7 @@ struct AIQuizView: View {
     /// 把阅卷判定为"不通过"的题目写入错题库
     /// Save the questions graded as "incorrect" into the mistake library.
     private func saveIncorrectQuestionsToLibrary(response: QuizGradingResponse) async {
-        let activePhaseId = envManager.activePhaseId
+        let activePhaseId = container.envManager.activePhaseId
 
         for index in questions.indices {
             guard let result = response.results.first(where: { $0.index == index }) else { continue }

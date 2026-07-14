@@ -14,7 +14,6 @@ import SwiftUI
 /// Home "Quick Actions" card: 3 common entry points.
 struct QuickActionsCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     /// 是否显示登记成绩 sheet
     /// Whether to show the "Add Grade" sheet.
     @State private var showingAddGrade = false

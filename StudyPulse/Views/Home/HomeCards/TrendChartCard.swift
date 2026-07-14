@@ -26,7 +26,6 @@ import Charts
 /// the card only reads, never writes.
 struct TrendChartCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     /// 注入 HomeViewModel(图表选科逻辑已迁入)
     /// Injected HomeViewModel (chart subject selection has been moved here).
     @ObservedObject var viewModel: HomeViewModel
@@ -96,8 +95,8 @@ struct TrendChartCard: View {
                     TrendChartView(
                         grades: grades.sorted(by: { $0.date < $1.date }),
                         fullScore: container.fullScore(for: subject),
-                        chartType: envManager.preferences.chartType,
-                        tintColor: envManager.effectiveAccentColor
+                        chartType: container.envManager.preferences.chartType,
+                        tintColor: container.envManager.effectiveAccentColor
                     )
                     .frame(height: chartHeight)
                     .opacity(animateChart ? 1 : 0)

@@ -98,7 +98,6 @@ enum FlashcardFilter: Equatable {
 /// Full-screen flashcard study entry.
 struct FlashcardStudyView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var viewModel: FlashcardStudyViewModel
@@ -233,7 +232,7 @@ struct FlashcardStudyView: View {
 
                 ProgressView(value: viewModel.progress)
                     .progressViewStyle(.linear)
-                    .tint(envManager.effectiveAccentColor)
+                    .tint(container.envManager.effectiveAccentColor)
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)

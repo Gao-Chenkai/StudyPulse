@@ -22,13 +22,16 @@ import Foundation
 final class TodoAggregator {
     private let examRepo: any ExamRepository
     private let taskRepo: any TaskRepository
+    private let envManager: AppEnvironmentManager
 
     init(
         examRepo: any ExamRepository,
-        taskRepo: any TaskRepository
+        taskRepo: any TaskRepository,
+        envManager: AppEnvironmentManager
     ) {
         self.examRepo = examRepo
         self.taskRepo = taskRepo
+        self.envManager = envManager
     }
 
     /// 合并考试 + 待办为统一 TodoEntry(供 TodoView 用)
@@ -36,7 +39,7 @@ final class TodoAggregator {
     ///   - includeCompleted: 是否包含已完成条目
     ///   - phaseId: 外部显式指定过滤 phase;nil = 按 active phase 自动判定
     func entries(includeCompleted: Bool = false, phaseId: UUID? = nil) -> [TodoEntry] {
-        let active = phaseId ?? AppEnvironmentManager.shared.activePhaseId
+        let active = phaseId ?? envManager.activePhaseId
         var entries: [TodoEntry] = []
         // 单科考试
         for e in examRepo.examSets {

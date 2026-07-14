@@ -10,13 +10,13 @@
 import SwiftUI
 
 struct PlantHomeCard: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @Environment(\.colorScheme) private var colorScheme
     @State private var plantManager = PlantManager.shared
 
     var body: some View {
         Group {
-            if envManager.preferences.plantCardEnabled {
+            if container.envManager.preferences.plantCardEnabled {
                 activeContent
             } else {
                 hiddenContent
@@ -29,7 +29,7 @@ struct PlantHomeCard: View {
 
     private var activeContent: some View {
         let stage = plantManager.currentStage
-        let petalColorId = envManager.preferences.plantPetalColorId
+        let petalColorId = container.envManager.preferences.plantPetalColorId
         let petal = PetalColorCatalog.resolve(petalColorId).resolved(colorScheme: colorScheme)
         return NavigationLink(destination: PlantDetailView()) {
             cardContent(stage: stage, petal: petal)
@@ -44,7 +44,7 @@ struct PlantHomeCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "leaf.fill")
                         .font(.title3)
-                        .foregroundColor(envManager.effectiveAccentColor)
+                        .foregroundColor(container.envManager.effectiveAccentColor)
                         .symbolEffect(.bounce, value: stage)
                     Text("plant.card.title".localized())
                         .font(.headline.weight(.bold))
@@ -67,7 +67,7 @@ struct PlantHomeCard: View {
                 PlantCanvasView(
                     stage: stage,
                     petalColor: petal,
-                    accent: envManager.effectiveAccentColor
+                    accent: container.envManager.effectiveAccentColor
                 )
                 .frame(width: 160, height: 200)
                 Spacer()
@@ -102,8 +102,8 @@ struct PlantHomeCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Toggle(isOn: Binding(
-                get: { envManager.preferences.plantCardEnabled },
-                set: { envManager.preferences.plantCardEnabled = $0 }
+                get: { container.envManager.preferences.plantCardEnabled },
+                set: { container.envManager.preferences.plantCardEnabled = $0 }
             )) {
                 Text("plant.card.toggle".localized()).font(.subheadline)
             }
@@ -118,17 +118,18 @@ struct PlantHomeCard: View {
 
 #Preview("Plant Card - Active") {
     PlantHomeCard()
-        .environmentObject(AppEnvironmentManager.shared)
+        .environment(RepositoryContainer())
         .padding()
         .background(Color(.systemGroupedBackground))
 }
 
 #Preview("Plant Card - Hidden") {
+    let container = RepositoryContainer()
     PlantHomeCard()
-        .environmentObject(AppEnvironmentManager.shared)
+        .environment(container)
         .padding()
         .background(Color(.systemGroupedBackground))
         .onAppear {
-            AppEnvironmentManager.shared.preferences.plantCardEnabled = false
+            container.envManager.preferences.plantCardEnabled = false
         }
 }

@@ -47,6 +47,17 @@ final class RepositoryContainer {
     let todoAggregator: TodoAggregator
     let phaseRefresher: PhaseFilterRefresher
 
+    /// 全局应用环境(主题 / 语言 / phase / LLM 配置等)。由容器持有,Repository 层经构造器注入,
+    /// View 层经 `@Environment(RepositoryContainer.self)` 读 `container.envManager`。
+    /// Global app environment (theme / language / phase / LLM config). Owned by the
+    /// container; repos get it via constructor injection, Views read `container.envManager`.
+    let envManager: AppEnvironmentManager
+
+    /// App Intents 跨进程桥接。容器持有引用;App Intents 写入仍走 `IntentActionStore.setPending(_:)` 静态方法。
+    /// App Intents cross-process bridge. Container holds the reference; App Intents
+    /// writes still go through the `IntentActionStore.setPending(_:)` static method.
+    let intentStore: IntentActionStore
+
     /// SwiftData ModelContainer(由 StudyPulseApp 在 .modelContainer modifier 之后注入)
     /// SwiftData ModelContainer (injected by StudyPulseApp after the
     /// `.modelContainer(...)` modifier).
@@ -57,74 +68,74 @@ final class RepositoryContainer {
     /// Whether `asyncInit` has finished loading. Views use this to gate a loader.
     private(set) var isReady: Bool = false
 
-    /// 跨域桥接(给 Intents 跨进程用):镜像 IntentActionStore.shared.pendingIntentAction。
-    /// Cross-domain bridge (for Intents across processes): mirrors
-    /// `IntentActionStore.shared.pendingIntentAction`.
-    /// View 直接观察 IntentActionStore(ContentView 已用 @ObservedObject 桥)。
-    /// Views observe `IntentActionStore` directly (ContentView uses an `@ObservedObject` bridge).
-    var pendingIntentAction: IntentAction? {
-        get { IntentActionStore.shared.pendingIntentAction }
-        set { IntentActionStore.shared.pendingIntentAction = newValue }
-    }
-
     init(
-        gradeRepo: any GradeRepository = DefaultGradeRepository(),
-        mistakeRepo: any MistakeRepository = DefaultMistakeRepository(),
-        examRepo: any ExamRepository = DefaultExamRepository(),
-        taskRepo: any TaskRepository = DefaultTaskRepository(),
-        phaseRepo: any PhaseRepository = DefaultPhaseRepository(),
-        profileRepo: any ProfileRepository = DefaultProfileRepository(),
-        subjectRepo: any SubjectRepository = DefaultSubjectRepository(),
-        routineRepo: any RoutineRepository = DefaultRoutineRepository(),
-        routineInstanceRepo: any RoutineInstanceRepository = DefaultRoutineInstanceRepository()
+        envManager: AppEnvironmentManager = .shared,
+        intentStore: IntentActionStore = .shared,
+        gradeRepo: (any GradeRepository)? = nil,
+        mistakeRepo: (any MistakeRepository)? = nil,
+        examRepo: (any ExamRepository)? = nil,
+        taskRepo: (any TaskRepository)? = nil,
+        phaseRepo: (any PhaseRepository)? = nil,
+        profileRepo: (any ProfileRepository)? = nil,
+        subjectRepo: (any SubjectRepository)? = nil,
+        routineRepo: (any RoutineRepository)? = nil,
+        routineInstanceRepo: (any RoutineInstanceRepository)? = nil
     ) {
-        self.gradeRepo = gradeRepo
-        self.mistakeRepo = mistakeRepo
-        self.examRepo = examRepo
-        self.taskRepo = taskRepo
-        self.phaseRepo = phaseRepo
-        self.profileRepo = profileRepo
-        self.subjectRepo = subjectRepo
-        self.routineRepo = routineRepo
-        self.routineInstanceRepo = routineInstanceRepo
+        self.envManager = envManager
+        self.intentStore = intentStore
+
+        // 默认实现按需构造(便于测试注入 mock;默认参数无法引用前序 envManager,故在 body 内构造)
+        // Construct default implementations on demand (mocks can be injected; default
+        // argument expressions cannot reference a prior parameter, so build in body).
+        self.gradeRepo = gradeRepo ?? DefaultGradeRepository(envManager: envManager)
+        self.mistakeRepo = mistakeRepo ?? DefaultMistakeRepository(envManager: envManager)
+        self.examRepo = examRepo ?? DefaultExamRepository(envManager: envManager)
+        self.taskRepo = taskRepo ?? DefaultTaskRepository(envManager: envManager)
+        self.phaseRepo = phaseRepo ?? DefaultPhaseRepository(envManager: envManager)
+        self.profileRepo = profileRepo ?? DefaultProfileRepository()
+        self.subjectRepo = subjectRepo ?? DefaultSubjectRepository()
+        self.routineRepo = routineRepo ?? DefaultRoutineRepository(envManager: envManager)
+        self.routineInstanceRepo = routineInstanceRepo ?? DefaultRoutineInstanceRepository()
 
         // 注入跨域 weak 引用
-        if let phaseImpl = phaseRepo as? DefaultPhaseRepository {
+        if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
             phaseImpl.setCrossRefs(
-                grade: gradeRepo,
-                mistake: mistakeRepo,
-                exam: examRepo,
-                task: taskRepo
+                grade: self.gradeRepo,
+                mistake: self.mistakeRepo,
+                exam: self.examRepo,
+                task: self.taskRepo
             )
         }
-        if let profileImpl = profileRepo as? DefaultProfileRepository,
-           let subjectImpl = subjectRepo as? DefaultSubjectRepository {
-            profileImpl.setSubjectRef(subjectRepo)
-            subjectImpl.setProfileRef(profileRepo)
+        if let profileImpl = self.profileRepo as? DefaultProfileRepository,
+           let subjectImpl = self.subjectRepo as? DefaultSubjectRepository {
+            profileImpl.setSubjectRef(self.subjectRepo)
+            subjectImpl.setProfileRef(self.profileRepo)
         }
 
         // 组合 3 个跨域子模块
         // Compose the 3 cross-domain sub-modules.
         self.bulkOps = BulkOperationOrchestrator(
-            gradeRepo: gradeRepo,
-            mistakeRepo: mistakeRepo,
-            examRepo: examRepo,
-            taskRepo: taskRepo,
-            routineRepo: routineRepo,
-            routineInstanceRepo: routineInstanceRepo,
-            profileRepo: profileRepo
+            gradeRepo: self.gradeRepo,
+            mistakeRepo: self.mistakeRepo,
+            examRepo: self.examRepo,
+            taskRepo: self.taskRepo,
+            routineRepo: self.routineRepo,
+            routineInstanceRepo: self.routineInstanceRepo,
+            profileRepo: self.profileRepo
         )
         self.todoAggregator = TodoAggregator(
-            examRepo: examRepo,
-            taskRepo: taskRepo
+            examRepo: self.examRepo,
+            taskRepo: self.taskRepo,
+            envManager: envManager
         )
         self.phaseRefresher = PhaseFilterRefresher(
-            gradeRepo: gradeRepo,
-            mistakeRepo: mistakeRepo,
-            examRepo: examRepo,
-            taskRepo: taskRepo,
-            routineRepo: routineRepo,
-            routineInstanceRepo: routineInstanceRepo
+            gradeRepo: self.gradeRepo,
+            mistakeRepo: self.mistakeRepo,
+            examRepo: self.examRepo,
+            taskRepo: self.taskRepo,
+            routineRepo: self.routineRepo,
+            routineInstanceRepo: self.routineInstanceRepo,
+            envManager: envManager
         )
     }
 

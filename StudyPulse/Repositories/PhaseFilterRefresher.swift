@@ -25,6 +25,7 @@ final class PhaseFilterRefresher {
     private let taskRepo: any TaskRepository
     private let routineRepo: any RoutineRepository
     private let routineInstanceRepo: any RoutineInstanceRepository
+    private let envManager: AppEnvironmentManager
 
     @ObservationIgnored
     private var observerTask: Task<Void, Never>?
@@ -35,7 +36,8 @@ final class PhaseFilterRefresher {
         examRepo: any ExamRepository,
         taskRepo: any TaskRepository,
         routineRepo: any RoutineRepository,
-        routineInstanceRepo: any RoutineInstanceRepository
+        routineInstanceRepo: any RoutineInstanceRepository,
+        envManager: AppEnvironmentManager
     ) {
         self.gradeRepo = gradeRepo
         self.mistakeRepo = mistakeRepo
@@ -43,6 +45,7 @@ final class PhaseFilterRefresher {
         self.taskRepo = taskRepo
         self.routineRepo = routineRepo
         self.routineInstanceRepo = routineInstanceRepo
+        self.envManager = envManager
     }
 
     /// 启动 active phase 变化监听(通常在 asyncInit 后调用一次)
@@ -52,10 +55,10 @@ final class PhaseFilterRefresher {
     func startObserving() {
         observerTask?.cancel()
         observerTask = Task { @MainActor [weak self] in
-            var lastId: UUID? = AppEnvironmentManager.shared.activePhaseId
+            var lastId: UUID? = self?.envManager.activePhaseId
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 500_000_000)
-                let currentId = AppEnvironmentManager.shared.activePhaseId
+                let currentId = self?.envManager.activePhaseId
                 if currentId != lastId {
                     lastId = currentId
                     self?.recomputeAll()

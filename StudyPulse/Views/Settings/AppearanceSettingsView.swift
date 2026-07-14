@@ -7,7 +7,6 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
 
   var body: some View {
          List {
@@ -37,7 +36,7 @@ struct AppearanceSettingsView: View {
                         HStack {
                             Label("Chart Type".localized(), systemImage: "chart.xyaxis.line")
                             Spacer()
-                            Text(envManager.preferences.chartType.localizedDisplayName)
+                            Text(container.envManager.preferences.chartType.localizedDisplayName)
                                 .font(.system(size: 14))
                                 .foregroundColor(.secondary)
                         }
@@ -54,8 +53,8 @@ struct AppearanceSettingsView: View {
                 // Plant Garden (主页植物卡片)
                 Section {
                     Toggle(isOn: Binding(
-                        get: { envManager.preferences.plantCardEnabled },
-                        set: { envManager.preferences.plantCardEnabled = $0 }
+                        get: { container.envManager.preferences.plantCardEnabled },
+                        set: { container.envManager.preferences.plantCardEnabled = $0 }
                     )) {
                         Label("plant.card.toggle".localized(), systemImage: "leaf.fill")
                     }
@@ -65,7 +64,7 @@ struct AppearanceSettingsView: View {
                     HStack(spacing: 10) {
                         ForEach(PetalColorCatalog.all) { petal in
                             Button {
-                                envManager.preferences.plantPetalColorId = petal.id
+                                container.envManager.preferences.plantPetalColorId = petal.id
                             } label: {
                                 Circle()
                                     .fill(petal.resolved(colorScheme: colorScheme))
@@ -73,9 +72,9 @@ struct AppearanceSettingsView: View {
                                     .overlay(
                                         Circle()
                                             .strokeBorder(
-                                                envManager.preferences.plantPetalColorId == petal.id
+                                                container.envManager.preferences.plantPetalColorId == petal.id
                                                     ? Color.primary : Color.primary.opacity(0.15),
-                                                lineWidth: envManager.preferences.plantPetalColorId == petal.id ? 2 : 1
+                                                lineWidth: container.envManager.preferences.plantPetalColorId == petal.id ? 2 : 1
                                             )
                                     )
                             }

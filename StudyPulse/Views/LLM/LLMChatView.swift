@@ -21,7 +21,7 @@ import SwiftStreamingMarkdown
 /// AI 助手对话页(单页入口,无上下文绑定)。
 /// LLM assistant chat screen (standalone entry, no external context binding).
 struct LLMChatView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel = LLMChatViewModel()
     /// 输入框文本
     /// Input bar text.
@@ -70,7 +70,7 @@ struct LLMChatView: View {
 
     private var canSend: Bool {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !viewModel.isStreaming && envManager.llmConfig.isConfigured
+        return !trimmed.isEmpty && !viewModel.isStreaming && container.envManager.llmConfig.isConfigured
     }
 
     // MARK: - Messages List / 消息列表
@@ -116,7 +116,7 @@ struct LLMChatView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            if !envManager.llmConfig.isConfigured {
+            if !container.envManager.llmConfig.isConfigured {
                 Image(systemName: "brain")
                     .font(.system(size: 56))
                     .foregroundColor(.secondary)
@@ -162,6 +162,6 @@ struct LLMChatView: View {
         inputText = ""
         // 清空输入框后立刻把消息交给 viewModel
         // Hand off the message to the view model right after clearing the input.
-        viewModel.sendUserMessage(text, config: envManager.llmConfig, envManager: envManager)
+        viewModel.sendUserMessage(text, config: container.envManager.llmConfig, envManager: container.envManager)
     }
 }

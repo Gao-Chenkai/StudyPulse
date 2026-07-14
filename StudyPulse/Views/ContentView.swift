@@ -41,13 +41,11 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
 
 struct ContentView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selectedTab: AppTab = .home
     @State private var showingAddGradeFromIntent = false
     @State private var showingNewMistakeFromIntent = false
     @State private var currentIntentAction: IntentAction? = nil
-    @ObservedObject private var intentStore = IntentActionStore.shared
    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -58,7 +56,7 @@ struct ContentView: View {
                 iPhoneTabLayout(selectedTab: $selectedTab, container: container)
             }
         }
-        .tint(envManager.effectiveAccentColor)
+        .tint(container.envManager.effectiveAccentColor)
         .overlay(alignment: .top) {
             AchievementUnlockToast()
         }
@@ -95,7 +93,7 @@ struct ContentView: View {
             }
         }
         // ===== App Intent Navigation Bridge =====
-        .onChange(of: intentStore.pendingIntentAction) { _, action in
+        .onChange(of: container.intentStore.pendingIntentAction) { _, action in
            guard let action = action else { return }
             currentIntentAction = action
            selectedTab = .home

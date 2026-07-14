@@ -32,7 +32,14 @@ final class DefaultExamRepository: ExamRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
-    init() {}
+    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
+    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
+    @ObservationIgnored
+    private let envManager: AppEnvironmentManager
+
+    init(envManager: AppEnvironmentManager) {
+        self.envManager = envManager
+    }
 
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
@@ -65,7 +72,7 @@ final class DefaultExamRepository: ExamRepository {
     /// 批量新增考试
     /// Batch add exams.
     func add(single: [Exam], comprehensive: [comprehensiveExam]) {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         let storedSingle: [Exam] = single.map { e in
             var s = e
             if s.phaseId == nil { s.phaseId = activeId }
@@ -237,7 +244,7 @@ final class DefaultExamRepository: ExamRepository {
     /// 重新计算 filteredExamSets / filteredComprehensiveExamSets
     /// Recompute the filtered exam arrays from the active phase.
     func recomputeFiltered() {
-        let activeId = AppEnvironmentManager.shared.activePhaseId
+        let activeId = envManager.activePhaseId
         if let id = activeId {
             filteredExamSets = examSets.filter { $0.phaseId == id }
             filteredComprehensiveExamSets = comprehensiveExamSets.filter { $0.phaseId == id }

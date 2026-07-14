@@ -56,7 +56,6 @@ private enum AnswerMode: String, CaseIterable, Identifiable {
 struct AISimilarQuestionFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
 
     /// 用作 generation 种子的原错题
     /// Original mistake used as the generation seed.
@@ -308,14 +307,14 @@ struct AISimilarQuestionFlowView: View {
                 .disabled(typedAnswer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && gradingResult == nil)
 
                 Button {
-                    if envManager.llmConfig.isConfigured {
+                    if container.envManager.llmConfig.isConfigured {
                         startGrading()
                     } else {
                         // 未配置 LLM → 退化为"查看正解"
                         showingSolution = true
                     }
                 } label: {
-                    if envManager.llmConfig.isConfigured {
+                    if container.envManager.llmConfig.isConfigured {
                         Label("AI 判分".localized(), systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
                     } else {
@@ -324,7 +323,7 @@ struct AISimilarQuestionFlowView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(envManager.llmConfig.isConfigured ? .teal : .blue)
+                .tint(container.envManager.llmConfig.isConfigured ? .teal : .blue)
                 .disabled(typedAnswer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGrading)
             }
         }
@@ -456,7 +455,7 @@ struct AISimilarQuestionFlowView: View {
             do {
                 let jsonString = try await LLMClient.shared.complete(
                     prompt: prompt,
-                    config: envManager.llmConfig,
+                    config: container.envManager.llmConfig,
                     caller: "AISimilarQuestion"
                 )
 
@@ -490,7 +489,7 @@ struct AISimilarQuestionFlowView: View {
             correctSolution: generatedSolution,
             userAnswer: typedAnswer
         )
-        let config = envManager.llmConfig
+        let config = container.envManager.llmConfig
         Task { @MainActor in
             do {
                 let streamed = try await LLMClient.shared.stream(

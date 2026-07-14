@@ -51,7 +51,8 @@ struct TodoRootView: View {
 
 #if DEBUG
 #Preview {
-    TodoRootView(container: RepositoryContainer())
-        .environmentObject(AppEnvironmentManager.shared)
+    let container = RepositoryContainer()
+    TodoRootView(container: container)
+        .environment(container)
 }
 #endif

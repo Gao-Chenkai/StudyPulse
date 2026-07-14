@@ -80,7 +80,7 @@ struct TodoView: View {
                 .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
                 .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
                 .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
-                .onChange(of: AppEnvironmentManager.shared.activePhaseId) { _, _ in viewModel.recompute() }
+                .onChange(of: container.envManager.activePhaseId) { _, _ in viewModel.recompute() }
                 .modifier(TodoViewSheetsAndDestinations(viewModel: viewModel, container: container))
                 .onAppear {
                     container.refreshTaskCompletionStatesFromReminders()

@@ -20,7 +20,7 @@ struct SingleSubjectPredictionContent: View {
     let subjectMistakes: [MistakeNote]
     @Binding var showingDetail: Bool
 
-    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -83,7 +83,7 @@ struct SingleSubjectPredictionContent: View {
                     "pts".localized()
                 ))
                     .font(.caption2.weight(.semibold))
-                    .foregroundColor(envManager.effectiveAccentColor)
+                    .foregroundColor(container.envManager.effectiveAccentColor)
             }
 
             // 主柱状图
@@ -95,18 +95,18 @@ struct SingleSubjectPredictionContent: View {
                     yStart: .value("Lower", result.lowerBound),
                     yEnd: .value("Upper", result.upperBound)
                 )
-                .foregroundStyle(envManager.effectiveAccentColor.opacity(0.18))
+                .foregroundStyle(container.envManager.effectiveAccentColor.opacity(0.18))
                 .cornerRadius(6)
 
                 // 预测点水平线
                 // Predicted-score horizontal rule.
                 RuleMark(y: .value("Predicted", result.predicted))
-                    .foregroundStyle(envManager.effectiveAccentColor)
+                    .foregroundStyle(container.envManager.effectiveAccentColor)
                     .lineStyle(StrokeStyle(lineWidth: 2.5))
                     .annotation(position: .top, alignment: .leading) {
                         HStack(spacing: 4) {
                             Circle()
-                                .fill(envManager.effectiveAccentColor)
+                                .fill(container.envManager.effectiveAccentColor)
                                 .frame(width: 7, height: 7)
                             Text("\(Int(result.predicted.rounded()))")
                                 .font(.caption2.weight(.bold))
@@ -137,19 +137,19 @@ struct SingleSubjectPredictionContent: View {
             HStack(spacing: 6) {
                 Text("\(Int(result.lowerBound.rounded()))")
                     .font(.title3.weight(.bold))
-                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
+                    .foregroundColor(container.envManager.effectiveAccentColor.opacity(0.45))
                 Text("→")
                     .font(.title3)
-                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
+                    .foregroundColor(container.envManager.effectiveAccentColor.opacity(0.45))
                 Text("\(Int(result.predicted.rounded()))")
                     .font(.title3.weight(.heavy))
-                    .foregroundColor(envManager.effectiveAccentColor)
+                    .foregroundColor(container.envManager.effectiveAccentColor)
                 Text("→")
                     .font(.title3)
-                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
+                    .foregroundColor(container.envManager.effectiveAccentColor.opacity(0.45))
                 Text("\(Int(result.upperBound.rounded()))")
                     .font(.title3.weight(.bold))
-                    .foregroundColor(envManager.effectiveAccentColor.opacity(0.45))
+                    .foregroundColor(container.envManager.effectiveAccentColor.opacity(0.45))
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -422,9 +422,9 @@ struct SingleSubjectPredictionContent: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(envManager.effectiveAccentColor.opacity(0.12))
+                    .fill(container.envManager.effectiveAccentColor.opacity(0.12))
             )
-            .foregroundColor(envManager.effectiveAccentColor)
+            .foregroundColor(container.envManager.effectiveAccentColor)
         }
         .buttonStyle(.plain)
     }
@@ -442,7 +442,6 @@ struct ScorePredictionDetailView: View {
     let fullScore: Double
 
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.dismiss) private var dismiss
     @State private var targetScoreText: String = ""
     @State private var didInitTarget = false

@@ -20,7 +20,7 @@ import Combine
 import os
 
 struct DebugBannerView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @StateObject private var toasterStore = LogToasterStore()
 
     /// 可选点击回调（默认跳转到 Debug Console）
@@ -29,10 +29,10 @@ struct DebugBannerView: View {
     /// 当前处于激活状态的子开关数（显示在 banner 副标题里）
     private var activeSubToggles: Int {
         var n = 0
-        if envManager.debugVerboseLogging { n += 1 }
-        if envManager.debugFPSOverlay { n += 1 }
-        if envManager.debugLayoutBounds { n += 1 }
-        if envManager.debugLongPressInspect { n += 1 }
+        if container.envManager.debugVerboseLogging { n += 1 }
+        if container.envManager.debugFPSOverlay { n += 1 }
+        if container.envManager.debugLayoutBounds { n += 1 }
+        if container.envManager.debugLongPressInspect { n += 1 }
         return n
     }
 
@@ -215,6 +215,6 @@ final class LogToasterStore: ObservableObject {
 #if DEBUG
 #Preview {
     DebugBannerView()
-        .environmentObject(AppEnvironmentManager.shared)
+        .environment(RepositoryContainer())
 }
 #endif

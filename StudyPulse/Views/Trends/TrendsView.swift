@@ -17,7 +17,6 @@ import Combine
 /// Trends home view.
 struct TrendsView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: TrendsViewModel
     @State private var showingAddGrade = false
@@ -40,7 +39,7 @@ struct TrendsView: View {
                 VStack(spacing: DesignToken.Spacing.cardSpacing) {
                     // 90 天学习热力图（顶部全宽；通过 toolbar Menu 开关控制）
                     // 90-day learning heatmap (top, full-width; toolbar Menu toggles it on/off).
-                    if envManager.preferences.learningHeatmapOnTrends {
+                    if container.envManager.preferences.learningHeatmapOnTrends {
                         LearningHeatmapView()
                     }
 
@@ -131,8 +130,8 @@ struct TrendsView: View {
 
                         // 90 天热力图开关（持久化到 AppPreferences）
                         Toggle(isOn: Binding(
-                            get: { envManager.preferences.learningHeatmapOnTrends },
-                            set: { envManager.preferences.learningHeatmapOnTrends = $0 }
+                            get: { container.envManager.preferences.learningHeatmapOnTrends },
+                            set: { container.envManager.preferences.learningHeatmapOnTrends = $0 }
                         )) {
                             Label("Show Learning Heatmap".localized(), systemImage: "square.grid.4x3.fill")
                         }
@@ -182,7 +181,6 @@ struct TrendsView: View {
 struct SubjectDetailView: View {
     let subject: String
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject var envManager: AppEnvironmentManager
     @Binding var displayMode: String // 修复2：删除重复的 displayMode 声明
     @Environment(\.horizontalSizeClass) private var sizeClass
 
@@ -350,8 +348,8 @@ struct SubjectDetailView: View {
                         TrendChartView(
                             grades: filteredGrades,
                             fullScore: container.fullScore(for: subject),
-                            chartType: envManager.preferences.chartType,
-                            tintColor: envManager.effectiveAccentColor
+                            chartType: container.envManager.preferences.chartType,
+                            tintColor: container.envManager.effectiveAccentColor
                         )
                         .frame(height: chartHeight)
                     } else {

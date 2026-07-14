@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct ThemeShopView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
     @ObservedObject private var achievementManager = AchievementManager.shared
 
     // 缓存：当前所有已解锁成就 id
@@ -21,47 +21,47 @@ struct ThemeShopView: View {
             .reduce(into: Set<String>()) { $0.insert($1) }
     }
 
-    private var isDebugMode: Bool { envManager.isDebugModeActive }
+    private var isDebugMode: Bool { container.envManager.isDebugModeActive }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 if isDebugMode { debugBanner }
                 LivePreviewSection(
-                    accent: envManager.effectiveAccentPalette,
-                    skin: envManager.effectiveCardSkin,
-                    animation: envManager.effectiveTimerAnimation,
-                    glassEnabled: envManager.glassEffectEnabled
+                    accent: container.envManager.effectiveAccentPalette,
+                    skin: container.envManager.effectiveCardSkin,
+                    animation: container.envManager.effectiveTimerAnimation,
+                    glassEnabled: container.envManager.glassEffectEnabled
                 )
                 .padding(.horizontal, 16)
 
                 ThemeShopSectionView(
                     section: .accent,
                     items: ThemeShopCatalog.accentPalettes,
-                    selectedId: envManager.preferences.accentPaletteId,
+                    selectedId: container.envManager.preferences.accentPaletteId,
                     achievementSet: achievementSet,
                     isDebugMode: isDebugMode,
-                    onSelect: { id in envManager.setAccentPaletteId(id) }
+                    onSelect: { id in container.envManager.setAccentPaletteId(id) }
                 )
                 .padding(.horizontal, 16)
 
                 ThemeShopSectionView(
                     section: .skin,
                     items: ThemeShopCatalog.cardSkins,
-                    selectedId: envManager.preferences.cardSkinId,
+                    selectedId: container.envManager.preferences.cardSkinId,
                     achievementSet: achievementSet,
                     isDebugMode: isDebugMode,
-                    onSelect: { id in envManager.setCardSkinId(id) }
+                    onSelect: { id in container.envManager.setCardSkinId(id) }
                 )
                 .padding(.horizontal, 16)
 
                 ThemeShopSectionView(
                     section: .animation,
                     items: ThemeShopCatalog.timerAnimations,
-                    selectedId: envManager.preferences.timerAnimationId,
+                    selectedId: container.envManager.preferences.timerAnimationId,
                     achievementSet: achievementSet,
                     isDebugMode: isDebugMode,
-                    onSelect: { id in envManager.setTimerAnimationId(id) }
+                    onSelect: { id in container.envManager.setTimerAnimationId(id) }
                 )
                 .padding(.horizontal, 16)
 
@@ -385,7 +385,7 @@ struct ThemeShopItemCard<Preview: View>: View {
     let isUnlocked: Bool
     @ViewBuilder let preview: () -> Preview
 
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     var body: some View {
         VStack(spacing: 8) {
@@ -439,14 +439,14 @@ struct ThemeShopItemCard<Preview: View>: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     isSelected
-                        ? envManager.effectiveAccentPalette.color.opacity(0.12)
+                        ? container.envManager.effectiveAccentPalette.color.opacity(0.12)
                         : Color(.tertiarySystemBackground)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
-                    isSelected ? envManager.effectiveAccentPalette.color : Color.clear,
+                    isSelected ? container.envManager.effectiveAccentPalette.color : Color.clear,
                     lineWidth: isSelected ? 1.5 : 0
                 )
         )
@@ -458,7 +458,6 @@ struct ThemeShopItemCard<Preview: View>: View {
 #Preview {
     NavigationStack {
         ThemeShopView()
-            .environmentObject(AppEnvironmentManager.shared)
     }
 }
 #endif

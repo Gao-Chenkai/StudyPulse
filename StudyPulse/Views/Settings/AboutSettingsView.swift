@@ -9,7 +9,7 @@ import os
 struct AboutSettingsView: View {
     @State private var showingCopyright = false
     @State private var showingUserAgreement = false
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
   var body: some View {
          List {
@@ -69,7 +69,10 @@ struct AboutSettingsView: View {
     @ViewBuilder
     private var debugModeSection: some View {
         Section {
-            Toggle(isOn: $envManager.preferences.debugModeEnabled) {
+            Toggle(isOn: Binding(
+                get: { container.envManager.preferences.debugModeEnabled },
+                set: { container.envManager.preferences.debugModeEnabled = $0 }
+            )) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("debug.masterToggle".localized())
@@ -84,27 +87,39 @@ struct AboutSettingsView: View {
                 }
             }
             .tint(.yellow)
-            .onChange(of: envManager.preferences.debugModeEnabled) { _, newValue in
+            .onChange(of: container.envManager.preferences.debugModeEnabled) { _, newValue in
                 Log.preferences.info("Debug 总开关 / master toggle: -> \(newValue, privacy: .public)")
             }
 
-            if envManager.preferences.debugModeEnabled {
-                Toggle(isOn: $envManager.preferences.debugVerboseLogging) {
+            if container.envManager.preferences.debugModeEnabled {
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.debugVerboseLogging },
+                    set: { container.envManager.preferences.debugVerboseLogging = $0 }
+                )) {
                     Label("debug.verboseLogging".localized(), systemImage: "text.alignleft")
                 }
                 .tint(.yellow)
 
-                Toggle(isOn: $envManager.preferences.debugFPSOverlay) {
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.debugFPSOverlay },
+                    set: { container.envManager.preferences.debugFPSOverlay = $0 }
+                )) {
                     Label("debug.fpsOverlay".localized(), systemImage: "speedometer")
                 }
                 .tint(.yellow)
 
-                Toggle(isOn: $envManager.preferences.debugLayoutBounds) {
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.debugLayoutBounds },
+                    set: { container.envManager.preferences.debugLayoutBounds = $0 }
+                )) {
                     Label("debug.layoutBounds".localized(), systemImage: "rectangle.dashed")
                 }
                 .tint(.yellow)
 
-                Toggle(isOn: $envManager.preferences.debugLongPressInspect) {
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.debugLongPressInspect },
+                    set: { container.envManager.preferences.debugLongPressInspect = $0 }
+                )) {
                     Label("debug.longPressInspect".localized(), systemImage: "hand.point.up.left.fill")
                 }
                 .tint(.yellow)

@@ -23,7 +23,7 @@ import SwiftUI
 /// Settings → LLM configuration page: endpoint / auth / model / prompt
 /// settings for the BYOK (bring-your-own-key) mode.
 struct LLMSettingsView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(RepositoryContainer.self) private var container
 
     /// Base URL 输入(临时,onChange 即写回 envManager)
     /// Base URL input (temporary, written back to envManager on change).
@@ -58,7 +58,7 @@ struct LLMSettingsView: View {
     /// Whether an API Key is already saved (decides whether to show the
     /// SecureField or the masked placeholder).
     private var hasSavedAPIKey: Bool {
-        !(envManager.preferences.llmAPIKey?.isEmpty ?? true)
+        !(container.envManager.preferences.llmAPIKey?.isEmpty ?? true)
     }
 
     var body: some View {
@@ -72,8 +72,8 @@ struct LLMSettingsView: View {
             // 1) 总开关
             Section {
                 Toggle(isOn: Binding(
-                    get: { envManager.llmEnabled },
-                    set: { envManager.llmEnabled = $0 }
+                    get: { container.envManager.llmEnabled },
+                    set: { container.envManager.llmEnabled = $0 }
                 )) {
                     Label("Enable LLM Features".localized(), systemImage: "brain")
                 }
@@ -92,7 +92,7 @@ struct LLMSettingsView: View {
                         .autocorrectionDisabled(true)
                         .keyboardType(.URL)
                         .onChange(of: baseURLInput) { _, newValue in
-                            envManager.setLLMBaseURL(newValue.isEmpty ? nil : newValue)
+                            container.envManager.setLLMBaseURL(newValue.isEmpty ? nil : newValue)
                         }
                 }
 
@@ -102,7 +102,7 @@ struct LLMSettingsView: View {
                         .foregroundColor(.secondary)
                     if hasSavedAPIKey {
                         HStack {
-                            Text(maskedKey(envManager.preferences.llmAPIKey ?? ""))
+                            Text(maskedKey(container.envManager.preferences.llmAPIKey ?? ""))
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -111,7 +111,7 @@ struct LLMSettingsView: View {
                             Button("Change".localized()) {
                                 // 清掉已保存的 key,这样 SecureField 才会重新出现
                                 // Clear the saved key so the SecureField reappears.
-                                envManager.setLLMAPIKey(nil)
+                                container.envManager.setLLMAPIKey(nil)
                                 apiKeyInput = ""
                             }
                             .font(.caption)
@@ -121,7 +121,7 @@ struct LLMSettingsView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .onChange(of: apiKeyInput) { _, newValue in
-                                envManager.setLLMAPIKey(newValue)
+                                container.envManager.setLLMAPIKey(newValue)
                             }
                     }
                 }
@@ -134,7 +134,7 @@ struct LLMSettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
                         .onChange(of: modelInput) { _, newValue in
-                            envManager.setLLMModel(newValue.isEmpty ? nil : newValue)
+                            container.envManager.setLLMModel(newValue.isEmpty ? nil : newValue)
                         }
                 }
 
@@ -152,7 +152,7 @@ struct LLMSettingsView: View {
                         Text("Temperature")
                     }
                     .onChange(of: temperature) { _, newValue in
-                        envManager.setLLMTemperature(newValue)
+                        container.envManager.setLLMTemperature(newValue)
                     }
                 }
             } header: {
@@ -170,7 +170,7 @@ struct LLMSettingsView: View {
                     TextEditor(text: $appendixInput)
                         .frame(minHeight: 100)
                         .onChange(of: appendixInput) { _, newValue in
-                            envManager.setLLMSystemPromptAppendix(newValue.isEmpty ? nil : newValue)
+                            container.envManager.setLLMSystemPromptAppendix(newValue.isEmpty ? nil : newValue)
                         }
                 }
             } header: {
@@ -180,7 +180,7 @@ struct LLMSettingsView: View {
             }
 
             // 3.5) DEBUG 模式专用:全局覆盖系统 prompt
-            if envManager.debugModeEnabled {
+            if container.envManager.debugModeEnabled {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
@@ -193,12 +193,12 @@ struct LLMSettingsView: View {
                             .frame(minHeight: 140)
                             .font(.system(.footnote, design: .monospaced))
                             .onChange(of: overrideInput) { _, newValue in
-                                envManager.setLLMDebugOverrideSystemPrompt(newValue.isEmpty ? nil : newValue)
+                                container.envManager.setLLMDebugOverrideSystemPrompt(newValue.isEmpty ? nil : newValue)
                             }
                         if !overrideInput.isEmpty {
                             Button(role: .destructive) {
                                 overrideInput = ""
-                                envManager.setLLMDebugOverrideSystemPrompt(nil)
+                                container.envManager.setLLMDebugOverrideSystemPrompt(nil)
                             } label: {
                                 Label("Clear Override".localized(), systemImage: "trash")
                             }
@@ -230,7 +230,7 @@ struct LLMSettingsView: View {
                         Text("Test Connection".localized())
                     }
                 }
-                .disabled(isTesting || !envManager.llmConfig.isConfigured)
+                .disabled(isTesting || !container.envManager.llmConfig.isConfigured)
             } footer: {
                 Text("Sends a minimal request to verify the endpoint, API key and model.".localized())
             }
@@ -267,11 +267,11 @@ struct LLMSettingsView: View {
 
     // MARK: - Helpers / 辅助方法
 
-    /// 从 `envManager.preferences` 拉一份初始值填到本地 @State(只跑一次)
-    /// Pull initial values from `envManager.preferences` into local @State
+    /// 从 `container.envManager.preferences` 拉一份初始值填到本地 @State(只跑一次)
+    /// Pull initial values from `container.envManager.preferences` into local @State
     /// (runs once on appear).
     private func syncFromPreferences() {
-        let prefs = envManager.preferences
+        let prefs = container.envManager.preferences
         baseURLInput = prefs.llmBaseURL ?? ""
         modelInput = prefs.llmModel ?? ""
         appendixInput = prefs.llmSystemPromptAppendix ?? ""
@@ -293,7 +293,7 @@ struct LLMSettingsView: View {
         isTesting = true
         defer { isTesting = false }
         do {
-            try await LLMClient.shared.testConnection(config: envManager.llmConfig)
+            try await LLMClient.shared.testConnection(config: container.envManager.llmConfig)
             testAlertSucceeded = true
             testAlertMessage = "Endpoint reachable, model responded.".localized()
         } catch let error as LLMError {

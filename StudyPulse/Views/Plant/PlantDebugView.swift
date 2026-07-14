@@ -14,7 +14,6 @@
 import SwiftUI
 
 struct PlantDebugView: View {
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @State private var plantManager = PlantManager.shared
     @ObservedObject private var achievementManager = AchievementManager.shared
 
@@ -320,6 +319,5 @@ private extension PlantManager {
 #Preview {
     NavigationStack {
         PlantDebugView()
-            .environmentObject(AppEnvironmentManager.shared)
     }
 }

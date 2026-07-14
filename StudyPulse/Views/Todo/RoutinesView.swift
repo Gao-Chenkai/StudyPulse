@@ -13,7 +13,6 @@ import SwiftUI
 /// 例程视图(列表 + 编辑器)
 struct RoutinesView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var envManager: AppEnvironmentManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
