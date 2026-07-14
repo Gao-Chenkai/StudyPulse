@@ -94,7 +94,7 @@ struct HRVStatusCard: View {
                 }
             }
             .padding(16)
-            .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+            .cardSkin()
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
                     .stroke(accent.opacity(0.25), lineWidth: 1)

@@ -73,7 +73,7 @@ struct QuickActionsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
         .sheet(isPresented: $showingAddGrade) {
             AddGradeView(container: container)
                 .environment(container)

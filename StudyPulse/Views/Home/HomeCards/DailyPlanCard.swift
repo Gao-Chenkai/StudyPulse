@@ -41,7 +41,7 @@ struct DailyPlanCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 8)
         .onAppear {

@@ -129,7 +129,7 @@ struct TrendChartCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
         .debugLayoutBoundsAuto()
         .onAppear {
             viewModel.selectChartSubject(rule: viewModel.chartRule)

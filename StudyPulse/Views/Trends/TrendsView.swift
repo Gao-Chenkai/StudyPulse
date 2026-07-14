@@ -95,7 +95,7 @@ struct TrendsView: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()

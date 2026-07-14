@@ -180,7 +180,7 @@ struct SubjectScoreCard: View {
             }
         }
         .padding(16)
-        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 18)
+        .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 20)

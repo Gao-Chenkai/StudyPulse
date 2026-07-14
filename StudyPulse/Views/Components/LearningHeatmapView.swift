@@ -163,7 +163,7 @@ struct LearningHeatmapView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
         .sheet(item: $selectedCell) { cell in
             HeatmapDayDetailSheet(cell: cell, accent: accent)
                 .presentationDetents([.medium])

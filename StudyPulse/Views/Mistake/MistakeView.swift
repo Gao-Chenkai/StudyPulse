@@ -76,14 +76,7 @@ struct MistakeView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding()
-                .background(
-                    // 16pt 圆角浅灰背景,iOS 26 上叠加 glass 效果
-                    // 16pt rounded light-gray background; iOS 26+ layers
-                    // a glass effect on top.
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                )
-                .glassCard(enabled: envManager.preferences.glassEffectEnabled)
+                .cardSkin()
             }
             .buttonStyle(.plain)
             .padding(.horizontal)
@@ -102,7 +95,6 @@ struct MistakeView: View {
             )
             Spacer()
         }
-        .background(Color(.systemGroupedBackground))
     }
 
     // MARK: - List Content / 列表内容
@@ -130,7 +122,6 @@ struct MistakeView: View {
             .padding(.vertical)
             .frame(maxWidth: .infinity)
         }
-        .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder
@@ -363,7 +354,7 @@ struct MistakeView: View {
                     PhaseSelectorView()
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
         }
         .sheet(isPresented: $showingAIQuizSetup) {
             AIQuizSetupView()
@@ -648,10 +639,7 @@ struct OverviewStatsCard: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
     }
 }
 
@@ -715,10 +703,7 @@ struct SubjectOverviewCard: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
     }
 }
 
@@ -827,10 +812,7 @@ struct SubjectCardView: View {
                 .foregroundColor(Color(UIColor.tertiaryLabel))
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)
@@ -864,10 +846,7 @@ struct MistakeCardView: View {
             cardDetails
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
         .offset(y: animateIn ? 0 : 15)

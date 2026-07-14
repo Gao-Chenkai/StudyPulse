@@ -69,7 +69,7 @@ struct HomeView: View {
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(Color(.systemGroupedBackground).opacity(0.4))
+            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()
@@ -564,7 +564,7 @@ struct DailyQuoteCard: View {
         .frame(minHeight: 140)
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
     }
 }
 

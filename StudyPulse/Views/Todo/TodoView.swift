@@ -87,7 +87,6 @@ struct TodoView: View {
                             .buttonStyle(.borderedProminent)
                         }
                     }
-                    .background(Color(.systemGroupedBackground))
                 } else if viewModel.viewMode == .calendar {
                     VStack(spacing: 0) {
                         segmentPicker
@@ -103,7 +102,7 @@ struct TodoView: View {
             }
             .navigationTitle("Todo".localized())
             .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()
@@ -339,7 +338,6 @@ struct TodoView: View {
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder

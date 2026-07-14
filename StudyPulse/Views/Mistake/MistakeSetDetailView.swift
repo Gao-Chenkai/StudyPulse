@@ -543,10 +543,7 @@ struct SuggestedMistakeCard: View {
         }
         .padding(14)
         .frame(width: cardWidth)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
         .opacity(animateIn ? 1 : 0)
         .offset(x: animateIn ? 0 : -20)
         .onAppear {

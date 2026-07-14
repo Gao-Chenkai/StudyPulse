@@ -101,7 +101,7 @@ struct MainStatsCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
+        .cardSkin()
         .onAppear {
             recomputeStats()
         }

@@ -44,6 +44,8 @@ struct RoutinesView: View {
                 listContent
             }
         }
+        .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
+        .containerBackground(.clear, for: .navigation)
         .navigationTitle("Routines".localized())
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -138,11 +140,7 @@ struct RoutinesView: View {
             WeekGridView(routines: routines)
                 .frame(height: 120)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
     }
 
     private func weekdaySection(group: WeekdayGroup) -> some View {
@@ -160,10 +158,7 @@ struct RoutinesView: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .cardSkin()
     }
 
     private func routineRow(_ routine: Routine) -> some View {

@@ -41,7 +41,7 @@ struct ExamView: View {
             .debugModeContainer()
             .debugLayoutBoundsAuto()
             .navigationTitle("Exams".localized())
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .frame(maxWidth: .infinity)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

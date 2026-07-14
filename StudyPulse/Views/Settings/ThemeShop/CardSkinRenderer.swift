@@ -25,10 +25,25 @@ import SwiftUI
 // MARK: - View extension
 
 extension View {
+    /// 自动使用环境中的 `AppEnvironmentManager` 渲染卡片背景 + 边框 + 阴影。
+    func cardSkin() -> some View {
+        modifier(EnvironmentCardSkinModifier())
+    }
+
     /// 用指定 `CardSkin` 渲染卡片背景 + 边框 + 阴影。
     /// 保留 `.cornerRadius` / `.shadow` 行为一致；老调用点可直接平替。
     func cardSkin(_ skin: CardSkin, glassEnabled: Bool = false) -> some View {
         modifier(CardSkinModifier(skin: skin, glassEnabled: glassEnabled))
+    }
+}
+
+/// 从环境对象自动获取属性并渲染的修饰符
+@MainActor
+private struct EnvironmentCardSkinModifier: ViewModifier {
+    @EnvironmentObject var envManager: AppEnvironmentManager
+    
+    func body(content: Content) -> some View {
+        content.cardSkin(envManager.effectiveCardSkin, glassEnabled: envManager.glassEffectEnabled)
     }
 }
 

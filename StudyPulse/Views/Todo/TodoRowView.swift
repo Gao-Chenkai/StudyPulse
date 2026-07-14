@@ -119,7 +119,7 @@ struct TodoRowView: View {
             }
         }
         .padding(14)
-        .glassCard(enabled: envManager.glassEffectEnabled, cornerRadius: 14)
+        .cardSkin()
         .opacity(entry.isCompleted ? 0.55 : 1.0)
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
