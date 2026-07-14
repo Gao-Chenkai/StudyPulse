@@ -21,7 +21,13 @@ import SwiftUI
 import Charts
 import UIKit
 
-// MARK: - 主视图
+// MARK: - 主体 / Main view
+
+/// 主页(Dashboard)主视图,渲染顶部欢迎区、4 个核心统计卡与用户可配置的动态卡片。
+/// 内部小节:Init / Layout / Body / Dynamic Cards / 学习报告图片导出。
+/// Home dashboard root. Renders the welcome header, four core stat cards,
+/// and the user-configurable dynamic card list. Internal sub-MARKs cover
+/// init, layout, body, dynamic cards, and report export.
 struct HomeView: View {
     @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -459,6 +465,10 @@ struct HomeView: View {
     }
 }
 
+// MARK: - 子组件 / Subcomponents
+// HomeView 内的子卡片 View,各自独立成 struct。数据不足时调用方负责不渲染。
+// Individual sub-cards used by HomeView.dynamicCards. Callers gate by data presence.
+
 // MARK: - 成绩登记提醒卡片
 
 struct UnregisteredExamsReminderCard: View {
@@ -652,6 +662,10 @@ struct FlashcardReviewHomeCard: View {
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 }
+
+// MARK: - 工具 / Utilities
+// 内部 helper(派生数据重算 ViewModifier)+ SwiftUI 预览。
+// Internal helpers (derived-data recompute ViewModifier) + SwiftUI previews.
 
 // MARK: - 派生数据重算 ViewModifier
 /// 集中管理 HomeView 4 个缓存的 onAppear / onChange 触发,

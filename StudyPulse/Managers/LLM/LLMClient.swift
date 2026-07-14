@@ -356,7 +356,11 @@ final class LLMClient: ObservableObject {
         ---------------------- MESSAGES ----------------------
         \(messageBlocks)==================== LLM REQUEST PROMPT END ====================
         """
-        print(output)
+        // 通过 Log.llm(debug 级) 走统一日志系统;Release 默认 minCaptureLevel=.info 不会保留,
+        // DEBUG 模式 verbose 开启时才进入 LogStore。
+        // Route through the unified Log system at .debug level. Release builds
+        // (minCaptureLevel=.info) drop it; DEBUG + verbose captures into LogStore.
+        Log.llm.debug("\(output, privacy: .public)")
     }
 
     private func buildURL(baseURL: String?) throws -> URL {

@@ -10,8 +10,13 @@
 
 import SwiftUI
 
-/// 考试列表主视图
-/// Exam list root view.
+// MARK: - 主体 / Main view
+
+/// 考试列表主视图,支持列表 / 月历两种模式,可新建 / 编辑 / 删除 / 预测。
+/// 内部小节:内容 / 视图模式切换。
+/// Exam list root view. Supports list and calendar modes, plus
+/// create / edit / delete / predict flows. Internal sub-MARKs cover
+/// content rendering and the view-mode toggle menu.
 struct ExamView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -250,6 +255,11 @@ struct ExamView: View {
         }
     }
 }
+
+// MARK: - 子组件 / Subcomponents
+// ExamView 的辅助 View 与目标数据类型:预测目标、过去考试 Sheet、列表 / 月历行。
+// Auxiliary types and views used by ExamView: prediction target struct,
+// past-exams bottom sheet, and the single / comprehensive exam rows.
 
 // MARK: - 预测目标
 // MARK: - Prediction target
@@ -712,6 +722,10 @@ struct ComprehensiveExamRowView: View {
         .environment(RepositoryContainer())
         .preferredColorScheme(.dark)
 }
+
+// MARK: - 工具 / Utilities
+// 视图模式枚举(UserDefaults 持久化)。
+// View-mode enum with UserDefaults persistence.
 
 // MARK: - 视图模式
 // MARK: - View mode

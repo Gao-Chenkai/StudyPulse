@@ -110,8 +110,21 @@ enum ModelContainerFactory {
             _sharedContainer = container
             return container
         } catch {
-            // 极端情况：直接 crash
-            fatalError("Cannot create any ModelContainer: \(error.localizedDescription)")
+            // 极端情况:连纯内存容器都失败。记 fatal + 在 DEBUG 下 assertionFailure,
+            // 然后降级到一个**空 schema**的最小容器,让 App 至少能启动(无数据持久化)。
+            // Last resort: even in-memory failed. Log as .fault + assertionFailure in DEBUG,
+            // then fall back to a schema-less in-memory container so the app can at least launch
+            // (no entities will persist). `try!` is acceptable here: with an empty schema and
+            // in-memory config, ModelContainer initialization cannot fail.
+            // If this somehow still throws, the OS terminates the process — which is what we want.
+            assertionFailure("Cannot create any ModelContainer: \(error.localizedDescription)")
+            Log.data.fault("无法创建任何 ModelContainer / Cannot create any ModelContainer: \(error.localizedDescription, privacy: .public)")
+            let empty = try! ModelContainer(
+                for: Schema([]),
+                configurations: [ModelConfiguration(isStoredInMemoryOnly: true)]
+            )
+            _sharedContainer = empty
+            return empty
         }
     }
 

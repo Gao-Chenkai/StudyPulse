@@ -9,6 +9,10 @@
 
 import SwiftUI
 
+// MARK: - 工具 / Utilities
+// 筛选 chip 类型(TodoTypeFilter)与四象配色。
+// Filter chip type with its 4 accent colors.
+
 // MARK: - 类型筛选
 
 /// 列表顶部的类型筛选 chip
@@ -37,8 +41,13 @@ enum TodoTypeFilter: Hashable, CaseIterable {
     }
 }
 
-// MARK: - TodoView
+// MARK: - 主体 / Main view
 
+/// 「待办」主页:统一展示日常作业、阅读材料与考试日程。
+/// 内部小节:Body / 列表内容 / 日历内容 / 视图模式菜单 / 新增菜单 / 行为。
+/// Todo root. Unified view of homework, reading, and exam schedules.
+/// Internal sub-MARKs cover body, list content, calendar content, view-mode
+/// menu, add menu, and tap/completion behavior.
 struct TodoView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -52,7 +61,7 @@ struct TodoView: View {
         _segment = segment
     }
 
-    // MARK: - 主体
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -432,6 +441,10 @@ struct TodoView: View {
         viewModel.toggleCompletion(for: task)
     }
 }
+
+// MARK: - 子组件 / Subcomponents
+// TodoView 调用的辅助 Sheet(过去条目列表 + 类型图标 / 文案 / 配色 helper)。
+// Auxiliary sheet and per-kind icon / label / color helpers used by TodoView.
 
 // MARK: - 过期条目 Sheet
 

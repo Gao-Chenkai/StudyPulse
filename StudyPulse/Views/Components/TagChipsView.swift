@@ -20,6 +20,7 @@
 //
 
 import SwiftUI
+import os
 
 /// 标签胶囊展示行。
 /// Tag chip row.
@@ -152,7 +153,9 @@ struct FlowLayout: Layout {
         TagChipsView(tags: ["函数", "三角", "解析几何"], compact: true)
         TagChipsView(tags: ["a", "b", "c", "d", "e", "f"], compact: true, maxVisible: 3)
         TagChipsView(tags: ["点击我", "测试"]) { tag in
-            print("tapped \(tag)")
+            // 仅用于 #Preview 调试;走 Log.view 避免裸 print
+            // Preview-only debug hook; route through Log.view instead of bare print.
+            Log.view.debug("TagChipsView tapped / tag=\(tag, privacy: .public)")
         }
     }
     .padding()
