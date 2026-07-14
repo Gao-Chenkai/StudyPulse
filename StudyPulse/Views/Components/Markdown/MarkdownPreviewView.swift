@@ -181,6 +181,12 @@ extension String {
     ///   match stays on a single line and inside the original delimiters.
     /// - An unmatched opening `$` (e.g. "100$ price") is left as-is.
     func normalisingSingleDollarMath() -> String {
+        // 先将不支持的 cases 环境替换为 array 环境
+        // First replace unsupported cases environment with array environment
+        let replacedCases = self
+            .replacingOccurrences(of: "\\begin{cases}", with: "\\left\\{\\begin{array}{l}")
+            .replacingOccurrences(of: "\\end{cases}", with: "\\end{array}\\right.")
+
         // 正则解析:
         // (?<!\$)(?<!\\)\$(?!\$)  – 开头 $,不是 \$、$$ 或 $$ 右侧一部分
         // ([^\$\n]+?)              – 行内公式主体(无 $,无 \n)
@@ -192,13 +198,13 @@ extension String {
         // \$(?!\$)                 – closing $ that is not part of $$
         let pattern = #"(?<!\$)(?<!\\)\$(?!\$)([^\$\n]+?)\$(?!\$)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return self
+            return replacedCases
         }
-        let range = NSRange(startIndex..., in: self)
+        let range = NSRange(replacedCases.startIndex..., in: replacedCases)
         // 替换模板:把捕获组用 \( ... \) 包裹
         // Replacement template: wrap the captured group in \( ... \).
         return regex.stringByReplacingMatches(
-            in: self,
+            in: replacedCases,
             options: [],
             range: range,
             withTemplate: "\\\\($1\\\\)"

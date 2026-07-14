@@ -617,6 +617,10 @@
 "Workout" = "운동";
 "Today Exercise" = "오늘 운동";
 
+// 6th radar axis (psychological stability)
+"Stability" = "심리적 안정성";
+"Psychological Stability" = "심리적 안정성";
+
 // 30-day baseline & age calibration
 "%@ %@ — vs 30-day mean %@" = "%@ %@ — 30일 평균과 비교 %@";
 "%@ %@ — using age reference" = "%@ %@ — 연령대 참고값 사용 중";

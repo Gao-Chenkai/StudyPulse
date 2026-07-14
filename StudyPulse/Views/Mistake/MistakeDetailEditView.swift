@@ -118,10 +118,29 @@ struct MistakeDetailEditView: View {
                 correctSolution: viewModel.editedCorrectSolution,
                 reason: viewModel.editedErrorReason,
                 onInsert: { insertText in
-                    if viewModel.editedCorrectSolution.isEmpty {
-                        viewModel.editedCorrectSolution = insertText
-                    } else {
-                        viewModel.editedCorrectSolution += "\n\n" + insertText
+                    let correctApproach = MistakeAnalysisLLM.parseCorrectApproach(from: insertText)
+                    if !correctApproach.isEmpty {
+                        if viewModel.editedCorrectSolution.isEmpty {
+                            viewModel.editedCorrectSolution = correctApproach
+                        } else {
+                            viewModel.editedCorrectSolution += "\n\n" + correctApproach
+                        }
+                    }
+                    
+                    let errorReason = MistakeAnalysisLLM.parseErrorReason(from: insertText)
+                    if !errorReason.isEmpty {
+                        if viewModel.editedErrorReason.isEmpty {
+                            viewModel.editedErrorReason = errorReason
+                        } else {
+                            viewModel.editedErrorReason += "\n\n" + errorReason
+                        }
+                    }
+                    
+                    let extractedTags = MistakeAnalysisLLM.parseTags(from: insertText)
+                    for tag in extractedTags {
+                        if !viewModel.editedTags.contains(tag) {
+                            viewModel.editedTags.append(tag)
+                        }
                     }
                 }
             )

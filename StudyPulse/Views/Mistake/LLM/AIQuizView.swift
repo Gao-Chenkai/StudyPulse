@@ -519,13 +519,13 @@ struct AIQuizView: View {
                 errorReason: "自测得分率判定不通过（该题得分：\(result.score)分）。AI阅卷反馈：\(result.feedback)".localized(),
                 wrongSolution: answer,
                 correctSolution: "标准参考答案：\(question.correctAnswer)\n\n解析：\(question.solution)".localized(),
-                reviewState: nil,
+                reviewState: .initial(),
                 phaseId: activePhaseId,
                 tags: ["AI自测"]
             )
 
             await MainActor.run {
-                container.mistakeRepo.add(mistake)
+                container.addMistake(mistake)
             }
         }
     }

@@ -78,7 +78,8 @@ struct HRVStatusCard: View {
                             hrv: hrvManager.readiness,
                             body: hrvManager.bodyStatus,
                             baselines: hrvManager.personalBaselines,
-                            age: container.profileRepo.profile.age
+                            age: container.profileRepo.profile.age,
+                            mistakes: container.mistakeRepo.filteredMistakeSets
                         )
                         BodyRadarChart(values: radar)
                             .frame(height: 220)
@@ -163,9 +164,10 @@ struct HRVStatusCard: View {
             hrv: hrvManager.readiness,
             body: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
-            age: container.profileRepo.profile.age
+            age: container.profileRepo.profile.age,
+            mistakes: container.mistakeRepo.filteredMistakeSets
         )
-        return HStack(spacing: 10) {
+        return HStack(spacing: 6) {
             axisTile(
                 title: "HRV",
                 value: radar.hrvValueText,
@@ -188,6 +190,11 @@ struct HRVStatusCard: View {
                 title: "Respiratory".localized(),
                 value: radar.respiratoryValueText,
                 color: radar.respiratoryColor
+            )
+            axisTile(
+                title: "Stability".localized(),
+                value: radar.psychologicalStabilityValueText,
+                color: radar.psychologicalStabilityColor
             )
         }
     }
@@ -591,8 +598,9 @@ struct BodyRadarValues {
     let sleep: Double        // 0-1
     let exercise: Double     // 0-1  (today's workout, 30 min = 1.0)
     let respiratory: Double  // 0-1
+    let psychologicalStability: Double // 0-1
 
-    var all: [Double] { [hrv, heartRate, sleep, exercise, respiratory] }
+    var all: [Double] { [hrv, heartRate, sleep, exercise, respiratory, psychologicalStability] }
 
     // Per-axis text (raw, un-normalized)
     let hrvValueText: String
@@ -600,6 +608,7 @@ struct BodyRadarValues {
     let sleepValueText: String
     let exerciseValueText: String
     let respiratoryValueText: String
+    let psychologicalStabilityValueText: String
 
     // Per-axis colors (bad → good: red → orange → blue → green)
     let hrvColor: Color
@@ -607,6 +616,7 @@ struct BodyRadarValues {
     let sleepColor: Color
     let exerciseColor: Color
     let respiratoryColor: Color
+    let psychologicalStabilityColor: Color
 
     /// Build radar values from the current `HRVReadiness` and
     /// `BodyStatus`. Each axis is normalized to 0-1 using the
@@ -617,7 +627,8 @@ struct BodyRadarValues {
         hrv: HRVReadiness,
         body: BodyStatus,
         baselines: PersonalBaselines = .empty,
-        age: Int? = nil
+        age: Int? = nil,
+        mistakes: [MistakeNote] = []
     ) -> BodyRadarValues {
         let ageRef = age.map(AgeReference.compute) ?? .adult
 
@@ -673,22 +684,50 @@ struct BodyRadarValues {
             String(format: "%.0f m", $0)
         } ?? "--"
 
+        // Psychological stability score calculation:
+        let psychTags: Set<String> = [
+            "概念混淆", "计算粗心", "跳步", "审题不清", "思维定势",
+            "逻辑不严密", "考试焦虑", "急躁粗心", "笔误", "遗漏条件",
+            "concept confusion", "careless calculation", "skipping steps",
+            "misreading", "fixed thinking", "loose logic", "exam anxiety",
+            "impatience", "slip of pen", "missing condition"
+        ]
+        
+        let stabilityScore: Double = {
+            guard !mistakes.isEmpty else { return 1.0 }
+            var totalImpact = 0.0
+            for m in mistakes {
+                let hasPsych = m.tags.contains { tag in
+                    psychTags.contains(tag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                if hasPsych {
+                    totalImpact += (1.0 - m.masteryScore)
+                }
+            }
+            let val = 1.0 - (totalImpact / Double(mistakes.count))
+            return max(0.0, min(1.0, val))
+        }()
+        let stabilityText = String(format: "%.0f%%", stabilityScore * 100)
+
         return BodyRadarValues(
             hrv: hrvScore,
             heartRate: hrCal.score,
             sleep: sleepCal.score,
             exercise: exerciseCal.score,
             respiratory: rrCal.score,
+            psychologicalStability: stabilityScore,
             hrvValueText: hrvText,
             heartRateValueText: hrText,
             sleepValueText: sleepText,
             exerciseValueText: exerciseText,
             respiratoryValueText: rrText,
+            psychologicalStabilityValueText: stabilityText,
             hrvColor: colorFor(score: hrvScore),
             heartRateColor: colorFor(score: hrCal.score),
             sleepColor: colorFor(score: sleepCal.score),
             exerciseColor: colorFor(score: exerciseCal.score),
-            respiratoryColor: colorFor(score: rrCal.score)
+            respiratoryColor: colorFor(score: rrCal.score),
+            psychologicalStabilityColor: colorFor(score: stabilityScore)
         )
     }
 
@@ -709,23 +748,24 @@ struct BodyRadarValues {
 // MARK: - Body Radar Chart (polygon)
 // MARK: - 身体雷达图(多边形)
 
-/// 5-axis radar / polygon chart. Pure SwiftUI `Path`s — no Charts
+/// 6-axis radar / polygon chart. Pure SwiftUI `Path`s — no Charts
 /// framework dependency for the radar itself. Each axis has its own
 /// color so the data points and labels are easy to associate.
-/// 5 轴雷达/多边形图。纯 SwiftUI Path 绘制,雷达本身不依赖 Charts 框架。
+/// 6 轴雷达/多边形图。纯 SwiftUI Path 绘制,雷达本身不依赖 Charts 框架。
 /// 每根轴有自己的颜色,数据点和标签易于对应。
 struct BodyRadarChart: View {
     let values: BodyRadarValues
 
-    private let dimensionCount = 5
+    private let dimensionCount = 6
     private let axisLabels: [String] = [
         "HRV",
         "Heart Rate".localized(),
         "Recovery Sleep".localized(),
         "Workout".localized(),
-        "Respiratory".localized()
+        "Respiratory".localized(),
+        "Stability".localized()
     ]
-    private let axisColors: [Color] = [.purple, .pink, .indigo, .green, .cyan]
+    private let axisColors: [Color] = [.purple, .pink, .indigo, .green, .cyan, .orange]
 
     var body: some View {
         GeometryReader { geo in

@@ -617,6 +617,10 @@
 "Workout" = "锻炼";
 "Today Exercise" = "今日锻炼";
 
+// 6th radar axis (psychological stability)
+"Stability" = "心理稳定性";
+"Psychological Stability" = "心理稳定性";
+
 // 30-day baseline & age calibration
 "%@ %@ — 对比 30 天均值 %@" = "%@ %@ — 对比 30 天均值 %@";
 "%@ %@ — 暂用年龄段参考" = "%@ %@ — 暂用年龄段参考";

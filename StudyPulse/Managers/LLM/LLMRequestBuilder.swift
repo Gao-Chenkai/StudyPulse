@@ -38,6 +38,26 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Shared LaTeX formatting rule (injected into all math-related system prompts)
+
+/// 所有可能输出数学公式的 system prompt 末尾必须追加此规则。
+/// 原因：iosMath 渲染引擎不支持 `\begin{cases}` 等 LaTeX 环境，渲染时会静默产生空白。
+/// Must be appended to every system prompt that may output math.
+/// Reason: the iosMath rendering engine does not support `\begin{cases}` and similar
+/// LaTeX environments; they are silently rendered as blank space.
+private let latexFormattingRule = """
+
+        【数学公式格式强制规则 — 不得违反】
+        严禁使用 `\\begin{cases}` / `\\end{cases}` 语法（渲染引擎不支持，会变为空白）。
+        严禁使用 `\\begin{align}` / `\\begin{align*}` / `\\begin{array}` 等任何 LaTeX 环境块。
+        方程组 / 不等式组必须改用以下方式之一：
+        方式 A（推荐）：每个方程单独一行，用行内公式 + 序号，例如：
+          方程①：$2x - 3 \\geq 5$
+          方程②：$x + 4 < 10$
+        方式 B：整个方程组写成一行行内公式（用分号分隔），例如：$2x-3\\geq5;\\;x+4<10$
+        行内公式使用 `$...$`，块级公式使用 `$$...$$`，但块级公式内不得含任何 `\\begin{...}` 环境。
+        """
+
 // MARK: - 1) Study Suggestions (学习建议)
 
 /// 学习建议 prompt 工厂。
@@ -52,7 +72,7 @@ enum StudySuggestionsLLM {
            - **<SF Symbol 名> <建议标题>** — <一句话建议,20-60 字>
         3. SF Symbol 名从以下选择(不要自造):exclamationmark.triangle.fill / timer / doc.text.magnifyingglass / chart.line.uptrend.xyaxis / chart.line.downtrend.xyaxis / hand.thumbsup.fill / lightbulb.fill / heart.text.square / brain.head.profile
         4. 严禁输出 JSON、解释、客套话、Markdown 标题、代码块;只输出 3 行 Markdown 列表。
-        """
+        """ + latexFormattingRule
 
     /// 构造 prompt。`context` 由 `StudySuggestionsContext` 提供,内部由
     /// `LLMClient` 之外的 View / ViewModel 准备(避免循环依赖)。
@@ -141,15 +161,21 @@ enum StudySuggestionsLLM {
 // MARK: - 2) Mistake Analysis (错题 AI 解析)
 
 /// 错题 AI 解析 prompt 工厂。
-/// Mistake AI analysis prompt factory. Output format: 3 fixed sections
-/// (`## 错因分析` / `## 正确思路` / `## 类似题建议`) for consistent UI rendering.
+/// Mistake AI analysis prompt factory. Output format: 4 fixed sections
+/// (`## 错因分析` / `## 错因标签` / `## 正确思路` / `## 类似题建议`) for consistent UI rendering.
 enum MistakeAnalysisLLM {
     static let defaultSystem: String = """
-        你是错题分析专家。给定错题内容,输出 Markdown 总结,中文。
+        你是错题分析专家。给定错题内容,结合题目内容分析用户可能的心理和习惯原因(例如概念混淆、计算粗心、跳步、审题不清等),输出 Markdown 总结,中文。
         严格使用以下结构(每个 ## 标题独占一行,小标题顺序固定):
 
         ## 错因分析
-        <2-4 行,定位知识漏洞 / 思维误区 / 计算失误>
+        - 知识点: <知识点定位>
+        - 思维习惯: <分析思维习惯,例如概念混淆/跳步/思维定势等>
+        - 情绪状态: <分析答题时的可能情绪状态,如焦虑/急躁/紧张/疲劳等>
+        - 行为模式: <分析行为模式,如计算粗心/审题不清/笔误等>
+
+        ## 错因标签
+        <根据上述分析,提取 1-3 个对应的标准错因标签,用英文逗号分隔。标准标签必须从以下集合中选择:概念混淆, 计算粗心, 跳步, 审题不清, 思维定势, 逻辑不严密, 考试焦虑, 急躁粗心, 笔误, 遗漏条件>
 
         ## 正确思路
         <3-6 行,分步骤展示解题路径,必要时用列表>
@@ -158,7 +184,7 @@ enum MistakeAnalysisLLM {
         <1-3 条,具体可练习的方向>
 
         严禁输出解释、客套话、JSON、代码块语言标签。
-        """
+        """ + latexFormattingRule
 
     /// 构造 prompt。
     /// `mistake` 字段为空时自动用 `(空)` 占位,避免 LLM 误判。
@@ -184,6 +210,94 @@ enum MistakeAnalysisLLM {
         """
         return LLMPrompt(system: defaultSystem, messages: [.user(user)])
     }
+
+    /// 从 AI 解析的完整文本中解析出 "## 错因标签" 这一节的标签列表。
+    /// Parse tag list under "## 错因标签" from the LLM output.
+    static func parseTags(from text: String) -> [String] {
+        let lines = text.components(separatedBy: .newlines)
+        var foundSection = false
+        var sectionContent = ""
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("##") {
+                if trimmed.contains("错因标签") {
+                    foundSection = true
+                } else if foundSection {
+                    break
+                }
+            } else if foundSection {
+                if !trimmed.isEmpty {
+                    if sectionContent.isEmpty {
+                        sectionContent = trimmed
+                    } else {
+                        sectionContent += " " + trimmed
+                    }
+                }
+            }
+        }
+        
+        if sectionContent.isEmpty {
+            return []
+        }
+        
+        return sectionContent
+            .components(separatedBy: CharacterSet(charactersIn: ",，"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Extract the "正确思路" section from the LLM output.
+    static func parseCorrectApproach(from text: String) -> String {
+        let lines = text.components(separatedBy: .newlines)
+        var foundSection = false
+        var sectionLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("##") {
+                if trimmed.contains("正确思路") {
+                    foundSection = true
+                } else if foundSection {
+                    break
+                }
+            } else if foundSection {
+                sectionLines.append(line)
+            }
+        }
+        
+        if sectionLines.isEmpty {
+            return text
+        }
+        
+        return sectionLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Extract the "错因分析" section from the LLM output.
+    static func parseErrorReason(from text: String) -> String {
+        let lines = text.components(separatedBy: .newlines)
+        var foundSection = false
+        var sectionLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("##") {
+                if trimmed.contains("错因分析") {
+                    foundSection = true
+                } else if foundSection {
+                    break
+                }
+            } else if foundSection {
+                sectionLines.append(line)
+            }
+        }
+        
+        if sectionLines.isEmpty {
+            return ""
+        }
+        
+        return sectionLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 // MARK: - 8) AI Similar Question (AI 相似题变式)
@@ -198,7 +312,7 @@ enum SimilarQuestionLLM {
           "question": "<变式题题目内容（支持 Markdown / LaTeX）>",
           "correctSolution": "<变式题的正确解法，分步骤详细说明>"
         }
-        """
+        """ + latexFormattingRule
 
     static func makePrompt(
         subject: String,
@@ -245,7 +359,7 @@ enum SimilarQuestionGradingLLM {
 
         严禁输出解释、客套话、JSON、代码块语言标签。
         不要重复原题或标准解法全文;只引用与扣分相关的关键步骤。
-        """
+        """ + latexFormattingRule
 
     /// 构造 prompt。
     /// - Parameters:
@@ -354,7 +468,7 @@ enum WeeklyReportLLM {
         <1-3 条,基于数据中的弱项 / 错题 / 持续下滑>
 
         不要重复输入数据;不要输出客套话、JSON、代码块。
-        """
+        """ + latexFormattingRule
 
     static func makePrompt(_ data: WeeklyReportManager.ReportData) -> LLMPrompt {
         let f = DateFormatter()
@@ -407,7 +521,7 @@ enum ComprehensiveScorePredictionLLM {
         <1-3 条,基于各科状态的优先级建议,每条 1 行>
 
         不要重复输入数据;不要输出客套话、JSON、代码块。
-        """
+        """ + latexFormattingRule
 
     /// 构造 prompt。
     static func makePrompt(
@@ -470,7 +584,7 @@ enum ScorePredictionLLM {
         <1-3 条,基于错题结构给出的具体方向,每条 1 行>
 
         不要重复输入数据;不要输出客套话、JSON、代码块。
-        """
+        """ + latexFormattingRule
 
     /// 构造 prompt。
     /// - Parameters:
@@ -562,7 +676,7 @@ enum AIDiscussionLLM {
 
         --- 预测 / 分析上下文 ---
         \(context)\(previousBlock)
-        """
+        """ + latexFormattingRule
     }
 }
 
@@ -574,7 +688,7 @@ enum LLMChatLLM {
         你是 StudyPulse 的 AI 学习助手。你能基于用户的成绩、错题、考试和身体数据回答问题。
         回答尽量使用 Markdown(标题 / 列表 / 表格 / 代码块),中文为主,语言跟随用户提问。
         如果用户问的与学习数据无关,可以正常回答;不要主动编造未提供的个人数据。
-        """
+        """ + latexFormattingRule
 }
 
 // MARK: - 9) Home Ask (主页 AI 提问: 路由 + 回答 两阶段)
@@ -686,7 +800,7 @@ enum HomeAskAnswerLLM {
         6. **跟随用户语言**(中文 / 英文 / 日文 / 韩文等),默认中文;
         7. **如果数据不足以回答问题**,直接说缺什么,不要硬猜;
         8. 不要再做路由判断,你的任务只是基于现有数据回答。
-        """
+        """ + latexFormattingRule
 
     /// 构造回答 prompt
     /// - Parameters:
@@ -935,7 +1049,7 @@ enum QuizGenerationLLM {
             "solution": "<本题的详细步骤解析，支持 Markdown / LaTeX>"
           }
         ]
-        """
+        """ + latexFormattingRule
 
     /// 构造自测出题 prompt
     static func makePrompt(
@@ -996,7 +1110,7 @@ enum QuizGradingLLM {
             }
           ]
         }
-        """
+        """ + latexFormattingRule
 
     /// 构造自测判分 prompt
     static func makePrompt(

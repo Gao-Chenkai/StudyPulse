@@ -264,10 +264,29 @@ struct MistakeSetDetailView: View {
                     var updated = liveMistake
                     let trimmed = insight.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
-                        if updated.correctSolution.isEmpty {
-                            updated.correctSolution = trimmed
-                        } else {
-                            updated.correctSolution += "\n\n---\n\n" + trimmed
+                        let correctApproach = MistakeAnalysisLLM.parseCorrectApproach(from: trimmed)
+                        if !correctApproach.isEmpty {
+                            if updated.correctSolution.isEmpty {
+                                updated.correctSolution = correctApproach
+                            } else {
+                                updated.correctSolution += "\n\n---\n\n" + correctApproach
+                            }
+                        }
+                        
+                        let errorReason = MistakeAnalysisLLM.parseErrorReason(from: trimmed)
+                        if !errorReason.isEmpty {
+                            if updated.errorReason.isEmpty {
+                                updated.errorReason = errorReason
+                            } else {
+                                updated.errorReason += "\n\n---\n\n" + errorReason
+                            }
+                        }
+                        
+                        let extractedTags = MistakeAnalysisLLM.parseTags(from: trimmed)
+                        for tag in extractedTags {
+                            if !updated.tags.contains(tag) {
+                                updated.tags.append(tag)
+                            }
                         }
                         container.mistakeRepo.update(updated)
                     }

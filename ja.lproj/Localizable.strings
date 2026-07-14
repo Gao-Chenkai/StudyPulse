@@ -617,6 +617,10 @@
 "Workout" = "運動";
 "Today Exercise" = "本日の運動";
 
+// 6th radar axis (psychological stability)
+"Stability" = "心理的安定性";
+"Psychological Stability" = "心理的安定性";
+
 // 30-day baseline & age calibration
 "%@ %@ — vs 30-day mean %@" = "%@ %@ — 30日平均と比較 %@";
 "%@ %@ — using age reference" = "%@ %@ — 年齢範囲を暫定使用";

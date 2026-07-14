@@ -328,7 +328,8 @@ struct ReportContentView: View {
                     hrv: hrv,
                     body: body,
                     baselines: report.baselines ?? .empty,
-                    age: report.profile.age
+                    age: report.profile.age,
+                    mistakes: report.mistakeSets
                 )
                 BodyRadarChart(values: radar)
                     .frame(height: 220)

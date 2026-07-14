@@ -624,6 +624,10 @@
 "Workout" = "Workout";
 "Today Exercise" = "Today Exercise";
 
+// 6th radar axis (psychological stability)
+"Stability" = "Stability";
+"Psychological Stability" = "Psychological Stability";
+
 // Q&A Settings (FAQ)
 "FAQ" = "FAQ";
 "Frequently Asked Questions" = "Frequently Asked Questions";

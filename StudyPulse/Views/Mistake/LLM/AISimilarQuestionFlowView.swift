@@ -531,11 +531,11 @@ struct AISimilarQuestionFlowView: View {
             errorReason: "",
             wrongSolution: "",
             correctSolution: generatedSolution,
-            reviewState: nil,
+            reviewState: .initial(),
             phaseId: originalMistake.phaseId,
             tags: ["AI变式题"]
         )
-        container.mistakeRepo.add(newMistake)
+        container.addMistake(newMistake)
     }
 
     private func updateOriginalMastery() {
