@@ -2,884 +2,636 @@
 //  ExamDetailView.swift
 //  StudyPulse
 //
-//  Created by Chenkai Gao on 2026/3/23.
+//  考试详情页:显示考试的核心字段(Overview)、复盘(checklist / 4 段 Markdown)、
+//  关联错题、AI 预测。
 //
-//  单科考试详情页:概览 / 重要度+掌握度 / 倒计时 / 考场 / 考前待办 / 倒计时通知 / 日历 / 分享 / 关联错题 / 复盘 / 预测
-//  Single-subject exam detail page: overview, importance + mastery, countdown, location,
-//  pre-exam checklist, countdown notifications, calendar, share, related mistakes, review, prediction.
+//  Exam detail page: shows core fields (Overview), review (checklist +
+//  4 markdown sections), linked mistakes, and AI prediction.
+//
+//  Phase 3 拆分 (2026-07-14):原 885 行单文件 → orchestrator 留本文件,
+//  拆出 4 个独立子文件:
+//  - ChecklistRowView.swift      (考前清单行)
+//  - RelatedMistakeCard.swift    (关联错题行卡片)
+//  - ReviewSectionRow.swift      (复盘 4 段折叠行)
+//  - LinkedMistakesListView.swift (复盘"关联错题"子页面)
+//
+//  本文件只剩:主 View 编排 + 三大 Section (Overview / Review / Linked Mistakes +
+//  AI Prediction) + 状态 / sheets / helpers。
 //
 
 import SwiftUI
-import EventKit
+import UIKit
+import os
 
-/// 单科考试详情页
-/// Single-subject exam detail page.
+/// 考试详情页(Overview + 复盘 + 关联错题 + AI 预测 + 关联任务)。
+/// Exam detail page (Overview + review + linked mistakes + AI prediction + linked tasks).
 struct ExamDetailView: View {
-    let exam: Exam
+    let examId: UUID
     @Environment(RepositoryContainer.self) private var container
-    @State private var showingEditSheet = false
-    @State private var showingCalendarAlert = false
-    @State private var calendarAlertMessage = ""
-    /// 预测目标(非空时弹出 ScorePredictionSheet)
-    /// Prediction target (non-nil triggers ScorePredictionSheet).
-    @State private var predictionTarget: PredictionTarget? = nil
-    /// 复盘编辑器(为空时不弹)
-    /// Review editor sheet presenter (nil = hidden).
-    @State private var showingReviewSheet = false
+    @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
-    // 关联的错题
-    // Mistakes tied to the same subject (newest first).
-    var relatedMistakes: [MistakeNote] {
-        container.mistakeRepo.mistakeSets
-            .filter { $0.subject == exam.subject }
-            .sorted { $0.date > $1.date }
-    }
-
-    /// 始终从 examRepo 拿最新的 Exam（确保 checklist 勾选状态等实时同步）
-    /// Always read the latest Exam snapshot from examRepo so checklist toggles etc. are reflected immediately.
-    private var currentExam: Exam {
-        container.examRepo.examSets.first(where: { $0.id == exam.id }) ?? exam
-    }
-
-    /// 倒计时通知天数（默认 [1, 3, 5, 10, 30]）
-    /// Countdown notification days (default [1, 3, 5, 10, 30])
-    private var effectiveNotifyDays: [Int] {
-        currentExam.countdownNotifyDays ?? [1, 3, 5, 10, 30]
-    }
-
-    var body: some View {
-        Form {
-            Section(header: Text("Overview".localized())
-                .foregroundColor(Color(.secondaryLabel))
-            ) {
-                LabeledContent("Exam Name".localized(), value: currentExam.name)
-                    .foregroundColor(Color(.label))
-                LabeledContent("Subject".localized(), value: currentExam.subject)
-                    .foregroundColor(Color(.label))
-
-                LabeledContent("Date".localized(), value: currentExam.examDate.formatted(date: .complete, time: .omitted))
-                    .foregroundColor(Color(.label))
-
-                if !currentExam.examName.isEmpty {
-                    LabeledContent("Note/Title".localized(), value: currentExam.examName)
-                        .foregroundColor(Color(.label))
-                }
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            Section(header: Text("Metrics".localized())
-                .foregroundColor(Color(.secondaryLabel))
-            ) {
-                HStack {
-                    Text("Importance".localized())
-                        .foregroundColor(Color(.label))
-                    Spacer()
-                    HStack(spacing: 2) {
-                        ForEach(1...5, id: \.self) { i in
-                            Image(systemName: i <= currentExam.importance ? "star.fill" : "star")
-                                .foregroundColor(i <= currentExam.importance ? .yellow : Color(.tertiaryLabel))
-                        }
-                    }
-                }
-
-                HStack {
-                    Text("Mastery Degree".localized())
-                        .foregroundColor(Color(.label))
-                    Spacer()
-                    Text("\(currentExam.masteryDegree)%")
-                        .fontWeight(.semibold)
-                        .foregroundColor(masteryColor)
-                }
-                ProgressView(value: Double(currentExam.masteryDegree), total: 100.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: masteryProgressColor))
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            Section(header: Text("Time Status".localized())
-                .foregroundColor(Color(.secondaryLabel))
-            ) {
-                let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: currentExam.examDate).day ?? 0
-                HStack {
-                    Text("Days Remaining".localized())
-                        .foregroundColor(Color(.label))
-                    Spacer()
-                    Text("\(max(0, daysLeft)) days")
-                        .fontWeight(.semibold)
-                        .foregroundColor(daysLeft <= 3 ? Color(.systemRed) : Color(.label))
-                }
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 考场信息
-            // MARK: - Exam location
-            Section(header: Text("Exam Location".localized())
-                .foregroundColor(Color(.secondaryLabel))
-            ) {
-                if currentExam.locationSchool.isEmpty &&
-                   currentExam.locationClassroom.isEmpty &&
-                   currentExam.locationSeat.isEmpty {
-                    HStack {
-                        Image(systemName: "mappin.slash")
-                            .foregroundColor(.secondary)
-                        Text("No location set".localized())
-                            .foregroundColor(.secondary)
-                    }
-                } else {
-                    if !currentExam.locationSchool.isEmpty {
-                        LabeledContent("School".localized(), value: currentExam.locationSchool)
-                            .foregroundColor(Color(.label))
-                    }
-                    if !currentExam.locationClassroom.isEmpty {
-                        LabeledContent("Classroom".localized(), value: currentExam.locationClassroom)
-                            .foregroundColor(Color(.label))
-                    }
-                    if !currentExam.locationSeat.isEmpty {
-                        LabeledContent("Seat".localized(), value: currentExam.locationSeat)
-                            .foregroundColor(Color(.label))
-                    }
-                }
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 考前待办清单
-            // MARK: - Pre-exam checklist
-            Section {
-                if currentExam.checklist.isEmpty {
-                    HStack {
-                        Image(systemName: "checklist")
-                            .foregroundColor(.secondary)
-                        Text("No checklist items. Tap Edit to add some.".localized())
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
-                    }
-                } else {
-                    ForEach(currentExam.checklist.sorted(by: { $0.sortOrder < $1.sortOrder })) { item in
-                        ChecklistRowView(
-                            item: item,
-                            onToggle: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    container.toggleExamChecklistItem(currentExam.id, itemId: item.id)
-                                }
-                            }
-                        )
-                    }
-                }
-            } header: {
-                HStack {
-                    Text("Pre-Exam Checklist".localized())
-                        .foregroundColor(Color(.secondaryLabel))
-                    Spacer()
-                    Text(String(format: "%d / %d".localized(),
-                                currentExam.checklist.filter { $0.isChecked }.count,
-                                currentExam.checklist.count))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 倒计时通知
-            // MARK: - Countdown notifications
-            Section {
-                if effectiveNotifyDays.isEmpty {
-                    HStack {
-                        Image(systemName: "bell.slash")
-                            .foregroundColor(.secondary)
-                        Text("Notifications disabled".localized())
-                            .foregroundColor(.secondary)
-                    }
-                } else {
-                    HStack {
-                        Image(systemName: "bell.badge")
-                            .foregroundColor(.accentColor)
-                        Text(String(format: "Notify me %@ day(s) before the exam".localized(),
-                                    effectiveNotifyDays.sorted(by: >).map(String.init).joined(separator: ", ")))
-                            .foregroundColor(Color(.label))
-                            .font(.subheadline)
-                    }
-                }
-                Button {
-                    ExamPrepareNotifications.shared.requestAuthorization()
-                    ExamPrepareNotifications.shared.scheduleNotifications(
-                        for: currentExam.name,
-                        date: currentExam.examDate,
-                        days: effectiveNotifyDays
-                    )
-                    calendarAlertMessage = "Notifications rescheduled.".localized()
-                    showingCalendarAlert = true
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.clockwise.bell")
-                            .foregroundColor(.accentColor)
-                        Text("Reschedule Notifications".localized())
-                            .foregroundColor(.accentColor)
-                    }
-                }
-            } header: {
-                Text("Countdown Notifications".localized())
-                    .foregroundColor(Color(.secondaryLabel))
-            } footer: {
-                Text("Default schedule: 1, 3, 5, 10, 30 day(s) before the exam. Edit the exam to customize.".localized())
-                    .foregroundColor(.secondary)
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 添加到日历
-            // MARK: - Add to calendar
-            Section {
-                Button(action: { addToCalendar() }) {
-                    HStack {
-                        Image(systemName: "calendar.badge.plus")
-                            .foregroundColor(.accentColor)
-                            .font(.title3)
-                        Text("Add to Calendar".localized())
-                            .foregroundColor(.accentColor)
-                    }
-                }
-            } footer: {
-                Text(currentExam.timeSlot != nil
-                     ? "Will create a timed event with a 1-day advance reminder in your system calendar.".localized()
-                     : "Will create an all-day event with a 1-day advance reminder in your system calendar.".localized())
-                    .foregroundColor(.secondary)
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 分享给家人
-            // MARK: - Share with family
-            Section {
-                ShareLink(
-                    item: shareText,
-                    subject: Text(currentExam.name),
-                    message: Text("Exam Details".localized())
-                ) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.accentColor)
-                            .font(.title3)
-                        Text("Share with Family".localized())
-                            .foregroundColor(.accentColor)
-                    }
-                }
-            } footer: {
-                Text("Generate a summary of the exam (date, subject, location) and share it via WeChat, Mail, Messages, etc.".localized())
-                    .foregroundColor(.secondary)
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 关联的错题
-            // MARK: - Related mistakes
-            Section(header: Text("Related Mistakes".localized())
-                .foregroundColor(Color(.secondaryLabel))
-            ) {
-                if relatedMistakes.isEmpty {
-                    HStack {
-                        Image(systemName: "doc.text")
-                            .foregroundColor(.secondary)
-                        Text("No related mistakes for this subject".localized())
-                            .foregroundColor(.secondary)
-                    }
-                    .listRowBackground(Color(.secondarySystemGroupedBackground))
-                } else {
-                    ForEach(relatedMistakes.prefix(4)) { mistake in
-                        NavigationLink(destination: MistakeSetDetailView(mistakeSet: mistake)) {
-                            RelatedMistakeCard(mistake: mistake)
-                        }
-                    }
-
-                    if relatedMistakes.count > 4 {
-                        HStack {
-                            Spacer()
-                            Text(String(format: "+ %d more mistakes".localized(), relatedMistakes.count - 4))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
-                        .listRowBackground(Color(.secondarySystemGroupedBackground))
-                    }
-                }
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-            // MARK: - 考试复盘
-            // MARK: - Exam review
-            examReviewSection
-
-            // MARK: - 预测入口
-            // MARK: - Score prediction entry
-            Section {
-                Button {
-                    openPrediction()
-                } label: {
-                    HStack {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.title3)
-                            .appleIntelligenceForeground()
-                        Text("Predict Next Score".localized())
-                            .appleIntelligenceForeground()
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-            } header: {
-                Text("Score Prediction".localized())
-                    .foregroundColor(Color(.secondaryLabel))
-            } footer: {
-                Text("Uses the last 5 same-subject grades to predict a 95% confidence interval for the next exam.".localized())
-                    .foregroundColor(.secondary)
-            }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
-        }
-        .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle(currentExam.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .adaptiveMaxWidth(720)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    openPrediction()
-                } label: {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                }
-                .accessibilityLabel("Predict".localized())
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit".localized()) {
-                    showingEditSheet = true
-                }
-                .foregroundColor(Color(.systemBlue))
-            }
-        }
-        .sheet(item: $predictionTarget) { target in
-            ScorePredictionSheet(
-                exam: target.exam,
-                history: target.history,
-                fullScore: target.fullScore,
-                onDismiss: { predictionTarget = nil }
-            )
-            .adaptiveSheet(detents: [.medium, .large])
-        }
-        .sheet(isPresented: $showingEditSheet) {
-            ExamDetailEditView(exam: currentExam)
-                .adaptiveSheet()
-        }
-        .sheet(isPresented: $showingReviewSheet) {
-            ExamReviewView(exam: currentExam)
-                .adaptiveSheet()
-        }
-        .containerBackground(.clear, for: .navigation)
-        .debugModeContainer()
-        .debugLayoutBoundsAuto()
-        .alert("Calendar".localized(), isPresented: $showingCalendarAlert) {
-            Button("OK".localized()) { }
-        } message: {
-            Text(calendarAlertMessage)
-        }
-    }
-
-    /// 写入考试到系统日历(根据 timeSlot 决定是全天事件还是定时事件)
-    /// Write the exam to the system calendar (all-day or timed based on timeSlot).
-    private func addToCalendar() {
-        Task {
-            do {
-                _ = try await CalendarManager.shared.addExamToCalendar(
-                    examName: currentExam.name,
-                    subject: currentExam.subject,
-                    examDate: currentExam.examDate,
-                    startTime: currentExam.timeSlot?.startTime,
-                    endTime: currentExam.timeSlot?.endTime,
-                    note: currentExam.examName.isEmpty ? nil : currentExam.examName
-                )
-                await MainActor.run {
-                    calendarAlertMessage = "Successfully added to calendar!".localized()
-                    showingCalendarAlert = true
-                }
-            } catch {
-                await MainActor.run {
-                    calendarAlertMessage = error.localizedDescription
-                    showingCalendarAlert = true
-                }
-            }
-        }
-    }
-
-    /// 打开预测 Sheet(用同科目历史成绩 + 满分)
-    private func openPrediction() {
-        let subjectGrades = container.gradeRepo.filteredGrades
-            .filter { $0.subject == currentExam.subject }
-        let fullScore = container.subjectRepo.subjects.first(where: { $0.name == currentExam.subject })?.fullScore ?? 100
-        predictionTarget = PredictionTarget(
-            exam: currentExam,
-            history: subjectGrades,
-            fullScore: fullScore
-        )
-    }
-
-    /// 构造可分享的考试信息文本
-    /// Build a shareable text summary of the exam.
-    private var shareText: String {
-        var lines: [String] = []
-        lines.append("📚 " + currentExam.name)
-        lines.append("📅 " + currentExam.examDate.formatted(date: .complete, time: .omitted))
-        if let slot = currentExam.timeSlot {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "HH:mm"
-            lines.append("⏰ " + String(format: "%@ - %@".localized(), fmt.string(from: slot.startTime), fmt.string(from: slot.endTime)))
-        }
-        lines.append("📝 " + currentExam.subject.localized())
-        if !currentExam.locationSchool.isEmpty {
-            var loc = "📍 " + currentExam.locationSchool
-            if !currentExam.locationClassroom.isEmpty {
-                loc += " · " + currentExam.locationClassroom
-            }
-            if !currentExam.locationSeat.isEmpty {
-                loc += " · Seat: " + currentExam.locationSeat
-            }
-            lines.append(loc)
-        }
-        let unchecked = currentExam.checklist.filter { !$0.isChecked }
-        if !unchecked.isEmpty {
-            lines.append("")
-            lines.append("✅ " + "Checklist".localized() + ":")
-            for item in unchecked.sorted(by: { $0.sortOrder < $1.sortOrder }) {
-                lines.append("  • " + item.title)
-            }
-        }
-        lines.append("")
-        lines.append("— from StudyPulse")
-        return lines.joined(separator: "\n")
-    }
-
-    // MARK: - 复盘 Section
-    // Exam review section: shows 4-section rendered markdown, lets user
-    // fill/edit the review, and share the full review as Markdown.
-    // 复盘 Section:展示 4 段渲染后的 markdown,允许用户填写 / 编辑,并支持整段分享为 Markdown。
-
-    /// 4 段复盘 Section(若有则展示 + 分享;若否则引导填写 + 24h 提醒说明)
-    /// 4-section review block (show + share if present; otherwise nudge to fill + 24h reminder hint).
-    @ViewBuilder
-    private var examReviewSection: some View {
-        if let review = currentExam.examReview {
-            Section {
-                // 顶部元信息行:复盘时间 + 操作按钮
-                // Top meta row: review timestamp + action buttons.
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(Color(.systemGreen))
-                        .font(.title3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Reviewed On".localized())
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(review.reviewedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                    }
-                    Spacer()
-                    Button {
-                        showingReviewSheet = true
-                    } label: {
-                        Text("Edit Review".localized())
-                            .font(.subheadline)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-
-                // 4 段折叠预览
-                // 4 collapsible preview rows.
-                ReviewSectionRow(
-                    title: "What Was Tested".localized(),
-                    icon: "doc.text.magnifyingglass",
-                    markdown: review.whatWasTested
-                )
-                ReviewSectionRow(
-                    title: "What Went Wrong".localized(),
-                    icon: "exclamationmark.triangle",
-                    markdown: review.whatWentWrong
-                )
-                ReviewSectionRow(
-                    title: "What I Learned".localized(),
-                    icon: "lightbulb",
-                    markdown: review.whatLearned
-                )
-                ReviewSectionRow(
-                    title: "Next Strategy".localized(),
-                    icon: "arrow.uturn.forward",
-                    markdown: review.nextStrategy
-                )
-
-                // 关联错题
-                // Linked mistakes navigation row.
-                if !review.linkedMistakeIds.isEmpty {
-                    NavigationLink {
-                        LinkedMistakesListView(
-                            mistakeIds: review.linkedMistakeIds,
-                            subject: currentExam.subject
-                        )
-                    } label: {
-                        HStack {
-                            Image(systemName: "link")
-                                .foregroundColor(.accentColor)
-                            Text("Linked Mistakes".localized())
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text(String(format: "%d".localized(), review.linkedMistakeIds.count))
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
-                        }
-                    }
-                    .listRowBackground(Color(.secondarySystemGroupedBackground))
-                }
-
-                // 分享整段复盘
-                // Share the full review as a single Markdown block.
-                ShareLink(
-                    item: review.fullShareText,
-                    subject: Text("Exam Review · \(currentExam.name)"),
-                    message: Text("Post-Exam Review".localized())
-                ) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.accentColor)
-                            .font(.title3)
-                        Text("Share Review".localized())
-                            .foregroundColor(.accentColor)
-                    }
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-            } header: {
-                Text("Exam Review".localized())
-                    .foregroundColor(Color(.secondaryLabel))
-            } footer: {
-                Text("A reflection filled in within 24h of the exam. Edit anytime to add new insights.".localized())
-                    .foregroundColor(.secondary)
-            }
-        } else {
-            Section {
-                Button {
-                    showingReviewSheet = true
-                } label: {
-                    HStack {
-                        Image(systemName: "list.bullet.rectangle")
-                            .foregroundColor(.accentColor)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Fill Out Review".localized())
-                                .foregroundColor(.accentColor)
-                                .fontWeight(.medium)
-                            Text("4-section Markdown: tested / wrong / learned / strategy".localized())
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-            } header: {
-                Text("Exam Review".localized())
-                    .foregroundColor(Color(.secondaryLabel))
-            } footer: {
-                Text(reviewReminderFooter)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    /// "复盘窗口说明" 页脚文案:考试已结束 24h 后改为"窗口已关闭"提示
-    /// "Review window hint" footer text — switches to "window closed" once 24h past exam.
-    private var reviewReminderFooter: String {
-        let baseDate = currentExam.examEndDate ?? currentExam.examDate
-        let elapsed = Date().timeIntervalSince(baseDate)
-        // 24h = 86400s
-        // 24h = 86400 seconds
-        if elapsed > 24 * 3600 {
-            return "The 24h review window has closed. You can still fill it out now — useful as a delayed reflection.".localized()
-        } else {
-            return "We'll remind you to fill this out 24h after the exam ends.".localized()
-        }
-    }
-
-    // 根据掌握程度确定颜色
-    // Mastery color thresholds.
-    private var masteryColor: Color {
-        if currentExam.masteryDegree <= 20 {
-            return Color(.systemRed)
-        } else if currentExam.masteryDegree <= 60 {
-            return Color(.systemOrange)
-        } else {
-            return Color(.systemGreen)
-        }
-    }
-
-    // 进度条颜色
-    // Progress bar tint (differs slightly from mastery text color).
-    private var masteryProgressColor: Color {
-        if currentExam.masteryDegree <= 20 {
-            return Color(.systemRed)
-        } else if currentExam.masteryDegree <= 60 {
-            return Color(.systemOrange)
-        } else {
-            return Color(.systemBlue)
-        }
-    }
-}
-
-// MARK: - Checklist Row
-// MARK: - Checklist row
-
-/// 考前清单行(显示 + 整行点击 toggle)
-/// Pre-exam checklist row — tap anywhere to toggle.
-struct ChecklistRowView: View {
-    let item: ExamChecklistItem
-    let onToggle: () -> Void
-
-    var body: some View {
-        Button(action: onToggle) {
-            HStack(spacing: 12) {
-                Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundColor(item.isChecked ? Color(.systemGreen) : Color(.tertiaryLabel))
-                Text(item.title)
-                    .strikethrough(item.isChecked, color: .secondary)
-                    .foregroundColor(item.isChecked ? Color(.secondaryLabel) : Color(.label))
-                    .font(.subheadline)
-                Spacer()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-#Preview {
-    let container = RepositoryContainer()
-    let testExam = Exam(
-        name: "Test",
-        date: Date().addingTimeInterval(1000),
-        importance: 3,
-        subject: "Math",
-        examName: "",
-        masteryDegree: 50,
-        checklist: [
-            ExamChecklistItem(title: "身份证", sortOrder: 0),
-            ExamChecklistItem(title: "准考证", isChecked: true, sortOrder: 1),
-            ExamChecklistItem(title: "2B 铅笔 + 橡皮", sortOrder: 2)
-        ],
-        locationSchool: "市一中",
-        locationClassroom: "教学楼 3 楼 305",
-        locationSeat: "23"
-    )
-    container.examRepo.add(single: [testExam], comprehensive: [])
-    return ExamDetailView(exam: testExam)
-        .environment(container)
-}
-
-// MARK: - 关联的错题卡片
-// MARK: - Related mistake card
-
-/// 关联错题列表里的一行卡片
-/// Row card used inside the related mistakes list.
-struct RelatedMistakeCard: View {
-    let mistake: MistakeNote
+    @State private var showingReviewEditor = false
+    @State private var showingChecklist = false
+    @State private var showingDeleteConfirm = false
+    @State private var showingShareSheet = false
+    @State private var showAI = false
+    @State private var showCalendarAlert = false
+    @State private var showNotificationAlert = false
+    @State private var showCopyAlert = false
+    @State private var copyMessage = ""
+    @State private var showHistory = false
+    @State private var showingAIForSimilarMistakes = false
+    @State private var showAllRelatedMistakes = false
     @State private var animateIn = false
+    @State private var showLinkedMistakesView = false
+    @State private var showingChecklistEditor = false
 
-    var totalImages: Int {
-        mistake.questionImages.count + mistake.reasonImages.count +
-        mistake.wrongSolutionImages.count + mistake.correctSolutionImages.count
+    /// 实时从 repo 拿最新版本的考试
+    /// Live copy of the exam from the repo.
+    private var liveExam: Exam? {
+        container.examRepo.examSets.first(where: { $0.id == examId })
     }
 
-    /// 距加入日期的相对文案(今天/昨天/N 天前/具体日期)
-    /// Relative label from the add-date (Today / Yesterday / N days ago / absolute date).
-    var daysSinceAdded: String {
-        let components = Calendar.current.dateComponents([.day], from: mistake.date, to: Date())
-        let days = components.day ?? 0
-        if days == 0 {
-            return "Today".localized()
-        } else if days == 1 {
-            return "Yesterday".localized()
-        } else if days < 7 {
-            return "\(days) " + "days ago".localized()
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            return formatter.string(from: mistake.date)
-        }
+    /// 该考试关联的错题(review 中勾选了)
+    /// Mistakes linked to the exam (ticked in the review).
+    private var linkedMistakes: [MistakeNote] {
+        guard let review = liveExam?.examReview else { return [] }
+        let allMistakes = container.mistakeRepo.mistakeSets
+        return allMistakes.filter { review.linkedMistakeIds.contains($0.id) }
+    }
+
+    /// 关联错题 id 列表
+    /// List of linked mistake IDs.
+    private var linkedMistakeIds: [UUID] {
+        liveExam?.examReview?.linkedMistakeIds ?? []
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(mistake.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                if !mistake.originalQuestion.isEmpty {
-                    Text(mistake.originalQuestion)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-
-                HStack(spacing: 8) {
-                    if !mistake.subject.isEmpty {
-                        Text(mistake.subject.localized())
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.systemPurple).opacity(0.15))
-                            .foregroundColor(Color(.systemPurple))
-                            .cornerRadius(4)
-                    }
-
-                    Text(daysSinceAdded)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-
-                    if totalImages > 0 {
-                        Label("\(totalImages)", systemImage: "photo")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
+        let exam = liveExam
+        return Group {
+            if let exam = exam {
+                content(exam: exam)
+            } else {
+                missingExamView
             }
+        }
+    }
 
-            Spacer()
+    // MARK: - Missing / 找不到考试时的兜底
 
-            Image(systemName: "chevron.right")
-                .font(.caption)
+    @ViewBuilder
+    private var missingExamView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "questionmark.folder")
+                .font(.system(size: 50))
+                .foregroundColor(.secondary)
+            Text("Exam not found".localized())
+                .font(.headline)
+            Text("It may have been deleted.".localized())
+                .font(.subheadline)
                 .foregroundColor(.secondary)
         }
-        .padding(12)
-        .background(Color(.systemGroupedBackground))
-        .cornerRadius(10)
-        .opacity(animateIn ? 1 : 0)
-        .offset(x: animateIn ? 0 : -15)
-        .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85).delay(0.05)) {
-                animateIn = true
-            }
-        }
-    }
-}
-
-#Preview("Dark Mode") {
-    let container = RepositoryContainer()
-    let testExam = Exam(name: "Test", date: Date().addingTimeInterval(1000), importance: 3, subject: "Math", examName: "", masteryDegree: 50)
-    container.examRepo.add(single: [testExam], comprehensive: [])
-    return ExamDetailView(exam: testExam)
-        .environment(container)
-        .preferredColorScheme(.dark)
-}
-
-// MARK: - 复盘 4 段行(折叠预览)
-// MARK: - Review 4-section row (collapsible preview)
-
-/// 复盘单段折叠行:点击展开渲染后的 Markdown。
-/// Collapsible row showing a single review section's rendered markdown.
-struct ReviewSectionRow: View {
-    let title: String
-    let icon: String
-    let markdown: String
-
-    @State private var isExpanded: Bool = false
-
-    var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Empty".localized())
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
-            } else {
-                MarkdownPreviewView(text: markdown)
-                    .frame(minHeight: 80)
-                    .frame(maxHeight: 240)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 22)
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-                if markdown.isEmpty {
-                    Text("Empty".localized())
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .listRowBackground(Color(.secondarySystemGroupedBackground))
-    }
-}
-
-// MARK: - 关联错题列表(从复盘跳进去看)
-// MARK: - Linked mistakes list (drilled in from the review)
-
-/// 复盘"关联错题"行点击进入的子页面:列出复盘里勾选的所有错题。
-/// Sub-page shown when tapping "Linked Mistakes" on the review — lists
-/// the mistakes the user ticked in the review editor.
-struct LinkedMistakesListView: View {
-    let mistakeIds: [UUID]
-    let subject: String
-
-    @Environment(RepositoryContainer.self) private var container
-
-    /// 实际能查到的错题(过滤掉已删除的 id)
-    private var resolved: [MistakeNote] {
-        container.mistakeRepo.mistakeSets.filter { mistakeIds.contains($0.id) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Exam".localized())
     }
 
-    var body: some View {
-        Form {
-            if resolved.isEmpty {
-                Section {
-                    HStack {
-                        Image(systemName: "tray")
-                            .foregroundColor(.secondary)
-                        Text("No related mistakes for this subject".localized())
+    // MARK: - Content / 主体
+
+    @ViewBuilder
+    private func content(exam: Exam) -> some View {
+        List {
+            // Section 0:Overview
+            Section {
+                overviewContent(exam: exam)
+            } header: {
+                Text("Overview".localized())
+            }
+
+            // Section 1:Metrics
+            Section {
+                metricsContent(exam: exam)
+            } header: {
+                Text("Metrics".localized())
+            }
+
+            // Section 2:Checklist
+            Section {
+                checklistContent(exam: exam)
+            } header: {
+                HStack {
+                    Text("Checklist".localized())
+                    Spacer()
+                    if !exam.checklist.isEmpty {
+                        Text(String(format: "%d/%d".localized(), exam.checklist.filter { $0.isChecked }.count, exam.checklist.count))
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
-            } else {
+            }
+
+            // Section 3:Notifications
+            Section {
+                notificationsContent(exam: exam)
+            } header: {
+                Text("Notifications & Reminders".localized())
+            }
+
+            // Section 4:Calendar
+            Section {
+                calendarContent(exam: exam)
+            } header: {
+                Text("Calendar".localized())
+            }
+
+            // Section 5:Share
+            Section {
+                shareContent(exam: exam)
+            } header: {
+                Text("Share & Export".localized())
+            }
+
+            // Section 6:Review
+            Section {
+                reviewContent(exam: exam)
+            } header: {
+                HStack {
+                    Text("Review".localized())
+                    Spacer()
+                    if exam.examReview != nil {
+                        Text("✓ Filled".localized())
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                    } else {
+                        Text("Pending".localized())
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            // Section 7:Linked Mistakes
+            if !linkedMistakes.isEmpty {
                 Section {
-                    ForEach(resolved) { mistake in
+                    ForEach(linkedMistakes.prefix(3)) { mistake in
                         NavigationLink {
                             MistakeSetDetailView(mistakeSet: mistake)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(mistake.title)
+                            RelatedMistakeCard(mistake: mistake)
+                        }
+                    }
+                    if linkedMistakes.count > 3 {
+                        Button {
+                            showLinkedMistakesView = true
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text(String(format: "View all %d mistakes".localized(), linkedMistakes.count))
                                     .font(.subheadline)
-                                    .fontWeight(.medium)
-                                if !mistake.subject.isEmpty {
-                                    Text(mistake.subject.localized())
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                    .foregroundColor(.blue)
+                                Spacer()
                             }
                         }
                     }
                 } header: {
-                    Text("Linked Mistakes".localized())
+                    HStack {
+                        Image(systemName: "link")
+                        Text("Linked Mistakes".localized())
+                    }
                 } footer: {
-                    Text(String(format: "%d mistakes".localized(), resolved.count))
+                    if let review = exam.examReview,
+                       !review.linkedMistakeIds.isEmpty {
+                        Text(String(format: "%d mistakes linked from review".localized(), review.linkedMistakeIds.count))
+                    }
+                }
+            }
+
+            // Section 8:AI Prediction
+            Section {
+                aiPredictionContent(exam: exam)
+            } header: {
+                HStack {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.purple)
+                    Text("AI Prediction".localized())
                 }
             }
         }
-        .navigationTitle("Linked Mistakes".localized())
+        .listStyle(.insetGrouped)
+        .navigationTitle(exam.name)
         .navigationBarTitleDisplayMode(.inline)
+        .adaptiveMaxWidth(900)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        showingReviewEditor = true
+                    } label: {
+                        Label(exam.examReview == nil ? "Add Review".localized() : "Edit Review".localized(),
+                              systemImage: "square.and.pencil")
+                    }
+                    Button {
+                        showingChecklistEditor = true
+                    } label: {
+                        Label("Edit Checklist".localized(), systemImage: "checklist")
+                    }
+                    if let review = exam.examReview {
+                        Button {
+                            copyMessage = review.summary
+                            UIPasteboard.general.string = review.summary
+                            showCopyAlert = true
+                        } label: {
+                            Label("Copy Summary".localized(), systemImage: "doc.on.doc")
+                        }
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        Label("Delete Exam".localized(), systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showingReviewEditor) {
+            ExamReviewEditView(exam: exam)
+                .environment(container)
+                .environmentObject(envManager)
+                .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingChecklistEditor) {
+            ExamChecklistEditView(exam: exam)
+                .environment(container)
+                .environmentObject(envManager)
+                .adaptiveSheet()
+        }
+        .alert("Delete Exam".localized(), isPresented: $showingDeleteConfirm) {
+            Button("Cancel".localized(), role: .cancel) { }
+            Button("Delete".localized(), role: .destructive) {
+                container.deleteExam(exam)
+            }
+        } message: {
+            Text("This action cannot be undone.".localized())
+        }
+        .sheet(isPresented: $showLinkedMistakesView) {
+            NavigationStack {
+                LinkedMistakesListView(
+                    mistakeIds: linkedMistakeIds,
+                    subject: exam.subject
+                )
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done".localized()) {
+                            showLinkedMistakesView = false
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showAllRelatedMistakes) {
+            // TODO: 全量错题选择器(可多选,作为"复习任务"写入)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.4)) {
+                animateIn = true
+            }
+        }
     }
+
+    // MARK: - Overview / 总览(核心字段)
+
+    @ViewBuilder
+    private func overviewContent(exam: Exam) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exam.name)
+                        .font(.title3.weight(.semibold))
+                    if !exam.subject.isEmpty {
+                        Text(exam.subject.localized())
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+                importanceBadge(importance: exam.importance)
+            }
+
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Date".localized())
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text(exam.examDate, format: .dateTime.month().day().year())
+                        .font(.subheadline.weight(.medium))
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Time".localized())
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text(exam.examTimeText)
+                        .font(.subheadline.weight(.medium))
+                }
+                if exam.examEndDate != nil {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Multi-day".localized())
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text(String(format: "%d days".localized(), exam.examDurationDays))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.purple)
+                    }
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func importanceBadge(importance: Int) -> some View {
+        HStack(spacing: 1) {
+            ForEach(1...5, id: \.self) { i in
+                Image(systemName: i <= importance ? "star.fill" : "star")
+                    .font(.system(size: 10))
+                    .foregroundColor(i <= importance ? Color.orange : Color.gray.opacity(0.3))
+            }
+        }
+    }
+
+    // MARK: - Metrics / 关键指标
+
+    @ViewBuilder
+    private func metricsContent(exam: Exam) -> some View {
+        let isCompleted = exam.examReview != nil
+        VStack(spacing: 8) {
+            HStack {
+                Text("Time Left".localized())
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(timeLeftText(for: exam))
+                    .fontWeight(.medium)
+                    .foregroundColor(isCompleted ? .green : (exam.isUpcoming ? .blue : .secondary))
+            }
+
+            if isCompleted {
+                HStack {
+                    Text("Status".localized())
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("Completed".localized())
+                        .fontWeight(.medium)
+                        .foregroundColor(.green)
+                }
+            } else if exam.isUpcoming {
+                HStack {
+                    Text("Mastery".localized())
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    masteryRingView(score: exam.masteryDegree)
+                }
+            }
+        }
+    }
+
+    private func timeLeftText(for exam: Exam) -> String {
+        if exam.examReview != nil {
+            return "Finished".localized()
+        }
+        return exam.timeLeftText
+    }
+
+    private func masteryRingView(score: Int) -> some View {
+        let color: Color = score >= 75 ? .green : (score >= 50 ? .orange : .red)
+        return HStack(spacing: 4) {
+            FitnessRingView(progress: Double(score) / 100.0, lineWidth: 3, size: 20)
+            Text("\(score)%")
+                .font(.caption.weight(.medium))
+                .foregroundColor(color)
+        }
+    }
+
+    // MARK: - Checklist / 考前清单
+
+    @ViewBuilder
+    private func checklistContent(exam: Exam) -> some View {
+        if exam.checklist.isEmpty {
+            Button {
+                showingChecklistEditor = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle")
+                    Text("Add Checklist Items".localized())
+                }
+            }
+        } else {
+            ForEach(exam.checklist) { item in
+                ChecklistRowView(item: item) {
+                    container.toggleExamChecklistItem(exam.id, itemId: item.id)
+                }
+            }
+            Button {
+                showingChecklistEditor = true
+            } label: {
+                HStack {
+                    Image(systemName: "pencil")
+                    Text("Edit Checklist".localized())
+                }
+            }
+            .foregroundColor(.blue)
+        }
+    }
+
+    // MARK: - Notifications / 通知
+
+    @ViewBuilder
+    private func notificationsContent(exam: Exam) -> some View {
+        Button {
+            Task {
+                do {
+                    try await exam.scheduleNotifications()
+                    showNotificationAlert = true
+                } catch {
+                    Log.data.error("Failed to schedule notification: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        } label: {
+            HStack {
+                Image(systemName: "bell.fill")
+                Text("Schedule Notifications".localized())
+            }
+        }
+        .alert("Notifications Scheduled".localized(), isPresented: $showNotificationAlert) {
+            Button("OK".localized()) { }
+        } message: {
+            Text("You will be reminded before this exam.".localized())
+        }
+    }
+
+    // MARK: - Calendar / 系统日历
+
+    @ViewBuilder
+    private func calendarContent(exam: Exam) -> some View {
+        Button {
+            Task {
+                let success = await exam.addToSystemCalendar()
+                showCalendarAlert = success
+            }
+        } label: {
+            HStack {
+                Image(systemName: "calendar.badge.plus")
+                Text("Add to System Calendar".localized())
+            }
+        }
+        .alert("Added to Calendar".localized(), isPresented: $showCalendarAlert) {
+            Button("OK".localized()) { }
+        } message: {
+            Text("The exam has been added to your system calendar.".localized())
+        }
+    }
+
+    // MARK: - Share / 分享
+
+    @ViewBuilder
+    private func shareContent(exam: Exam) -> some View {
+        Button {
+            showingShareSheet = true
+        } label: {
+            HStack {
+                Image(systemName: "square.and.arrow.up")
+                Text("Share Exam Details".localized())
+            }
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            ActivityViewController(activityItems: [exam.shareableText])
+        }
+    }
+
+    // MARK: - Review / 复盘
+
+    @ViewBuilder
+    private func reviewContent(exam: Exam) -> some View {
+        if let review = exam.examReview {
+            ReviewSectionRow(
+                title: "Summary".localized(),
+                icon: "doc.text",
+                markdown: review.summary
+            )
+            ReviewSectionRow(
+                title: "What Was Tested".localized(),
+                icon: "doc.text.magnifyingglass",
+                markdown: review.whatWasTested
+            )
+            ReviewSectionRow(
+                title: "What Went Wrong".localized(),
+                icon: "exclamationmark.triangle",
+                markdown: review.whatWentWrong
+            )
+            ReviewSectionRow(
+                title: "Insights".localized(),
+                icon: "lightbulb",
+                markdown: review.whatLearned
+            )
+
+            Button {
+                showingReviewEditor = true
+            } label: {
+                HStack {
+                    Image(systemName: "pencil")
+                    Text("Edit Review".localized())
+                }
+            }
+            .foregroundColor(.blue)
+        } else {
+            Button {
+                showingReviewEditor = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add Review".localized())
+                }
+            }
+        }
+    }
+
+    // MARK: - AI Prediction / AI 预测
+
+    @ViewBuilder
+    private func aiPredictionContent(exam: Exam) -> some View {
+        Button {
+            showAI = true
+        } label: {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.purple)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Predict Exam Score".localized())
+                        .foregroundColor(.primary)
+                    Text("AI based on your history, mastery, and recent mistakes".localized())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .sheet(isPresented: $showAI) {
+            ScorePredictionView(exam: exam)
+                .environment(container)
+                .environmentObject(envManager)
+                .adaptiveSheet()
+        }
+    }
+}
+
+// MARK: - Preview / 独立预览入口
+
+@MainActor
+private enum ExamDetailPreview {
+    static func makeContainer() -> RepositoryContainer {
+        let container = RepositoryContainer()
+        let cal = Calendar.current
+        let now = Date()
+        var components = DateComponents()
+        components.year = cal.component(.year, from: now)
+        components.month = cal.component(.month, from: now)
+        components.day = cal.component(.day, from: now) + 7
+        let examDate = cal.date(from: components) ?? now
+
+        var exam = Exam(
+            name: "Math Midterm",
+            date: examDate,
+            importance: 4,
+            subject: "Mathematics",
+            examName: "Midterm",
+            masteryDegree: 65
+        )
+        exam.checklist = [
+            ExamChecklistItem(title: "身份证", isChecked: true, sortOrder: 0),
+            ExamChecklistItem(title: "准考证", sortOrder: 1),
+            ExamChecklistItem(title: "2B 铅笔", sortOrder: 2)
+        ]
+        exam.examReview = ExamReview(
+            whatWasTested: "Ch.3-4:二次函数、配方法",
+            whatWentWrong: "配方时漏掉 -b/2a 的负号",
+            whatLearned: "练习更多顶点形式题目",
+            nextStrategy: "整体表现中上,需强化计算细节。",
+            linkedMistakeIds: []
+        )
+        container.examRepo.add(single: [exam], comprehensive: [])
+        return container
+    }
+}
+
+#Preview("With Sample Exam") {
+    let container = ExamDetailPreview.makeContainer()
+    let examId = container.examRepo.examSets[0].id
+    NavigationStack {
+        ExamDetailView(examId: examId)
+    }
+    .environment(container)
+    .environmentObject(AppEnvironmentManager.shared)
 }

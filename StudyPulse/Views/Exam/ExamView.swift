@@ -29,105 +29,66 @@ struct ExamView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.upcomingExams.isEmpty && viewModel.pastExams.isEmpty {
-                    ContentUnavailableView(
-                        "No Exams".localized(),
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Tap '+' to add a new exam.".localized())
-                    )
-                    .background(Color(.systemGroupedBackground))
-                } else if viewModel.showsCalendar {
-                    calendarContent
-                } else {
-                    listContent
-                }
+            mainContent
+                .navigationTitle("Exams".localized())
+                .navigationBarTitleDisplayMode(.large)
+                .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
+                .frame(maxWidth: .infinity)
+                .toolbar { toolbarContent }
+                .modifier(ExamViewSheetsAndDestinations(viewModel: viewModel, container: container))
+                .onAppear { viewModel.recompute() }
+                .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
+                .onChange(of: container.examRepo.filteredComprehensiveExamSets) { _, _ in viewModel.recompute() }
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        Group {
+            if viewModel.upcomingExams.isEmpty && viewModel.pastExams.isEmpty {
+                ContentUnavailableView(
+                    "No Exams".localized(),
+                    systemImage: "calendar.badge.exclamationmark",
+                    description: Text("Tap '+' to add a new exam.".localized())
+                )
+                .background(Color(.systemGroupedBackground))
+            } else if viewModel.showsCalendar {
+                calendarContent
+            } else {
+                listContent
             }
-            .containerBackground(.clear, for: .navigation)
-            .debugModeContainer()
-            .debugLayoutBoundsAuto()
-            .navigationTitle("Exams".localized())
-            .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
-            .frame(maxWidth: .infinity)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !viewModel.pastExams.isEmpty {
-                        Button {
-                            viewModel.showingPastExams = true
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                Text("\(viewModel.pastExams.count)")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                            }
-                        }
+        }
+        .containerBackground(.clear, for: .navigation)
+        .debugModeContainer()
+        .debugLayoutBoundsAuto()
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            if !viewModel.pastExams.isEmpty {
+                Button {
+                    viewModel.showingPastExams = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("\(viewModel.pastExams.count)")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    viewModeMenu
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { viewModel.showingNewExamSet = true }) {
-                        Image(systemName: "plus")
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    PhaseSelectorView()
-                }
             }
-            .sheet(isPresented: $viewModel.showingNewExamSet) {
-                NewExamSetView(container: container)
-                    .adaptiveSheet()
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            viewModeMenu
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button(action: { viewModel.showingNewExamSet = true }) {
+                Image(systemName: "plus")
             }
-            .sheet(isPresented: $viewModel.showingPastExams) {
-                PastExamsSheet(
-                    pastExams: viewModel.pastExams,
-                    onSelectExam: { exam in
-                        viewModel.showingPastExams = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            viewModel.selectedExamForDetail = exam
-                        }
-                    },
-                    onSelectComprehensive: { exam in
-                        viewModel.showingPastExams = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            viewModel.selectedComprehensiveExam = exam
-                        }
-                    },
-                    onDeleteExam: { exam in viewModel.deleteExam(exam) },
-                    onDeleteComprehensive: { exam in viewModel.deleteComprehensiveExam(exam) }
-                )
-                    .adaptiveSheet(detents: [.medium, .large])
-            }
-            .navigationDestination(item: $viewModel.selectedExamForDetail) { exam in
-                ExamDetailView(exam: exam)
-                    .background(Color(.systemBackground))
-            }
-            .navigationDestination(item: $viewModel.selectedComprehensiveExam) { exam in
-                ComprehensiveExamDetailView(exam: exam)
-                    .background(Color(.systemBackground))
-            }
-            .sheet(item: $viewModel.predictionTarget) { target in
-                ScorePredictionSheet(
-                    exam: target.exam,
-                    history: target.history,
-                    fullScore: target.fullScore,
-                    onDismiss: { viewModel.predictionTarget = nil }
-                )
-                .adaptiveSheet(detents: [.medium, .large])
-            }
-            .sheet(item: $viewModel.comprehensivePredictionTarget) { target in
-                ComprehensiveScorePredictionSheet(
-                    target: target,
-                    onDismiss: { viewModel.comprehensivePredictionTarget = nil }
-                )
-                .adaptiveSheet(detents: [.medium, .large])
-            }
-            .onAppear { viewModel.recompute() }
-            .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
-            .onChange(of: container.examRepo.filteredComprehensiveExamSets) { _, _ in viewModel.recompute() }
+        }
+        ToolbarItem(placement: .principal) {
+            PhaseSelectorView()
         }
     }
 
@@ -253,6 +214,74 @@ struct ExamView: View {
         .onChange(of: viewModel.viewMode) { _, newValue in
             newValue.saveToDefaults()
         }
+    }
+}
+
+// MARK: - Sheets & Destinations 修饰器
+// MARK: - Sheets & Destinations modifier
+//
+// 把 5 个 sheet + 2 个 navigationDestination 抽成单独的 ViewModifier,
+// 避免 `body` 中链式修饰器过多导致 SwiftUI 类型推导超时。
+// Extracted to dodge the "type-check timeout" error on `ExamView.body`.
+
+private struct ExamViewSheetsAndDestinations: ViewModifier {
+    @ObservedObject var viewModel: ExamViewModel
+    let container: RepositoryContainer
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $viewModel.showingNewExamSet) {
+                NewExamSetView(container: container)
+                    .adaptiveSheet()
+            }
+            .sheet(isPresented: $viewModel.showingPastExams) {
+                pastExamsSheet
+            }
+            .navigationDestination(item: $viewModel.selectedExamForDetail) { exam in
+                ExamDetailView(examId: exam.id)
+                    .background(Color(.systemBackground))
+            }
+            .navigationDestination(item: $viewModel.selectedComprehensiveExam) { exam in
+                ComprehensiveExamDetailView(exam: exam)
+                    .background(Color(.systemBackground))
+            }
+            .sheet(item: $viewModel.predictionTarget) { target in
+                ScorePredictionSheet(
+                    exam: target.exam,
+                    history: target.history,
+                    fullScore: target.fullScore,
+                    onDismiss: { viewModel.predictionTarget = nil }
+                )
+                .adaptiveSheet(detents: [.medium, .large])
+            }
+            .sheet(item: $viewModel.comprehensivePredictionTarget) { target in
+                ComprehensiveScorePredictionSheet(
+                    target: target,
+                    onDismiss: { viewModel.comprehensivePredictionTarget = nil }
+                )
+                .adaptiveSheet(detents: [.medium, .large])
+            }
+    }
+
+    private var pastExamsSheet: some View {
+        PastExamsSheet(
+            pastExams: viewModel.pastExams,
+            onSelectExam: { exam in
+                viewModel.showingPastExams = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedExamForDetail = exam
+                }
+            },
+            onSelectComprehensive: { exam in
+                viewModel.showingPastExams = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedComprehensiveExam = exam
+                }
+            },
+            onDeleteExam: { exam in viewModel.deleteExam(exam) },
+            onDeleteComprehensive: { exam in viewModel.deleteComprehensiveExam(exam) }
+        )
+        .adaptiveSheet(detents: [.medium, .large])
     }
 }
 

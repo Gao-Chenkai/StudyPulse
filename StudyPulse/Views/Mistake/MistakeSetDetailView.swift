@@ -10,6 +10,13 @@
 //  Top of the page is the MasteryCurveView; below it is a field list
 //  and the question image(s).
 //
+//  Phase 3 拆分 (2026-07-14):原 555 行单文件 → orchestrator 留本文件,
+//  拆出 2 个独立子文件:
+//  - MistakeSetHeaderSection.swift  (MasteryCurve + Details)
+//  - MistakeSetContentSection.swift (4 段 Markdown:原题/错因/错解/正解)
+//
+//  本文件只剩:主 View 编排 + AI 入口(sheets / cover) + ThumbnailImageView / SuggestedMistakeCard 通用组件。
+//
 
 import SwiftUI
 import UIKit
@@ -39,7 +46,7 @@ struct MistakeSetDetailView: View {
     /// 是否弹出 AI 同类题 sheet
     /// Whether to present the similar-question sheet.
     @State private var showingAISimilarQuestion = false
-    /// 最近一次成功的 AI 解析(供"深入讨论"sheet 当作 initial assistant 消息)
+    /// 最近一次成功的 AI 解析(供"深入探讨"sheet 当作 initial assistant 消息)
     /// Most recent successful AI analysis (used as the initial assistant
     /// message in the deep-discussion sheet).
     @State private var lastAIAnalysis: String? = nil
@@ -53,173 +60,13 @@ struct MistakeSetDetailView: View {
 
     var body: some View {
         List {
-            // 掌握度曲线 / 曝光统计
-            // Mastery curve / exposure stats card.
-            Section {
-                MasteryCurveView(
-                    history: liveMistake.masteryHistory,
-                    currentScore: liveMistake.masteryScore,
-                    exposureCount: liveMistake.exposureCount,
-                    createdAt: liveMistake.date,
-                    tintColor: envManager.effectiveAccentColor
-                )
-                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-                .listRowBackground(Color.clear)
-            }
+            // 顶部 header 区块:掌握度曲线 + 错题基本字段
+            // Top header block: mastery curve + basic fields.
+            MistakeSetHeaderSection(mistake: liveMistake, tintColor: envManager.effectiveAccentColor)
 
-            // Basic Info Section
-            Section(header: Text("Details".localized())) {
-                HStack {
-                    Text("Title".localized())
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(liveMistake.title)
-                        .fontWeight(.medium)
-                }
-
-                if !liveMistake.subject.isEmpty {
-                    HStack {
-                        Text("Subject".localized())
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(liveMistake.subject.localized())
-                            .fontWeight(.medium)
-                    }
-                }
-
-                if !liveMistake.source.isEmpty {
-                    HStack {
-                        Text("Source".localized())
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(liveMistake.source)
-                    }
-                }
-
-                HStack {
-                    Text("Date".localized())
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(liveMistake.date.formatted(date: .abbreviated, time: .omitted))
-                }
-
-                // 难度自评
-                if liveMistake.difficulty > 0 {
-                    HStack {
-                        Text("Difficulty".localized())
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        HStack(spacing: 2) {
-                            ForEach(1...5, id: \.self) { i in
-                                Image(systemName: i <= liveMistake.difficulty ? "star.fill" : "star")
-                                    .font(.caption2)
-                                    .foregroundStyle(i <= liveMistake.difficulty ? Color.orange : Color.gray.opacity(0.4))
-                            }
-                        }
-                    }
-                }
-
-                // 标签(只读)
-                if !liveMistake.tags.isEmpty {
-                    HStack(alignment: .top) {
-                        Text("Tags".localized())
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        TagChipsView(tags: liveMistake.tags, compact: true)
-                            .frame(maxWidth: 240, alignment: .trailing)
-                    }
-                }
-                
-                // 语音备忘录
-                if let audioFileName = liveMistake.audioFileName {
-                    AudioPlaybackView(audioFileName: audioFileName, onDelete: nil)
-                        .padding(.top, 4)
-                }
-            }
-            
-            // Question Section
-            // 原题段:MarkdownView + 题图横滑(若存在)
-            // Question section: MarkdownView + question-image strip (if any).
-            if !liveMistake.originalQuestion.isEmpty {
-                Section(header: Text("Original Question".localized())) {
-                    MarkdownView(
-                        // normalisingSingleDollarMath 把 "$...$" → "$ ... $",
-                        // 让 SwiftUI Markdown / MathJax 都能正确解析
-                        // normalisingSingleDollarMath rewrites "$...$" to "$ ... $"
-                        // so both SwiftUI Markdown and MathJax render it.
-                        text: liveMistake.originalQuestion.normalisingSingleDollarMath(),
-                        config: .previewConfig
-                    )
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    if !liveMistake.questionImages.isEmpty {
-                        imageScrollView(images: liveMistake.questionImages)
-                    }
-                }
-            }
-
-            // Error Reason Section
-            // 错因段:MarkdownView + 错因图(若存在)
-            // Error reason section: MarkdownView + reason images (if any).
-            if !liveMistake.errorReason.isEmpty {
-                Section(header: Text("Error Reason".localized())) {
-                    MarkdownView(
-                        text: liveMistake.errorReason.normalisingSingleDollarMath(),
-                        config: .previewConfig
-                    )
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    if !liveMistake.reasonImages.isEmpty {
-                        imageScrollView(images: liveMistake.reasonImages)
-                    }
-                }
-            }
-
-            // Wrong Solution Section
-            // 错解段:红 ✗ 图标作为 header 装饰
-            // Wrong-solution section: red ✗ icon in the header.
-            if !liveMistake.wrongSolution.isEmpty {
-                Section {
-                    MarkdownView(
-                        text: liveMistake.wrongSolution.normalisingSingleDollarMath(),
-                        config: .previewConfig
-                    )
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    if !liveMistake.wrongSolutionImages.isEmpty {
-                        imageScrollView(images: liveMistake.wrongSolutionImages)
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red)
-                        Text("Wrong Solution".localized())
-                    }
-                }
-            }
-
-            // Correct Solution Section
-            // 正解段:绿 ✓ 图标作为 header 装饰
-            // Correct-solution section: green ✓ icon in the header.
-            if !liveMistake.correctSolution.isEmpty {
-                Section {
-                    MarkdownView(
-                        text: liveMistake.correctSolution.normalisingSingleDollarMath(),
-                        config: .previewConfig
-                    )
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    if !liveMistake.correctSolutionImages.isEmpty {
-                        imageScrollView(images: liveMistake.correctSolutionImages)
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("Correct Solution".localized())
-                    }
-                }
-            }
+            // 主体内容:原题 / 错因 / 错解 / 正解 四段 Markdown
+            // Main content: 4 markdown sections (question / reason / wrong / correct).
+            MistakeSetContentSection(mistake: liveMistake)
         }
         .listStyle(.insetGrouped)
         .navigationTitle(liveMistake.title)
@@ -272,7 +119,7 @@ struct MistakeSetDetailView: View {
                                 updated.correctSolution += "\n\n---\n\n" + correctApproach
                             }
                         }
-                        
+
                         let errorReason = MistakeAnalysisLLM.parseErrorReason(from: trimmed)
                         if !errorReason.isEmpty {
                             if updated.errorReason.isEmpty {
@@ -281,7 +128,7 @@ struct MistakeSetDetailView: View {
                                 updated.errorReason += "\n\n---\n\n" + errorReason
                             }
                         }
-                        
+
                         let extractedTags = MistakeAnalysisLLM.parseTags(from: trimmed)
                         for tag in extractedTags {
                             if !updated.tags.contains(tag) {
@@ -350,21 +197,6 @@ struct MistakeSetDetailView: View {
             container.mistakeRepo.recordExposure(mistakeSet.id)
         }
     }
-    
-    @ViewBuilder
-    private func imageScrollView(images: [Data]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(images.indices, id: \.self) { index in
-                    ThumbnailImageView(data: images[index])
-                        .frame(width: 150, height: 150)
-                        .clipped()
-                        .cornerRadius(8)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
 
     private func buildMistakeDiscussionContext() -> String {
         // 把错题打包成 LLM 可读的多行 block:
@@ -413,10 +245,12 @@ struct MistakeSetDetailView: View {
     }
 }
 
+/// 缩略图视图(异步解码 + ImageCache,共享给"原题/错因/错解/正解"四段)
+/// Thumbnail view (async decode + ImageCache).
 struct ThumbnailImageView: View {
     let data: Data
     @State private var uiImage: UIImage?
-    
+
     var body: some View {
         Group {
             if let image = uiImage {
@@ -429,7 +263,7 @@ struct ThumbnailImageView: View {
             }
         }
     }
-    
+
     private func loadImage() async {
         if let cached = ImageCache.shared.getImage(data) {
             uiImage = cached
@@ -445,6 +279,11 @@ struct ThumbnailImageView: View {
     }
 }
 
+// MARK: - Suggested Mistake Card / 建议错题卡
+// (SubjectMistakesView.swift 也引用它,所以放在本 orchestrator 里以避免循环引用)
+
+/// 学科下错题二级页里的"建议复习"卡
+/// "Suggested for review" card on the per-subject drill-down page.
 struct SuggestedMistakeCard: View {
     let mistake: MistakeNote
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -478,7 +317,7 @@ struct SuggestedMistakeCard: View {
     private var cardWidth: CGFloat {
         sizeClass == .regular ? 220 : 180
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -552,4 +391,23 @@ struct SuggestedMistakeCard: View {
             }
         }
     }
+}
+
+#Preview {
+    let m = MistakeNote(
+        title: "二次函数顶点公式",
+        subject: "Mathematics",
+        originalQuestion: "已知 f(x) = x² - 4x + 3,求顶点坐标。",
+        source: "数学课本",
+        date: Date(),
+        errorReason: "忘记配方",
+        wrongSolution: "x = -b/2a = 2",
+        correctSolution: "顶点 (2, -1)",
+        tags: ["跳步", "计算粗心"]
+    )
+    NavigationStack {
+        MistakeSetDetailView(mistakeSet: m)
+    }
+    .environment(RepositoryContainer())
+    .environmentObject(AppEnvironmentManager.shared)
 }

@@ -65,150 +65,120 @@ struct TodoView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.allEntries.isEmpty && viewModel.pastEntries.isEmpty {
-                    VStack(spacing: 0) {
-                        segmentPicker
-                        filterChips
-                        ContentUnavailableView {
-                            Label("No Items".localized(), systemImage: "checklist")
-                        } description: {
-                            Text("Tap '+' to add a homework, reading material, or exam.".localized())
-                        } actions: {
-                            Menu {
-                                Button {
-                                    viewModel.showingNewExam = true
-                                } label: {
-                                    Label("New Exam".localized(), systemImage: "calendar.badge.plus")
-                                }
-                                Button {
-                                    viewModel.showingNewTask = .homework
-                                } label: {
-                                    Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
-                                }
-                                Button {
-                                    viewModel.showingNewTask = .reading
-                                } label: {
-                                    Label("New Reading".localized(), systemImage: "book.fill")
-                                }
-                            } label: {
-                                Label("Add First Item".localized(), systemImage: "plus.circle.fill")
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                } else if viewModel.viewMode == .calendar {
-                    VStack(spacing: 0) {
-                        segmentPicker
-                        filterChips
-                        ScrollView {
-                            calendarContent
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                } else {
-                    listContent
+            mainContent
+                .navigationTitle("Todo".localized())
+                .navigationBarTitleDisplayMode(.large)
+                .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
+                .containerBackground(.clear, for: .navigation)
+                .debugModeContainer()
+                .debugLayoutBoundsAuto()
+                .frame(maxWidth: .infinity)
+                .toolbar { toolbarContent }
+                .onAppear { viewModel.recompute() }
+                .onChange(of: viewModel.typeFilter) { _, _ in viewModel.recompute() }
+                .onChange(of: viewModel.showCompleted) { _, _ in viewModel.recompute() }
+                .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
+                .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
+                .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
+                .onChange(of: AppEnvironmentManager.shared.activePhaseId) { _, _ in viewModel.recompute() }
+                .modifier(TodoViewSheetsAndDestinations(viewModel: viewModel, container: container))
+                .onAppear {
+                    container.refreshTaskCompletionStatesFromReminders()
                 }
-            }
-            .navigationTitle("Todo".localized())
-            .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
-            .containerBackground(.clear, for: .navigation)
-            .debugModeContainer()
-            .debugLayoutBoundsAuto()
-            .frame(maxWidth: .infinity)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !viewModel.pastEntries.isEmpty {
-                        Button {
-                            viewModel.showingPastSheet = true
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                Text("\(viewModel.pastEntries.count)")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            viewModel.showCompleted.toggle()
-                        }
-                    } label: {
-                        Image(systemName: viewModel.showCompleted ? "checkmark.circle.fill" : "checkmark.circle")
-                            .foregroundColor(viewModel.showCompleted ? Color(.systemGreen) : .accentColor)
-                    }
-                    .accessibilityLabel("Show Completed".localized())
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    viewModeMenu
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    addMenu
-                }
-                ToolbarItem(placement: .principal) {
-                    PhaseSelectorView()
-                }
-            }
-            .onAppear { viewModel.recompute() }
-            .onChange(of: viewModel.typeFilter) { _, _ in viewModel.recompute() }
-            .onChange(of: viewModel.showCompleted) { _, _ in viewModel.recompute() }
-            .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
-            .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
-            .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
-            .sheet(isPresented: $viewModel.showingNewExam) {
-                NewExamSetView(container: container)
-                    .adaptiveSheet()
-            }
-            .sheet(item: $viewModel.showingNewTask) { taskType in
-                NewTaskView(initialType: taskType)
-                    .adaptiveSheet()
-            }
-            .sheet(isPresented: $viewModel.showingPastSheet) {
-                PastItemsSheet(
-                    pastEntries: viewModel.pastEntries,
-                    onSelectExam: { exam in
-                        viewModel.showingPastSheet = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            viewModel.selectedExam = exam
-                        }
-                    },
-                    onSelectComprehensive: { exam in
-                        viewModel.showingPastSheet = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            viewModel.selectedComprehensive = exam
-                        }
-                    },
-                    onSelectTask: { task in
-                        viewModel.showingPastSheet = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            viewModel.selectedTask = task
-                        }
-                    },
-                    onDeleteEntry: { entry in viewModel.deleteTodoEntry(entry) }
-                )
-                .adaptiveSheet(detents: [.medium, .large])
-            }
-            .navigationDestination(item: $viewModel.selectedExam) { exam in
-                ExamDetailView(exam: exam)
-                    .background(Color(.systemBackground))
-            }
-            .navigationDestination(item: $viewModel.selectedComprehensive) { exam in
-                ComprehensiveExamDetailView(exam: exam)
-                    .background(Color(.systemBackground))
-            }
-            .navigationDestination(item: $viewModel.selectedTask) { task in
-                TaskDetailView(task: task)
-                    .background(Color(.systemBackground))
-            }
-            .onAppear {
-                container.refreshTaskCompletionStatesFromReminders()
-            }
+        }
     }
-}
+
+    /// 三段式主内容:空 / 日历 / 列表。拆为独立 View 避免 ViewBuilder 推导超时。
+    /// Three-way main content: empty / calendar / list. Split out to avoid SwiftUI type-check timeout.
+    @ViewBuilder
+    private var mainContent: some View {
+        if viewModel.allEntries.isEmpty && viewModel.pastEntries.isEmpty {
+            VStack(spacing: 0) {
+                segmentPicker
+                filterChips
+                emptyState
+            }
+        } else if viewModel.viewMode == .calendar {
+            VStack(spacing: 0) {
+                segmentPicker
+                filterChips
+                ScrollView {
+                    calendarContent
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        } else {
+            listContent
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Items".localized(), systemImage: "checklist")
+        } description: {
+            Text("Tap '+' to add a homework, reading material, or exam.".localized())
+        } actions: {
+            Menu {
+                Button {
+                    viewModel.showingNewExam = true
+                } label: {
+                    Label("New Exam".localized(), systemImage: "calendar.badge.plus")
+                }
+                Button {
+                    viewModel.showingNewTask = .homework
+                } label: {
+                    Label("New Homework".localized(), systemImage: "pencil.and.list.clipboard")
+                }
+                Button {
+                    viewModel.showingNewTask = .reading
+                } label: {
+                    Label("New Reading".localized(), systemImage: "book.fill")
+                }
+            } label: {
+                Label("Add First Item".localized(), systemImage: "plus.circle.fill")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            if !viewModel.pastEntries.isEmpty {
+                Button {
+                    viewModel.showingPastSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("\(viewModel.pastEntries.count)")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    viewModel.showCompleted.toggle()
+                }
+            } label: {
+                Image(systemName: viewModel.showCompleted ? "checkmark.circle.fill" : "checkmark.circle")
+                    .foregroundColor(viewModel.showCompleted ? Color(.systemGreen) : .accentColor)
+            }
+            .accessibilityLabel("Show Completed".localized())
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            viewModeMenu
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            addMenu
+        }
+        ToolbarItem(placement: .principal) {
+            PhaseSelectorView()
+        }
+    }
 
     /// 渲染在「待办」标题正下方的水平滚动筛选 chip 行
     @ViewBuilder
@@ -562,4 +532,68 @@ struct PastItemsSheet: View {
     TodoView(container: container, segment: .constant(.tasks))
         .environment(container)
         .preferredColorScheme(.light)
+}
+
+// MARK: - Sheets & Destinations 修饰器 / Sheets & Destinations modifier
+//
+// 把 3 个 sheet + 3 个 navigationDestination 抽成单独的 ViewModifier,
+// 避免 `body` 中链式修饰器过多导致 SwiftUI 类型推导超时。
+// Extracted to dodge the "type-check timeout" error on `TodoView.body`.
+
+private struct TodoViewSheetsAndDestinations: ViewModifier {
+    @ObservedObject var viewModel: TodoViewModel
+    let container: RepositoryContainer
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $viewModel.showingNewExam) {
+                NewExamSetView(container: container)
+                    .adaptiveSheet()
+            }
+            .sheet(item: $viewModel.showingNewTask) { taskType in
+                NewTaskView(initialType: taskType)
+                    .adaptiveSheet()
+            }
+            .sheet(isPresented: $viewModel.showingPastSheet) {
+                pastItemsSheet
+            }
+            .navigationDestination(item: $viewModel.selectedExam) { exam in
+                ExamDetailView(examId: exam.id)
+                    .background(Color(.systemBackground))
+            }
+            .navigationDestination(item: $viewModel.selectedComprehensive) { exam in
+                ComprehensiveExamDetailView(exam: exam)
+                    .background(Color(.systemBackground))
+            }
+            .navigationDestination(item: $viewModel.selectedTask) { task in
+                TaskDetailView(task: task)
+                    .background(Color(.systemBackground))
+            }
+    }
+
+    private var pastItemsSheet: some View {
+        PastItemsSheet(
+            pastEntries: viewModel.pastEntries,
+            onSelectExam: { exam in
+                viewModel.showingPastSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedExam = exam
+                }
+            },
+            onSelectComprehensive: { exam in
+                viewModel.showingPastSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedComprehensive = exam
+                }
+            },
+            onSelectTask: { task in
+                viewModel.showingPastSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedTask = task
+                }
+            },
+            onDeleteEntry: { entry in viewModel.deleteTodoEntry(entry) }
+        )
+        .adaptiveSheet(detents: [.medium, .large])
+    }
 }

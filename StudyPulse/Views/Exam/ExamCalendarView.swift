@@ -2,39 +2,41 @@
 //  ExamCalendarView.swift
 //  StudyPulse
 //
-//  考试月历视图：按日期标点，多日考试跨日高亮。
-//  v1.x: 同时展示考试、作业、阅读材料三类条目。
+//  考试月历视图:按日期标点,多日考试跨日高亮,考试 / 综合考试 / 作业 / 阅读四类条目同屏。
 //  Exam monthly calendar view: dots per date, multi-day exams highlighted across days.
+//
+//  v1.x:同时展示考试、作业、阅读材料三类条目。
 //  v1.x: shows exams, homework, and reading tasks together.
+//
+//  Phase 3 拆分 (2026-07-14):原 1008 行单文件 → orchestrator 留本文件,
+//  拆出 3 个独立子文件:
+//  - ExamCalendarModels.swift      (CalendarItem / CalendarItemKind / CalendarItemKindFilter / Calendar 扩展)
+//  - ExamCalendarDayCell.swift     (单日 cell:支持多日 span bar / 单日 dots)
+//  - ExamCalendarItemRow.swift     (选中日底部面板的单个事件行)
+//
+//  本文件只剩:主 View 编排 + 数据聚合 + 玻璃 header / 面板 + 动画状态机 + 点击回调。
 //
 
 import SwiftUI
 
 /// 考试 / 任务月历视图
-///
-/// 视觉上与原 ExamCalendarView 完全一致；现在 `CalendarItem.kind` 把考试 / 综合考试 / 作业 / 阅读
-/// 统一在同一个月历内展示。每个 dot / 每行 row 用不同颜色区分类型。
 /// Exam / task monthly calendar view.
-///
-/// Visually identical to the original ExamCalendarView; now `CalendarItem.kind`
-/// unifies exams, comprehensive exams, homework, and reading on the same grid.
-/// Each dot / row uses a different color per type.
 struct ExamCalendarView: View {
     @Environment(RepositoryContainer.self) private var container
 
-    /// 当前显示月份（动画过程中已提前切为目标月）
+    /// 当前显示月份(动画过程中已提前切为目标月)
     /// Currently displayed month (already swapped to the target month during animation).
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
-    /// 正在滑出的旧月份（nil 表示无动画中）
+    /// 正在滑出的旧月份(nil 表示无动画中)
     /// Outgoing month being slid out (nil when no animation is running).
     @State private var outgoingMonth: Date? = nil
-    /// 新网格滑入进度（1 → 0，使用弹簧）
+    /// 新网格滑入进度(1 → 0,使用弹簧)
     /// Incoming grid slide-in progress (1 → 0, spring).
     @State private var incomingProgress: CGFloat = 0
-    /// 旧网格滑出进度（1 → 0，使用 easeOut 防止回弹）
+    /// 旧网格滑出进度(1 → 0,使用 easeOut 防止回弹)
     /// Outgoing grid slide-out progress (1 → 0, easeOut to avoid bounce).
     @State private var outgoingProgress: CGFloat = 0
-    /// 滑动方向：1 表示下一个月从底部滑入，-1 表示上一个月从顶部滑入
+    /// 滑动方向:1 表示下一个月从底部滑入,-1 表示上一个月从顶部滑入
     /// Slide direction: 1 = next month slides in from the bottom; -1 = previous from the top.
     @State private var slideDirection: Int = 0
     /// 用户当前选中的日期
@@ -51,17 +53,20 @@ struct ExamCalendarView: View {
     /// Callback for tapping a homework / reading row.
     var onSelectTask: ((TaskItem) -> Void)?
 
-    /// 类型过滤（默认全部；考试 / 作业 / 阅读可单独筛选）
+    /// 类型过滤(默认全部;考试 / 作业 / 阅读可单独筛选)
     /// Type filter (default: all; can filter by exam / homework / reading).
     var typeFilter: CalendarItemKindFilter = .all
 
-    /// 当天及之后需要展示的「待办」条目（统一格式）
-    /// All "to-do" items to display (unified format).
+    // MARK: - Data Aggregation / 数据聚合
+
+    /// 当前过滤后所有条目(单科考试 / 综合考试 / 作业 / 阅读)
+    /// All items under the current type filter.
     private var allItems: [CalendarItem] {
         var items: [CalendarItem] = []
 
         if typeFilter == .all || typeFilter == .exam {
             for exam in container.examRepo.examSets {
+                let endDate = exam.examEndDate ?? exam.examDate
                 items.append(CalendarItem(
                     id: exam.id,
                     kind: .exam,
@@ -70,25 +75,25 @@ struct ExamCalendarView: View {
                     importance: exam.importance,
                     isCompleted: false,
                     start: Calendar.current.startOfDay(for: exam.examDate),
-                    end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
-                    isMultiDay: false,
+                    end: Calendar.current.startOfDay(for: endDate),
+                    isMultiDay: exam.examEndDate != nil,
                     exam: exam,
                     comprehensiveExam: nil,
                     taskItem: nil
                 ))
             }
             for exam in container.examRepo.comprehensiveExamSets {
-                let subjectText = exam.subject.joined(separator: ", ")
+                let endDate = exam.examEndDate ?? exam.examDate
                 items.append(CalendarItem(
                     id: exam.id,
                     kind: .comprehensiveExam,
                     title: exam.name,
-                    subject: subjectText,
+                    subject: exam.subject.joined(separator: ", "),
                     importance: exam.importance,
                     isCompleted: false,
                     start: Calendar.current.startOfDay(for: exam.examDate),
-                    end: Calendar.current.startOfDay(for: exam.examEndDate ?? exam.examDate),
-                    isMultiDay: false,
+                    end: Calendar.current.startOfDay(for: endDate),
+                    isMultiDay: exam.examEndDate != nil,
                     exam: nil,
                     comprehensiveExam: exam,
                     taskItem: nil
@@ -137,32 +142,21 @@ struct ExamCalendarView: View {
         return items
     }
 
-    /// 当天（selectedDate）所在的条目
+    /// 当天(selectedDate)所在的条目
     /// Items that fall on the selected date.
     private var itemsOnSelectedDate: [CalendarItem] {
         let day = Calendar.current.startOfDay(for: selectedDate)
         return allItems
             .filter { $0.contains(day: day) }
             .sorted { lhs, rhs in
-                // 重要度降序，再按开始时间升序
+                // 重要度降序,再按开始时间升序
                 // Sort: importance DESC, then start time ASC.
                 if lhs.importance != rhs.importance { return lhs.importance > rhs.importance }
                 return lhs.start < rhs.start
             }
     }
 
-    /// 当前显示月内涉及的所有条目（按开始时间升序）
-    /// All items in the displayed month (sorted by start time ASC).
-    private var monthItems: [CalendarItem] {
-        guard let monthInterval = Calendar.current.dateInterval(of: .month, for: displayedMonth) else {
-            return []
-        }
-        let monthStart = Calendar.current.startOfDay(for: monthInterval.start)
-        let monthEnd = Calendar.current.startOfDay(for: monthInterval.end)
-        return allItems
-            .filter { $0.end >= monthStart && $0.start < monthEnd }
-            .sorted { $0.start < $1.start }
-    }
+    // MARK: - Body / 主体
 
     var body: some View {
         VStack(spacing: 0) {
@@ -178,13 +172,12 @@ struct ExamCalendarView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    /// 月历区域固定高度：顶部 header + 6 行日期格子
+    /// 月历区域固定高度:顶部 header + 6 行日期格子
     private var calendarSectionHeight: CGFloat {
         headerTotalFixedHeight + 6 * 52 + 8
     }
 
-    // MARK: - 月份网格背景层
-    // MARK: - Month grid background layer
+    // MARK: - Month Grid / 月份网格
 
     private var monthGridContainer: some View {
         GeometryReader { geo in
@@ -207,6 +200,8 @@ struct ExamCalendarView: View {
     }
 
     private var monthSwipeGesture: some Gesture {
+        // 垂直滑动 = 切换月份(向上 = 下个月,向下 = 上个月)
+        // Vertical swipe switches month: up = next, down = previous.
         DragGesture(minimumDistance: 30, coordinateSpace: .local)
             .onEnded { value in
                 let vertical = value.translation.height
@@ -231,7 +226,7 @@ struct ExamCalendarView: View {
                 let isToday = Calendar.current.isDate(day, inSameDayAs: today)
                 let dayItems = allItems.filter { $0.contains(day: day) }
 
-                DayCell(
+                ExamCalendarDayCell(
                     date: day,
                     inMonth: inMonth,
                     isSelected: isSelected,
@@ -250,13 +245,12 @@ struct ExamCalendarView: View {
         .padding(.horizontal, 4)
     }
 
-    // MARK: - 顶部玻璃层
-    // MARK: - Top glass header layer
+    // MARK: - Top Glass Header / 顶部玻璃层
 
     /// 玻璃背景与屏幕左右边缘之间的内缩量
     /// Horizontal inset of the glass background from the screen edges.
     private let glassEdgeInset: CGFloat = 16
-    /// 顶部玻璃层固定总高度（与 monthGridContainer 的 .padding(.top) 对齐）
+    /// 顶部玻璃层固定总高度(与 monthGridContainer 的 .padding(.top) 对齐)
     /// Total fixed height of the top glass layer (aligned with monthGridContainer's top padding).
     private let headerTotalFixedHeight: CGFloat = 88
 
@@ -378,8 +372,7 @@ struct ExamCalendarView: View {
         .padding(.horizontal, 4)
     }
 
-    // MARK: - 底部玻璃详情面板
-    // MARK: - Bottom glass detail panel
+    // MARK: - Bottom Glass Panel / 底部玻璃详情面板
 
     private var glassBottomPanel: some View {
         VStack(spacing: 0) {
@@ -443,7 +436,7 @@ struct ExamCalendarView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 8) {
                         ForEach(itemsOnSelectedDate) { item in
-                            CalendarItemRow(item: item, referenceDate: selectedDate)
+                            ExamCalendarItemRow(item: item, referenceDate: selectedDate)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     if let underlying = item.exam {
@@ -464,8 +457,7 @@ struct ExamCalendarView: View {
         .padding(.horizontal, 16)
     }
 
-    // MARK: - 跳转
-    // MARK: - Navigation
+    // MARK: - Navigation / 跳转
 
     private func shiftMonth(by offset: Int) {
         guard let next = Calendar.current.date(byAdding: .month, value: offset, to: displayedMonth) else { return }
@@ -497,325 +489,7 @@ struct ExamCalendarView: View {
     }
 }
 
-// MARK: - 单日格子
-// MARK: - Day cell
-
-private struct DayCell: View {
-    let date: Date
-    let inMonth: Bool
-    let isSelected: Bool
-    let isToday: Bool
-    let items: [CalendarItem]
-
-    var body: some View {
-        VStack(spacing: 3) {
-            ZStack {
-                if isSelected {
-                    Circle().fill(Color(.systemBlue))
-                } else if isToday {
-                    Circle()
-                        .stroke(Color(.systemBlue), lineWidth: 1.5)
-                }
-                Text(Calendar.current.component(.day, from: date), format: .number)
-                    .font(.system(size: 14, weight: isToday ? .bold : .medium))
-                    .foregroundColor(numberColor)
-            }
-            .frame(width: 26, height: 26)
-            dotsRow
-        }
-        .frame(maxWidth: .infinity)
-        .opacity(inMonth ? 1.0 : 0.32)
-    }
-
-    @ViewBuilder
-    private var dotsRow: some View {
-        ZStack {
-            if let span = multiDaySpanInfo {
-                GeometryReader { proxy in
-                    spanBar(width: proxy.size.width, color: span.color,
-                            isStart: span.isStart, isEnd: span.isEnd)
-                }
-                .frame(height: 6)
-            }
-            HStack(spacing: 2) {
-                ForEach(0..<3, id: \.self) { idx in
-                    Circle()
-                        .fill(dotColor(at: idx))
-                        .frame(width: 4, height: 4)
-                        .opacity(idx < singleDayDotCount ? 1 : 0)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .frame(height: 8)
-    }
-
-    @ViewBuilder
-    private func spanBar(width: CGFloat, color: Color, isStart: Bool, isEnd: Bool) -> some View {
-        let height: CGFloat = 6
-        let radius = height / 2
-        UnevenRoundedRectangle(cornerRadii: cornerRadii(radius: radius, isStart: isStart, isEnd: isEnd))
-            .fill(color.opacity(0.22))
-            .frame(width: width, height: height)
-    }
-
-    private func cornerRadii(radius: CGFloat, isStart: Bool, isEnd: Bool) -> RectangleCornerRadii {
-        if isStart {
-            return .init(topLeading: radius, bottomLeading: radius, bottomTrailing: 0, topTrailing: 0)
-        } else if isEnd {
-            return .init(topLeading: 0, bottomLeading: 0, bottomTrailing: radius, topTrailing: radius)
-        }
-        return .init(topLeading: 0, bottomLeading: 0, bottomTrailing: 0, topTrailing: 0)
-    }
-
-    private var singleDayDotCount: Int {
-        let allSorted = sortedItemsForDisplay
-        if allSorted.isEmpty { return 0 }
-        return min(3, allSorted.count)
-    }
-
-    private var sortedItemsForDisplay: [CalendarItem] {
-        items.sorted { lhs, rhs in
-            // 优先级：综合考试 > 单科考试 > 作业 > 阅读
-            // Priority: comprehensive exam > single-subject exam > homework > reading
-            if lhs.kind.sortPriority != rhs.kind.sortPriority {
-                return lhs.kind.sortPriority < rhs.kind.sortPriority
-            }
-            return lhs.importance > rhs.importance
-        }
-    }
-
-    private func dotColor(at index: Int) -> Color {
-        let sorted = sortedItemsForDisplay
-        guard index < sorted.count else { return .clear }
-        return sorted[index].accentColor
-    }
-
-    private var multiDaySpanInfo: (color: Color, isStart: Bool, isEnd: Bool)? {
-        // 仅当天的考试（且非单日）才会跨日展示
-        // Only exams marked as multi-day are drawn as a connecting span bar.
-        for item in items where item.isMultiDay {
-            let isStart = Calendar.current.isDate(date, inSameDayAs: item.start)
-            let isEnd = Calendar.current.isDate(date, inSameDayAs: item.end)
-            if isStart || isEnd {
-                return (item.accentColor, isStart, isEnd)
-            }
-            if item.start < date && date < item.end {
-                return (item.accentColor, false, false)
-            }
-        }
-        return nil
-    }
-
-    private var numberColor: Color {
-        if isSelected { return .white }
-        if isToday { return Color(.systemBlue) }
-        if Calendar.current.isDateInWeekend(date) { return Color(.systemRed).opacity(0.85) }
-        return Color(.label)
-    }
-}
-
-// MARK: - 选中日行
-// MARK: - Selected day row
-
-private struct CalendarItemRow: View {
-    let item: CalendarItem
-    let referenceDate: Date
-
-    var body: some View {
-        HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(item.accentColor)
-                .frame(width: 4, height: 32)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Image(systemName: item.kind.systemImage)
-                        .font(.caption2)
-                        .foregroundColor(item.accentColor)
-                    Text(item.title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(Color(.label))
-                        .lineLimit(1)
-                    if !item.isSingleDay {
-                        Text(multiDayLabel)
-                            .font(.caption2.weight(.medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule().fill(item.accentColor.opacity(0.15))
-                            )
-                            .foregroundColor(item.accentColor)
-                    }
-                }
-                Text(item.subject)
-                    .font(.caption)
-                    .foregroundColor(Color(.secondaryLabel))
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                ForEach(0..<item.importance, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 6))
-                        .foregroundColor(.yellow)
-                }
-                if item.importance < 5 {
-                    ForEach(0..<(5 - item.importance), id: \.self) { _ in
-                        Image(systemName: "star")
-                            .font(.system(size: 6))
-                            .foregroundColor(Color(.tertiaryLabel))
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 10)
-        .background {
-            if #available(iOS 26.0, *) {
-                Color.clear.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            } else {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.tertiarySystemGroupedBackground))
-            }
-        }
-    }
-
-    private var multiDayLabel: String {
-        if item.isSingleDay { return "" }
-        let calendar = Calendar.current
-        let totalDays = (calendar.dateComponents([.day], from: item.start, to: item.end).day ?? 0) + 1
-        let dayIndex = (calendar.dateComponents([.day], from: item.start, to: referenceDate).day ?? 0) + 1
-        let clamped = min(max(dayIndex, 1), totalDays)
-        let template = "Day %d/%d".localized()
-        return String(format: template, clamped, totalDays)
-    }
-}
-
-// MARK: - 数据模型
-// MARK: - Data model
-
-/// 视图层统一的「日历条目」，把考试 / 作业 / 阅读都装进同一个 view model
-/// View-layer unified "calendar item" that wraps exams, homework, and reading.
-struct CalendarItem: Identifiable, Hashable {
-    let id: UUID
-    let kind: CalendarItemKind
-    let title: String
-    let subject: String
-    let importance: Int
-    let isCompleted: Bool
-    let start: Date
-    let end: Date
-    /// 显式标记是否多日（只有考试会用；任务强制 false 节省判断）
-    let isMultiDay: Bool
-    let exam: Exam?
-    let comprehensiveExam: comprehensiveExam?
-    let taskItem: TaskItem?
-
-    /// 该条目是否单日(起止同一天)
-    /// Whether this item is single-day (start == end).
-    var isSingleDay: Bool {
-        Calendar.current.isDate(start, inSameDayAs: end)
-    }
-
-    /// 不同类型用不同颜色：考试蓝、综合考紫、作业绿、阅读靛
-    /// Different colors per kind: exam blue / comp purple / homework green / reading indigo
-    var accentColor: Color {
-        kind.accentColor
-    }
-
-    /// 某天是否落在这条目的时间区间内(含起止)
-    /// Whether a given day falls within this item's range (inclusive).
-    func contains(day: Date) -> Bool {
-        let target = Calendar.current.startOfDay(for: day)
-        return target >= start && target <= end
-    }
-
-    static func == (lhs: CalendarItem, rhs: CalendarItem) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}
-
-/// 日历条目类型：与 TodoEntryKind 类似但只用于日历视图层
-/// Calendar item kind — similar to TodoEntryKind but only used by the calendar view.
-enum CalendarItemKind: Hashable, Sendable {
-    case exam
-    case comprehensiveExam
-    case homework
-    case reading
-
-    var accentColor: Color {
-        switch self {
-        case .exam: return Color(.systemBlue)
-        case .comprehensiveExam: return Color(.systemPurple)
-        case .homework: return Color(.systemGreen)
-        case .reading: return Color(.systemIndigo)
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .exam: return "calendar"
-        case .comprehensiveExam: return "square.stack.3d.up.fill"
-        case .homework: return "pencil.and.list.clipboard"
-        case .reading: return "book.fill"
-        }
-    }
-
-    /// 排序优先级（数值越小越靠前）
-    /// Sort priority (smaller value ranks first).
-    var sortPriority: Int {
-        switch self {
-        case .comprehensiveExam: return 0
-        case .exam: return 1
-        case .homework: return 2
-        case .reading: return 3
-        }
-    }
-}
-
-/// 月历视图的类型过滤器（与 TodoTypeFilter 平行）
-/// Type filter for the monthly calendar view (parallel to TodoTypeFilter).
-enum CalendarItemKindFilter: Hashable {
-    case all
-    case exam
-    case homework
-    case reading
-}
-
-// MARK: - Calendar 扩展
-// MARK: - Calendar extension
-
-private extension Calendar {
-    func startOfMonth(for date: Date) -> Date {
-        var components = dateComponents([.year, .month], from: date)
-        components.day = 1
-        components.hour = 0
-        components.minute = 0
-        components.second = 0
-        return self.date(from: components) ?? date
-    }
-
-    func monthGridDays(for monthAnchor: Date) -> [Date] {
-        let monthStart = startOfMonth(for: monthAnchor)
-        let weekdayIndex = component(.weekday, from: monthStart) - 1
-        guard let gridStart = self.date(byAdding: .day, value: -weekdayIndex, to: monthStart) else {
-            return []
-        }
-        return (0..<42).compactMap { offset in
-            self.date(byAdding: .day, value: offset, to: gridStart)
-        }
-    }
-}
-
-// MARK: - Preview
-// MARK: - Preview
+// MARK: - Preview / 独立预览入口
 
 #Preview("With Sample Data") {
     ExamCalendarView()

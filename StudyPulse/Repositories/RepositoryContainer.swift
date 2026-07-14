@@ -8,13 +8,19 @@
 //
 //  注入方式:`@Environment(RepositoryContainer.self) var container`
 //
+//  Phase 3 拆分 (2026-07-14):
+//  - `BulkOperationOrchestrator`  → BulkOperationOrchestrator.swift
+//  - `TodoAggregator`             → TodoAggregator.swift
+//  - `PhaseFilterRefresher`       → PhaseFilterRefresher.swift
+//  本文件仅保留 7 repo 持有 + ModelContainer + ready 状态 + 高层 facade 薄包装。
+//
 
 import Foundation
 import SwiftData
 import os
 
-/// Repository 容器:7 域 + 跨域 + ModelContainer 持有 + ready 状态。
-/// Repository container: 7 domain repos + cross-domain orchestration +
+/// Repository 容器:7 域 + 3 个跨域子模块 + ModelContainer 持有 + ready 状态。
+/// Repository container: 7 domain repos + 3 cross-domain sub-modules +
 /// ModelContainer ownership + readiness flag.
 @Observable @MainActor
 final class RepositoryContainer {
@@ -33,6 +39,13 @@ final class RepositoryContainer {
     /// 例程实例 Repository(2026-07-09 新增)
     /// Routine instance repository (added 2026-07-09).
     let routineInstanceRepo: any RoutineInstanceRepository
+
+    // 3 个跨域编排子模块(组合而非继承,避免注入面爆炸)
+    // 3 cross-domain orchestration sub-modules (composition over inheritance,
+    // to avoid injection surface explosion).
+    let bulkOps: BulkOperationOrchestrator
+    let todoAggregator: TodoAggregator
+    let phaseRefresher: PhaseFilterRefresher
 
     /// SwiftData ModelContainer(由 StudyPulseApp 在 .modelContainer modifier 之后注入)
     /// SwiftData ModelContainer (injected by StudyPulseApp after the
@@ -89,6 +102,30 @@ final class RepositoryContainer {
             profileImpl.setSubjectRef(subjectRepo)
             subjectImpl.setProfileRef(profileRepo)
         }
+
+        // 组合 3 个跨域子模块
+        // Compose the 3 cross-domain sub-modules.
+        self.bulkOps = BulkOperationOrchestrator(
+            gradeRepo: gradeRepo,
+            mistakeRepo: mistakeRepo,
+            examRepo: examRepo,
+            taskRepo: taskRepo,
+            routineRepo: routineRepo,
+            routineInstanceRepo: routineInstanceRepo,
+            profileRepo: profileRepo
+        )
+        self.todoAggregator = TodoAggregator(
+            examRepo: examRepo,
+            taskRepo: taskRepo
+        )
+        self.phaseRefresher = PhaseFilterRefresher(
+            gradeRepo: gradeRepo,
+            mistakeRepo: mistakeRepo,
+            examRepo: examRepo,
+            taskRepo: taskRepo,
+            routineRepo: routineRepo,
+            routineInstanceRepo: routineInstanceRepo
+        )
     }
 
     // MARK: - ModelContainer wiring
@@ -140,7 +177,7 @@ final class RepositoryContainer {
         PlantManager.shared.attach(container: self)
 
         // 观察 active phase 变化:每次变化触发 5 个 filtered 缓存重算
-        observeActivePhaseChanges()
+        phaseRefresher.startObserving()
 
         isReady = true
 
@@ -157,7 +194,7 @@ final class RepositoryContainer {
     }
 
 #if DEBUG
-    /// 仅限测试与预览（Unit Tests & Previews）：注入纯内存的 ModelContainer 完成全套 Repo 初始化
+    /// 仅限测试与预览(Unit Tests & Previews):注入纯内存的 ModelContainer 完成全套 Repo 初始化
     /// Tests & previews only: boot the whole repo stack against an in-memory ModelContainer.
     func asyncTestInit(with testContainer: ModelContainer) async {
         self.modelContainer = testContainer
@@ -177,147 +214,31 @@ final class RepositoryContainer {
             subjectRepo.initializeDefaultSubjects()
         }
 
-        recomputeAllFiltered()
+        phaseRefresher.recomputeAll()
         isReady = true
     }
 #endif
 
-    /// 订阅 AppEnvironmentManager 的 activePhaseId 变化。
-    /// Subscribe to `AppEnvironmentManager` activePhaseId changes.
-    /// 用 polling(每 0.5s 检查)而非 Combine 桥接,避免引入 Combine 依赖。
-    /// Uses polling (every 0.5s) instead of a Combine bridge to avoid the Combine dependency.
-    private func observeActivePhaseChanges() {
-        Task { @MainActor [weak self] in
-            var lastId: UUID? = AppEnvironmentManager.shared.activePhaseId
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                let currentId = AppEnvironmentManager.shared.activePhaseId
-                if currentId != lastId {
-                    lastId = currentId
-                    self?.recomputeAllFiltered()
-                }
-            }
-        }
-    }
+    // MARK: - 跨域操作(转发到子模块,保持调用面不变)
+    // MARK: - Cross-domain operations (forward to sub-modules; keep call sites unchanged)
 
-    /// 5 个数据域的 filtered 缓存重算(phase 切换时用)。
-    /// Recompute the 5 filtered caches (called on phase switch).
+    /// 5 个数据域的 filtered 缓存重算(phase 切换时用)。转发到 `phaseRefresher`。
+    /// Recompute the 5 filtered caches (called on phase switch). Forwards to `phaseRefresher`.
     func recomputeAllFiltered() {
-        if let g = gradeRepo as? DefaultGradeRepository { g.recomputeFiltered() }
-        if let m = mistakeRepo as? DefaultMistakeRepository { m.recomputeFiltered() }
-        if let e = examRepo as? DefaultExamRepository { e.recomputeFiltered() }
-        if let t = taskRepo as? DefaultTaskRepository { t.recomputeFiltered() }
-        if let r = routineRepo as? DefaultRoutineRepository { r.recomputeFiltered() }
-        if let ri = routineInstanceRepo as? DefaultRoutineInstanceRepository { ri.recomputeDerived() }
-        Log.data.debug("RepositoryContainer recomputeAllFiltered")
+        phaseRefresher.recomputeAll()
     }
 
-    // MARK: - 跨域操作
-    // MARK: - 跨域操作 / Cross-domain operations
-
-    /// 合并考试 + 待办为统一 TodoEntry(供 TodoView 用)。
+    /// 合并考试 + 待办为统一 TodoEntry(供 TodoView 用)。转发到 `todoAggregator`。
     /// Merge exams + tasks into a unified `TodoEntry` list (for `TodoView`).
-    /// - Parameters:
-    ///   - includeCompleted:是否包含已完成条目
-    ///     Whether to include already-completed items.
-    ///   - phaseId:外部显式指定过滤 phase;nil=按 active phase 自动判定
-    ///     Explicit phase filter; nil = derive from the active phase.
     func todoEntries(includeCompleted: Bool = false, phaseId: UUID? = nil) -> [TodoEntry] {
-        let active = phaseId ?? AppEnvironmentManager.shared.activePhaseId
-        var entries: [TodoEntry] = []
-        // 单科考试
-        for e in examRepo.examSets {
-            if active != nil && e.phaseId != active { continue }
-            if !includeCompleted && e.examReview != nil { continue }
-            entries.append(TodoEntry(
-                id: e.id,
-                kind: .exam,
-                title: e.name,
-                subject: e.subject,
-                date: e.examDate,
-                endDate: e.examEndDate,
-                importance: e.importance,
-                isCompleted: e.examReview != nil,
-                exam: e,
-                comprehensiveExam: nil,
-                taskItem: nil
-            ))
-        }
-        // 综合考试
-        for c in examRepo.comprehensiveExamSets {
-            if active != nil && c.phaseId != active { continue }
-            entries.append(TodoEntry(
-                id: c.id,
-                kind: .comprehensiveExam,
-                title: c.name,
-                subject: "综合",
-                date: c.examDate,
-                endDate: nil,
-                importance: c.importance,
-                isCompleted: false,
-                exam: nil,
-                comprehensiveExam: c,
-                taskItem: nil
-            ))
-        }
-        // 待办
-        for t in taskRepo.taskItems {
-            if active != nil && t.phaseId != active { continue }
-            if !includeCompleted && t.isCompleted { continue }
-            let kind: TodoEntryKind = t.type == .reading ? .reading : .homework
-            entries.append(TodoEntry(
-                id: t.id,
-                kind: kind,
-                title: t.title,
-                subject: t.subject,
-                date: t.dueDate,
-                endDate: nil,
-                importance: t.importance,
-                isCompleted: t.isCompleted,
-                exam: nil,
-                comprehensiveExam: nil,
-                taskItem: t
-            ))
-        }
-        return entries.sorted { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date < rhs.date }
-            return lhs.importance > rhs.importance
-        }
+        todoAggregator.entries(includeCompleted: includeCompleted, phaseId: phaseId)
     }
 
-    /// 批量清空数据(category → 删除条数)。
-    /// Bulk-clear data. Returns `(category, deleted count)` pairs.
+    /// 批量清空数据。转发到 `bulkOps`。
+    /// Bulk-clear data. Forwards to `bulkOps`.
     @discardableResult
     func bulkClearData(categories: Set<BulkClearCategory>) -> [(category: BulkClearCategory, count: Int)] {
-        var results: [(BulkClearCategory, Int)] = []
-        for cat in categories {
-            let count: Int
-            switch cat {
-            case .grades:       count = gradeRepo.clearAll()
-            case .mistakes:     count = mistakeRepo.clearAll()
-            case .exams:        count = examRepo.clearAll()
-            case .tasks:        count = taskRepo.clearAll()
-            case .routines:
-                // 例程 + 关联 instance 一起清
-                let instCount = routineInstanceRepo.allInstances.count
-                for inst in routineInstanceRepo.allInstances {
-                    routineInstanceRepo.delete(inst.id)
-                }
-                let routineCount = routineRepo.clearAll()
-                count = routineCount + instCount
-            case .profileReset:
-                // 重置 profile 到默认 + 删头像
-                if let filename = profileRepo.profile.avatarFileName {
-                    profileRepo.deleteAvatar(filename: filename)
-                }
-                profileRepo.profile = UserProfile()
-                profileRepo.saveProfile()
-                count = 1
-            }
-            results.append((cat, count))
-        }
-        Log.data.info("RepositoryContainer bulkClear: \(results.map { "\($0.0)=\($0.1)" }.joined(separator: ","), privacy: .public)")
-        return results
+        bulkOps.clear(categories: categories)
     }
 
     // MARK: - Passthroughs(原 DataManager 调用习惯的兼容)
@@ -534,44 +455,3 @@ final class RepositoryContainer {
         NotificationCenter.default.post(name: .routineDataChanged, object: nil)
     }
 }
-
-// MARK: - BulkClearCategory
-// MARK: - 批量清空类别 / Bulk-clear categories
-
-/// 批量清空选项（用于设置页"清空数据"面板）
-/// Bulk-clear option (used in Settings → "Clear Data" panel).
-enum BulkClearCategory: String, CaseIterable, Identifiable, Hashable {
-    case grades
-    case mistakes
-    case exams
-    case tasks
-    case profileReset
-    case routines
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .grades:       return "成绩"
-        case .mistakes:     return "错题"
-        case .exams:        return "考试"
-        case .tasks:        return "待办"
-        case .profileReset: return "重置个人资料"
-        case .routines:     return "例程"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .grades:       return "chart.bar.fill"
-        case .mistakes:     return "book.fill"
-        case .exams:        return "calendar"
-        case .tasks:        return "checklist"
-        case .profileReset: return "person.crop.circle.badge.exclamationmark"
-        case .routines:     return "repeat.circle.fill"
-        }
-    }
-}
-
-// MARK: - TodoEntry(原 DataModels 中已有定义,这里仅做最小映射)
-

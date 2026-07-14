@@ -25,6 +25,14 @@ struct PredictionDiscussionEntryView: View {
 
     @EnvironmentObject var envManager: AppEnvironmentManager
 
+    /// `Date` → `yyyy-MM-dd` 字符串(给 LLM 用)
+    /// `Date` → `yyyy-MM-dd` string (for LLM).
+    static func isoDateString(from date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
     @State private var aiPredictionText: String? = nil
     @State private var aiPredictionLoading: Bool = false
     @State private var aiPredictionError: String? = nil

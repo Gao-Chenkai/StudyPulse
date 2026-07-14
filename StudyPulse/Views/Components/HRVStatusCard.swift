@@ -8,13 +8,20 @@
 //  仪表盘卡片:用 4 轴雷达 / 多边形图(HRV、心率、恢复睡眠、呼吸频率)
 //  展示恢复度,并从同一组信号中派生学习建议。
 //
+//  Phase 3 拆分 (2026-07-14):原 951 行单文件 → orchestrator 留本文件,
+//  拆出 4 个独立子文件:
+//  - BodyRadarValues.swift             (6 轴归一化数值 + 颜色 / 文本)
+//  - BodyRadarChart.swift              (6 轴多边形 Path 绘制)
+//  - FitnessRingView.swift             (单环进度环,Activity-ring 风格)
+//  - HRVStatusSuggestionSection.swift  (本地 + LLM 增强建议区,含 AI debug 入口)
+//
+//  本文件只剩:主 View 编排(header / chart / axis row / suggestion / AI 请求生命周期 / 冷却计时 / discussion sheet)。
+//
+
 import SwiftUI
-import Charts
 import os
 
-// MARK: - HRV Status Card
-// MARK: - HRV 状态卡片
-/// 恢复雷达卡:HRV/HR/睡眠/呼吸 4 轴雷达 + 整合学习建议
+/// 恢复雷达卡:HRV/HR/睡眠/呼吸 4 轴雷达 + 整合学习建议。
 /// Recovery radar card: 4-axis radar (HRV/HR/Sleep/Respiratory) + integrated study suggestion.
 struct HRVStatusCard: View {
     @ObservedObject var hrvManager = HealthKitManager.shared
@@ -23,6 +30,7 @@ struct HRVStatusCard: View {
     @State private var animateIn = false
 
     // LLM 增强雷达建议
+    // LLM enhancement state.
     @State private var aiSuggestion: StudySuggestion? = nil
     @State private var aiLoading: Bool = false
     @State private var aiErrorMessage: String? = nil
@@ -67,10 +75,7 @@ struct HRVStatusCard: View {
 
                 if hrvManager.isHealthBootstrapping {
                     // 后台仍在跑 14 天 HRV 查询 + PersonalBaselines 重算
-                    // 时显示 Loading 占位，避免首屏卡住。
-                    // Show a Loading placeholder while the background
-                    // task is still pulling 14 days of HRV + recomputing
-                    // PersonalBaselines, so the home view doesn't stall.
+                    // 时显示 Loading 占位,避免首屏卡住。
                     loadingPlaceholder
                 } else {
                     if hrvManager.hrvDetailLevel != .suggestionOnly {
@@ -119,11 +124,12 @@ struct HRVStatusCard: View {
         }
     }
 
-    /// 后台 bootstrap 期间的占位视图。显示一个柔和的灰色卡，避免
-    /// 在 14 天 HRV 查询完成前渲染出残缺的雷达图/建议。
+    // MARK: - Loading Placeholder / 后台 bootstrap 期间的占位
+
     /// Placeholder shown while the background bootstrap is still
     /// running. Keeps the layout stable (no half-rendered radar) and
     /// signals that data is on the way.
+    /// 后台 bootstrap 期间显示柔和的灰色卡,避免渲染残缺的雷达图/建议。
     private var loadingPlaceholder: some View {
         HStack(spacing: 10) {
             ProgressView()
@@ -137,8 +143,7 @@ struct HRVStatusCard: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Header
-    // MARK: - 顶部标题
+    // MARK: - Header / 顶部标题
     private var header: some View {
         HStack {
             Image(systemName: "heart.text.square.fill")
@@ -152,8 +157,7 @@ struct HRVStatusCard: View {
         }
     }
 
-    // MARK: - Axis values row
-    // MARK: - 各轴数值行
+    // MARK: - Axis values row / 各轴数值行
     /// Numeric readout for each of the four radar dimensions.
     /// Shown only at the highest detail level. The workout slot is
     /// rendered as a 3-ring fitness ring instead of a plain text tile.
@@ -250,7 +254,7 @@ struct HRVStatusCard: View {
         )
     }
 
-    // MARK: - Integrated suggestion row
+    // MARK: - Integrated suggestion row / 整合建议
     /// 雷达建议:本地算法 + LLM 增强。
     /// - 未配置 LLM → 直接显示本地建议
     /// - 已配置 LLM → 显示本地建议作为兜底,流式 LLM 增强版本覆盖
@@ -397,7 +401,7 @@ struct HRVStatusCard: View {
         )
     }
 
-    // MARK: - AI
+    // MARK: - AI 生命周期 / AI lifecycle
 
     /// 拉取最新数据后决定:本地建议立刻就位;若 LLM 已配置且不在冷却中则流式增强
     /// - 冷却:距上次成功请求 < 40 分钟时跳过,显示本地建议 + 倒计时
@@ -479,7 +483,7 @@ struct HRVStatusCard: View {
         }
     }
 
-    // MARK: - 冷却辅助
+    // MARK: - 冷却辅助 / Cooldown helpers
 
     /// 是否在冷却中(且未强制)
     private func canRequestNow() -> Bool {
@@ -551,8 +555,7 @@ struct HRVStatusCard: View {
             ?? "雷达建议上下文"
     }
 
-    // MARK: - Computed Properties
-    // MARK: - 计算属性
+    // MARK: - Computed Properties / 计算属性
     private var accent: Color {
         // 按 readiness category 取强调色
         // Accent color per readiness category.
@@ -582,370 +585,6 @@ struct HRVStatusCard: View {
         case .insufficient: return "Collecting".localized()
         case .noAuthorization: return "-"
         case .queryFailed: return "Error".localized()
-        }
-    }
-}
-
-// MARK: - Body Radar Values
-// MARK: - 身体雷达数值
-
-/// Normalized values (0-1) for the 5 radar axes, plus the raw value
-/// strings and per-axis colors used by the card UI.
-/// 5 轴雷达的归一化数值(0-1),以及卡片 UI 使用的原始值字符串和每轴颜色。
-struct BodyRadarValues {
-    let hrv: Double          // 0-1
-    let heartRate: Double    // 0-1
-    let sleep: Double        // 0-1
-    let exercise: Double     // 0-1  (today's workout, 30 min = 1.0)
-    let respiratory: Double  // 0-1
-    let psychologicalStability: Double // 0-1
-
-    var all: [Double] { [hrv, heartRate, sleep, exercise, respiratory, psychologicalStability] }
-
-    // Per-axis text (raw, un-normalized)
-    let hrvValueText: String
-    let heartRateValueText: String
-    let sleepValueText: String
-    let exerciseValueText: String
-    let respiratoryValueText: String
-    let psychologicalStabilityValueText: String
-
-    // Per-axis colors (bad → good: red → orange → blue → green)
-    let hrvColor: Color
-    let heartRateColor: Color
-    let sleepColor: Color
-    let exerciseColor: Color
-    let respiratoryColor: Color
-    let psychologicalStabilityColor: Color
-
-    /// Build radar values from the current `HRVReadiness` and
-    /// `BodyStatus`. Each axis is normalized to 0-1 using the
-    /// personal 30-day baseline (when there are ≥ 7 samples) or
-    /// the age-adjusted reference range; missing data is treated as
-    /// neutral (0.5) so the polygon doesn't collapse.
-    static func compute(
-        hrv: HRVReadiness,
-        body: BodyStatus,
-        baselines: PersonalBaselines = .empty,
-        age: Int? = nil,
-        mistakes: [MistakeNote] = []
-    ) -> BodyRadarValues {
-        let ageRef = age.map(AgeReference.compute) ?? .adult
-
-        // HRV uses its own 14/30-day Z-score path (already exposed on
-        // HRVReadiness). It does not need a personal baseline lookup
-        // here because `readiness` is recomputed with its own.
-        let hrvScore: Double = {
-            if let z = hrv.zScore { return clamp((z + 2) / 4) }
-            return 0.5
-        }()
-        let hrvText: String = hrv.todayHRV.map {
-            String(format: "%.0f ms", $0)
-        } ?? "--"
-
-        // The remaining four signals are calibrated against the
-        // personal 30-day baseline (preferred) or the age reference.
-        // Sleep is calibrated against RESTORATIVE sleep (deep N3 +
-        // REM), not total hours in bed — total hours determine the
-        // user-facing quality label, but only deep+REM is the
-        // recovery-load signal.
-        let hrCal      = StudyReadinessAlgorithm.calibrated(
-            value: body.restingHeartRate,
-            baseline: baselines.restingHeartRate,
-            range: ageRef.restingHeartRate)
-        let sleepCal   = StudyReadinessAlgorithm.calibrated(
-            value: body.restorativeSleepHours,
-            baseline: baselines.restorativeSleepHours,
-            range: ageRef.restorativeSleepHours)
-        let rrCal      = StudyReadinessAlgorithm.calibrated(
-            value: body.respiratoryRate,
-            baseline: baselines.respiratoryRate,
-            range: ageRef.respiratoryRate)
-        let exerciseCal = StudyReadinessAlgorithm.calibrated(
-            value: body.exerciseMinutesToday,
-            baseline: baselines.exerciseMinutes,
-            range: ageRef.exerciseMinutes)
-
-        let hrText      = body.restingHeartRate.map {
-            String(format: "%.0f bpm", $0)
-        } ?? "--"
-        // The tile shows restorative sleep (deep+REM) as the primary
-        // value, with the total hours in parentheses for context.
-        let sleepText: String = {
-            guard let r = body.restorativeSleepHours else { return "--" }
-            let total = body.lastNightSleepHours
-            let totalStr = total.map { String(format: "·%.1fh", $0) } ?? ""
-            return String(format: "%.1fh", r) + totalStr
-        }()
-        let rrText      = body.respiratoryRate.map {
-            String(format: "%.0f", $0)
-        } ?? "--"
-        let exerciseText = body.exerciseMinutesToday.map {
-            String(format: "%.0f m", $0)
-        } ?? "--"
-
-        // Psychological stability score calculation:
-        let psychTags: Set<String> = [
-            "概念混淆", "计算粗心", "跳步", "审题不清", "思维定势",
-            "逻辑不严密", "考试焦虑", "急躁粗心", "笔误", "遗漏条件",
-            "concept confusion", "careless calculation", "skipping steps",
-            "misreading", "fixed thinking", "loose logic", "exam anxiety",
-            "impatience", "slip of pen", "missing condition"
-        ]
-        
-        let stabilityScore: Double = {
-            guard !mistakes.isEmpty else { return 1.0 }
-            var totalImpact = 0.0
-            for m in mistakes {
-                let hasPsych = m.tags.contains { tag in
-                    psychTags.contains(tag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))
-                }
-                if hasPsych {
-                    totalImpact += (1.0 - m.masteryScore)
-                }
-            }
-            let val = 1.0 - (totalImpact / Double(mistakes.count))
-            return max(0.0, min(1.0, val))
-        }()
-        let stabilityText = String(format: "%.0f%%", stabilityScore * 100)
-
-        return BodyRadarValues(
-            hrv: hrvScore,
-            heartRate: hrCal.score,
-            sleep: sleepCal.score,
-            exercise: exerciseCal.score,
-            respiratory: rrCal.score,
-            psychologicalStability: stabilityScore,
-            hrvValueText: hrvText,
-            heartRateValueText: hrText,
-            sleepValueText: sleepText,
-            exerciseValueText: exerciseText,
-            respiratoryValueText: rrText,
-            psychologicalStabilityValueText: stabilityText,
-            hrvColor: colorFor(score: hrvScore),
-            heartRateColor: colorFor(score: hrCal.score),
-            sleepColor: colorFor(score: sleepCal.score),
-            exerciseColor: colorFor(score: exerciseCal.score),
-            respiratoryColor: colorFor(score: rrCal.score),
-            psychologicalStabilityColor: colorFor(score: stabilityScore)
-        )
-    }
-
-    private static func clamp(_ x: Double) -> Double {
-        max(0, min(1, x))
-    }
-
-    private static func colorFor(score: Double) -> Color {
-        switch score {
-        case ..<0.34: return .red
-        case ..<0.5:  return .orange
-        case ..<0.75: return .blue
-        default:      return .green
-        }
-    }
-}
-
-// MARK: - Body Radar Chart (polygon)
-// MARK: - 身体雷达图(多边形)
-
-/// 6-axis radar / polygon chart. Pure SwiftUI `Path`s — no Charts
-/// framework dependency for the radar itself. Each axis has its own
-/// color so the data points and labels are easy to associate.
-/// 6 轴雷达/多边形图。纯 SwiftUI Path 绘制,雷达本身不依赖 Charts 框架。
-/// 每根轴有自己的颜色,数据点和标签易于对应。
-struct BodyRadarChart: View {
-    let values: BodyRadarValues
-
-    private let dimensionCount = 6
-    private let axisLabels: [String] = [
-        "HRV",
-        "Heart Rate".localized(),
-        "Recovery Sleep".localized(),
-        "Workout".localized(),
-        "Respiratory".localized(),
-        "Stability".localized()
-    ]
-    private let axisColors: [Color] = [.purple, .pink, .indigo, .green, .cyan, .orange]
-
-    var body: some View {
-        GeometryReader { geo in
-            let size = min(geo.size.width, geo.size.height)
-            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            // Reserve 22% of the radius for outside labels.
-            let maxRadius = size / 2 * 0.78
-
-            ZStack {
-                // Concentric grid polygons (25 / 50 / 75 / 100%).
-                ForEach([0.25, 0.5, 0.75, 1.0], id: \.self) { level in
-                    polygonPath(center: center,
-                                radius: maxRadius * CGFloat(level),
-                                count: dimensionCount)
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-                }
-
-                // Axis lines from center to each label.
-                ForEach(0..<dimensionCount, id: \.self) { i in
-                    Path { path in
-                        path.move(to: center)
-                        path.addLine(to: pointAt(
-                            angle: angleFor(index: i),
-                            radius: maxRadius,
-                            from: center))
-                    }
-                    .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-                }
-
-                // Filled data polygon (gradient).
-                dataPolygonPath(center: center, radius: maxRadius)
-                    .fill(LinearGradient(
-                        colors: [Color.blue.opacity(0.45),
-                                 Color.purple.opacity(0.18)],
-                        startPoint: .top, endPoint: .bottom))
-
-                // Data polygon outline.
-                dataPolygonPath(center: center, radius: maxRadius)
-                    .stroke(
-                        LinearGradient(colors: [.blue, .purple],
-                                       startPoint: .top, endPoint: .bottom),
-                        lineWidth: 2
-                    )
-
-                // Per-axis data point + label.
-                ForEach(0..<dimensionCount, id: \.self) { i in
-                    let p = pointAt(
-                        angle: angleFor(index: i),
-                        radius: maxRadius * CGFloat(values.all[i]),
-                        from: center
-                    )
-                    Circle()
-                        .fill(axisColors[i])
-                        .frame(width: 10, height: 10)
-                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                        .position(p)
-
-                    let labelPoint = pointAt(
-                        angle: angleFor(index: i),
-                        radius: maxRadius * 1.18,
-                        from: center
-                    )
-                    Text(axisLabels[i])
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(axisColors[i])
-                        .position(labelPoint)
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-        }
-    }
-
-    // MARK: - Geometry helpers
-    // MARK: - 几何辅助
-    /// Start at the top (12 o'clock) and go clockwise. With 5 axes this
-    /// puts HRV at the top, Heart Rate on the right, Recovery Sleep at
-    /// the bottom-right, Workout at the bottom-left, and Respiratory on
-    /// the left.
-    /// 从 12 点钟方向起、顺时针排列。5 轴时:HRV 在正上,心率在右,
-    /// 恢复睡眠在右下,运动在左下,呼吸在左。
-    private func angleFor(index: Int) -> Angle {
-        .degrees(Double(index) * 360.0 / Double(dimensionCount) - 90)
-    }
-
-    private func pointAt(angle: Angle, radius: CGFloat, from center: CGPoint) -> CGPoint {
-        let rad = CGFloat(angle.radians)
-        return CGPoint(
-            x: center.x + cos(rad) * radius,
-            y: center.y + sin(rad) * radius
-        )
-    }
-
-    private func polygonPath(center: CGPoint, radius: CGFloat, count: Int) -> Path {
-        Path { path in
-            for i in 0..<count {
-                let p = pointAt(angle: angleFor(index: i), radius: radius, from: center)
-                if i == 0 { path.move(to: p) }
-                else { path.addLine(to: p) }
-            }
-            path.closeSubpath()
-        }
-    }
-
-    /// Connect the five radar data points, each at its own radius
-    /// (maxRadius × normalized value) along its axis direction.
-    /// 连接 5 个雷达数据点,每个点位于自己轴方向上 maxRadius × 归一化值处。
-    private func dataPolygonPath(center: CGPoint, radius: CGFloat) -> Path {
-        Path { path in
-            for i in 0..<dimensionCount {
-                let p = pointAt(
-                    angle: angleFor(index: i),
-                    radius: radius * CGFloat(values.all[i]),
-                    from: center
-                )
-                if i == 0 { path.move(to: p) }
-                else { path.addLine(to: p) }
-            }
-            path.closeSubpath()
-        }
-    }
-}
-
-// MARK: - Fitness Ring View
-// MARK: - Fitness Ring 视图
-
-/// iOS Activity-ring style concentric progress ring. Single ring when
-/// `progress` is supplied (green color, gradients to red as the
-/// progress falls). Designed to be small (≈ 24-30 pt) so it fits as
-/// the workout axis tile in the recovery-radar card.
-/// iOS Activity-ring 风格的同心进度环。提供 progress 时显示单环
-/// (绿色,随进度下降向红色过渡)。设计为小型(约 24-30 pt)以便
-/// 嵌入恢复雷达卡中的运动轴 tile。
-struct FitnessRingView: View {
-    let progress: Double      // 0-1
-    var lineWidth: CGFloat = 4
-    var size: CGFloat = 28
-
-    var body: some View {
-        ZStack {
-            // Background track
-            Circle()
-                .stroke(Color.secondary.opacity(0.18), lineWidth: lineWidth)
-
-            // Foreground progress
-            Circle()
-                .trim(from: 0, to: max(0, min(1, progress)))
-                .stroke(
-                    AngularGradient(
-                        colors: gradientColors,
-                        center: .center,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(360)
-                    ),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.easeOut(duration: 0.6), value: progress)
-        }
-        .frame(width: size, height: size)
-    }
-
-    private var gradientColors: [Color] {
-        switch progress {
-        case ..<0.34: return [.red, .orange]
-        case ..<0.7:  return [.orange, .yellow]
-        case ..<1.0:  return [.green, .mint]
-        default:      return [.mint, .green]
-        }
-    }
-
-    /// Color used by the surrounding tile to match the ring state.
-    /// 外层 tile 用来匹配 ring 状态的颜色。
-    static func colorFor(progress: Double) -> Color {
-        // 进度阈值:<0.34 红,<0.7 橙,<1.0 蓝,其余绿
-        // Progress thresholds: <0.34 red, <0.7 orange, <1.0 blue, otherwise green.
-        switch progress {
-        case ..<0.34: return .red
-        case ..<0.7:  return .orange
-        case ..<1.0:  return .blue
-        default:      return .green
         }
     }
 }
