@@ -14,6 +14,7 @@ import SwiftUI
 struct RoutinesView: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
     @Binding var segment: TodoRootView.Segment
@@ -47,6 +48,7 @@ struct RoutinesView: View {
         .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
         .containerBackground(.clear, for: .navigation)
         .navigationTitle("Routines".localized())
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -77,7 +79,7 @@ struct RoutinesView: View {
         }
         .pickerStyle(.segmented)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
         .padding(.top, 8)
         .padding(.bottom, 4)
     }
@@ -114,7 +116,7 @@ struct RoutinesView: View {
 
     private var listContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: DesignToken.Spacing.cardSpacing) {
                 segmentPicker
                 gridCard
                 Text("All routines".localized())
@@ -124,7 +126,8 @@ struct RoutinesView: View {
                     weekdaySection(group: group)
                 }
             }
-            .padding(16)
+            .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
+            .padding(.vertical, DesignToken.Spacing.large)
         }
     }
 
@@ -140,6 +143,7 @@ struct RoutinesView: View {
             WeekGridView(routines: routines)
                 .frame(height: 120)
         }
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
     }
 
@@ -157,7 +161,7 @@ struct RoutinesView: View {
                 routineRow(routine)
             }
         }
-        .padding(12)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
     }
 

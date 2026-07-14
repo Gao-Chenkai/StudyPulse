@@ -119,7 +119,7 @@ struct StudySuggestionsCard: View {
                 LLMCallIndicator(caller: "StudySuggestions")
             }
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .onAppear {

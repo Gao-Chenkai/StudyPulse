@@ -42,7 +42,6 @@ struct MistakeTagSectionView: View {
                     }
                 }
             }
-            .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -66,7 +65,6 @@ struct MistakeTagSectionView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal)
             }
         }
     }

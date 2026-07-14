@@ -80,7 +80,7 @@ struct PlantHomeCard: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
     }
@@ -108,7 +108,7 @@ struct PlantHomeCard: View {
                 Text("plant.card.toggle".localized()).font(.subheadline)
             }
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
     }

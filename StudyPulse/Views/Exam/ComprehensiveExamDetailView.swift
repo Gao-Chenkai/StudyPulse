@@ -273,7 +273,7 @@ struct ComprehensiveExamDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
         .navigationTitle(currentExam.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

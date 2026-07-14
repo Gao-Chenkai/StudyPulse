@@ -93,7 +93,7 @@ struct HRVStatusCard: View {
                     suggestionRow
                 }
             }
-            .padding(16)
+            .padding(DesignToken.Spacing.cardPadding)
             .cardSkin()
             .overlay(
                 RoundedRectangle(cornerRadius: 18)

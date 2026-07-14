@@ -83,8 +83,7 @@ struct HomeAskCard: View {
                     .font(.system(size: 22))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(DesignToken.Spacing.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)

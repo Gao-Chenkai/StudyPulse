@@ -65,7 +65,7 @@ struct HomeView: View {
                         dynamicCards
                     }
                 }
-                .padding(.horizontal, sizeClass == .regular || isIPad ? 24 : 20)
+                .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
@@ -74,7 +74,7 @@ struct HomeView: View {
             .debugModeContainer()
             .debugLayoutBoundsAuto()
             .llmDebugHomeButton()
-            .navigationTitle("Dashboard".localized())
+            .navigationTitle("")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

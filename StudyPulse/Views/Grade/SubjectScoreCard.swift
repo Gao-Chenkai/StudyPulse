@@ -179,7 +179,7 @@ struct SubjectScoreCard: View {
                     .foregroundColor(Color(.secondaryLabel))
             }
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)

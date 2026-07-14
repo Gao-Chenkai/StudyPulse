@@ -86,7 +86,7 @@ struct StreakHomeCard: View {
                 goalsProgress
             }
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .debugLayoutBoundsAuto()

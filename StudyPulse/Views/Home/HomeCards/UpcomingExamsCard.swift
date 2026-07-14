@@ -64,7 +64,7 @@ struct UpcomingExamsCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .debugLayoutBoundsAuto()

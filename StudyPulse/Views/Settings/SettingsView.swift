@@ -41,6 +41,7 @@ struct SettingsView: View {
   .debugModeContainer()
   .debugLayoutBoundsAuto()
   .navigationTitle("Settings".localized())
+  .navigationBarTitleDisplayMode(.large)
         }
     }
 

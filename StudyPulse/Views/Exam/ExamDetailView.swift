@@ -335,7 +335,7 @@ struct ExamDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
         .navigationTitle(currentExam.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .adaptiveMaxWidth(720)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

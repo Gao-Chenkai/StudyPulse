@@ -25,6 +25,25 @@ enum DesignToken {
         static let extraLarge: CGFloat = 24
         /// 区域/卡片之间的垂直间距 (20pt)：模块间隔
         static let section: CGFloat = 20
+        
+        /// 主页面水平内边距 (iPhone 20pt, iPad 24pt)
+        static var mainHorizontal: CGFloat {
+            isIPad ? 24 : 20
+        }
+        
+        /// 主页面水平内边距 (iPhone 20pt, iPad 24pt)，根据 sizeClass 判断
+        static func mainHorizontal(for sizeClass: UserInterfaceSizeClass?) -> CGFloat {
+            sizeClass == .regular ? 24 : 20
+        }
+        
+        /// 二级页水平内边距 (16pt)
+        static let secondaryHorizontal: CGFloat = 16
+        
+        /// 统一默认卡片内边距 (16pt)
+        static let cardPadding: CGFloat = 16
+        
+        /// 统一默认卡片间距/区块间距 (20pt)
+        static let cardSpacing: CGFloat = 20
     }
     
     // MARK: - Corner Radius (圆角)

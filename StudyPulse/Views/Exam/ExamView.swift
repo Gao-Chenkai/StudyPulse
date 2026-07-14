@@ -14,6 +14,7 @@ import SwiftUI
 /// Exam list root view.
 struct ExamView: View {
     @Environment(RepositoryContainer.self) private var container
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: ExamViewModel
 
     init(container: RepositoryContainer) {
@@ -41,6 +42,7 @@ struct ExamView: View {
             .debugModeContainer()
             .debugLayoutBoundsAuto()
             .navigationTitle("Exams".localized())
+            .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .frame(maxWidth: .infinity)
             .toolbar {
@@ -473,7 +475,7 @@ struct ExamRowView: View {
                 .padding(.top, 2)
             }
         }
-        .padding(14)
+        .padding(DesignToken.Spacing.cardPadding)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
@@ -641,7 +643,7 @@ struct ComprehensiveExamRowView: View {
                 .padding(.top, 2)
             }
         }
-        .padding(14)
+        .padding(DesignToken.Spacing.cardPadding)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 14)

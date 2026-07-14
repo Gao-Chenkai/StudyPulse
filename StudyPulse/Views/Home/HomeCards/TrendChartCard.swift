@@ -127,7 +127,7 @@ struct TrendChartCard: View {
                 .cornerRadius(16)
             }
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .debugLayoutBoundsAuto()

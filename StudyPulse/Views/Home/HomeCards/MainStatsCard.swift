@@ -99,7 +99,7 @@ struct MainStatsCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .onAppear {
@@ -172,7 +172,7 @@ struct StatItemView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .background(Color(.systemBackground).opacity(0.6))
         .cornerRadius(16)
     }

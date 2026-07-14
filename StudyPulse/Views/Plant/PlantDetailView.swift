@@ -76,7 +76,7 @@ struct PlantDetailView: View {
                 value: "\(achievementManager.snapshot.streak.totalActiveDays)"
             )
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
     }
 
     private func statTile(icon: String, color: Color, title: String, value: String) -> some View {
@@ -97,12 +97,12 @@ struct PlantDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("plant.detail.historyHeader".localized())
                 .font(.headline)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
             if plantManager.history.isEmpty {
                 Text("plant.detail.historyEmpty".localized())
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
             } else {
                 VStack(spacing: 0) {
                     ForEach(plantManager.history.reversed()) { transition in
@@ -118,7 +118,7 @@ struct PlantDetailView: View {
                             }
                             Spacer()
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
                         .padding(.vertical, 8)
                         Divider()
                     }
@@ -127,7 +127,7 @@ struct PlantDetailView: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color(.secondarySystemGroupedBackground))
                 )
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
             }
         }
     }
@@ -136,7 +136,7 @@ struct PlantDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("plant.card.colorSection".localized())
                 .font(.headline)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
             HStack(spacing: 12) {
                 ForEach(PetalColorCatalog.all) { petal in
                     Button {
@@ -158,7 +158,7 @@ struct PlantDetailView: View {
                     .accessibilityLabel(petal.id)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
         }
     }
 
@@ -174,7 +174,7 @@ struct PlantDetailView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
     }
 
     private func iconForStage(_ stage: PlantStage) -> String {

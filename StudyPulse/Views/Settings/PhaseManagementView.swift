@@ -25,6 +25,7 @@ struct PhaseManagementView: View {
             overviewSection
         }
         .navigationTitle("Study Phases".localized())
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

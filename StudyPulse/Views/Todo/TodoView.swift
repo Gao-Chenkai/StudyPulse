@@ -41,6 +41,7 @@ enum TodoTypeFilter: Hashable, CaseIterable {
 
 struct TodoView: View {
     @Environment(RepositoryContainer.self) private var container
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: TodoViewModel
 
     /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
@@ -209,7 +210,7 @@ struct TodoView: View {
                     chip(for: filter)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
             .padding(.vertical, 10)
         }
         .background(Color(.systemGroupedBackground))
@@ -224,7 +225,7 @@ struct TodoView: View {
         }
         .pickerStyle(.segmented)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
         .padding(.top, 8)
         .padding(.bottom, 4)
     }
@@ -331,7 +332,7 @@ struct TodoView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
                         }
                     }
                     .padding(.bottom, 24)
@@ -346,7 +347,7 @@ struct TodoView: View {
             .font(.subheadline)
             .foregroundColor(Color(.secondaryLabel))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
     }
 
     // MARK: - 日历内容

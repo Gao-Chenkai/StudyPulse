@@ -71,7 +71,7 @@ struct QuickActionsCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .sheet(isPresented: $showingAddGrade) {

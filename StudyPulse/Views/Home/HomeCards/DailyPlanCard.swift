@@ -39,7 +39,7 @@ struct DailyPlanCard: View {
             header
             content
         }
-        .padding(20)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .opacity(animateIn ? 1 : 0)

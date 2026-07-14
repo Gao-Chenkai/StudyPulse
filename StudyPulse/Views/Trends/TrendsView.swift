@@ -18,6 +18,7 @@ import Combine
 struct TrendsView: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject var envManager: AppEnvironmentManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: TrendsViewModel
     @State private var showingAddGrade = false
 
@@ -36,12 +37,11 @@ struct TrendsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: DesignToken.Spacing.cardSpacing) {
                     // 90 天学习热力图（顶部全宽；通过 toolbar Menu 开关控制）
                     // 90-day learning heatmap (top, full-width; toolbar Menu toggles it on/off).
                     if envManager.preferences.learningHeatmapOnTrends {
                         LearningHeatmapView()
-                            .padding(.horizontal)
                     }
 
                     if viewModel.activeSubjects.isEmpty {
@@ -75,7 +75,6 @@ struct TrendsView: View {
                                     }
                                 }
                             }
-                            .padding()
                         }
 
                         LazyVGrid(columns: AdaptiveGridColumns().columns, spacing: 20) {
@@ -91,15 +90,17 @@ struct TrendsView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding()
                     }
                 }
+                .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
+                .padding(.vertical)
             }
             .background(Color(.systemGroupedBackground).opacity(DesignToken.Opacity.rootBackground))
             .containerBackground(.clear, for: .navigation)
             .debugModeContainer()
             .debugLayoutBoundsAuto()
             .navigationTitle("Trends".localized())
+            .navigationBarTitleDisplayMode(.large)
             // iPad 上撑满 detail 区宽度
             .frame(maxWidth: .infinity)
 
@@ -305,15 +306,15 @@ struct SubjectDetailView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
                 }
-                .padding(18)
+            }
+            .padding(DesignToken.Spacing.cardPadding)
                 .background(
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: DesignToken.CornerRadius.card)
                             .fill(Color(.secondarySystemGroupedBackground))
                         
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: DesignToken.CornerRadius.card)
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -438,10 +439,11 @@ struct SubjectDetailView: View {
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
+            .padding(.vertical)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .adaptiveMaxWidth(960)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

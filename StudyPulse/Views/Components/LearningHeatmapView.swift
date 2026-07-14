@@ -161,7 +161,7 @@ struct LearningHeatmapView: View {
             grid
             legend
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .sheet(item: $selectedCell) { cell in

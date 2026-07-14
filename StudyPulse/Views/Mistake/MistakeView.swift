@@ -17,6 +17,7 @@ import UniformTypeIdentifiers
 struct MistakeView: View {
     @Environment(RepositoryContainer.self) private var container
     @EnvironmentObject private var envManager: AppEnvironmentManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
     /// 主 ViewModel(过滤 / 分组 / SRS / 搜索)
     /// Main view model (filter / grouping / SRS / search).
     @StateObject private var viewModel: MistakeViewModel
@@ -75,11 +76,10 @@ struct MistakeView: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                .padding()
+                .padding(DesignToken.Spacing.cardPadding)
                 .cardSkin()
             }
             .buttonStyle(.plain)
-            .padding(.horizontal)
         }
     }
 
@@ -102,13 +102,12 @@ struct MistakeView: View {
     @ViewBuilder
     private var listView: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
+            VStack(spacing: DesignToken.Spacing.cardSpacing) {
                 if viewModel.searchText.isEmpty {
                     OverviewStatsCard(
                         totalCount: viewModel.groups.totalCount,
                         subjectCount: viewModel.groups.sortedSubjects.count
                     )
-                    .padding(.horizontal)
                 }
 
                 srsBanner
@@ -119,6 +118,7 @@ struct MistakeView: View {
 
                 subjectsList
             }
+            .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
             .padding(.vertical)
             .frame(maxWidth: .infinity)
         }
@@ -134,7 +134,6 @@ struct MistakeView: View {
                 viewModel.flashcardFilter = .dueQueue
                 viewModel.showingFlashcards = true
             }
-            .padding(.horizontal)
         }
     }
 
@@ -162,7 +161,6 @@ struct MistakeView: View {
                 : "Search Results".localized()
             Text(headerText)
                 .font(.headline)
-                .padding(.horizontal)
 
             // 每个学科一个 card,点进去展开该学科下的错题
             // One card per subject; tap to expand the subject's mistakes.
@@ -175,7 +173,6 @@ struct MistakeView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
         }
     }
 
@@ -312,6 +309,7 @@ struct MistakeView: View {
             .debugModeContainer()
             .debugLayoutBoundsAuto()
             .navigationTitle("Mistakes".localized())
+            .navigationBarTitleDisplayMode(.large)
             // 搜索栏:同时影响"subjectsList"标题 + 学科列表过滤
             // Search bar: drives both the "subjectsList" header and
             // the subject list filtering.
@@ -495,9 +493,9 @@ struct SubjectMistakesView: View {
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
+            VStack(spacing: DesignToken.Spacing.cardSpacing) {
                 SubjectOverviewCard(subject: subject, mistakes: sortedMistakes)
-                    .padding(.horizontal)
+                    .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
 
                 subjectTagsSection
 
@@ -509,6 +507,7 @@ struct SubjectMistakesView: View {
             .adaptiveMaxWidth(900)
         }
         .navigationTitle(subject.localized())
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search mistakes...".localized())
         .background(Color(.systemGroupedBackground))
         .debugLayoutBoundsAuto()
@@ -546,7 +545,7 @@ struct SubjectMistakesView: View {
                         .font(.headline)
                     Spacer()
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -570,7 +569,7 @@ struct SubjectMistakesView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
                 }
             }
         }
@@ -599,7 +598,7 @@ struct SubjectMistakesView: View {
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
         }
     }
 
@@ -611,7 +610,7 @@ struct SubjectMistakesView: View {
                 : String(format: "Search Results (%d)".localized(), filteredMistakes.count)
             Text(headerText)
                 .font(.headline)
-                .padding(.horizontal)
+                .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
 
             LazyVStack(spacing: 12) {
                 ForEach(filteredMistakes) { mistake in
@@ -621,7 +620,7 @@ struct SubjectMistakesView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, DesignToken.Spacing.secondaryHorizontal)
         }
     }
 }
@@ -638,7 +637,7 @@ struct OverviewStatsCard: View {
                 StatItem(title: "Subjects".localized(), value: "\(subjectCount)", icon: "folder.fill", color: .purple)
             }
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
     }
 }
@@ -702,7 +701,7 @@ struct SubjectOverviewCard: View {
                 }
             }
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
     }
 }
@@ -811,7 +810,7 @@ struct SubjectCardView: View {
                 .font(.caption)
                 .foregroundColor(Color(UIColor.tertiaryLabel))
         }
-        .padding(16)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)
@@ -845,7 +844,7 @@ struct MistakeCardView: View {
             cardHeader
             cardDetails
         }
-        .padding(14)
+        .padding(DesignToken.Spacing.cardPadding)
         .cardSkin()
         .hoverHighlight()
         .opacity(animateIn ? 1 : 0)

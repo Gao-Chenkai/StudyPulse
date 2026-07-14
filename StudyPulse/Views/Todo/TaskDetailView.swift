@@ -33,7 +33,7 @@ struct TaskDetailView: View {
             if let current = currentTask {
                 contentBody(for: current)
                     .navigationTitle(current.title)
-                    .navigationBarTitleDisplayMode(.large)
+                    .navigationBarTitleDisplayMode(.inline)
             } else {
                 ContentUnavailableView(
                     "Task Deleted".localized(),
