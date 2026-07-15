@@ -21,6 +21,7 @@ enum TodoTypeFilter: Hashable, CaseIterable {
     case exam
     case homework
     case reading
+    case routine
 
     var label: String {
         switch self {
@@ -28,6 +29,7 @@ enum TodoTypeFilter: Hashable, CaseIterable {
         case .exam: return "Exams".localized()
         case .homework: return "Homework".localized()
         case .reading: return "Reading".localized()
+        case .routine: return "Routine".localized()
         }
     }
 
@@ -37,6 +39,7 @@ enum TodoTypeFilter: Hashable, CaseIterable {
         case .exam: return "calendar"
         case .homework: return "pencil.and.list.clipboard"
         case .reading: return "book.fill"
+        case .routine: return "repeat"
         }
     }
 }
@@ -53,12 +56,8 @@ struct TodoView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: TodoViewModel
 
-    /// 由 TodoRootView 传入的页签绑定(Tasks / Routines)
-    @Binding private var segment: TodoRootView.Segment
-
-    init(container: RepositoryContainer, segment: Binding<TodoRootView.Segment>) {
+    init(container: RepositoryContainer) {
         _viewModel = StateObject(wrappedValue: TodoViewModel.makeDefault(container: container))
-        _segment = segment
     }
 
     // MARK: - Body
@@ -80,6 +79,8 @@ struct TodoView: View {
                 .onChange(of: container.examRepo.filteredExamSets) { _, _ in viewModel.recompute() }
                 .onChange(of: container.examRepo.comprehensiveExamSets) { _, _ in viewModel.recompute() }
                 .onChange(of: container.taskRepo.taskItems) { _, _ in viewModel.recompute() }
+                .onChange(of: container.routineInstanceRepo.allInstances) { _, _ in viewModel.recompute() }
+                .onChange(of: container.routineRepo.filteredRoutines) { _, _ in viewModel.recompute() }
                 .onChange(of: container.envManager.activePhaseId) { _, _ in viewModel.recompute() }
                 .modifier(TodoViewSheetsAndDestinations(viewModel: viewModel, container: container))
                 .onAppear {
@@ -94,13 +95,11 @@ struct TodoView: View {
     private var mainContent: some View {
         if viewModel.allEntries.isEmpty && viewModel.pastEntries.isEmpty {
             VStack(spacing: 0) {
-                segmentPicker
                 filterChips
                 emptyState
             }
         } else if viewModel.viewMode == .calendar {
             VStack(spacing: 0) {
-                segmentPicker
                 filterChips
                 ScrollView {
                     calendarContent
@@ -134,6 +133,11 @@ struct TodoView: View {
                     viewModel.showingNewTask = .reading
                 } label: {
                     Label("New Reading".localized(), systemImage: "book.fill")
+                }
+                Button {
+                    viewModel.showingNewRoutine = true
+                } label: {
+                    Label("New Routine".localized(), systemImage: "repeat")
                 }
             } label: {
                 Label("Add First Item".localized(), systemImage: "plus.circle.fill")
@@ -195,20 +199,6 @@ struct TodoView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    /// Tasks / Routines 页签选择器,作为滚动内容的一部分
-    private var segmentPicker: some View {
-        Picker("", selection: $segment) {
-            ForEach(TodoRootView.Segment.allCases) { s in
-                Label(s.title, systemImage: s.icon).tag(s)
-            }
-        }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, DesignToken.Spacing.mainHorizontal(for: sizeClass))
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-    }
-
     @ViewBuilder
     private func chip(for filter: TodoTypeFilter) -> some View {
         let selected = viewModel.typeFilter == filter
@@ -253,6 +243,7 @@ struct TodoView: View {
         case .exam:      return Color(red: 0.58, green: 0.18, blue: 1.00)
         case .homework:  return Color(red: 0.05, green: 0.72, blue: 0.28)
         case .reading:   return Color(red: 0.00, green: 0.62, blue: 0.92)
+        case .routine:   return Color(red: 0.35, green: 0.34, blue: 0.84)
         }
     }
 
@@ -262,7 +253,6 @@ struct TodoView: View {
     private var listContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                segmentPicker
                 filterChips
                     .padding(.bottom, 16)
 
@@ -292,7 +282,7 @@ struct TodoView: View {
                                         onToggleCompletion: { toggleCompletion(of: entry) }
                                     )
                                     .contextMenu {
-                                        if entry.kind == .homework || entry.kind == .reading {
+                                        if entry.kind == .homework || entry.kind == .reading || entry.kind == .routine {
                                             Button {
                                                 toggleCompletion(of: entry)
                                             } label: {
@@ -347,6 +337,8 @@ struct TodoView: View {
         case .exam: return .exam
         case .homework: return .homework
         case .reading: return .reading
+        // 日历视图不支持周期性例程,回退到全部
+        case .routine: return .all
         }
     }
 
@@ -388,6 +380,11 @@ struct TodoView: View {
             } label: {
                 Label("New Reading".localized(), systemImage: "book.fill")
             }
+            Button {
+                viewModel.showingNewRoutine = true
+            } label: {
+                Label("New Routine".localized(), systemImage: "repeat")
+            }
         } label: {
             Image(systemName: "plus")
         }
@@ -403,12 +400,22 @@ struct TodoView: View {
             if let comp = entry.comprehensiveExam { viewModel.selectedComprehensive = comp }
         case .homework, .reading:
             if let task = entry.taskItem { viewModel.selectedTask = task }
+        case .routine:
+            if let r = entry.routine { viewModel.selectedRoutine = r }
         }
     }
 
     private func toggleCompletion(of entry: TodoEntry) {
-        guard let task = entry.taskItem else { return }
-        viewModel.toggleCompletion(for: task)
+        switch entry.kind {
+        case .homework, .reading:
+            guard let task = entry.taskItem else { return }
+            viewModel.toggleCompletion(for: task)
+        case .routine:
+            guard let inst = entry.routineInstance else { return }
+            viewModel.toggleCompletion(for: inst)
+        default:
+            break
+        }
     }
 }
 
@@ -423,6 +430,7 @@ struct PastItemsSheet: View {
     let onSelectExam: (Exam) -> Void
     let onSelectComprehensive: (comprehensiveExam) -> Void
     let onSelectTask: (TaskItem) -> Void
+    let onSelectRoutine: (Routine) -> Void
     let onDeleteEntry: (TodoEntry) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -440,6 +448,8 @@ struct PastItemsSheet: View {
                             if let comp = entry.comprehensiveExam { onSelectComprehensive(comp) }
                         case .homework, .reading:
                             if let task = entry.taskItem { onSelectTask(task) }
+                        case .routine:
+                            if let r = entry.routine { onSelectRoutine(r) }
                         }
                     } label: {
                         pastRow(entry: entry)
@@ -505,6 +515,9 @@ struct PastItemsSheet: View {
         case .reading:
             Image(systemName: "book.fill")
                 .foregroundColor(Color(.systemIndigo))
+        case .routine:
+            Image(systemName: "repeat")
+                .foregroundColor(Color(.systemIndigo))
         }
     }
 
@@ -514,6 +527,7 @@ struct PastItemsSheet: View {
         case .comprehensiveExam: return "Compre.".localized()
         case .homework: return "Homework".localized()
         case .reading: return "Reading".localized()
+        case .routine: return "Routine".localized()
         }
     }
 
@@ -523,13 +537,14 @@ struct PastItemsSheet: View {
         case .comprehensiveExam: return Color(.systemPurple)
         case .homework: return Color(.systemGreen)
         case .reading: return Color(.systemIndigo)
+        case .routine: return Color(.systemIndigo)
         }
     }
 }
 
 #Preview {
     let container = RepositoryContainer()
-    TodoView(container: container, segment: .constant(.tasks))
+    TodoView(container: container)
         .environment(container)
         .preferredColorScheme(.light)
 }
@@ -552,6 +567,14 @@ private struct TodoViewSheetsAndDestinations: ViewModifier {
             }
             .sheet(item: $viewModel.showingNewTask) { taskType in
                 NewTaskView(initialType: taskType)
+                    .adaptiveSheet()
+            }
+            .sheet(isPresented: $viewModel.showingNewRoutine) {
+                RoutineEditorSheet(container: container, editing: nil)
+                    .adaptiveSheet()
+            }
+            .sheet(item: $viewModel.selectedRoutine) { routine in
+                RoutineEditorSheet(container: container, editing: routine)
                     .adaptiveSheet()
             }
             .sheet(isPresented: $viewModel.showingPastSheet) {
@@ -590,6 +613,12 @@ private struct TodoViewSheetsAndDestinations: ViewModifier {
                 viewModel.showingPastSheet = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                     viewModel.selectedTask = task
+                }
+            },
+            onSelectRoutine: { routine in
+                viewModel.showingPastSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    viewModel.selectedRoutine = routine
                 }
             },
             onDeleteEntry: { entry in viewModel.deleteTodoEntry(entry) }

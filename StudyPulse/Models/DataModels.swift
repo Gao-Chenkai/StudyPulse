@@ -516,6 +516,8 @@ nonisolated enum TodoEntryKind: String, Codable, Hashable, Sendable {
     case homework
     /// 阅读材料 / Reading material
     case reading
+    /// 例程(当天物化的 RoutineInstance) / Routine (today's materialized instance)
+    case routine
 }
 
 /// 待办列表统一渲染的条目结构
@@ -535,6 +537,9 @@ nonisolated struct TodoEntry: Identifiable, Hashable, Sendable {
     let exam: Exam?
     let comprehensiveExam: comprehensiveExam?
     let taskItem: TaskItem?
+    /// 例程模板 + 当天实例(仅 kind == .routine 时非空)
+    let routine: Routine?
+    let routineInstance: RoutineInstance?
 }
 
 /// 作业 / 阅读材料任务项

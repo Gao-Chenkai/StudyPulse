@@ -123,7 +123,10 @@ struct BodyStatus: Equatable {
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
-    private let healthStore = HKHealthStore()
+    private let _healthStore = HKHealthStore()
+    /// 对外只读访问,供 StudyTimerManager 挂载 observer/anchored query。
+    /// Read-only access for StudyTimerManager to attach observer/anchored queries.
+    var healthStore: HKHealthStore { _healthStore }
 
     @Published var hrvEnabled: Bool {
         didSet { UserDefaults.standard.set(hrvEnabled, forKey: "hrv_enabled") }

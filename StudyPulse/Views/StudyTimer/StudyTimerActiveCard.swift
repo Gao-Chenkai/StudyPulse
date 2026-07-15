@@ -676,6 +676,39 @@ struct StudyTimerActiveCard: View {
                         Capsule().stroke(Color.orange.opacity(0.3), lineWidth: 1)
                     )
                 }
+
+                // 实时心率徽标(Apple Watch 通过 HealthKit 写入)
+                // Live heart-rate badge (Apple Watch via HealthKit).
+                if let hr = timer.currentHeartRate {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 11))
+                            .symbolEffect(.bounce, value: hr)
+                        Text("\(Int(hr)) bpm")
+                            .font(.system(size: max(12, timeFontSize * 0.2), weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.pink)
+                    .contentTransition(.numericText())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.pink.opacity(0.12)))
+                    .overlay(Capsule().stroke(Color.pink.opacity(0.25), lineWidth: 1))
+                } else if timer.timerState == .running {
+                    // 会话运行中但尚未收到心率样本。区分采集是否已启动:
+                    // Session running but no HR sample yet. Distinguish whether
+                    // streaming is actually active vs skipped/disabled.
+                    if timer.hrStreamingActive {
+                        // 采集已启动,但 Apple Watch 被动采样间隔 5-10 分钟,需等待
+                        Text("Waiting for Apple Watch HR (passive sampling ~5-10 min)…".localized())
+                            .font(.system(size: max(10, timeFontSize * 0.16), weight: .medium))
+                            .foregroundColor(activeSecondaryTextColor)
+                    } else {
+                        // 采集未启动:功能关闭或 HealthKit 未授权
+                        Text("HR streaming off — enable in Settings / Health".localized())
+                            .font(.system(size: max(10, timeFontSize * 0.16), weight: .medium))
+                            .foregroundColor(activeSecondaryTextColor.opacity(0.7))
+                    }
+                }
             }
             .frame(maxWidth: innerSize * 0.82)
         }

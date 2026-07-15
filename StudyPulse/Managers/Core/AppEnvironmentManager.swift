@@ -85,6 +85,12 @@ final class AppEnvironmentManager {
         preferences.glassEffectEnabled
     }
 
+    /// 学习计时器运行时是否采集 Apple Watch 心率
+    /// Whether to stream Apple Watch heart rate during study timer sessions.
+    var heartRateStreamingEnabled: Bool {
+        preferences.heartRateStreamingEnabled
+    }
+
     /// 当前激活的 study phase id（nil = 全部数据）
     /// Currently active study phase id (nil = all data).
     var activePhaseId: UUID? {
@@ -173,6 +179,12 @@ final class AppEnvironmentManager {
     func setGlassEffectEnabled(_ enabled: Bool) {
         Log.preferences.info("切换玻璃效果 / Glass effect: -> \(enabled, privacy: .public)")
         preferences.glassEffectEnabled = enabled
+    }
+
+    /// Toggle the Apple Watch heart-rate streaming switch.
+    func setHeartRateStreamingEnabled(_ enabled: Bool) {
+        Log.preferences.info("切换心率采集 / HR streaming: -> \(enabled, privacy: .public)")
+        preferences.heartRateStreamingEnabled = enabled
     }
 
     // MARK: - LLM (BYOK 大模型) 透传属性

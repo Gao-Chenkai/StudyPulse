@@ -50,7 +50,8 @@ struct BodyRadarValues {
         body: BodyStatus,
         baselines: PersonalBaselines = .empty,
         age: Int? = nil,
-        mistakes: [MistakeNote] = []
+        mistakes: [MistakeNote] = [],
+        recentAnnotations: [DifficultyAnnotation] = []
     ) -> BodyRadarValues {
         let ageRef = age.map(AgeReference.compute) ?? .adult
 
@@ -108,8 +109,10 @@ struct BodyRadarValues {
 
         // Psychological stability score calculation:
         // 思路:把所有"心理/思维类"错题标签列出来,每条匹配上的错题贡献 (1 - mastery),
-        // 总体 stability = 1 - average(影响),即掌握度越低的心理类错题越多,stability 越低。
-        // 缺数据时 stability = 1.0(默认满分)。
+        // 总体 mistakeStability = 1 - average(影响)。
+        // 再融合最近 7 天难题标注(annotationStability):标注越多,稳定性越低。
+        // 最终 stabilityScore = mistakeStability * 0.65 + annotationStability * 0.35。
+        // 缺数据时对应分量为 1.0(默认满分)。
         let psychTags: Set<String> = [
             "概念混淆", "计算粗心", "跳步", "审题不清", "思维定势",
             "逻辑不严密", "考试焦虑", "急躁粗心", "笔误", "遗漏条件",
@@ -118,7 +121,7 @@ struct BodyRadarValues {
             "impatience", "slip of pen", "missing condition"
         ]
 
-        let stabilityScore: Double = {
+        let mistakeStability: Double = {
             guard !mistakes.isEmpty else { return 1.0 }
             var totalImpact = 0.0
             for m in mistakes {
@@ -132,6 +135,15 @@ struct BodyRadarValues {
             let val = 1.0 - (totalImpact / Double(mistakes.count))
             return max(0.0, min(1.0, val))
         }()
+
+        // 标注维度:最近 7 天每条标注降 0.15,封顶 0.2。
+        let annotationStability: Double = {
+            guard !recentAnnotations.isEmpty else { return 1.0 }
+            let count = recentAnnotations.count
+            return max(0.2, 1.0 - Double(count) * 0.15)
+        }()
+
+        let stabilityScore = max(0.0, min(1.0, mistakeStability * 0.65 + annotationStability * 0.35))
         let stabilityText = String(format: "%.0f%%", stabilityScore * 100)
 
         return BodyRadarValues(

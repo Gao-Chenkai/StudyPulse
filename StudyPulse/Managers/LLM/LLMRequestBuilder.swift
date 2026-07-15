@@ -848,8 +848,8 @@ enum BodyRadarLLM {
     /// 默认 system prompt
     static let defaultSystem: String = """
         你是 StudyPulse 的"恢复准备度"教练。给定用户今日的身体信号(HRV / 静息心率 / 呼吸 /
-        恢复性睡眠 / 今日锻炼 / 近期活动)+ 30 天个人基线 + 本地算法的"强度 + 焦点"建议,
-        你的任务是:基于完整数据校准本地建议,产出更具体、更可操作的中文建议。
+        恢复性睡眠 / 今日锻炼 / 近期活动)+ 30 天个人基线 + 本地算法的"强度 + 焦点"建议 +
+        近期学习压力标注,你的任务是:基于完整数据校准本地建议,产出更具体、更可操作的中文建议。
         严格使用以下 Markdown 结构(每个 ## 标题独占一行,顺序固定):
 
         ## 强度
@@ -860,11 +860,13 @@ enum BodyRadarLLM {
 
         ## 建议
         <2-5 句,具体到学科分配 / 时间块 / 强度 / 休息时机。允许使用 Markdown 列表。
+        若提供了「近期学习压力标注」,请针对性回应其中提到的具体难题。
         不要再写"依据"段,所有依据会单独输出。>
 
         ## 依据
         <3-6 条 bullet,每条引用 1 个具体信号 vs 基线 / 参考值的对比,
-        例如:"- 恢复性睡眠 6.2h — vs 你的 30 天均值 7.4h(↓1.2h,校准分 0.42)">
+        例如"- 恢复性睡眠 6.2h — vs 你的 30 天均值 7.4h(↓1.2h,校准分 0.42)"。
+        若有「近期学习压力标注」,至少 1 条引用具体事件。>
 
         不要重复输入数据;不要输出客套话、JSON、代码块;不要解释你做了什么。
         """
@@ -947,6 +949,20 @@ enum BodyRadarLLM {
         let local = c.localSuggestion.map { s in
             "标题=\(s.title); 强度=\(s.priority) ; 颜色=\(colorName(s.color))"
         } ?? "无"
+        // 近期学习压力标注(7 天内,用户在心率峰值处登记的难题)
+        let annos = c.recentDifficultyAnnotations
+        let annoBlock: String
+        if annos.isEmpty {
+            annoBlock = "无近期压力标注"
+        } else {
+            let lines = annos.prefix(15).map { a -> String in
+                let hrStr = a.heartRate.map { " HR=\(Int($0))bpm" } ?? ""
+                let note = a.note.isEmpty ? "(无文字)" : a.note
+                let ts = f.string(from: a.timestamp)
+                return "- [\(ts)]\(hrStr): \(note)"
+            }
+            annoBlock = "共 \(annos.count) 条\n" + lines.joined(separator: "\n")
+        }
         return """
         当前时间:\(f.string(from: c.now))
         年龄:\(c.age.map { "\($0)岁" } ?? "未知(用 adult 兜底)")
@@ -968,6 +984,9 @@ enum BodyRadarLLM {
         总睡眠: \(bl(c.baselines.sleepHours))
         今日锻炼: \(bl(c.baselines.exerciseMinutes))
         年龄参考范围(RHR low/mid/high): \(Int(ref.restingHeartRate.low))/\(Int(ref.restingHeartRate.mid))/\(Int(ref.restingHeartRate.high))
+
+        ===== 近期学习压力标注(7 天内)=====
+        \(annoBlock)
 
         ===== 本地算法已给出建议 =====
         \(local)
@@ -1133,5 +1152,100 @@ enum QuizGradingLLM {
         }
         
         return LLMPrompt(system: defaultSystem, messages: [.user(userText)])
+    }
+}
+
+// MARK: - 14) Study Session Stress Interpretation (学习会话压力解读)
+
+/// 单次学习会话的心率压力解读 prompt 工厂。
+/// 输入:会话元信息 + 心率样本 + 难题标注 + RHR 基线。
+/// 输出:3 段 Markdown(`## 压力模式 / ## 触发因素 / ## 建议`)。
+///
+/// Prompt factory for interpreting a single study session's heart-rate
+/// stress pattern. Input: session metadata + HR samples + difficulty
+/// annotations + RHR baseline. Output: 3 Markdown sections.
+enum StudySessionStressLLM {
+    static let defaultSystem: String = """
+    你是一位学习生理学专家。给定用户一次学习会话的心率曲线(采样点)、
+    难题标注、静息心率基线,你的任务是解读本次会话的压力模式。
+    严格使用以下 Markdown 结构(每个 ## 标题独占一行,顺序固定):
+
+    ## 压力模式
+    <2-4 句,描述本次会话心率曲线的整体形态(上升 / 平稳 / 骤升骤降 / 间歇峰值),
+    引用具体 bpm 数值与时间点。>
+
+    ## 触发因素
+    <2-4 句,结合难题标注推测可能的压力源。若标注为空,基于心率峰值出现的时间点
+    推测(如"会话中段出现 110bpm 峰值,可能是遇到难点")。>
+
+    ## 建议
+    <2-4 条 bullet,每条具体可执行的下一次学习改进建议,例如:
+    - 难点出现时主动暂停 30 秒深呼吸
+    - 把卡住的题目单独标记,会话结束后集中请教
+    - 若峰值集中在某学科,下次先复习相关基础概念>
+
+    不要重复输入数据;不要输出客套话、JSON、代码块;不要解释你做了什么。
+    """ + latexFormattingRule
+
+    static func makePrompt(
+        session: StudySession,
+        rhrBaseline: Double?
+    ) -> LLMPrompt {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        let start = session.startDate
+        let durationMin = session.durationSeconds / 60
+        let intensity = session.intensity.displayName
+
+        // 心率样本(最多 30 个点,避免 prompt 过长)
+        let samples = (session.heartRateSamples ?? []).prefix(30)
+        let sampleLines: String
+        if samples.isEmpty {
+            sampleLines = "(无心率样本)"
+        } else {
+            sampleLines = samples.map { s in
+                let offset = Int(s.timestamp.timeIntervalSince(start))
+                let mm = offset / 60
+                let ss = offset % 60
+                return String(format: "+%02d:%02d  %.0f bpm", mm, ss, s.bpm)
+            }.joined(separator: "\n")
+        }
+
+        // 难题标注
+        let annos = session.difficultyAnnotations ?? []
+        let annoLines: String
+        if annos.isEmpty {
+            annoLines = "(无标注)"
+        } else {
+            annoLines = annos.map { a in
+                let offset = Int(a.timestamp.timeIntervalSince(start))
+                let mm = offset / 60
+                let ss = offset % 60
+                let hrStr = a.heartRate.map { " HR=\(Int($0))" } ?? ""
+                return String(format: "+%02d:%02d%@  %@", mm, ss, hrStr, a.note)
+            }.joined(separator: "\n")
+        }
+
+        let rhrLine = rhrBaseline.map { String(format: "%.0f bpm", $0) } ?? "未知"
+        let userText = """
+        会话开始:\(f.string(from: start))
+        时长:\(durationMin) 分钟
+        强度档位:\(intensity)
+        静息心率基线:\(rhrLine)
+
+        ===== 心率采样(\(samples.count) 个点)=====
+        \(sampleLines)
+
+        ===== 难题标注(\(annos.count) 条)=====
+        \(annoLines)
+        """
+        return LLMPrompt(system: defaultSystem, messages: [.user(userText)])
+    }
+
+    /// 解析输出:直接返回 Markdown 文本(不做结构化解析)。
+    /// Parse output: return the Markdown text as-is (no structured parsing).
+    static func parse(_ output: String) -> String? {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

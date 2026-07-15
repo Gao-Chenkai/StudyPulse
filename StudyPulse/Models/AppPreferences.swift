@@ -117,6 +117,12 @@ nonisolated struct AppPreferences: Codable {
     /// Last LLM request timestamp for the Study Suggestions card; same 40-minute cooldown as BodyRadar.
     var lastStudySuggestionsAIRequestTime: Date? = nil
 
+    /// 学习计时器运行时是否采集 Apple Watch 心率(需 HealthKit 授权)。
+    /// 默认开启;关闭后不挂载 observer、不弹回顾 sheet。
+    /// Whether to stream Apple Watch heart rate during study timer sessions.
+    /// Requires HealthKit authorization. Default on.
+    var heartRateStreamingEnabled: Bool = true
+
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
@@ -127,6 +133,7 @@ nonisolated struct AppPreferences: Codable {
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
         case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case heartRateStreamingEnabled
     }
 
     init() {}
@@ -159,6 +166,7 @@ nonisolated struct AppPreferences: Codable {
         self.lastRadarAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastRadarAIRequestTime)
         self.debugOverrideSystemPrompt = try c.decodeIfPresent(String.self, forKey: .debugOverrideSystemPrompt)
         self.lastStudySuggestionsAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastStudySuggestionsAIRequestTime)
+        self.heartRateStreamingEnabled = try c.decodeIfPresent(Bool.self, forKey: .heartRateStreamingEnabled) ?? true
     }
     
     // MARK: - 语言常量

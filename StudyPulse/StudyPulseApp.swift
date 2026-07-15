@@ -40,6 +40,7 @@ struct StudyPulseApp: App {
     @StateObject private var hrvManager = HealthKitManager.shared
     @StateObject private var timerManager = StudyTimerManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var routineSpawner: RoutineSpawner?
 
     // 2. 声明协调器实例
     private let notificationCoordinator = NotificationCoordinator()
@@ -100,7 +101,9 @@ struct StudyPulseApp: App {
                     Log.record(.info, category: "App", message: "HealthKit bootstrap 完成 / HealthKit bootstrap complete")
 
                     // 例程物化 + Live Activity 恢复(2026-07-09 新增)
+                    // spawner 必须存为 @State 长期持有,否则释放后 .routineDataChanged 通知监听失效
                     let spawner = RoutineSpawner(container: container)
+                    routineSpawner = spawner
                     spawner.runOnce()
                     // 若当前有进行中的 routine,恢复 Live Activity
                     RoutineLiveActivityController.shared.restoreIfNeeded(container: container)

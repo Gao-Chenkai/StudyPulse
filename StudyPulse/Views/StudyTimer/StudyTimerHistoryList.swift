@@ -123,40 +123,49 @@ struct StudyTimerHistoryList: View {
     }
 
     private func sessionRow(_ session: StudySession) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: session.intensity.icon)
-                .font(.system(size: 14))
-                .foregroundColor(intensityColor(session.intensity))
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(intensityColor(session.intensity).opacity(0.12)))
+        NavigationLink(value: session.id) {
+            HStack(spacing: 10) {
+                Image(systemName: session.intensity.icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(intensityColor(session.intensity))
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(intensityColor(session.intensity).opacity(0.12)))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.intensity.displayName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.primary)
-                Text(timeLabel(for: session.startDate))
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.intensity.displayName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.primary)
+                    Text(timeLabel(for: session.startDate))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(session.durationSeconds / 60) min")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(session.completed ? .primary : .secondary)
+
+                if let samples = session.heartRateSamples, !samples.isEmpty {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.pink)
+                }
+
+                if !session.completed {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red.opacity(0.7))
+                }
             }
-
-            Spacer()
-
-            Text("\(session.durationSeconds / 60) min")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(session.completed ? .primary : .secondary)
-
-            if !session.completed {
-                Image(systemName: "xmark.circle")
-                    .font(.system(size: 12))
-                    .foregroundColor(.red.opacity(0.7))
-            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.tertiarySystemFill))
+            )
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.tertiarySystemFill))
-        )
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers
@@ -195,28 +204,53 @@ struct StudyTimerHistoryList: View {
 /// user can see today's focus and total completed sessions at a glance.
 struct HistorySummaryInline: View {
     @ObservedObject private var timer = StudyTimerManager.shared
+    @State private var showFullHistory = false
 
     var body: some View {
-        VStack(spacing: 8) {
-            Divider()
-            HStack {
-                Label(
-                    "\(StudySessionStore.todayTotalMinutes()) min focused today".localized(),
-                    systemImage: "clock.badge.checkmark"
-                )
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+        Button {
+            showFullHistory = true
+        } label: {
+            VStack(spacing: 8) {
+                Divider()
+                HStack {
+                    Label(
+                        "\(StudySessionStore.todayTotalMinutes()) min focused today".localized(),
+                        systemImage: "clock.badge.checkmark"
+                    )
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
 
-                Spacer()
+                    Spacer()
 
-                Label(
-                    "\(timer.sessions.filter(\.completed).count) sessions total".localized(),
-                    systemImage: "list.clipboard"
-                )
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                    Label(
+                        "\(timer.sessions.filter(\.completed).count) sessions total".localized(),
+                        systemImage: "list.clipboard"
+                    )
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showFullHistory) {
+            NavigationStack {
+                StudyTimerHistoryList(timer: timer)
+                    .navigationTitle("Study History".localized())
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done".localized()) { showFullHistory = false }
+                        }
+                    }
+                    .navigationDestination(for: UUID.self) { sessionId in
+                        StudySessionDetailView(sessionId: sessionId)
+                    }
+            }
         }
     }
 }

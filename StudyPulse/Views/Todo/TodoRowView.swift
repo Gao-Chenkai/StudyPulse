@@ -34,8 +34,8 @@ struct TodoRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 8) {
-                // 完成态勾选（仅作业 / 阅读）
-                if entry.kind == .homework || entry.kind == .reading {
+                // 完成态勾选（作业 / 阅读 / 例程）
+                if entry.kind == .homework || entry.kind == .reading || entry.kind == .routine {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             onToggleCompletion?()
@@ -106,7 +106,7 @@ struct TodoRowView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Reminder".localized())
+                        Text(entry.kind == .routine ? "Time".localized() : "Reminder".localized())
                             .font(.caption2)
                             .foregroundColor(Color(.secondaryLabel))
                         Text(reminderTimeText)
@@ -176,6 +176,7 @@ struct TodoRowView: View {
         case .comprehensiveExam: return Color(.systemPurple)
         case .homework: return Color(.systemGreen)
         case .reading: return Color(.systemIndigo)
+        case .routine: return Color(hex: entry.routine?.type.colorHex ?? "5856D6")
         }
     }
 
@@ -185,6 +186,7 @@ struct TodoRowView: View {
         case .comprehensiveExam: return "Compre.".localized()
         case .homework: return "Homework".localized()
         case .reading: return "Reading".localized()
+        case .routine: return "Routine".localized()
         }
     }
 
@@ -192,6 +194,7 @@ struct TodoRowView: View {
         switch entry.kind {
         case .homework, .reading: return "Due today".localized()
         case .exam, .comprehensiveExam: return "Today!".localized()
+        case .routine: return "Today".localized()
         }
     }
 
@@ -212,6 +215,10 @@ struct TodoRowView: View {
     }
 
     private var reminderColor: Color {
+        if entry.kind == .routine {
+            if entry.isCompleted { return Color(.secondaryLabel) }
+            return typeColor
+        }
         guard let task = entry.taskItem else { return Color(.secondaryLabel) }
         if entry.isCompleted { return Color(.secondaryLabel) }
         if task.reminderDate < Date() { return Color(.systemRed) }
@@ -221,6 +228,14 @@ struct TodoRowView: View {
     }
 
     private var reminderTimeText: String {
+        if entry.kind == .routine {
+            // 例程:显示 startTime - endTime 时段
+            let s = entry.date.formatted(date: .omitted, time: .shortened)
+            if let end = entry.endDate {
+                return "\(s) - \(end.formatted(date: .omitted, time: .shortened))"
+            }
+            return s
+        }
         guard let task = entry.taskItem else { return "—" }
         return task.reminderDate.formatted(date: .abbreviated, time: .shortened)
     }

@@ -27,6 +27,10 @@ struct StudyTimerView: View {
     @State private var immersiveLandscapeMode = false
     @State private var showThemePicker: Bool = false
 
+    // 会话结束心率回顾 sheet / Post-session HR review sheet
+    @State private var showReviewSheet: Bool = false
+    @State private var reviewedSessionId: UUID?
+
     private var isActive: Bool {
         timer.timerState == .running || timer.timerState == .paused
     }
@@ -101,6 +105,28 @@ struct StudyTimerView: View {
         }
         .onDisappear {
             exitImmersiveLandscapeMode()
+        }
+        .onChange(of: timer.timerState) { _, newState in
+            // 会话自然完成且心率样本 ≥3 时弹出回顾 sheet
+            if newState == .completed, let s = timer.sessions.first {
+                reviewedSessionId = s.id
+                if (s.heartRateSamples?.count ?? 0) >= 3 {
+                    showReviewSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $showReviewSheet) {
+            if let id = reviewedSessionId,
+               let s = timer.sessions.first(where: { $0.id == id }) {
+                StudySessionReviewSheet(
+                    session: s,
+                    subjects: container.subjectRepo.subjects,
+                    onAnnotationsChange: { updated in
+                        StudySessionStore.updateAnnotations(sessionId: id, annotations: updated)
+                        timer.refreshSessions()
+                    }
+                )
+            }
         }
     }
 

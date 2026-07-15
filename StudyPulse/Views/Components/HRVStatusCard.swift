@@ -83,7 +83,8 @@ struct HRVStatusCard: View {
                             body: hrvManager.bodyStatus,
                             baselines: hrvManager.personalBaselines,
                             age: container.profileRepo.profile.age,
-                            mistakes: container.mistakeRepo.filteredMistakeSets
+                            mistakes: container.mistakeRepo.filteredMistakeSets,
+                            recentAnnotations: StudySessionStore.recentAnnotations(days: 7)
                         )
                         BodyRadarChart(values: radar)
                             .frame(height: 220)
@@ -168,7 +169,8 @@ struct HRVStatusCard: View {
             body: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
             age: container.profileRepo.profile.age,
-            mistakes: container.mistakeRepo.filteredMistakeSets
+            mistakes: container.mistakeRepo.filteredMistakeSets,
+            recentAnnotations: StudySessionStore.recentAnnotations(days: 7)
         )
         return HStack(spacing: 6) {
             axisTile(
@@ -448,7 +450,8 @@ struct HRVStatusCard: View {
             hrv: hrvManager.readiness,
             bodyStatus: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
-            age: container.profileRepo.profile.age
+            age: container.profileRepo.profile.age,
+            recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7)
         )
         lastBodyReadinessContext = context
 
@@ -543,7 +546,8 @@ struct HRVStatusCard: View {
                 hrv: hrvManager.readiness,
                 bodyStatus: hrvManager.bodyStatus,
                 baselines: hrvManager.personalBaselines,
-                age: container.profileRepo.profile.age
+                age: container.profileRepo.profile.age,
+                recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7)
             )
             lastBodyReadinessContext = temp
             return BodyRadarLLM.makePrompt(temp).messages.first?.content

@@ -2,50 +2,18 @@
 //  TodoRootView.swift
 //  StudyPulse
 //
-//  Todo Tab 的根视图,包含两个子页签:
-//  - Tasks: 原 TodoView
-//  - Routines: 新增的 RoutinesView
-//
-//  Picker 不再固定在顶部,而是作为子视图滚动内容的一部分。
-//
-//  Created for Plans & Routines spec (2026-07-09).
+//  Todo Tab 的根视图。原 Tasks/Routines 双 segment 已合并:
+//  例程现在作为待办列表的第 5 种类型(与考试/作业/阅读并列)在 TodoView 内展示。
+//  保留本文件作为 ContentView 的入口薄包装(TodoView 自带 NavigationStack)。
 //
 
 import SwiftUI
 
 struct TodoRootView: View {
     let container: RepositoryContainer
-    @State private var segment: Segment = .tasks
-
-    enum Segment: String, CaseIterable, Identifiable {
-        case tasks
-        case routines
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .tasks:    return "Tasks".localized()
-            case .routines: return "Routines".localized()
-            }
-        }
-        var icon: String {
-            switch self {
-            case .tasks:    return "checklist"
-            case .routines: return "repeat.circle"
-            }
-        }
-    }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch segment {
-                case .tasks:
-                    TodoView(container: container, segment: $segment)
-                case .routines:
-                    RoutinesView(segment: $segment)
-                }
-            }
-        }
+        TodoView(container: container)
     }
 }
 

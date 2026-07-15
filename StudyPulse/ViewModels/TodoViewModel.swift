@@ -26,9 +26,11 @@ final class TodoViewModel: ObservableObject {
     @Published var showCompleted: Bool = false
     @Published var showingNewExam: Bool = false
     @Published var showingNewTask: TaskType? = nil
+    @Published var showingNewRoutine: Bool = false
     @Published var selectedExam: Exam? = nil
     @Published var selectedComprehensive: comprehensiveExam? = nil
     @Published var selectedTask: TaskItem? = nil
+    @Published var selectedRoutine: Routine? = nil
     @Published var showingPastSheet: Bool = false
     /// 列表 / 日历视图模式(持久化) / List/calendar view mode (persisted).
     @Published var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
@@ -70,6 +72,7 @@ final class TodoViewModel: ObservableObject {
                 case .exam:      return entry.kind == .exam || entry.kind == .comprehensiveExam
                 case .homework:  return entry.kind == .homework
                 case .reading:   return entry.kind == .reading
+                case .routine:   return entry.kind == .routine
                 }
             }
         }
@@ -131,6 +134,12 @@ final class TodoViewModel: ObservableObject {
         _ = exam
     }
 
+    /// 切换 RoutineInstance 的完成态并重算 / Toggle a routine instance's completion & recompute.
+    func toggleCompletion(for instance: RoutineInstance) {
+        container.routineInstanceRepo.setCompletion(instance.id, isCompleted: !instance.isCompleted)
+        recompute()
+    }
+
     /// 删除一条 todo(根据 kind 路由到对应 Repository)
     /// Delete a todo (routed to the matching Repository by `kind`).
     func deleteTodoEntry(_ entry: TodoEntry) {
@@ -146,6 +155,11 @@ final class TodoViewModel: ObservableObject {
         case .comprehensiveExam:
             if let exam = container.examRepo.comprehensiveExamSets.first(where: { $0.id == entry.id }) {
                 container.examRepo.deleteComprehensiveExam(exam)
+            }
+        case .routine:
+            // 删除例程模板(级联清理关联 instance),与删除 exam/task 语义一致
+            if let r = entry.routine {
+                container.deleteRoutine(r.id)
             }
         }
         recompute()

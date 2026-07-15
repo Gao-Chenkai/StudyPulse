@@ -22,15 +22,21 @@ import Foundation
 final class TodoAggregator {
     private let examRepo: any ExamRepository
     private let taskRepo: any TaskRepository
+    private let routineRepo: any RoutineRepository
+    private let routineInstanceRepo: any RoutineInstanceRepository
     private let envManager: AppEnvironmentManager
 
     init(
         examRepo: any ExamRepository,
         taskRepo: any TaskRepository,
+        routineRepo: any RoutineRepository,
+        routineInstanceRepo: any RoutineInstanceRepository,
         envManager: AppEnvironmentManager
     ) {
         self.examRepo = examRepo
         self.taskRepo = taskRepo
+        self.routineRepo = routineRepo
+        self.routineInstanceRepo = routineInstanceRepo
         self.envManager = envManager
     }
 
@@ -56,7 +62,9 @@ final class TodoAggregator {
                 isCompleted: e.examReview != nil,
                 exam: e,
                 comprehensiveExam: nil,
-                taskItem: nil
+                taskItem: nil,
+                routine: nil,
+                routineInstance: nil
             ))
         }
         // 综合考试
@@ -73,7 +81,9 @@ final class TodoAggregator {
                 isCompleted: false,
                 exam: nil,
                 comprehensiveExam: c,
-                taskItem: nil
+                taskItem: nil,
+                routine: nil,
+                routineInstance: nil
             ))
         }
         // 待办
@@ -92,7 +102,36 @@ final class TodoAggregator {
                 isCompleted: t.isCompleted,
                 exam: nil,
                 comprehensiveExam: nil,
-                taskItem: t
+                taskItem: t,
+                routine: nil,
+                routineInstance: nil
+            ))
+        }
+        // 例程:把 routineInstanceRepo 里今天及以后的实例合并进来。
+        //   - phase 过滤:用 routineRepo.filteredRoutines(已按 active phase 过滤)做白名单
+        //   - includeCompleted=false → 跳过已完成 instance
+        //   - 只取今天及以后(由 RoutineSpawner 在 App 启动时物化当天 instance)
+        let allowedRoutineIds = Set(routineRepo.filteredRoutines.map { $0.id })
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        for inst in routineInstanceRepo.allInstances {
+            guard allowedRoutineIds.contains(inst.routineId) else { continue }
+            guard inst.date >= todayStart else { continue }
+            if !includeCompleted && inst.isCompleted { continue }
+            let routine = routineRepo.filteredRoutines.first { $0.id == inst.routineId }
+            entries.append(TodoEntry(
+                id: inst.id,
+                kind: .routine,
+                title: inst.title,
+                subject: inst.subject ?? "",
+                date: inst.startTime,
+                endDate: inst.endTime,
+                importance: 3,
+                isCompleted: inst.isCompleted,
+                exam: nil,
+                comprehensiveExam: nil,
+                taskItem: nil,
+                routine: routine,
+                routineInstance: inst
             ))
         }
         return entries.sorted { lhs, rhs in

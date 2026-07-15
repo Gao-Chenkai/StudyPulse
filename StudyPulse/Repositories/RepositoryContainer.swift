@@ -126,6 +126,8 @@ final class RepositoryContainer {
         self.todoAggregator = TodoAggregator(
             examRepo: self.examRepo,
             taskRepo: self.taskRepo,
+            routineRepo: self.routineRepo,
+            routineInstanceRepo: self.routineInstanceRepo,
             envManager: envManager
         )
         self.phaseRefresher = PhaseFilterRefresher(
@@ -431,12 +433,14 @@ final class RepositoryContainer {
     /// Add a routine template.
     func addRoutine(_ routine: Routine) {
         routineRepo.add(routine)
+        NotificationCenter.default.post(name: .routineDataChanged, object: nil)
     }
 
     /// 批量添加例程
     /// Batch-add routine templates.
     func addRoutines(_ newRoutines: [Routine]) {
         routineRepo.add(newRoutines)
+        NotificationCenter.default.post(name: .routineDataChanged, object: nil)
     }
 
     /// 更新例程模板

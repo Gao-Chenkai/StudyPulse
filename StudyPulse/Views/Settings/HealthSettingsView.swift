@@ -7,6 +7,7 @@ import SwiftUI
 
 struct HealthSettingsView: View {
     @EnvironmentObject var hrvManager: HealthKitManager
+    @Environment(RepositoryContainer.self) private var container
     @State private var showingHRVOnboarding = false
 
   var body: some View {
@@ -39,6 +40,14 @@ struct HealthSettingsView: View {
                 }
 
                 if hrvManager.hrvEnabled && hrvManager.hrvOnboardingCompleted {
+                    Section {
+                        Toggle(isOn: heartRateStreamingBinding) {
+                            Label("Stream Apple Watch HR during study".localized(), systemImage: "applewatch.radiowaves.left.and.right")
+                        }
+                    } footer: {
+                        Text("When enabled, the study timer collects Apple Watch heart-rate samples in real time. After the session ends, a chart is shown with high-HR peaks highlighted for logging difficulties encountered. Sample density depends on Apple Watch passive monitoring frequency.".localized())
+                    }
+
                     Section {
                         Picker("HRV Card Detail".localized(), selection: detailLevelBinding) {
                             ForEach(HRVDetailLevel.allCases, id: \.rawValue) { level in
@@ -85,6 +94,13 @@ struct HealthSettingsView: View {
         Binding(
             get: { hrvManager.hrvDetailLevel },
             set: { hrvManager.hrvDetailLevel = $0 }
+        )
+    }
+
+    private var heartRateStreamingBinding: Binding<Bool> {
+        Binding(
+            get: { container.envManager.heartRateStreamingEnabled },
+            set: { container.envManager.setHeartRateStreamingEnabled($0) }
         )
     }
 

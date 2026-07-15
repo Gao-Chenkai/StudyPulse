@@ -1602,6 +1602,8 @@
 "Great at %@" = "%@ 学得不错";
 "Keep up the good work" = "继续加油";
 "Routines" = "例程";
+"Routine" = "例程";
+"New Routine" = "新建例程";
 "No routines yet" = "还没有例程";
 "Add your first routine" = "添加第一个例程";
 "Schedule recurring study blocks like\n\"Mon 19:00-21:00 Math mistake review\"." = "安排周期性学习时间,例如\n「周一 19:00-21:00 数学错题复盘」。";
@@ -1802,4 +1804,17 @@
 "正在诊断您的思维误区..." = "正在诊断您的思维误区…";
 "正在撰写深度的正确解题思路..." = "正在撰写深度的正确解题思路…";
 "正在沉淀易错防坑指南..." = "正在沉淀易错防坑指南…";
+
+// MARK: - Study Timer Heart Rate Streaming
+"Waiting for Apple Watch HR (passive sampling ~5-10 min)…" = "等待 Apple Watch 心率数据(被动采样约 5-10 分钟一次)…";
+"HR streaming off — enable in Settings / Health" = "心率采集未启用 — 请在设置/健康中开启";
+"No heart-rate data" = "暂无心率数据";
+"Apple Watch may not have been worn or no samples were recorded during this session." = "可能未佩戴 Apple Watch,或本次学习期间未采集到心率样本。";
+"Apple Watch passive sampling is sparse. Peak detection may be less accurate." = "Apple Watch 被动采样较稀疏,峰值检测可能不够精确。";
+"Heart Rate Curve" = "心率曲线";
+"Tap a red peak to log what you were struggling with. Long-press anywhere to add a manual annotation." = "点击红色峰值记录当时遇到的难题,长按任意位置手动添加标注。";
+"Session Review" = "学习回顾";
+"HR samples" = "心率样本";
+"AI Stress Interpretation" = "AI 压力解读";
+"Analyzing…" = "分析中…";
 

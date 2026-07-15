@@ -2,6 +2,7 @@
 @preconcurrency import ActivityKit
 import Combine
 import Foundation
+import HealthKit
 import os
 
 // MARK: - Study Timer Palette
@@ -63,6 +64,25 @@ final class StudyTimerManager: ObservableObject {
     /// to show the suggested intensity before the user starts.
     @Published var recommendedIntensity: StudyIntensity = .steady
 
+    // MARK: - Heart-rate streaming state (Apple Watch real-time HR)
+
+    /// 最新心率(Apple Watch 通过 HealthKit 写入,UI 实时显示)
+    /// Latest heart rate from Apple Watch via HealthKit (for live UI).
+    @Published var currentHeartRate: Double?
+    /// 已采集心率样本数(UI 提示稀疏度)
+    /// Number of HR samples collected so far (UI density hint).
+    @Published var heartRateSampleCount: Int = 0
+    /// 心率采集是否已启动(observer 已挂载)。UI 据此区分「未授权」vs「等待数据」。
+    /// Whether HR streaming is actually active (observer mounted). UI uses this
+    /// to distinguish "not authorized / disabled" from "waiting for first sample".
+    @Published var hrStreamingActive: Bool = false
+
+    /// 会话期间内存缓存的心率样本,complete() 时写入 StudySession
+    /// In-memory HR sample buffer; flushed into StudySession on complete().
+    private var heartRateSamples: [HeartRateSample] = []
+    private var hrObserverQuery: HKObserverQuery?
+    private var hrAnchor: HKQueryAnchor?
+
     // MARK: - Live Activity handle
 
     private var currentActivity: Activity<StudyTimerActivityAttributes>?  // 当前 Live Activity 句柄(nil = 无)
@@ -107,6 +127,7 @@ final class StudyTimerManager: ObservableObject {
 
         startLiveActivity(intensity: intensity, totalSeconds: duration)
         startInternalTimer()
+        startHeartRateStreaming()
 
         Log.app.info("StudyTimer started: intensity=\(intensity.rawValue) duration=\(duration)s")
     }
@@ -141,6 +162,8 @@ final class StudyTimerManager: ObservableObject {
         totalSeconds = 0
         targetEndDate = nil
 
+        stopHeartRateStreaming()
+
         if wasRunning, let intensity = currentIntensity {
             let session = StudySession(
                 id: UUID(),
@@ -154,6 +177,7 @@ final class StudyTimerManager: ObservableObject {
         }
         endLiveActivity()
         currentIntensity = nil
+        resetHeartRateBuffer()
     }
 
     /// Called when the timer reaches 0 naturally.
@@ -163,19 +187,25 @@ final class StudyTimerManager: ObservableObject {
         timerState = .completed
         remainingSeconds = 0
 
+        stopHeartRateStreaming()
+
         if let intensity = currentIntensity {
             let session = StudySession(
                 id: UUID(),
                 startDate: Date().addingTimeInterval(-TimeInterval(totalSeconds)),
                 durationSeconds: totalSeconds,
                 intensity: intensity,
-                completed: true
+                completed: true,
+                heartRateSamples: heartRateSamples.isEmpty ? nil : heartRateSamples,
+                difficultyAnnotations: nil
             )
             sessions = StudySessionStore.append(session)
             AchievementManager.shared.recordFocusMinutes(totalSeconds / 60)
-            Log.app.info("StudyTimer completed: intensity=\(intensity.rawValue) duration=\(self.totalSeconds)s")
+            Log.app.info("StudyTimer completed: intensity=\(intensity.rawValue) duration=\(self.totalSeconds)s hrSamples=\(self.heartRateSamples.count)")
         }
         endLiveActivity()
+        // 注意:complete 后不立即清空 heartRateSamples,留给回顾 sheet 读取;
+        // reset() 时再清空。
     }
 
     /// Reset from completed state back to idle.
@@ -185,6 +215,157 @@ final class StudyTimerManager: ObservableObject {
         totalSeconds = 0
         targetEndDate = nil
         currentIntensity = nil
+        resetHeartRateBuffer()
+    }
+
+    /// 重新从磁盘加载会话列表(标注更新后同步 @Published)
+    /// Reload sessions from disk (sync @Published after annotation updates).
+    func refreshSessions() {
+        sessions = StudySessionStore.load()
+    }
+
+    // MARK: - Heart-rate streaming (Apple Watch via HealthKit)
+
+    /// 开始实时心率采集:挂载 HKObserverQuery + HKAnchoredObjectQuery。
+    /// Apple Watch 被动写入心率样本时,观察者触发 → 锚点查询拉取增量。
+    /// Start real-time HR streaming via HKObserverQuery + HKAnchoredObjectQuery.
+    private func startHeartRateStreaming() {
+        // 全局开关(单例只读 AppEnvironmentManager.shared.preferences,符合白名单)
+        guard AppEnvironmentManager.shared.preferences.heartRateStreamingEnabled else {
+            Log.app.info("StudyTimer HR streaming skipped: disabled by user preference")
+            return
+        }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            Log.app.info("StudyTimer HR streaming skipped: HealthKit unavailable")
+            return
+        }
+
+        // 检查心率类型是否已授权(不再用 isAuthorized 伞形标志,避免
+        // 用户只拒绝了呼吸率/锻炼时间等无关类型就整体跳过心率采集)
+        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        let hrAuthStatus = HealthKitManager.shared.healthStore.authorizationStatus(for: hrType)
+        if hrAuthStatus != .sharingAuthorized {
+            // 授权状态可能 stale,仍尝试启动(查询本身不报错,只是不返回数据)
+            Log.app.warning("StudyTimer HR streaming: HR auth status=\(hrAuthStatus.rawValue), starting anyway (status may be stale)")
+        }
+
+        // 重置缓冲
+        heartRateSamples = []
+        heartRateSampleCount = 0
+        currentHeartRate = nil
+        hrAnchor = nil
+        hrStreamingActive = true
+
+        // 先做一次锚点查询拉取已有样本(会话开始时刻之前的最近样本不取,
+        // 因为锚点初始 nil 会拉取所有历史。改用 predicate 限定到会话开始之后)
+        let startDate = Date()
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+
+        let observer = HKObserverQuery(sampleType: hrType, predicate: predicate) { [weak self] _, _, _ in
+            Task { @MainActor [weak self] in
+                self?.fetchNewHeartRateSamples(since: startDate)
+            }
+        }
+        HealthKitManager.shared.healthStore.execute(observer)
+        hrObserverQuery = observer
+
+        // 立即拉一次当前可用样本(会话开始后的新样本)
+        fetchNewHeartRateSamples(since: startDate)
+
+        // 立即查最近 15 分钟内的最新心率样本,让用户马上看到数据而非干等
+        // (Apple Watch 被动采样间隔 5-10 分钟,若刚测过就先显示出来)
+        fetchMostRecentHeartRate(withinMinutes: 15, sessionStart: startDate)
+
+        Log.app.info("StudyTimer HR streaming started at \(startDate.timeIntervalSince1970)")
+    }
+
+    /// 查询最近 N 分钟内的心率样本(用于会话启动时快速回显最近一次心率)。
+    /// 这些样本的时间戳在会话开始之前,不计入 heartRateSamples,
+    /// 只更新 currentHeartRate 让 UI 不至于一直显示 "Waiting"。
+    /// Fetch the most recent HR sample within the last N minutes (for quick
+    /// display at session start). These pre-session samples are NOT added to
+    /// the session buffer; only currentHeartRate is updated so the UI shows
+    /// something instead of "Waiting" for the next passive sample.
+    private func fetchMostRecentHeartRate(withinMinutes minutes: Int, sessionStart: Date) {
+        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        let lookbackStart = sessionStart.addingTimeInterval(-Double(minutes) * 60)
+        let predicate = HKQuery.predicateForSamples(withStart: lookbackStart, end: sessionStart, options: .strictStartDate)
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        let query = HKSampleQuery(sampleType: hrType, predicate: predicate, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, samples, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    Log.app.debug("StudyTimer: no recent HR sample in last \(minutes) min before session")
+                    return
+                }
+                let unit = HKUnit(from: "count/min")
+                let bpm = sample.quantity.doubleValue(for: unit)
+                // 仅在尚未收到会话内样本时更新(避免覆盖更新的数据)
+                if self.currentHeartRate == nil {
+                    self.currentHeartRate = bpm
+                    Log.app.info("StudyTimer: recent HR \(Int(bpm)) bpm (sampled \(sample.startDate, privacy: .public)) shown as initial")
+                }
+            }
+        }
+        HealthKitManager.shared.healthStore.execute(query)
+    }
+
+    /// 用 HKAnchoredObjectQuery 增量拉取新样本
+    /// Fetch new HR samples since anchor using HKAnchoredObjectQuery.
+    private func fetchNewHeartRateSamples(since startDate: Date) {
+        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+
+        let query = HKAnchoredObjectQuery(
+            type: hrType,
+            predicate: predicate,
+            anchor: hrAnchor,
+            limit: HKObjectQueryNoLimit
+        ) { [weak self] _, newSamples, deletedSamples, newAnchor, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.hrAnchor = newAnchor
+                let quantitySamples = newSamples as? [HKQuantitySample] ?? []
+                guard !quantitySamples.isEmpty else { return }
+                let unit = HKUnit(from: "count/min")
+                let mapped: [HeartRateSample] = quantitySamples.map {
+                    HeartRateSample(
+                        id: UUID(),
+                        timestamp: $0.startDate,
+                        bpm: $0.quantity.doubleValue(for: unit)
+                    )
+                }
+                self.heartRateSamples.append(contentsOf: mapped)
+                self.heartRateSamples.sort { $0.timestamp < $1.timestamp }
+                self.heartRateSampleCount = self.heartRateSamples.count
+                if let last = self.heartRateSamples.last {
+                    self.currentHeartRate = last.bpm
+                }
+                Log.app.debug("StudyTimer HR samples: +\(mapped.count) total=\(self.heartRateSamples.count)")
+            }
+        }
+        HealthKitManager.shared.healthStore.execute(query)
+    }
+
+    /// 停止心率采集
+    /// Stop HR streaming.
+    private func stopHeartRateStreaming() {
+        if let observer = hrObserverQuery {
+            HealthKitManager.shared.healthStore.stop(observer)
+        }
+        hrObserverQuery = nil
+        hrAnchor = nil
+        hrStreamingActive = false
+    }
+
+    /// 清空心率缓冲(用于 cancel / reset)
+    /// Clear HR buffer (used by cancel / reset).
+    private func resetHeartRateBuffer() {
+        heartRateSamples = []
+        heartRateSampleCount = 0
+        currentHeartRate = nil
+        hrStreamingActive = false
     }
 
     // MARK: - Internal timer tick

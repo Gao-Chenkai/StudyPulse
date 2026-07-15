@@ -280,6 +280,10 @@ struct BodyReadinessContext {
     let rhrCalibration: CalibratedValue
     let rrCalibration: CalibratedValue
     let exerciseCalibration: CalibratedValue
+    /// 最近 7 天学习会话中的难题标注(心率峰值处用户登记的压力事件)。
+    /// Recent difficulty annotations logged at HR peaks during study sessions
+    /// (last 7 days). Empty by default for callers that don't supply it.
+    let recentDifficultyAnnotations: [DifficultyAnnotation]
 
     /// 取年龄参考范围(默认 `adult` 兜底)
     var ageReference: AgeReference {
@@ -307,7 +311,8 @@ extension StudyReadinessAlgorithm {
         bodyStatus: BodyStatus,
         baselines: PersonalBaselines = .empty,
         age: Int? = nil,
-        now: Date = Date()
+        now: Date = Date(),
+        recentDifficultyAnnotations: [DifficultyAnnotation] = []
     ) -> BodyReadinessContext {
         let ageRef = age.map(AgeReference.compute) ?? .adult
         let sleepCal = calibrated(
@@ -349,7 +354,8 @@ extension StudyReadinessAlgorithm {
             sleepCalibration: sleepCal,
             rhrCalibration: rhrCal,
             rrCalibration: rrCal,
-            exerciseCalibration: exerciseCal
+            exerciseCalibration: exerciseCal,
+            recentDifficultyAnnotations: recentDifficultyAnnotations
         )
     }
 }
