@@ -75,6 +75,18 @@ struct HealthSettingsView: View {
                         }
                     }
                 }
+
+                // 学习日记入口(独立于 HRV 开关,始终显示)
+                // Study Diary entry (independent of HRV toggle; always shown).
+                Section {
+                    NavigationLink {
+                        DiarySettingsView()
+                    } label: {
+                        Label("Study Diary".localized(), systemImage: "book.fill")
+                    }
+                } footer: {
+                    Text("Daily study diary with mood and energy tags. Syncs to Apple Health Mindful Session.".localized())
+                }
          }
          .listStyle(.insetGrouped)
          .background(Color(.systemGroupedBackground))

@@ -203,7 +203,7 @@ struct StudyTimerHistoryList: View {
 /// Compact one-line summary used at the bottom of the setup sheet so the
 /// user can see today's focus and total completed sessions at a glance.
 struct HistorySummaryInline: View {
-    @ObservedObject private var timer = StudyTimerManager.shared
+    @EnvironmentObject private var timer: StudyTimerManager
     @State private var showFullHistory = false
 
     var body: some View {

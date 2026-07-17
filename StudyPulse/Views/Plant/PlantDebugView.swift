@@ -15,7 +15,7 @@ import SwiftUI
 
 struct PlantDebugView: View {
     @State private var plantManager = PlantManager.shared
-    @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var achievementManager: AchievementManager
 
     @State private var streakInput: String = ""
     @State private var daysInput: Double = 0
@@ -319,5 +319,6 @@ private extension PlantManager {
 #Preview {
     NavigationStack {
         PlantDebugView()
+            .environmentObject(AchievementManager.shared)
     }
 }

@@ -139,7 +139,9 @@ struct HomeAskDataProvider {
             return s
         }
 
-        // 周报(过去 7 天)
+        // 周报(过去 7 天)— 含日记情绪维度,让 HomeAsk 趋势摘要感知心情/精力
+        // Weekly summary (past 7 days) — includes diary mood dimension so
+        // HomeAsk trend summary is aware of mood / energy signals.
         let weekData = WeeklyReportManager.aggregateData(
             period: .weekly,
             sessions: sessions,
@@ -147,11 +149,13 @@ struct HomeAskDataProvider {
             mistakes: mistakes,
             exams: exams,
             subjects: subjects,
+            diaryEntries: container.diaryRepo.diaryEntries,
             now: now
         )
         out += render(weekData, periodLabel: "本周(过去 7 天)")
 
-        // 月报(过去 30 天)
+        // 月报(过去 30 天)— 同步含日记情绪维度
+        // Monthly summary (past 30 days) — also includes diary mood dimension.
         let monthData = WeeklyReportManager.aggregateData(
             period: .monthly,
             sessions: sessions,
@@ -159,6 +163,7 @@ struct HomeAskDataProvider {
             mistakes: mistakes,
             exams: exams,
             subjects: subjects,
+            diaryEntries: container.diaryRepo.diaryEntries,
             now: now
         )
         out += "\n" + render(monthData, periodLabel: "本月(过去 30 天)")

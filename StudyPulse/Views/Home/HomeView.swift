@@ -33,7 +33,7 @@ struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel: HomeViewModel
-    @ObservedObject private var hrvManager = HealthKitManager.shared
+    @EnvironmentObject private var hrvManager: HealthKitManager
 
     /// UI 临时状态聚合(分阶段渲染 / 模态 / 报告导出)。详见 `HomeUIState`。
     @State private var uiState = HomeUIState()
@@ -80,6 +80,19 @@ struct HomeView: View {
             .debugLayoutBoundsAuto()
             .llmDebugHomeButton()
             .navigationTitle("")
+            .navigationDestination(for: HomeCardType.self) { type in
+                // 只有 .diary 走 NavigationLink 推送;其他卡片各自用 sheet
+                // self-contained,不需要 destination。
+                // Only .diary is pushed via NavigationLink; other cards use
+                // their own sheets and don't need a destination.
+                switch type {
+                case .diary:
+                    DiaryView()
+                        .navigationBarTitleDisplayMode(.inline)
+                default:
+                    EmptyView()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -309,6 +322,9 @@ struct HomeView: View {
         case .homeAsk:
             // HomeAskCard 自带 Button 弹出 sheet,不参与长按分享(不能导出"输入框"图片)
             HomeAskCard()
+        case .diary:
+            DiaryHomeCard()
+                .contextMenu { shareCardMenu(for: type) }
         }
     }
 
@@ -366,7 +382,28 @@ struct HomeView: View {
             end: Date()
         )
         let title = cardShareTitle(for: type)
+        // 关键:ImageRenderer 不会自动继承调用方的环境。
+        // 各 Home 卡片普遍依赖 @EnvironmentObject(HealthKitManager / StudyTimerManager /
+        // AchievementManager / LLMClient)与 @Environment(RepositoryContainer.self)、
+        // @Environment(\.colorScheme) 等,缺一就在 body 评估时崩溃。
+        // 这里在渲染前显式注入这些环境对象,确保单卡能成功快照成图片。
+        // ImageRenderer doesn't auto-inherit the calling view's environment;
+        // cards rely on @EnvironmentObject / @Environment so we must inject them
+        // explicitly before rasterizing — otherwise SwiftUI crashes with
+        // "missing as an ancestor of this view" / "No observable object of type X".
         let view = cardShareView(for: type, report: snapshot)
+            .environment(container)
+            .environmentObject(hrvManager)
+            .environmentObject(StudyTimerManager.shared)
+            .environmentObject(AchievementManager.shared)
+            .environmentObject(LLMClient.shared)
+            // 导出模式:卡片内 iOS 26 glassEffect 会变成透明导致发灰、Menu 系统
+            // 指示器在 ImageRenderer 里渲染成黄底红禁止占位符,这里注入标记让
+            // 卡片走纯色 + 纯文本替身。
+            // Export mode: cards replace iOS 26 glassEffect with opaque backgrounds
+            // and replace interactive Menu with plain text, so the rendered image
+            // doesn't come out gray or with the yellow "prohibited" placeholder.
+            .exportMode(true)
         guard let image = ReportRenderer.render(view) else {
             uiState.reportErrorMessage = "Report export failed".localized()
             Log.record(.error, category: "Export", message: "单卡渲染失败 / Single card render returned nil: type=\(type.rawValue)")
@@ -398,6 +435,7 @@ struct HomeView: View {
         case .learningHeatmap: return "Learning Heatmap".localized()
         case .plant: return "Plant".localized()
         case .homeAsk: return "Ask AI".localized()
+        case .diary: return "Study Diary".localized()
         }
     }
 
@@ -454,6 +492,8 @@ struct HomeView: View {
                     PlantHomeCard()
                 case .homeAsk:
                     HomeAskCard()
+                case .diary:
+                    DiaryHomeCard()
                 }
             }
             .frame(maxWidth: .infinity)
@@ -687,10 +727,14 @@ private struct DerivedRecomputeModifier: ViewModifier {
 // MARK: - Previews
 #Preview {
     HomeView(container: RepositoryContainer(), selectedTab: .constant(0))
+        .environment(RepositoryContainer())
+        .environmentObject(HealthKitManager.shared)
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
     HomeView(container: RepositoryContainer(), selectedTab: .constant(0))
+        .environment(RepositoryContainer())
+        .environmentObject(HealthKitManager.shared)
         .preferredColorScheme(.dark)
 }

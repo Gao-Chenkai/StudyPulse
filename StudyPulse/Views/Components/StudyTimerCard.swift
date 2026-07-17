@@ -12,8 +12,8 @@ import SwiftUI
 /// 主页紧凑计时器卡片:基于当前身体状态给出推荐番茄钟时长,提供预设按钮快速开始。
 /// Compact home timer card: shows a readiness-based Pomodoro recommendation with preset buttons.
 struct StudyTimerCard: View {
-    @ObservedObject private var timer = StudyTimerManager.shared
-    @ObservedObject private var hrv = HealthKitManager.shared
+    @EnvironmentObject private var timer: StudyTimerManager
+    @EnvironmentObject private var hrv: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
     /// 是否显示全屏 StudyTimerView
     /// Whether the full-screen `StudyTimerView` is presented.

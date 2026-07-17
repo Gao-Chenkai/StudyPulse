@@ -227,6 +227,20 @@ final class HealthKitManager: ObservableObject {
         return types
     }
 
+    /// 我们要写入的全部 HealthKit 类型。当前仅 Mindful Session(用于日记同步)。
+    /// 调用方在 `requestAuthorization(toShare:)` 显式传入此集合才会触发系统授权弹窗,
+    /// 避免在用户未开启"日记同步到 Apple Health"时被询问写入权限。
+    /// All HealthKit types we write to. Currently only Mindful Session
+    /// (for diary sync). Callers must explicitly pass this set to
+    /// `requestAuthorization(toShare:)` to trigger the system permission
+    /// prompt — keeps users who haven't enabled diary sync from being asked.
+    private var diaryShareTypes: Set<HKSampleType> {
+        guard let mindful = HKObjectType.categoryType(forIdentifier: .mindfulSession) else {
+            return []
+        }
+        return [mindful]
+    }
+
     private init() {
         self.hrvEnabled = UserDefaults.standard.bool(forKey: "hrv_enabled")
         self.hrvOnboardingCompleted = UserDefaults.standard.bool(forKey: "hrv_onboarding_completed")
@@ -316,19 +330,64 @@ final class HealthKitManager: ObservableObject {
         Log.healthKit.info("HealthKit bootstrap phase2 完成 / phase2 done; category=\(self.readiness.category.rawValue, privacy: .public) isUsable=\(self.bodyStatus.isUsable, privacy: .public)")
     }
 
-    func requestAuthorization() async -> Bool {
+    func requestAuthorization(toShare shareTypes: Set<HKSampleType> = []) async -> Bool {
         guard isHealthKitAvailable else {
             Log.healthKit.warning("HealthKit 在此设备不可用 / HealthKit is not available on this device")
             return false
         }
         do {
-            try await healthStore.requestAuthorization(toShare: [], read: readTypes)
+            try await healthStore.requestAuthorization(toShare: shareTypes, read: readTypes)
             await checkAuthorizationStatus()
-            Log.healthKit.info("HealthKit 授权完成 / HealthKit authorization complete; isAuthorized=\(self.isAuthorized, privacy: .public)")
+            Log.healthKit.info("HealthKit 授权完成 / HealthKit authorization complete; isAuthorized=\(self.isAuthorized, privacy: .public) shareTypes=\(shareTypes.count, privacy: .public)")
             return isAuthorized
         } catch {
             Log.healthKit.error("HealthKit 鉴权失败 / HealthKit Auth error: \(error.localizedDescription, privacy: .public)")
             return false
+        }
+    }
+
+    /// 请求日记同步所需的 Mindful Session 写入权限。
+    /// 仅在用户开启"同步到 Apple Health"开关时调用,避免无关用户被询问写入权限。
+    /// Request write access to Mindful Session for diary sync.
+    /// Only called when the user enables the "Sync to Apple Health" toggle,
+    /// so users who haven't enabled the feature won't be prompted.
+    func requestDiaryAuthorization() async -> Bool {
+        guard isHealthKitAvailable else { return false }
+        return await requestAuthorization(toShare: diaryShareTypes)
+    }
+
+    /// 把一条日记记录作为 Mindful Session 写入 Apple Health。
+    /// MindfulSession 是 iOS 10+ 全球通用的 category 类型,仅记录一段"正念时刻"的起止时间,
+    /// 不携带 mood value(真正的情绪数据仍保留在本地 SwiftData)。
+    /// 失败时仅记日志,不弹窗(项目硬约束:HealthKit 错误绝不表面化)。
+    /// Write one diary entry to Apple Health as a Mindful Session sample.
+    /// MindfulSession is an iOS 10+ universal category type that records only a
+    /// time range — it doesn't carry the mood value itself (the real mood data
+    /// stays in local SwiftData). Failures are logged only, never alerted.
+    func saveMindfulSession(start: Date, end: Date) async {
+        guard isHealthKitAvailable else { return }
+        guard let type = HKObjectType.categoryType(forIdentifier: .mindfulSession) else {
+            Log.healthKit.warning("MindfulSession 类型不可用 / MindfulSession type unavailable")
+            return
+        }
+        // 检查写入授权状态;未授权直接静默返回。
+        // Check write authorization; silently return if not authorized.
+        let status = healthStore.authorizationStatus(for: type)
+        guard status == .sharingAuthorized else {
+            Log.healthKit.info("MindfulSession 未授权写入,跳过 / MindfulSession write not authorized, skipping")
+            return
+        }
+        let sample = HKCategorySample(
+            type: type,
+            value: HKCategoryValue.notApplicable.rawValue,
+            start: start,
+            end: end
+        )
+        do {
+            try await healthStore.save(sample)
+            Log.healthKit.info("MindfulSession 已写入 / MindfulSession saved: start=\(start, privacy: .public)")
+        } catch {
+            Log.healthKit.error("MindfulSession 写入失败 / MindfulSession save failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 

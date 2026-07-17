@@ -39,6 +39,9 @@ final class RepositoryContainer {
     /// 例程实例 Repository(2026-07-09 新增)
     /// Routine instance repository (added 2026-07-09).
     let routineInstanceRepo: any RoutineInstanceRepository
+    /// 学习日记 Repository(2026-07-17 新增)
+    /// Diary repository (added 2026-07-17).
+    let diaryRepo: any DiaryRepository
 
     // 3 个跨域编排子模块(组合而非继承,避免注入面爆炸)
     // 3 cross-domain orchestration sub-modules (composition over inheritance,
@@ -79,7 +82,8 @@ final class RepositoryContainer {
         profileRepo: (any ProfileRepository)? = nil,
         subjectRepo: (any SubjectRepository)? = nil,
         routineRepo: (any RoutineRepository)? = nil,
-        routineInstanceRepo: (any RoutineInstanceRepository)? = nil
+        routineInstanceRepo: (any RoutineInstanceRepository)? = nil,
+        diaryRepo: (any DiaryRepository)? = nil
     ) {
         self.envManager = envManager
         self.intentStore = intentStore
@@ -96,6 +100,7 @@ final class RepositoryContainer {
         self.subjectRepo = subjectRepo ?? DefaultSubjectRepository()
         self.routineRepo = routineRepo ?? DefaultRoutineRepository(envManager: envManager)
         self.routineInstanceRepo = routineInstanceRepo ?? DefaultRoutineInstanceRepository()
+        self.diaryRepo = diaryRepo ?? DefaultDiaryRepository(envManager: envManager)
 
         // 注入跨域 weak 引用
         if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
@@ -173,6 +178,7 @@ final class RepositoryContainer {
         await subjectRepo.loadAll(context: context)
         await routineRepo.loadAll(context: context)
         await routineInstanceRepo.loadAll(context: context)
+        await diaryRepo.loadAll(context: context)
 
         // 内嵌图片迁移
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
@@ -222,6 +228,7 @@ final class RepositoryContainer {
         await subjectRepo.loadAll(context: context)
         await routineRepo.loadAll(context: context)
         await routineInstanceRepo.loadAll(context: context)
+        await diaryRepo.loadAll(context: context)
 
         if subjectRepo.subjects.isEmpty {
             subjectRepo.initializeDefaultSubjects()

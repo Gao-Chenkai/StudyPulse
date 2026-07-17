@@ -22,7 +22,7 @@ struct StudySessionReviewSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
-    @ObservedObject private var hrv = HealthKitManager.shared
+    @EnvironmentObject private var hrv: HealthKitManager
 
     // 标注本地状态(初始化时从 session 读取)
     @State private var annotations: [DifficultyAnnotation] = []

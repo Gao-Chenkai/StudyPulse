@@ -24,7 +24,7 @@ import os
 /// 恢复雷达卡:HRV/HR/睡眠/呼吸 4 轴雷达 + 整合学习建议。
 /// Recovery radar card: 4-axis radar (HRV/HR/Sleep/Respiratory) + integrated study suggestion.
 struct HRVStatusCard: View {
-    @ObservedObject var hrvManager = HealthKitManager.shared
+    @EnvironmentObject private var hrvManager: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
     @State private var animateIn = false
 
@@ -67,6 +67,13 @@ struct HRVStatusCard: View {
         aiSuggestion ?? localSuggestion
     }
 
+    /// 最近 7 天心情/精力日记(供雷达心理稳定性轴 + LLM context)
+    /// Recent 7-day mood/energy diary entries (for radar stability axis + LLM context)
+    private var recentMoodEntries: [DiaryEntry] {
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date.distantPast
+        return container.diaryRepo.entriesInRange(sevenDaysAgo, Date())
+    }
+
     var body: some View {
         if hrvManager.hrvEnabled && hrvManager.hrvOnboardingCompleted {
             VStack(alignment: .leading, spacing: 14) {
@@ -84,7 +91,8 @@ struct HRVStatusCard: View {
                             baselines: hrvManager.personalBaselines,
                             age: container.profileRepo.profile.age,
                             mistakes: container.mistakeRepo.filteredMistakeSets,
-                            recentAnnotations: StudySessionStore.recentAnnotations(days: 7)
+                            recentAnnotations: StudySessionStore.recentAnnotations(days: 7),
+                            recentMoodEntries: recentMoodEntries
                         )
                         BodyRadarChart(values: radar)
                             .frame(height: 220)
@@ -170,7 +178,8 @@ struct HRVStatusCard: View {
             baselines: hrvManager.personalBaselines,
             age: container.profileRepo.profile.age,
             mistakes: container.mistakeRepo.filteredMistakeSets,
-            recentAnnotations: StudySessionStore.recentAnnotations(days: 7)
+            recentAnnotations: StudySessionStore.recentAnnotations(days: 7),
+            recentMoodEntries: recentMoodEntries
         )
         return HStack(spacing: 6) {
             axisTile(
@@ -451,7 +460,8 @@ struct HRVStatusCard: View {
             bodyStatus: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
             age: container.profileRepo.profile.age,
-            recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7)
+            recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7),
+            recentMoodEntries: recentMoodEntries
         )
         lastBodyReadinessContext = context
 
@@ -547,7 +557,8 @@ struct HRVStatusCard: View {
                 bodyStatus: hrvManager.bodyStatus,
                 baselines: hrvManager.personalBaselines,
                 age: container.profileRepo.profile.age,
-                recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7)
+                recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7),
+                recentMoodEntries: recentMoodEntries
             )
             lastBodyReadinessContext = temp
             return BodyRadarLLM.makePrompt(temp).messages.first?.content

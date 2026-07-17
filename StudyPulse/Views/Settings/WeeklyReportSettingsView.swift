@@ -126,13 +126,21 @@ struct WeeklyReportSettingsView: View {
             grades: container.gradeRepo.grades,
             mistakes: container.mistakeRepo.mistakeSets,
             exams: container.examRepo.examSets,
-            subjects: container.subjectRepo.subjects
+            subjects: container.subjectRepo.subjects,
+            diaryEntries: container.diaryRepo.diaryEntries
         )
 
-        // 如果 LLM 已配置,尝试拉取 AI 总结;失败静默回退到本地版本
+        // 如果 LLM 已配置,尝试拉取 AI 总结;失败静默回退到本地版本。
+        // 元认知段开关关闭时,makePrompt 会自动回退为原 3 段 system prompt。
+        // If LLM is configured, fetch the AI summary; silently fall back to local on failure.
+        // When the metacognition toggle is off, makePrompt automatically falls back
+        // to the original 3-section system prompt.
         var aiSummary: String? = nil
         if container.envManager.llmConfig.isConfigured {
-            let prompt = WeeklyReportLLM.makePrompt(reportData)
+            let prompt = WeeklyReportLLM.makePrompt(
+                reportData,
+                includeMetacognition: container.envManager.preferences.diaryLLMReflectionEnabled
+            )
             do {
                 aiSummary = try await LLMClient.shared.complete(prompt: prompt, config: container.envManager.llmConfig, caller: "WeeklyReport")
             } catch {

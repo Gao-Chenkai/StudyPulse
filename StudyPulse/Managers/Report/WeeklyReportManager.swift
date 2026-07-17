@@ -58,13 +58,23 @@ enum WeeklyReportManager {
         let topSubject: String?
         let weakestSubject: String?
         let dailyStudyMinutes: [(date: Date, minutes: Int)]
+
+        // 日记 / 心情维度(2026-07-17 新增)。diaryCount == 0 表示本周期无日记数据,
+        // 此时 averageMoodScore / averageEnergyScore 为 nil,moodDistribution 为空。
+        // Diary / mood dimension (added 2026-07-17). diaryCount == 0 means no diary
+        // data this period — averages are nil, distribution is empty.
+        let diaryCount: Int
+        let averageMoodScore: Double?
+        let averageEnergyScore: Double?
+        let moodDistribution: [(emoji: String, count: Int)]
+        let lowEnergyTagCount: Int
     }
 
     // MARK: - 数据聚合 / Data Aggregation
     // MARK: - Data Aggregation
 
-    /// 聚合指定时间窗内的学习数据(成绩 / 错题 / 考试 / sessions / 学科)。
-    /// Aggregate study data for the given period (grades, mistakes, exams, sessions, subjects).
+    /// 聚合指定时间窗内的学习数据(成绩 / 错题 / 考试 / sessions / 学科 / 日记)。
+    /// Aggregate study data for the given period (grades, mistakes, exams, sessions, subjects, diary).
     static func aggregateData(
         period: ReportPeriod,
         sessions: [StudySession],
@@ -72,6 +82,7 @@ enum WeeklyReportManager {
         mistakes: [MistakeNote],
         exams: [Exam],
         subjects: [Subject],
+        diaryEntries: [DiaryEntry] = [],
         now: Date = Date()
     ) -> ReportData {
         let calendar = Calendar.current
@@ -125,6 +136,27 @@ enum WeeklyReportManager {
         let topSubject = subjectStats.sorted { $0.avgRate > $1.avgRate }.first?.subject
         let weakestSubject = subjectStats.sorted { $0.avgRate < $1.avgRate }.first?.subject
 
+        // 日记聚合(按日期范围过滤后计算 mood/energy 均值 + 分布)
+        // Diary aggregation (filter by date range, then compute mood/energy averages + distribution)
+        let periodDiary = diaryEntries.filter { $0.date >= startDate && $0.date <= endDate }
+        let diaryCount = periodDiary.count
+        let avgMood: Double? = diaryCount > 0
+            ? periodDiary.map { Double($0.moodScore) }.reduce(0, +) / Double(diaryCount)
+            : nil
+        let avgEnergy: Double? = diaryCount > 0
+            ? periodDiary.map { Double($0.energyScore) }.reduce(0, +) / Double(diaryCount)
+            : nil
+        // 心情 emoji 分布(top 3,按出现次数降序)
+        // Mood emoji distribution (top 3, sorted by count desc)
+        let moodGroups = Dictionary(grouping: periodDiary) { $0.moodEmoji }
+        let moodDist = moodGroups.map { (emoji: $0.key, count: $0.value.count) }
+            .sorted { $0.count > $1.count }
+            .prefix(3)
+            .map { ($0.emoji, $0.count) }
+        // 低能量标签出现次数(焦虑/疲惫/烦躁/迷茫)
+        // Low-energy tag occurrence count (anxious/tired/irritable/confused)
+        let lowEnergyCount = periodDiary.filter { DiaryEntry.lowEnergyTags.contains($0.energyTag) }.count
+
         return ReportData(
             period: period,
             startDate: startDate,
@@ -140,7 +172,12 @@ enum WeeklyReportManager {
             examCount: periodExams.count,
             topSubject: topSubject,
             weakestSubject: weakestSubject,
-            dailyStudyMinutes: dailyMinutes
+            dailyStudyMinutes: dailyMinutes,
+            diaryCount: diaryCount,
+            averageMoodScore: avgMood,
+            averageEnergyScore: avgEnergy,
+            moodDistribution: moodDist,
+            lowEnergyTagCount: lowEnergyCount
         )
     }
 

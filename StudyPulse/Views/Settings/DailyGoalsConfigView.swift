@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct DailyGoalsConfigView: View {
-    @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var achievementManager: AchievementManager
     @State private var mistakeTarget: Int
     @State private var gradeTarget: Int
     @State private var focusTarget: Int

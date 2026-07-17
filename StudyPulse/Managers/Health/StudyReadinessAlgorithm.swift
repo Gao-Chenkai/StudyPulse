@@ -285,6 +285,11 @@ struct BodyReadinessContext {
     /// (last 7 days). Empty by default for callers that don't supply it.
     let recentDifficultyAnnotations: [DifficultyAnnotation]
 
+    /// 最近 7 天学习日记的心情/精力记录(主观恢复度信号)。
+    /// Recent mood/energy diary entries (last 7 days) — subjective
+    /// recovery signal. Empty by default for callers that don't supply it.
+    let recentMoodEntries: [DiaryEntry]
+
     /// 取年龄参考范围(默认 `adult` 兜底)
     var ageReference: AgeReference {
         age.map(AgeReference.compute) ?? .adult
@@ -312,7 +317,8 @@ extension StudyReadinessAlgorithm {
         baselines: PersonalBaselines = .empty,
         age: Int? = nil,
         now: Date = Date(),
-        recentDifficultyAnnotations: [DifficultyAnnotation] = []
+        recentDifficultyAnnotations: [DifficultyAnnotation] = [],
+        recentMoodEntries: [DiaryEntry] = []
     ) -> BodyReadinessContext {
         let ageRef = age.map(AgeReference.compute) ?? .adult
         let sleepCal = calibrated(
@@ -355,7 +361,8 @@ extension StudyReadinessAlgorithm {
             rhrCalibration: rhrCal,
             rrCalibration: rrCal,
             exerciseCalibration: exerciseCal,
-            recentDifficultyAnnotations: recentDifficultyAnnotations
+            recentDifficultyAnnotations: recentDifficultyAnnotations,
+            recentMoodEntries: recentMoodEntries
         )
     }
 }

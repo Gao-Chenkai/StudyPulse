@@ -11,7 +11,7 @@ import Combine
 import os
 
 struct DebugFPSOverlayView: View {
-    @StateObject private var fpsMonitor = FPSMonitor.shared
+    @EnvironmentObject private var fpsMonitor: FPSMonitor
     @Environment(RepositoryContainer.self) private var container
     @State private var memoryMB: Double = 0
     @State private var logCount: Int = 0

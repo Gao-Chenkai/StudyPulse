@@ -123,6 +123,27 @@ nonisolated struct AppPreferences: Codable {
     /// Requires HealthKit authorization. Default on.
     var heartRateStreamingEnabled: Bool = true
 
+    // MARK: - Diary (学习日记 + 心情记录)
+
+    /// 学习日记功能总开关(默认开启)。关闭后隐藏 DiaryHomeCard + 设置入口。
+    /// Master toggle for the study diary feature. When off, DiaryHomeCard
+    /// and the settings entry are hidden.
+    var diaryEnabled: Bool = true
+    /// 每日日记提醒(默认关闭)
+    /// Daily diary reminder notification (default off).
+    var diaryDailyReminderEnabled: Bool = false
+    /// 每日提醒时间(24 小时制,默认 22 点)
+    /// Daily reminder hour (24h, default 22 = 22:00).
+    var diaryDailyReminderHour: Int = 22
+    /// 同步日记记录时刻到 Apple Health Mindful Session(默认开启;iOS 10+ 全球通用)。
+    /// Sync each diary entry as an Apple Health Mindful Session sample
+    /// (default on; iOS 10+ universal).
+    var diarySyncToHealthEnabled: Bool = true
+    /// AI 元认知反思段开关(默认开启)。关闭后 WeeklyReportLLM 回退原 3 段输出。
+    /// AI metacognition reflection toggle (default on). When off, the weekly
+    /// report LLM falls back to the original 3-section output.
+    var diaryLLMReflectionEnabled: Bool = true
+
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
@@ -134,6 +155,7 @@ nonisolated struct AppPreferences: Codable {
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
         case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case heartRateStreamingEnabled
+        case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
     }
 
     init() {}
@@ -167,6 +189,13 @@ nonisolated struct AppPreferences: Codable {
         self.debugOverrideSystemPrompt = try c.decodeIfPresent(String.self, forKey: .debugOverrideSystemPrompt)
         self.lastStudySuggestionsAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastStudySuggestionsAIRequestTime)
         self.heartRateStreamingEnabled = try c.decodeIfPresent(Bool.self, forKey: .heartRateStreamingEnabled) ?? true
+        // Diary 配置 — 缺字段时使用安全默认值,保证旧版 UserDefaults 数据能继续 decode
+        self.diaryEnabled = try c.decodeIfPresent(Bool.self, forKey: .diaryEnabled) ?? true
+        self.diaryDailyReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .diaryDailyReminderEnabled) ?? false
+        let hour = try c.decodeIfPresent(Int.self, forKey: .diaryDailyReminderHour) ?? 22
+        self.diaryDailyReminderHour = max(0, min(23, hour))
+        self.diarySyncToHealthEnabled = try c.decodeIfPresent(Bool.self, forKey: .diarySyncToHealthEnabled) ?? true
+        self.diaryLLMReflectionEnabled = try c.decodeIfPresent(Bool.self, forKey: .diaryLLMReflectionEnabled) ?? true
     }
     
     // MARK: - 语言常量

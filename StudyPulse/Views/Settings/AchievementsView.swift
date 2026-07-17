@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct AchievementsView: View {
-    @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var achievementManager: AchievementManager
 
     private var progressList: [AchievementProgress] {
         achievementManager.snapshot.achievements

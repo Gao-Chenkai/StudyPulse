@@ -51,7 +51,8 @@ struct BodyRadarValues {
         baselines: PersonalBaselines = .empty,
         age: Int? = nil,
         mistakes: [MistakeNote] = [],
-        recentAnnotations: [DifficultyAnnotation] = []
+        recentAnnotations: [DifficultyAnnotation] = [],
+        recentMoodEntries: [DiaryEntry] = []
     ) -> BodyRadarValues {
         let ageRef = age.map(AgeReference.compute) ?? .adult
 
@@ -143,7 +144,24 @@ struct BodyRadarValues {
             return max(0.2, 1.0 - Double(count) * 0.15)
         }()
 
-        let stabilityScore = max(0.0, min(1.0, mistakeStability * 0.65 + annotationStability * 0.35))
+        // 心情稳定性:最近 7 天日记心情均值(1-5 → 0-1)。
+        // Mood stability: average mood score from recent diary entries (1-5 → 0-1).
+        let moodStability: Double = {
+            guard !recentMoodEntries.isEmpty else { return 0.5 }
+            let avg = recentMoodEntries.map { Double($0.moodScore) }.reduce(0, +) / Double(recentMoodEntries.count)
+            return max(0.0, min(1.0, (avg - 1) / 4))
+        }()
+
+        // 原:mistakeStability * 0.65 + annotationStability * 0.35
+        // 新(有心情数据时):moodStability * 0.4 + mistakeStability * 0.4 + annotationStability * 0.2
+        // Original: mistakeStability * 0.65 + annotationStability * 0.35
+        // New (when mood data present): moodStability * 0.4 + mistakeStability * 0.4 + annotationStability * 0.2
+        let stabilityScore: Double
+        if recentMoodEntries.isEmpty {
+            stabilityScore = max(0.0, min(1.0, mistakeStability * 0.65 + annotationStability * 0.35))
+        } else {
+            stabilityScore = max(0.0, min(1.0, moodStability * 0.4 + mistakeStability * 0.4 + annotationStability * 0.2))
+        }
         let stabilityText = String(format: "%.0f%%", stabilityScore * 100)
 
         return BodyRadarValues(

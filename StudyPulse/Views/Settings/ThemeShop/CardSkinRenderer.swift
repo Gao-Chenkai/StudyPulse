@@ -52,9 +52,19 @@ private struct EnvironmentCardSkinModifier: ViewModifier {
 private struct CardSkinModifier: ViewModifier {
     let skin: CardSkin
     let glassEnabled: Bool
+    @Environment(\.exportMode) private var exportMode
 
     func body(content: Content) -> some View {
-        if skin.isGlass && glassEnabled {
+        // 导出模式(`ImageRenderer` 截图)下强制走非 glass 分支:
+        // iOS 26 的 `glassEffect` 是实时 UIKit 材质,在 ImageRenderer 渲染管线里
+        // 会变成几乎透明的 `Color.clear`,导致整张卡片在导出的图里显灰、
+        // 边框/阴影消失。直接用 `backgroundFill()` 走系统颜色,保证导出图清晰。
+        // Force the non-glass branch in export mode (`ImageRenderer` rasterisation):
+        // iOS 26 `glassEffect` is a live UIKit material and renders as near-transparent
+        // in `ImageRenderer`, making the exported card look washed out / borderless.
+        // Falling back to `backgroundFill()` ensures the exported image stays clean.
+        let effectiveGlass = glassEnabled && !exportMode
+        if skin.isGlass && effectiveGlass {
             // iOS 26 glass path：保持现有 `GlassCardBackground` 行为
             content
                 .background(GlassCardBackground(cornerRadius: skin.cornerRadius, style: .regular))

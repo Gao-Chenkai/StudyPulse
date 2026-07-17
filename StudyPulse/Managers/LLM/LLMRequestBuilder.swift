@@ -470,7 +470,31 @@ enum WeeklyReportLLM {
         不要重复输入数据;不要输出客套话、JSON、代码块。
         """ + latexFormattingRule
 
-    static func makePrompt(_ data: WeeklyReportManager.ReportData) -> LLMPrompt {
+    /// 当本周期有日记数据(diaryCount > 0)且用户未关闭元认知反思开关时使用的扩展 system prompt。
+    /// 在原 3 段后追加第 4 段 `## 元认知反思`,引导用户自我觉察。
+    /// Extended system prompt used when the period has diary data
+    /// (diaryCount > 0) and the metacognition toggle is on. Appends a 4th
+    /// `## 元认知反思` section to guide user self-reflection.
+    static let extendedSystemWithMetacognition: String = """
+        你是 StudyPulse 学习报告分析师。基于给定的周/月数据,生成 200-500 字的中文 Markdown 总结。
+        严格使用以下结构(每个 ## 标题独占一行,顺序固定):
+
+        ## 整体表现
+        <1-2 句总评 + 关键数字(学习时长 / 成绩数 / 错题数)>
+
+        ## 学科亮点
+        <1-3 条,基于数据中的强项 / 进步>
+
+        ## 改进建议
+        <1-3 条,基于数据中的弱项 / 错题 / 持续下滑>
+
+        ## 元认知反思
+        <1-2 句,基于心情 / 精力数据与学习表现的关联,引导自我觉察。例如:低精力高错题时指出"疲惫时易出错";情绪稳定时鼓励保持。>
+
+        不要重复输入数据;不要输出客套话、JSON、代码块。
+        """ + latexFormattingRule
+
+    static func makePrompt(_ data: WeeklyReportManager.ReportData, includeMetacognition: Bool = true) -> LLMPrompt {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         let daily = data.dailyStudyMinutes
@@ -479,21 +503,43 @@ enum WeeklyReportLLM {
         let subs = data.subjectDistribution
             .map { "\($0.subject)=\($0.mistakeCount)(\(String(format: "%.0f%%", $0.percentage)))" }
             .joined(separator: ", ")
-        let user = """
-        报告周期:\(data.period.displayName)(\(f.string(from: data.startDate)) ~ \(f.string(from: data.endDate)))
-        总学习时长(分钟):\(data.totalStudyMinutes)
-        完成的番茄数:\(data.sessionCount)
-        平均番茄时长(分钟):\(String(format: "%.1f", data.averageSessionMinutes))
-        成绩数:\(data.gradeCount)
-        平均得分率:\(String(format: "%.0f%%", data.averageScoreRate * 100))
-        错题数:\(data.mistakeCount)
-        考试数:\(data.examCount)
-        强项学科:\(data.topSubject ?? "无")
-        弱势学科:\(data.weakestSubject ?? "无")
-        错题学科分布:{\(subs.isEmpty ? "无" : subs)}
-        每日学习分钟数:{\(daily.isEmpty ? "无" : daily)}
-        """
-        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+
+        // 日记维度:仅当有数据 + includeMetacognition=true 时才输出扩展 system + 日记上下文。
+        // Diary dimension: only emit extended system + diary context when data
+        // exists AND `includeMetacognition` is true.
+        let hasDiary = data.diaryCount > 0 && includeMetacognition
+        let systemPrompt = hasDiary ? extendedSystemWithMetacognition : defaultSystem
+
+        var userLines: [String] = [
+            "报告周期:\(data.period.displayName)(\(f.string(from: data.startDate)) ~ \(f.string(from: data.endDate)))",
+            "总学习时长(分钟):\(data.totalStudyMinutes)",
+            "完成的番茄数:\(data.sessionCount)",
+            "平均番茄时长(分钟):\(String(format: "%.1f", data.averageSessionMinutes))",
+            "成绩数:\(data.gradeCount)",
+            "平均得分率:\(String(format: "%.0f%%", data.averageScoreRate * 100))",
+            "错题数:\(data.mistakeCount)",
+            "考试数:\(data.examCount)",
+            "强项学科:\(data.topSubject ?? "无")",
+            "弱势学科:\(data.weakestSubject ?? "无")",
+            "错题学科分布:{\(subs.isEmpty ? "无" : subs)}",
+            "每日学习分钟数:{\(daily.isEmpty ? "无" : daily)}"
+        ]
+
+        if hasDiary {
+            let moodStr = data.averageMoodScore.map { String(format: "%.1f", $0) } ?? "无"
+            let energyStr = data.averageEnergyScore.map { String(format: "%.1f", $0) } ?? "无"
+            let moodDistStr = data.moodDistribution
+                .map { "\($0.emoji) \($0.count)次" }
+                .joined(separator: ", ")
+            userLines.append("日记条目数:\(data.diaryCount)")
+            userLines.append("平均心情(1-5):\(moodStr)")
+            userLines.append("平均精力(1-5):\(energyStr)")
+            userLines.append("高频情绪:{\(moodDistStr.isEmpty ? "无" : moodDistStr)}")
+            userLines.append("低能量标签次数:\(data.lowEnergyTagCount)(焦虑/疲惫/烦躁/迷茫)")
+        }
+
+        let user = userLines.joined(separator: "\n")
+        return LLMPrompt(system: systemPrompt, messages: [.user(user)])
     }
 }
 
@@ -963,6 +1009,26 @@ enum BodyRadarLLM {
             }
             annoBlock = "共 \(annos.count) 条\n" + lines.joined(separator: "\n")
         }
+        // 近期心情/精力日记(7 天内,主观恢复度)
+        // Recent mood/energy diary entries (last 7 days, subjective recovery)
+        let moods = c.recentMoodEntries
+        let moodBlock: String
+        if moods.isEmpty {
+            moodBlock = "无近期心情记录"
+        } else {
+            let avgMood = moods.map { $0.moodScore }.reduce(0, +) / moods.count
+            let avgEnergy = moods.map { $0.energyScore }.reduce(0, +) / moods.count
+            let lowEnergyTags = moods.filter { DiaryEntry.lowEnergyTags.contains($0.energyTag) }.count
+            let lines = moods.prefix(10).map { e -> String in
+                let ts = f.string(from: e.date)
+                let preview = e.content.isEmpty ? "(无文字)" : String(e.content.prefix(40))
+                return "- [\(ts)] 心情=\(e.moodScore)/5 精力=\(e.energyScore)/5 标签=\(e.energyTag): \(preview)"
+            }
+            moodBlock = """
+            共 \(moods.count) 条 | 平均心情=\(String(format: "%.1f", Double(avgMood))) 平均精力=\(String(format: "%.1f", Double(avgEnergy))) 低精力标签数=\(lowEnergyTags)
+            \(lines.joined(separator: "\n"))
+            """
+        }
         return """
         当前时间:\(f.string(from: c.now))
         年龄:\(c.age.map { "\($0)岁" } ?? "未知(用 adult 兜底)")
@@ -987,6 +1053,9 @@ enum BodyRadarLLM {
 
         ===== 近期学习压力标注(7 天内)=====
         \(annoBlock)
+
+        ===== 近期心情/精力(7 天内)=====
+        \(moodBlock)
 
         ===== 本地算法已给出建议 =====
         \(local)

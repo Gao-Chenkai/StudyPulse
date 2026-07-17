@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct AchievementUnlockToast: View, Equatable {
-    @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var achievementManager: AchievementManager
     @State private var currentProgress: AchievementProgress?
     @State private var isVisible = false
 

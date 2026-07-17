@@ -26,6 +26,7 @@ import Charts
 /// the card only reads, never writes.
 struct TrendChartCard: View {
     @Environment(RepositoryContainer.self) private var container
+    @Environment(\.exportMode) private var exportMode
     /// 注入 HomeViewModel(图表选科逻辑已迁入)
     /// Injected HomeViewModel (chart subject selection has been moved here).
     @ObservedObject var viewModel: HomeViewModel
@@ -47,34 +48,52 @@ struct TrendChartCard: View {
 
                 Spacer()
 
-                Menu {
-                    Button(action: { viewModel.selectChartSubject(rule: .lowestScore) }) {
-                        Label("Focus: Lowest Score".localized(), systemImage: "chart.line.downtrend.xyaxis")
+                // 导出模式(`ImageRenderer`)下用纯文本代替 `Menu`:
+                // iOS 26 的 Menu 在 label 自带圆角容器 + 系统"菜单指示器"图标,
+                // 这个内部图标在 ImageRenderer 渲染管线里会失败,显示成"黄底红禁止"
+                // 的占位符。用纯文本既能保留焦点规则信息,又规避了渲染问题。
+                // In export mode (`ImageRenderer`) replace the interactive `Menu` with
+                // plain text. iOS 26 Menu adds a system "menu indicator" icon that
+                // fails to load in `ImageRenderer`, leaving a yellow placeholder box
+                // with a red "prohibited" sign in the exported image.
+                if exportMode {
+                    Text(viewModel.chartRule.displayName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                } else {
+                    Menu {
+                        Button(action: { viewModel.selectChartSubject(rule: .lowestScore) }) {
+                            Label("Focus: Lowest Score".localized(), systemImage: "chart.line.downtrend.xyaxis")
+                        }
+                        Button(action: { viewModel.selectChartSubject(rule: .mostGrades) }) {
+                            Label("Focus: Most Data".localized(), systemImage: "doc.text.fill")
+                        }
+                        Button(action: { viewModel.selectChartSubject(rule: .recentMost) }) {
+                            Label("Focus: Recent Activity".localized(), systemImage: "clock")
+                        }
+                        Button(action: { viewModel.selectChartSubject(rule: .mostImprovement) }) {
+                            Label("Focus: Improvement".localized(), systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        Button(action: { viewModel.selectChartSubject(rule: .random) }) {
+                            Label("Random Subject".localized(), systemImage: "shuffle")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(viewModel.chartRule.displayName)
+                                .font(.system(size: 12, weight: .medium))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
                     }
-                    Button(action: { viewModel.selectChartSubject(rule: .mostGrades) }) {
-                        Label("Focus: Most Data".localized(), systemImage: "doc.text.fill")
-                    }
-                    Button(action: { viewModel.selectChartSubject(rule: .recentMost) }) {
-                        Label("Focus: Recent Activity".localized(), systemImage: "clock")
-                    }
-                    Button(action: { viewModel.selectChartSubject(rule: .mostImprovement) }) {
-                        Label("Focus: Improvement".localized(), systemImage: "chart.line.uptrend.xyaxis")
-                    }
-                    Button(action: { viewModel.selectChartSubject(rule: .random) }) {
-                        Label("Random Subject".localized(), systemImage: "shuffle")
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(viewModel.chartRule.displayName)
-                            .font(.system(size: 12, weight: .medium))
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.blue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
                 }
             }
 

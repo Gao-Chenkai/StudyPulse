@@ -36,6 +36,9 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// AI 提问入口:点击后弹出"向 AI 提问" sheet,可讨论身体 / 成绩 / 趋势 / 复习
     /// AI Ask entry: opens an "Ask AI" sheet covering body / grades / trends / review.
     case homeAsk = "homeAsk"
+    /// 学习日记 + 心情记录入口:点击 emoji cycle moodScore,点击其余区域打开 DiaryView sheet
+    /// Study Diary + Mood entry: tap emoji cycles moodScore; tap the rest opens DiaryView sheet.
+    case diary = "diary"
 
     /// 本地化显示名称
     var displayName: String {
@@ -55,6 +58,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .learningHeatmap: return "Learning Heatmap".localized()
         case .plant: return "Plant".localized()
         case .homeAsk: return "Ask AI".localized()
+        case .diary: return "Study Diary".localized()
         }
     }
 
@@ -76,6 +80,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .learningHeatmap: return "square.grid.4x3.fill"
         case .plant: return "leaf.fill"
         case .homeAsk: return "text.bubble.fill"
+        case .diary: return "book.fill"
         }
     }
 
@@ -115,6 +120,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .dailyPlan, enabled: true),
         HomeCardItem(type: .learningHeatmap, enabled: true),
         HomeCardItem(type: .hrvStatus, enabled: true),
+        HomeCardItem(type: .diary, enabled: true),
         HomeCardItem(type: .homeAsk, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),

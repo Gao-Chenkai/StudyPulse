@@ -12,7 +12,7 @@ import Combine
 import os
 
 struct PerformancePanelView: View {
-    @StateObject private var fpsMonitor = FPSMonitor.shared
+    @EnvironmentObject private var fpsMonitor: FPSMonitor
     @State private var memoryMB: Double = 0
     @State private var refreshTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     @State private var lagCount5min: Int = 0
@@ -218,6 +218,7 @@ struct PerformancePanelView: View {
 #Preview {
     NavigationStack {
         PerformancePanelView()
+            .environmentObject(FPSMonitor.shared)
     }
 }
 #endif

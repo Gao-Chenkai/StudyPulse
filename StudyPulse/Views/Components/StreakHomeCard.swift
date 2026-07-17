@@ -18,7 +18,7 @@ import SwiftUI
 /// 主页"连续打卡"卡片:展示当前连续天数 + 今日 3 档目标进度。
 /// Home "Streak" card: shows current streak length + today's 3 goal bars.
 struct StreakHomeCard: View {
-    @ObservedObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject private var achievementManager: AchievementManager
     @Environment(RepositoryContainer.self) private var container
 
     /// 今日目标配置(从 AchievementManager 快照中取)

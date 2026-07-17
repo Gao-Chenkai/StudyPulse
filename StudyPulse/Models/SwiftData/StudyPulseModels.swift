@@ -1269,3 +1269,97 @@ final class RoutineInstanceRecord {
         )
     }
 }
+
+// MARK: - Diary Entry Record (学习日记)
+// MARK: - 学习日记 / Diary Entry Record
+
+/// 学习日记持久化实体。镜像 `DiaryEntry` 值类型。
+/// Diary entry persistence entity. Mirrors the `DiaryEntry` value type.
+@Model
+final class DiaryEntryRecord {
+    // 索引: 日期排序 + 阶段过滤为高频查询
+    // Indexes: date sort + phase filter are the high-frequency queries.
+    #Index<DiaryEntryRecord>([\.date], [\.phaseId])
+
+    @Attribute(.unique) var id: UUID
+    /// 日记日期(当天 0 点归一化)
+    /// Diary date (normalized to start-of-day).
+    var date: Date
+    /// 心情分值 1-5
+    /// Mood score 1-5.
+    var moodScore: Int
+    /// 精力分值 1-5
+    /// Energy score 1-5.
+    var energyScore: Int
+    /// 精力标签(专注/疲惫/焦虑/兴奋/平静/烦躁/迷茫 之一;可空)
+    /// Energy tag (focus/tired/anxious/excited/calm/irritable/confused; may be empty).
+    var energyTag: String
+    /// 自由 Markdown 文字
+    /// Free-form Markdown content.
+    var content: String
+    /// 预留未来长文 / 附件存储(当前未使用)
+    /// Reserved for future long-form / attachment storage (currently unused).
+    @Attribute(.externalStorage) var contentData: Data?
+    /// 归属阶段 ID(关联 StudyPhaseRecord.id),nil = 未归类
+    /// Owning phase id; nil = uncategorized.
+    var phaseId: UUID?
+    /// 创建时间
+    /// Created timestamp.
+    var createdAt: Date
+    /// 最近更新时间
+    /// Last-updated timestamp.
+    var updatedAt: Date
+
+    init(
+        id: UUID,
+        date: Date,
+        moodScore: Int,
+        energyScore: Int,
+        energyTag: String,
+        content: String,
+        contentData: Data? = nil,
+        phaseId: UUID? = nil,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.date = date
+        self.moodScore = moodScore
+        self.energyScore = energyScore
+        self.energyTag = energyTag
+        self.content = content
+        self.contentData = contentData
+        self.phaseId = phaseId
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    convenience init(from entry: DiaryEntry) {
+        self.init(
+            id: entry.id,
+            date: entry.date,
+            moodScore: entry.moodScore,
+            energyScore: entry.energyScore,
+            energyTag: entry.energyTag,
+            content: entry.content,
+            contentData: nil,
+            phaseId: entry.phaseId,
+            createdAt: entry.createdAt,
+            updatedAt: entry.updatedAt
+        )
+    }
+
+    func toSnapshot() -> DiaryEntry {
+        DiaryEntry(
+            id: id,
+            date: date,
+            moodScore: moodScore,
+            energyScore: energyScore,
+            energyTag: energyTag,
+            content: content,
+            phaseId: phaseId,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}

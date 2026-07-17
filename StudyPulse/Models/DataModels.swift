@@ -1065,3 +1065,104 @@ nonisolated struct RoutineInstance: Identifiable, Codable, Hashable, Sendable {
         "\(routineId.uuidString)|\(dateKey)"
     }
 }
+
+// MARK: - Diary Entry (学习日记 + 心情记录)
+// MARK: - 学习日记 / Diary Entry
+
+/// 每日学习日记条目:自由文字 + 心情 emoji + 精力标签。
+/// 用于与 HRV / 学习时长 / 错题量交叉分析,补足情绪与主观反思维度。
+/// Daily study diary entry: free text + mood emoji + energy tag.
+/// Cross-analyzed with HRV / study duration / mistake count to capture
+/// the emotional & subjective-reflection dimension.
+nonisolated struct DiaryEntry: Identifiable, Codable, Hashable {
+    var id = UUID()
+    /// 日记日期(当天 0 点归一化)
+    /// Diary date (normalized to start-of-day).
+    var date: Date
+    /// 心情分值 1-5(对应 😢😕🙂😊🤩)
+    /// Mood score 1-5 (mapped to 😢😕🙂😊🤩).
+    var moodScore: Int
+    /// 精力分值 1-5(精疲力竭 → 精力充沛)
+    /// Energy score 1-5 (exhausted → energetic).
+    var energyScore: Int
+    /// 精力标签(专注/疲惫/焦虑/兴奋/平静/烦躁/迷茫 之一;可空)
+    /// Energy tag (focus/tired/anxious/excited/calm/irritable/confused; may be empty).
+    var energyTag: String
+    /// 自由 Markdown 文字
+    /// Free-form Markdown content.
+    var content: String
+    /// 归属阶段 ID(关联 StudyPhase.id),nil = 未归类
+    /// Owning phase id (links to StudyPhase.id); nil = uncategorized.
+    var phaseId: UUID? = nil
+    /// 创建时间
+    /// Created timestamp.
+    var createdAt: Date = .now
+    /// 最近更新时间
+    /// Last-updated timestamp.
+    var updatedAt: Date = .now
+
+    init(
+        id: UUID = UUID(),
+        date: Date = .now,
+        moodScore: Int = 3,
+        energyScore: Int = 3,
+        energyTag: String = "",
+        content: String = "",
+        phaseId: UUID? = nil,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.date = Calendar.current.startOfDay(for: date)
+        self.moodScore = max(1, min(5, moodScore))
+        self.energyScore = max(1, min(5, energyScore))
+        self.energyTag = energyTag
+        self.content = content
+        self.phaseId = phaseId
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    // 自定义解码器:缺字段时使用默认值,兼容老版本数据。
+    // Custom decoder: fall back to defaults for missing fields so older
+    // serialized diary entries continue to decode instead of throwing.
+    enum CodingKeys: String, CodingKey {
+        case id, date, moodScore, energyScore, energyTag, content, phaseId, createdAt, updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.date = try c.decodeIfPresent(Date.self, forKey: .date) ?? .now
+        self.moodScore = max(1, min(5, try c.decodeIfPresent(Int.self, forKey: .moodScore) ?? 3))
+        self.energyScore = max(1, min(5, try c.decodeIfPresent(Int.self, forKey: .energyScore) ?? 3))
+        self.energyTag = try c.decodeIfPresent(String.self, forKey: .energyTag) ?? ""
+        self.content = try c.decodeIfPresent(String.self, forKey: .content) ?? ""
+        self.phaseId = try c.decodeIfPresent(UUID.self, forKey: .phaseId)
+        self.createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        self.updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
+    }
+
+    /// 心情 emoji(moodScore → emoji)
+    /// Mood emoji (moodScore → emoji).
+    var moodEmoji: String {
+        switch moodScore {
+        case 1: return "😢"
+        case 2: return "😕"
+        case 3: return "🙂"
+        case 4: return "😊"
+        case 5: return "🤩"
+        default: return "🙂"
+        }
+    }
+
+    /// 所有合法精力标签(中英对照,顺序固定供 UI 使用)
+    /// All valid energy tags (bilingual, fixed order for UI).
+    static let allEnergyTags: [String] = [
+        "专注", "平静", "兴奋", "疲惫", "焦虑", "烦躁", "迷茫"
+    ]
+
+    /// 低能量标签集合(用于 LLM 提示"低能量标签次数")
+    /// Low-energy tag set (used to compute low-energy count for LLM prompt).
+    static let lowEnergyTags: Set<String> = ["疲惫", "焦虑", "烦躁", "迷茫"]
+}

@@ -18,8 +18,8 @@ import os
 struct StudyTimerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(RepositoryContainer.self) private var container
-    @ObservedObject private var timer = StudyTimerManager.shared
-    @ObservedObject private var hrv = HealthKitManager.shared
+    @EnvironmentObject private var timer: StudyTimerManager
+    @EnvironmentObject private var hrv: HealthKitManager
 
     // Shared view state
     @State private var customMinutes: Double = 25

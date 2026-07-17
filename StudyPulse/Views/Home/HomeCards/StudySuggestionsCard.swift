@@ -33,7 +33,7 @@ import SwiftUI
 /// when the body status changes.
 struct StudySuggestionsCard: View {
     @ObservedObject var viewModel: HomeViewModel
-    @ObservedObject private var healthManager = HealthKitManager.shared
+    @EnvironmentObject private var healthManager: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
 
     /// 本地建议(由 `HomeViewModel.generateSuggestions` 产生,作为 fallback)

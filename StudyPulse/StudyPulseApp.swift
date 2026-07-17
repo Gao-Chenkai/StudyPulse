@@ -39,6 +39,11 @@ struct StudyPulseApp: App {
     @State private var container: RepositoryContainer = RepositoryContainer()
     @StateObject private var hrvManager = HealthKitManager.shared
     @StateObject private var timerManager = StudyTimerManager.shared
+    @StateObject private var achievementManager = AchievementManager.shared
+    @StateObject private var llmClient = LLMClient.shared
+    #if DEBUG
+    @StateObject private var fpsMonitor = FPSMonitor.shared
+    #endif
     @Environment(\.scenePhase) private var scenePhase
     @State private var routineSpawner: RoutineSpawner?
 
@@ -85,6 +90,11 @@ struct StudyPulseApp: App {
                 .environment(container)
                 .environmentObject(hrvManager)
                 .environmentObject(timerManager)
+                .environmentObject(achievementManager)
+                .environmentObject(llmClient)
+                #if DEBUG
+                .environmentObject(fpsMonitor)
+                #endif
                 .preferredColorScheme(container.envManager.effectiveColorScheme)
                 .task {
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
