@@ -81,7 +81,12 @@ nonisolated struct LLMCallDebugInfo: Equatable, Sendable {
 /// - `stream(...)` 中 `onDelta` 接收**到目前为止的完整文本**(不是增量),
 ///   方便 UI 端直接存进 `AsyncStream` 给 `StreamedMarkdownView`。
 @MainActor
-final class LLMClient: ObservableObject {
+final class LLMClient: ObservableObject, @unchecked Sendable {
+    // `@unchecked Sendable`:nonisolated 方法(buildBody/effectiveSystem/buildURL)不访问可变状态,
+    // 仅 @Published 属性(lastCallInfo/recentCalls)需要 MainActor,它们仍在 MainActor 方法中访问。
+    // `@unchecked Sendable`: nonisolated methods (buildBody/effectiveSystem/buildURL) access no
+    // mutable state; only the @Published properties (lastCallInfo/recentCalls) require MainActor,
+    // and they are still touched only from MainActor methods (recordCall).
     static let shared = LLMClient()
 
     /// 整体请求超时(秒);`stream` 与 `complete` 通用。
@@ -120,9 +125,18 @@ final class LLMClient: ObservableObject {
         caller: String = "complete"
     ) async throws -> String {
         try validateConfig(config)
+        // 缓存命中:直接返回(避免重复走网络)。
+        // Cache hit: return immediately (avoids the network round-trip).
+        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+            return cached
+        }
         printPromptToConsole(prompt: prompt, config: config, caller: caller)
         let url = try buildURL(baseURL: config.baseURL)
-        let body = try buildBody(prompt: prompt, config: config, stream: false)
+        // JSON 编解码移到 detached Task,避免阻塞主线程
+        // Move JSON encoding off the main actor to keep UI responsive.
+        let body = try await Task.detached(priority: .userInitiated) {
+            try self.buildBody(prompt: prompt, config: config, stream: false)
+        }.value
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -176,7 +190,9 @@ final class LLMClient: ObservableObject {
             recordCall(info)
             throw error
         }
-        let result = try LLMChatResponse.parseSingleResponse(data)
+        let result = try await Task.detached(priority: .userInitiated) {
+            try LLMChatResponse.parseSingleResponse(data)
+        }.value
         let info = LLMCallDebugInfo(
             startTime: startTime, endTime: Date(),
             url: url.absoluteString, model: config.model ?? "?",
@@ -186,6 +202,9 @@ final class LLMClient: ObservableObject {
             response: result, error: nil, caller: caller
         )
         recordCall(info)
+        // 写入缓存:相同 prompt 在 TTL 内不重复请求网络。
+        // Cache the response so the same prompt doesn't hit the network within TTL.
+        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
         return result
     }
 
@@ -200,9 +219,19 @@ final class LLMClient: ObservableObject {
         onDelta: @MainActor (String) -> Void
     ) async throws -> String {
         try validateConfig(config)
+        // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
+        // Cache hit: emit the cached response as a single onDelta,avoiding the network round-trip.
+        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+            onDelta(cached)
+            return cached
+        }
         printPromptToConsole(prompt: prompt, config: config, caller: caller)
         let url = try buildURL(baseURL: config.baseURL)
-        let body = try buildBody(prompt: prompt, config: config, stream: true)
+        // JSON 编码移到 detached Task,与 complete() 一致
+        // Move JSON encoding off the main actor, matching complete().
+        let body = try await Task.detached(priority: .userInitiated) {
+            try self.buildBody(prompt: prompt, config: config, stream: true)
+        }.value
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -308,6 +337,9 @@ final class LLMClient: ObservableObject {
             response: accumulated, error: nil, caller: caller
         )
         recordCall(info)
+        // 写入缓存:与 complete() 一致,使流式调用的结果也可被后续命中。
+        // Cache the response so the same prompt doesn't hit the network within TTL.
+        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
         return accumulated
     }
 
@@ -363,7 +395,7 @@ final class LLMClient: ObservableObject {
         Log.llm.debug("\(output, privacy: .public)")
     }
 
-    private func buildURL(baseURL: String?) throws -> URL {
+    nonisolated private func buildURL(baseURL: String?) throws -> URL {
         guard let raw = baseURL else { throw LLMError.invalidURL }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         // 去除末尾的 "/",避免 appedingPathComponent 把请求变成 "//v1"
@@ -375,7 +407,7 @@ final class LLMClient: ObservableObject {
         return base.appendingPathComponent("/v1/chat/completions")
     }
 
-    private func buildBody(prompt: LLMPrompt, config: LLMConfig, stream: Bool) throws -> Data {
+    nonisolated private func buildBody(prompt: LLMPrompt, config: LLMConfig, stream: Bool) throws -> Data {
         // 手搓 JSON 避免引入外部 SDK
         // DEBUG 覆盖:非空时**完全替换**默认 system + appendix
         // DEBUG override: when non-empty, replace default system + appendix entirely.
@@ -392,7 +424,7 @@ final class LLMClient: ObservableObject {
 
     /// 拼接最终 system prompt:`override` 优先,否则 `default + appendix`。
     /// Resolve the final system prompt: override takes precedence over default + appendix.
-    private func effectiveSystem(prompt: LLMPrompt, config: LLMConfig) -> String {
+    nonisolated private func effectiveSystem(prompt: LLMPrompt, config: LLMConfig) -> String {
         if let override = config.overrideSystemPrompt?.trimmingCharacters(in: .whitespacesAndNewlines),
            !override.isEmpty {
             return override

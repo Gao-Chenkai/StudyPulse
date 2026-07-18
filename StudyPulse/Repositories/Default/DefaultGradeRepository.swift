@@ -29,6 +29,11 @@ final class DefaultGradeRepository: GradeRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
     /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
     @ObservationIgnored
@@ -45,22 +50,32 @@ final class DefaultGradeRepository: GradeRepository {
     /// Load all grades.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
+        self.modelContainer = context.container
         await reloadFromSwiftData()
     }
 
     func reloadFromSwiftData() async {
-        guard let context = modelContext else { return }
-        do {
-            let entities = try context.fetch(
-                FetchDescriptor<GradeRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // @Model 不可跨 actor 边界 → 在 detached 内完成 toSnapshot,只返回 [Grade] Sendable 数组
+        // Use an independent background ModelContext inside a detached task.
+        // @Model entities can't cross actor boundaries → do toSnapshot inside
+        // the detached task and return a Sendable [Grade] snapshot array.
+        let snapshots: [Grade] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            // fetchLimit=365:一年成绩足够趋势分析;按 date desc 保证拿到最新数据。
+            // fetchLimit=365: a year of grades is enough for trend analysis; sort date desc
+            // so the most recent data is retained when the cap is hit.
+            var descriptor = FetchDescriptor<GradeRecord>(
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
             )
-            // 在主 actor 上做 toSnapshot(@Model 不可跨 actor 边界)
-            let snap = entities.map { $0.toSnapshot() }
-            self.grades = snap
-            recomputeFiltered()
-        } catch {
-            Log.data.error("DefaultGradeRepository reloadFromSwiftData failed: \(error.localizedDescription, privacy: .public)")
-        }
+            descriptor.fetchLimit = 365
+            let entities = (try? ctx.fetch(descriptor)) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值(触发 @Observable 更新)
+        self.grades = snapshots
+        recomputeFiltered()
     }
 
     @discardableResult

@@ -22,6 +22,10 @@ struct AvatarView: View {
     /// Whether to draw a border ring.
     var showBorder: Bool = true
 
+    /// 异步解码的缩略图(从 `ImageCache.thumbnail` 取,带下采样)。
+    /// Async-decoded thumbnail (from `ImageCache.thumbnail`,with downsampling).
+    @State private var avatarImage: UIImage?
+
     /// 根据用户名生成稳定的颜色
     /// Stable color derived from the username hash.
     private var backgroundColor: Color {
@@ -42,11 +46,11 @@ struct AvatarView: View {
         }
         return "?"
     }
-    
+
     var body: some View {
         Group {
-            if let data = avatarData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+            if let avatarImage {
+                Image(uiImage: avatarImage)
                     .resizable()
                     .scaledToFill()
             } else {
@@ -59,7 +63,7 @@ struct AvatarView: View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
-                    
+
                     Text(initial)
                         .font(.system(size: size * 0.45, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -87,6 +91,15 @@ struct AvatarView: View {
             }
         )
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .task(id: avatarData) {
+            // 异步解码 + 下采样到屏幕尺寸 2x(避免主线程同步解码大图)。
+            // Async decode + downsample to 2x screen pixels (avoids sync main-thread decode of large images).
+            guard let data = avatarData else { avatarImage = nil; return }
+            let targetSize = size
+            avatarImage = await Task.detached(priority: .userInitiated) {
+                ImageCache.thumbnail(from: data, maxDimension: targetSize)
+            }.value
+        }
     }
 }
 

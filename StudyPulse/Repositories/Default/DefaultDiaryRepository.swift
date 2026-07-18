@@ -25,6 +25,11 @@ final class DefaultDiaryRepository: DiaryRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId + diarySyncToHealthEnabled)
     /// AppEnvironmentManager (injected by the container; used to read
     /// `activePhaseId` + `diarySyncToHealthEnabled`).
@@ -42,16 +47,24 @@ final class DefaultDiaryRepository: DiaryRepository {
     /// Load all diary entries.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let entities = try context.fetch(
-                FetchDescriptor<DiaryEntryRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // Use an independent background ModelContext inside a detached task.
+        let snapshots: [DiaryEntry] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            // fetchLimit=365:一年日记足够;按 date desc 保证拿到最新数据。
+            // fetchLimit=365: a year of diary entries is enough; sort date desc to keep the newest.
+            var descriptor = FetchDescriptor<DiaryEntryRecord>(
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
             )
-            let snap = entities.map { $0.toSnapshot() }
-            self.diaryEntries = snap
-            recomputeFiltered()
-        } catch {
-            Log.data.error("DefaultDiaryRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            descriptor.fetchLimit = 365
+            let entities = (try? ctx.fetch(descriptor)) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值
+        self.diaryEntries = snapshots
+        recomputeFiltered()
     }
 
     // MARK: - CRUD

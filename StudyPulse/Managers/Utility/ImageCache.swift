@@ -72,32 +72,34 @@ nonisolated final class ImageCache {
         cache.removeAllObjects()
     }
     
-    /// 生成缩略图（固定最大尺寸，减少内存占用）
+    /// 生成缩略图(固定最大尺寸,减少内存占用)。
+    /// 用 `CGImageSourceCreateThumbnailAtIndex` 直接生成下采样缩略图,
+    /// 避免先把整个原图解码到内存(适合 avatar / 错题图 等大图场景)。
     /// - Parameters:
     ///   - data: 原始图片数据
-    ///   - maxDimension: 最大边长（默认 300px）
-    /// - Returns: 缩放后的缩略图
-    /// Generate a thumbnail with a fixed max dimension to reduce memory.
+    ///   - maxDimension: 最大边长(默认 300px)
+    /// - Returns: 下采样后的缩略图
+    /// Generate a downsampled thumbnail with a fixed max dimension to reduce memory.
+    /// Uses `CGImageSourceCreateThumbnailAtIndex` to downsample at decode time,
+    /// avoiding a full-resolution decode of the original (suitable for avatars / mistake images).
     /// - Parameters:
     ///   - data: Original image data.
     ///   - maxDimension: Max edge length (default 300px).
-    /// - Returns: The scaled thumbnail, or nil if decode fails.
+    /// - Returns: The downsampled thumbnail, or nil if decode fails.
     static func thumbnail(from data: Data, maxDimension: CGFloat = 300) -> UIImage? {
-        guard let original = UIImage(data: data) else { return nil }
-        // 如果原图已小于最大尺寸，直接返回
-        // If the original is already small enough, return it as-is (no re-render).
-        guard original.size.width > maxDimension || original.size.height > maxDimension else {
-            return original
+        let maxPixels = Int(maxDimension * UIScreen.main.scale)
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixels
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            // 解码失败时回退到 UIImage(data:)
+            // Fall back to UIImage(data:) on CGImageSource failure.
+            return UIImage(data: data)
         }
-
-        // 按比例缩放(取较小比例,保证长边 == maxDimension)
-        // Scale uniformly; min() ratio ensures the longer edge equals maxDimension.
-        let ratio = min(maxDimension / original.size.width, maxDimension / original.size.height)
-        let newSize = CGSize(width: original.size.width * ratio, height: original.size.height * ratio)
-
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { _ in
-            original.draw(in: CGRect(origin: .zero, size: newSize))
-        }
+        return UIImage(cgImage: cgImage)
     }
 }

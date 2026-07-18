@@ -81,12 +81,12 @@ struct MistakeDetailEditView: View {
             })
             .ignoresSafeArea()
         }
-        // PencilKit 手写 → 转成 UIImage 追加
-        // PencilKit hand-drawn → converted to UIImage and appended.
+        // PencilKit 手写 → 直接把 PNG Data 追加(P1-3:不再 UIImage 中转)
+        // PencilKit hand-drawn → append the PNG Data directly (P1-3: no UIImage round-trip).
         .sheet(isPresented: $viewModel.showingHandwritingSheet) {
             HandwritingSheet { pngData in
-                if !pngData.isEmpty, let image = UIImage(data: pngData) {
-                    viewModel.addImageToCurrentSection(image)
+                if !pngData.isEmpty {
+                    viewModel.addImageDataToCurrentSection(pngData)
                 }
             }
             .ignoresSafeArea(edges: .bottom)
@@ -310,8 +310,8 @@ private extension MistakeDetailEditView {
                 if isIPad {
                     NavigationLink {
                         HandwritingView { pngData in
-                            if !pngData.isEmpty, let image = UIImage(data: pngData) {
-                                viewModel.addImageToCurrentSection(image)
+                            if !pngData.isEmpty {
+                                viewModel.addImageDataToCurrentSection(pngData)
                             }
                         }
                     } label: {
@@ -336,13 +336,11 @@ private extension MistakeDetailEditView {
                     HStack(spacing: 8) {
                         ForEach(viewModel.currentSectionImagesBinding.wrappedValue.indices, id: \.self) { index in
                             ZStack(alignment: .topTrailing) {
-                                Image(uiImage: viewModel.currentSectionImagesBinding.wrappedValue[index])
-                                    .resizable()
-                                    .scaledToFill()
+                                CachedAsyncImage(data: viewModel.currentSectionImagesBinding.wrappedValue[index])
                                     .frame(width: 80, height: 80)
                                     .clipped()
                                     .cornerRadius(8)
-                                
+
                                 Button(action: {
                                     viewModel.currentSectionImagesBinding.wrappedValue.remove(at: index)
                                 }) {

@@ -18,6 +18,11 @@ final class DefaultTaskRepository: TaskRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
     /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
     @ObservationIgnored
@@ -31,15 +36,27 @@ final class DefaultTaskRepository: TaskRepository {
 
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let entities = try context.fetch(
-                FetchDescriptor<TaskItemRecord>(sortBy: [SortDescriptor(\.dueDate, order: .forward)])
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // Use an independent background ModelContext inside a detached task.
+        let snapshots: [TaskItem] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            // fetchLimit=200 + sort by dueDate desc:取最近 200 个待办(覆盖即将到期 + 近期已完成)。
+            // fetchLimit=200 + sort by dueDate desc: take the 200 most recent tasks
+            // (upcoming + recently completed). Sort desc so heavy users keep the newest.
+            var descriptor = FetchDescriptor<TaskItemRecord>(
+                sortBy: [SortDescriptor(\.dueDate, order: .reverse)]
             )
-            self.taskItems = entities.map { $0.toSnapshot() }
-            recomputeFiltered()
-        } catch {
-            Log.data.error("DefaultTaskRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            descriptor.fetchLimit = 200
+            let entities = (try? ctx.fetch(descriptor)) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值
+        // add() 内部会按 dueDate 升序重排,初始 desc 不影响后续不变量。
+        // add() re-sorts ascending by dueDate, so the initial desc order doesn't break invariants.
+        self.taskItems = snapshots
+        recomputeFiltered()
     }
 
     // MARK: - CRUD

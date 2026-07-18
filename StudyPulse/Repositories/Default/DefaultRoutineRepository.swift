@@ -29,6 +29,11 @@ final class DefaultRoutineRepository: RoutineRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
     /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
     @ObservationIgnored
@@ -45,15 +50,20 @@ final class DefaultRoutineRepository: RoutineRepository {
     /// Load all routines.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let entities = try context.fetch(
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // Use an independent background ModelContext inside a detached task.
+        let snapshots: [Routine] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            let entities = (try? ctx.fetch(
                 FetchDescriptor<RoutineRecord>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
-            )
-            self.routines = entities.map { $0.toSnapshot() }
-            recomputeFiltered()
-        } catch {
-            Log.data.error("DefaultRoutineRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            )) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值
+        self.routines = snapshots
+        recomputeFiltered()
     }
 
     // MARK: - CRUD

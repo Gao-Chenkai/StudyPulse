@@ -55,12 +55,15 @@ struct StudySuggestionsCard: View {
     /// 冷却时长(秒):默认 40 分钟,跟雷达卡片同。
     /// Cooldown duration (seconds). Same 40-minute rate limit as the body-radar card.
     private static let suggestionsAICooldownSeconds: TimeInterval = 40 * 60
-    /// 距下次可自动请求的剩余秒数;Timer 每秒刷新一次。
-    /// Remaining seconds until the next auto-request is allowed; the timer refreshes it every second.
-    @State private var cooldownRemainingSeconds: Int = 0
-    /// 每秒刷新倒计时的定时器
-    /// Per-second countdown refresh timer.
-    @State private var cooldownTimer: Timer? = nil
+    /// 距下次可自动请求的剩余秒数(基于 `lastStudySuggestionsAIRequestTime` 计算)。
+    /// 倒计时显示由 `TimelineView(.periodic(by: 1))` 每秒重绘,不再用 1Hz Timer 唤醒。
+    /// Remaining seconds until the next auto-request is allowed (computed from `lastStudySuggestionsAIRequestTime`).
+    /// The countdown text is redrawn by `TimelineView(.periodic(by: 1))`,no more 1Hz Timer wakeups.
+    private var cooldownRemainingSeconds: Int {
+        guard let last = container.envManager.preferences.lastStudySuggestionsAIRequestTime else { return 0 }
+        let elapsed = Date().timeIntervalSince(last)
+        return max(0, Int((Self.suggestionsAICooldownSeconds - elapsed).rounded()))
+    }
 
     /// 当前展示的建议(优先 AI,失败/未启用时本地)
     /// Suggestions currently displayed (prefer AI, fall back to local on failure / disabled).
@@ -123,12 +126,10 @@ struct StudySuggestionsCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSkin()
         .onAppear {
-            startCooldownTimer()
             reload()
         }
         .onDisappear {
             aiTask?.cancel()
-            stopCooldownTimer()
         }
         .debugLayoutBoundsAuto()
         .onChange(of: healthManager.bodyStatus) { _, _ in reload() }
@@ -227,7 +228,6 @@ struct StudySuggestionsCard: View {
         }
         // 成功 / 失败 / 取消都重置冷却起点
         container.envManager.preferences.lastStudySuggestionsAIRequestTime = Date()
-        updateCooldownRemaining()
         aiLoading = false
     }
 
@@ -239,41 +239,6 @@ struct StudySuggestionsCard: View {
     private func canRequestNow() -> Bool {
         guard let last = container.envManager.preferences.lastStudySuggestionsAIRequestTime else { return true }
         return Date().timeIntervalSince(last) >= Self.suggestionsAICooldownSeconds
-    }
-
-    /// 重新计算剩余冷却秒数,用于 UI 倒计时(当前未直接展示,留作可观察值)。
-    /// Recompute remaining cooldown seconds for the UI countdown (not directly shown yet, kept as observable).
-    private func updateCooldownRemaining() {
-        guard let last = container.envManager.preferences.lastStudySuggestionsAIRequestTime else {
-            cooldownRemainingSeconds = 0
-            return
-        }
-        let elapsed = Date().timeIntervalSince(last)
-        let remaining = max(0, Self.suggestionsAICooldownSeconds - elapsed)
-        cooldownRemainingSeconds = Int(remaining.rounded())
-    }
-
-    /// 启动每秒刷新的冷却倒计时(只在仍有剩余时间时启动)
-    /// Start the per-second countdown timer (only if there's time remaining).
-    private func startCooldownTimer() {
-        updateCooldownRemaining()
-        guard cooldownRemainingSeconds > 0 else { return }
-        stopCooldownTimer()
-        cooldownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            Task { @MainActor in
-                updateCooldownRemaining()
-                if cooldownRemainingSeconds <= 0 {
-                    stopCooldownTimer()
-                }
-            }
-        }
-    }
-
-    /// 停止冷却倒计时定时器
-    /// Stop the cooldown countdown timer.
-    private func stopCooldownTimer() {
-        cooldownTimer?.invalidate()
-        cooldownTimer = nil
     }
 }
 

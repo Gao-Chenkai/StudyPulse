@@ -21,6 +21,11 @@ final class DefaultProfileRepository: ProfileRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// 跨域引用:commitOnboardingProfile 会写 subjects(由 SubjectRepository 持有)
     /// Cross-domain ref: commitOnboardingProfile writes subjects (held by SubjectRepository).
     @ObservationIgnored
@@ -41,14 +46,18 @@ final class DefaultProfileRepository: ProfileRepository {
     /// Load the user profile (first record).
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let profiles = try context.fetch(FetchDescriptor<UserProfileRecord>())
-            if let entity = profiles.first {
-                self.profile = entity.toSnapshot()
-            }
-        } catch {
-            Log.data.error("DefaultProfileRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // 库空时返回 nil,主 actor 用 if let 兜底
+        // Use an independent background ModelContext; return nil if empty.
+        let snapshot: UserProfile? = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            let entities = (try? ctx.fetch(FetchDescriptor<UserProfileRecord>())) ?? []
+            return entities.first?.toSnapshot()
+        }.value
+        // 回到 MainActor 赋值
+        if let snapshot { self.profile = snapshot }
     }
 
     // MARK: - CRUD

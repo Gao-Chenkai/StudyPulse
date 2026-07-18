@@ -21,6 +21,11 @@ final class DefaultPhaseRepository: PhaseRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// 跨域引用:Phase 操作会读 / 改其它域的 phaseId。
     /// Cross-domain refs: phase ops read/write phaseId in other domains.
     /// 这些 weak 引用由容器在 init 时注入。
@@ -65,14 +70,19 @@ final class DefaultPhaseRepository: PhaseRepository {
     /// Load all study phases.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let entities = try context.fetch(
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // Use an independent background ModelContext inside a detached task.
+        let snapshots: [StudyPhase] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            let entities = (try? ctx.fetch(
                 FetchDescriptor<StudyPhaseRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)])
-            )
-            self.phases = entities.map { $0.toSnapshot() }
-        } catch {
-            Log.data.error("DefaultPhaseRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            )) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值
+        self.phases = snapshots
     }
 
     // MARK: - Computed

@@ -42,12 +42,24 @@ struct HRVStatusCard: View {
     /// Radar LLM 增强建议的冷却时长(秒);默认 40 分钟。
     /// Cooldown duration (seconds) for the body-radar LLM-enhanced suggestion. Default 40 min.
     private static let radarAICooldownSeconds: TimeInterval = 40 * 60
-    /// 距下次可自动请求的剩余秒数;Timer 每秒刷新一次。
-    /// Seconds remaining until the next automatic request is allowed; refreshed every second.
-    @State private var cooldownRemainingSeconds: Int = 0
-    /// 每秒刷新倒计时的定时器。
-    /// Timer that refreshes the countdown every second.
-    @State private var cooldownTimer: Timer? = nil
+    /// 距下次可自动请求的剩余秒数(基于 `lastRadarAIRequestTime` 计算)。
+    /// 倒计时显示由 `TimelineView(.periodic(by: 1))` 每秒重绘,不再用 1Hz Timer 唤醒。
+    /// Seconds remaining until the next automatic request is allowed (computed from `lastRadarAIRequestTime`).
+    /// The countdown text is redrawn by `TimelineView(.periodic(by: 1))`,no more 1Hz Timer wakeups.
+    private var cooldownRemainingSeconds: Int {
+        guard let last = container.envManager.preferences.lastRadarAIRequestTime else { return 0 }
+        let elapsed = Date().timeIntervalSince(last)
+        return max(0, Int((Self.radarAICooldownSeconds - elapsed).rounded()))
+    }
+
+    /// 缓存的雷达数值(避免主 body 与 axisValuesRow 各调用一次 compute)。
+    /// 在 `.task` 中初始化,在 onChange 中重算,主 body 评估时 0 次 compute。
+    /// Cached radar values (avoids calling `BodyRadarValues.compute` twice per body evaluation).
+    /// Initialized in `.task`,refreshed in `onChange`,0 `compute` calls per body evaluation.
+    @State private var cachedRadar: BodyRadarValues?
+    /// 缓存的 7 天 difficulty annotations(避免每次 body 评估都磁盘读)。
+    /// Cached 7-day difficulty annotations (avoids disk read on every body evaluation).
+    @State private var recentAnnotations: [DifficultyAnnotation] = []
 
     /// 今日的本地算法建议(用于 AI 流式期间显示 + AI 解析失败的兜底)
     private var localSuggestion: StudySuggestion? {
@@ -85,18 +97,11 @@ struct HRVStatusCard: View {
                     loadingPlaceholder
                 } else {
                     if hrvManager.hrvDetailLevel != .suggestionOnly {
-                        let radar = BodyRadarValues.compute(
-                            hrv: hrvManager.readiness,
-                            body: hrvManager.bodyStatus,
-                            baselines: hrvManager.personalBaselines,
-                            age: container.profileRepo.profile.age,
-                            mistakes: container.mistakeRepo.filteredMistakeSets,
-                            recentAnnotations: StudySessionStore.recentAnnotations(days: 7),
-                            recentMoodEntries: recentMoodEntries
-                        )
-                        BodyRadarChart(values: radar)
-                            .frame(height: 220)
-                            .padding(.vertical, 4)
+                        if let radar = cachedRadar {
+                            BodyRadarChart(values: radar)
+                                .frame(height: 220)
+                                .padding(.vertical, 4)
+                        }
                     }
 
                     if hrvManager.hrvDetailLevel == .chartAndData {
@@ -114,20 +119,28 @@ struct HRVStatusCard: View {
             )
             .opacity(animateIn ? 1 : 0)
             .offset(y: animateIn ? 0 : 10)
+            .task {
+                // 后台读取 7 天 difficulty annotations(磁盘 I/O),再刷新雷达数值缓存。
+                // Background-read 7-day difficulty annotations (disk I/O),then refresh radar cache.
+                let annotations = await Task.detached(priority: .utility) {
+                    StudySessionStore.recentAnnotations(days: 7)
+                }.value
+                recentAnnotations = annotations
+                refreshRadar()
+                refreshAI()
+            }
             .onAppear {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                     animateIn = true
                 }
-                startCooldownTimer()
-                refreshAI()
             }
             .onDisappear {
                 aiTask?.cancel()
-                stopCooldownTimer()
             }
-            .onChange(of: hrvManager.bodyStatus) { _, _ in refreshAI() }
-            .onChange(of: hrvManager.readiness) { _, _ in refreshAI() }
-            .onChange(of: hrvManager.personalBaselines) { _, _ in refreshAI() }
+            .onChange(of: hrvManager.bodyStatus) { _, _ in refreshAI(); refreshRadar() }
+            .onChange(of: hrvManager.readiness) { _, _ in refreshAI(); refreshRadar() }
+            .onChange(of: hrvManager.personalBaselines) { _, _ in refreshAI(); refreshRadar() }
+            .onChange(of: container.mistakeRepo.filteredMistakeSets) { _, _ in refreshRadar() }
             .debugLayoutBoundsAuto()
         }
     }
@@ -172,44 +185,24 @@ struct HRVStatusCard: View {
     /// 4 轴雷达各维度的数值读数,只在最高细节级别显示。
     /// 运动那一格用 3 圈 fitness ring 渲染,而不是普通文本块。
     private var axisValuesRow: some View {
-        let radar = BodyRadarValues.compute(
-            hrv: hrvManager.readiness,
-            body: hrvManager.bodyStatus,
-            baselines: hrvManager.personalBaselines,
-            age: container.profileRepo.profile.age,
-            mistakes: container.mistakeRepo.filteredMistakeSets,
-            recentAnnotations: StudySessionStore.recentAnnotations(days: 7),
-            recentMoodEntries: recentMoodEntries
-        )
-        return HStack(spacing: 6) {
-            axisTile(
-                title: "HRV",
-                value: radar.hrvValueText,
-                color: radar.hrvColor
-            )
-            axisTile(
-                title: "Heart Rate".localized(),
-                value: radar.heartRateValueText,
-                color: radar.heartRateColor
-            )
-            axisTile(
-                title: "Recovery Sleep".localized(),
-                value: radar.sleepValueText,
-                color: radar.sleepColor
-            )
-            workoutTile(
-                minutes: hrvManager.bodyStatus.exerciseMinutesToday
-            )
-            axisTile(
-                title: "Respiratory".localized(),
-                value: radar.respiratoryValueText,
-                color: radar.respiratoryColor
-            )
-            axisTile(
-                title: "Stability".localized(),
-                value: radar.psychologicalStabilityValueText,
-                color: radar.psychologicalStabilityColor
-            )
+        // 复用主 body 的 cachedRadar;若缓存尚未就绪(.task 还在后台读 annotations)
+        // 则显示空占位 HStack,等下一次 body 评估自动填上。
+        // Reuse cachedRadar from the main body; if the cache isn't ready yet
+        // (`.task` still reading annotations in the background),show an empty
+        // HStack placeholder and let the next body evaluation fill it in.
+        Group {
+            if let radar = cachedRadar {
+                HStack(spacing: 6) {
+                    axisTile(title: "HRV", value: radar.hrvValueText, color: radar.hrvColor)
+                    axisTile(title: "Heart Rate".localized(), value: radar.heartRateValueText, color: radar.heartRateColor)
+                    axisTile(title: "Recovery Sleep".localized(), value: radar.sleepValueText, color: radar.sleepColor)
+                    workoutTile(minutes: hrvManager.bodyStatus.exerciseMinutesToday)
+                    axisTile(title: "Respiratory".localized(), value: radar.respiratoryValueText, color: radar.respiratoryColor)
+                    axisTile(title: "Stability".localized(), value: radar.psychologicalStabilityValueText, color: radar.psychologicalStabilityColor)
+                }
+            } else {
+                HStack(spacing: 6) { Color.clear.frame(height: 40) }
+            }
         }
     }
 
@@ -337,14 +330,17 @@ struct HRVStatusCard: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else if cooldownRemainingSeconds > 0 {
-                    // 冷却中:显示剩余时间,告诉用户可点击"立刻分析"绕过
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock")
-                            .font(.caption2)
-                        Text(formatCooldown(cooldownRemainingSeconds))
-                            .font(.caption2.monospacedDigit())
+                    // 冷却中:每秒重绘倒计时(TimelineView 替代 1Hz Timer)。
+                    // Per-second countdown redraw via TimelineView (replaces 1Hz Timer).
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                            Text(formatCooldown(cooldownRemainingSeconds))
+                                .font(.caption2.monospacedDigit())
+                        }
+                        .foregroundColor(.secondary)
                     }
-                    .foregroundColor(.secondary)
                 }
             }
             Spacer()
@@ -428,7 +424,6 @@ struct HRVStatusCard: View {
 
         // 冷却中 → 不发请求,但刷新倒计时让用户看到剩余时间
         if !canRequestNow() {
-            updateCooldownRemaining()
             return
         }
 
@@ -452,6 +447,7 @@ struct HRVStatusCard: View {
     /// 实际发起 LLM 请求的内部方法;请求前重置冷却起点,请求完成后再次刷新倒计时。
     private func runLLMRequest(fallback: StudySuggestion) {
         // 构造 LLM 上下文(包含 30 天基线 + 今日信号 + 本地建议)
+        // 使用缓存的 recentAnnotations(避免每次都磁盘读 7 天的 difficulty annotations)
         let context = StudyReadinessAlgorithm.buildBodyReadinessContext(
             hrvEnabled: hrvManager.hrvEnabled,
             hrvOnboardingCompleted: hrvManager.hrvOnboardingCompleted,
@@ -460,7 +456,7 @@ struct HRVStatusCard: View {
             bodyStatus: hrvManager.bodyStatus,
             baselines: hrvManager.personalBaselines,
             age: container.profileRepo.profile.age,
-            recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7),
+            recentDifficultyAnnotations: recentAnnotations,
             recentMoodEntries: recentMoodEntries
         )
         lastBodyReadinessContext = context
@@ -489,9 +485,27 @@ struct HRVStatusCard: View {
             }
             // 成功 / 失败 / 取消都重置冷却起点 —— 一次请求就消耗一次配额
             container.envManager.preferences.lastRadarAIRequestTime = Date()
-            updateCooldownRemaining()
+            // 倒计时显示由 TimelineView + computed property 自动刷新,不再需要 updateCooldownRemaining
             aiLoading = false
         }
+    }
+
+    // MARK: - 雷达数值缓存 / Radar cache
+
+    /// 重新计算 `cachedRadar`(在 `.task` 与各 `onChange` 中调用)。
+    /// 主 body 评估时 0 次 compute;与原实现相比每次 body 评估减少 2 次 compute。
+    /// Recompute `cachedRadar` (called from `.task` and `onChange`).
+    /// 0 `compute` calls per body evaluation; removes the previous 2× per-eval cost.
+    private func refreshRadar() {
+        cachedRadar = BodyRadarValues.compute(
+            hrv: hrvManager.readiness,
+            body: hrvManager.bodyStatus,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            mistakes: container.mistakeRepo.filteredMistakeSets,
+            recentAnnotations: recentAnnotations,
+            recentMoodEntries: recentMoodEntries
+        )
     }
 
     // MARK: - 冷却辅助 / Cooldown helpers
@@ -500,37 +514,6 @@ struct HRVStatusCard: View {
     private func canRequestNow() -> Bool {
         guard let last = container.envManager.preferences.lastRadarAIRequestTime else { return true }
         return Date().timeIntervalSince(last) >= Self.radarAICooldownSeconds
-    }
-
-    /// 计算并写入 `cooldownRemainingSeconds`(供 UI 倒计时显示)
-    private func updateCooldownRemaining() {
-        guard let last = container.envManager.preferences.lastRadarAIRequestTime else {
-            cooldownRemainingSeconds = 0
-            return
-        }
-        let elapsed = Date().timeIntervalSince(last)
-        let remaining = max(0, Self.radarAICooldownSeconds - elapsed)
-        cooldownRemainingSeconds = Int(remaining.rounded())
-    }
-
-    /// 启动每秒刷新一次的倒计时 Timer
-    private func startCooldownTimer() {
-        updateCooldownRemaining()
-        guard cooldownRemainingSeconds > 0 else { return }
-        stopCooldownTimer()
-        cooldownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            Task { @MainActor in
-                updateCooldownRemaining()
-                if cooldownRemainingSeconds <= 0 {
-                    stopCooldownTimer()
-                }
-            }
-        }
-    }
-
-    private func stopCooldownTimer() {
-        cooldownTimer?.invalidate()
-        cooldownTimer = nil
     }
 
     /// 把剩余秒数格式化成 "mm:ss"(> 1 小时显示 "Hh Mm")
@@ -557,7 +540,7 @@ struct HRVStatusCard: View {
                 bodyStatus: hrvManager.bodyStatus,
                 baselines: hrvManager.personalBaselines,
                 age: container.profileRepo.profile.age,
-                recentDifficultyAnnotations: StudySessionStore.recentAnnotations(days: 7),
+                recentDifficultyAnnotations: recentAnnotations,
                 recentMoodEntries: recentMoodEntries
             )
             lastBodyReadinessContext = temp

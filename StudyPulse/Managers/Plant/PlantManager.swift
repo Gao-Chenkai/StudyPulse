@@ -337,15 +337,20 @@ final class PlantManager {
     // MARK: - AchievementManager Subscription
 
     private func subscribeToAchievementManager() {
-        // 监听 snapshot 变化（AchievementManager 是 ObservableObject，objectWillChange 在 @Published 赋值时 fire）
-        // 因为 @MainActor + @Observable 不与 @Published 互通，最稳的方式是 polling。
-        // 用一个轻量 Task 周期检查 streak.totalActiveDays / streak.current / todayLog 的"上一次观测值"，
-        // 发生变化就调用 recomputeStage()。
+        // 通过 NotificationCenter 监听 `achievementsSnapshotDidChange` 通知,
+        // 替代原 1.5s polling(每分钟 40 次 MainActor 唤醒)。
+        // Snapshot 是用户主动操作(录入成绩 / 错题复习 / 完成专注)后才变化的,事件驱动完全足够。
+        // 仍保留 `currentSignature()` 比对:同一个 snapshot 变化但 streak 未变时跳过 derive。
+        // Listen to `achievementsSnapshotDidChange` via NotificationCenter (replaces the
+        // 1.5s polling that woke the main actor 40 times per minute).
+        // Snapshot only changes on user actions (grade / mistake review / focus session),
+        // so event-driven observation is sufficient.
+        // `currentSignature()` is still compared to skip derive when streak didn't change.
         cancellables.removeAll()
         var lastSig = currentSignature()
         cancellables.insert(
-            Timer.publish(every: 1.5, on: .main, in: .common)
-                .autoconnect()
+            NotificationCenter.default.publisher(for: .achievementsSnapshotDidChange)
+                .receive(on: RunLoop.main)
                 .sink { [weak self] _ in
                     guard let self else { return }
                     let sig = self.currentSignature()
@@ -355,10 +360,10 @@ final class PlantManager {
                     }
                 }
         )
-        Log.plant.debug("订阅 AchievementManager 变化 / Subscribed to AchievementManager via 1.5s polling")
+        Log.plant.debug("订阅 AchievementManager 变化 / Subscribed to AchievementManager via NotificationCenter")
     }
 
-    /// 当前 AchievementManager 状态的轻量签名（用于 polling 变化检测）。
+    /// 当前 AchievementManager 状态的轻量签名(用于变化检测)。
     private func currentSignature() -> String {
         let s = AchievementManager.shared.snapshot.streak
         let t = AchievementManager.shared.todayLog

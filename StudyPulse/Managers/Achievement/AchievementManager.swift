@@ -27,7 +27,15 @@ final class AchievementManager: ObservableObject {
 
     /// 完整快照（外部 view 不直接改）。
     /// Full snapshot (views must not mutate it directly).
-    @Published private(set) var snapshot: AchievementsSnapshot
+    /// `didSet` 在 snapshot 被赋值后 post `achievementsSnapshotDidChange` 通知,
+    /// PlantManager 监听此通知替代原 1.5s polling。
+    /// `didSet` posts `achievementsSnapshotDidChange` whenever the snapshot is assigned;
+    /// PlantManager listens to this notification instead of the old 1.5s polling.
+    @Published private(set) var snapshot: AchievementsSnapshot {
+        didSet {
+            NotificationCenter.default.post(name: .achievementsSnapshotDidChange, object: nil)
+        }
+    }
 
     /// 今日活动日志（date == startOfDay(today) 的副本，便于 view 直接订阅）。
     /// Today's activity log (a copy where date == startOfDay(today) so views can subscribe directly).

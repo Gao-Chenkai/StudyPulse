@@ -32,6 +32,11 @@ final class DefaultExamRepository: ExamRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
     /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
     @ObservationIgnored
@@ -48,22 +53,31 @@ final class DefaultExamRepository: ExamRepository {
     /// Load all exams into memory.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            // 主线程上完成 fetch + 转换,避免 @Model 跨 actor 边界
-            let examEntities = try context.fetch(
-                FetchDescriptor<ExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,两个 fetch 共用一个 ctx
+        // Use one independent background ModelContext for both fetches.
+        let snapshots: (exams: [Exam], comp: [comprehensiveExam]) = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            // fetchLimit=200 + sort by examDate desc:取最近 200 场考试(覆盖未来 + 近期已过)。
+            // fetchLimit=200 + sort by examDate desc: take the most recent 200 exams
+            // (covers upcoming + recently past).
+            var examDescriptor = FetchDescriptor<ExamRecord>(
+                sortBy: [SortDescriptor(\.examDate, order: .reverse)]
             )
-            let compEntities = try context.fetch(
-                FetchDescriptor<ComprehensiveExamRecord>(sortBy: [SortDescriptor(\.examDate, order: .forward)])
+            examDescriptor.fetchLimit = 200
+            var compDescriptor = FetchDescriptor<ComprehensiveExamRecord>(
+                sortBy: [SortDescriptor(\.examDate, order: .reverse)]
             )
-            let examsSnap: [Exam] = examEntities.map { $0.toSnapshot() }
-            let compSnap: [comprehensiveExam] = compEntities.map { $0.toSnapshot() }
-            self.examSets = examsSnap
-            self.comprehensiveExamSets = compSnap
-            recomputeFiltered()
-        } catch {
-            Log.data.error("DefaultExamRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            compDescriptor.fetchLimit = 200
+            let examEntities = (try? ctx.fetch(examDescriptor)) ?? []
+            let compEntities = (try? ctx.fetch(compDescriptor)) ?? []
+            return (exams: examEntities.map { $0.toSnapshot() }, comp: compEntities.map { $0.toSnapshot() })
+        }.value
+        // 回到 MainActor 赋值
+        self.examSets = snapshots.exams
+        self.comprehensiveExamSets = snapshots.comp
+        recomputeFiltered()
     }
 
     // MARK: - CRUD

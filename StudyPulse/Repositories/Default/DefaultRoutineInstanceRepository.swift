@@ -27,6 +27,11 @@ final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
     @ObservationIgnored
     private var modelContext: ModelContext?
 
+    /// 用于 background fetch 的容器引用(Sendable)
+    /// Container reference for background fetches (Sendable).
+    @ObservationIgnored
+    private var modelContainer: ModelContainer?
+
     init() {}
 
     // MARK: - Lifecycle
@@ -36,15 +41,24 @@ final class DefaultRoutineInstanceRepository: RoutineInstanceRepository {
     /// Load all instances.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
-        do {
-            let entities = try context.fetch(
-                FetchDescriptor<RoutineInstanceRecord>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        self.modelContainer = context.container
+        guard let container = modelContainer else { return }
+        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
+        // Use an independent background ModelContext inside a detached task.
+        let snapshots: [RoutineInstance] = await Task.detached(priority: .utility) {
+            let ctx = ModelContext(container)
+            // fetchLimit=200:取最近 200 个 instance(覆盖近 2-3 个月)。
+            // fetchLimit=200: take the 200 most recent instances (covers ~2-3 months).
+            var descriptor = FetchDescriptor<RoutineInstanceRecord>(
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
             )
-            self.allInstances = entities.map { $0.toSnapshot() }
-            recomputeDerived()
-        } catch {
-            Log.data.error("DefaultRoutineInstanceRepository loadAll failed: \(error.localizedDescription, privacy: .public)")
-        }
+            descriptor.fetchLimit = 200
+            let entities = (try? ctx.fetch(descriptor)) ?? []
+            return entities.map { $0.toSnapshot() }
+        }.value
+        // 回到 MainActor 赋值
+        self.allInstances = snapshots
+        recomputeDerived()
     }
 
     // MARK: - CRUD

@@ -58,7 +58,7 @@ nonisolated struct LLMChatResponse: Decodable, Sendable {
 extension LLMChatResponse {
     /// 提取 assistant 最终 content / Extract the assistant's final `content`.
     /// 找不到时抛 `LLMError.malformedResponse` / Throws `LLMError.malformedResponse` if missing.
-    static func parseSingleResponse(_ data: Data) throws -> String {
+    nonisolated static func parseSingleResponse(_ data: Data) throws -> String {
         let resp: LLMChatResponse
         do {
             resp = try JSONDecoder().decode(LLMChatResponse.self, from: data)

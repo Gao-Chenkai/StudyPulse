@@ -248,13 +248,12 @@ final class HealthKitManager: ObservableObject {
         // 恢复上次的 HRV 增量查询水位
         // Restore the last HRV query watermark for incremental queries
         self.lastHRVQueryEndDate = UserDefaults.standard.object(forKey: "hrv_last_query_end_date") as? Date
-        // Load any previously saved 30-day history so the algorithm
-        // starts with a personal baseline as soon as the app opens.
-        let history = HealthHistoryStore.load()
-        self.personalBaselines = PersonalBaselines.compute(from: history)
-        Log.healthKit.info("HealthKitManager 初始化 / HealthKitManager init; enabled=\(self.hrvEnabled, privacy: .public) onboarded=\(self.hrvOnboardingCompleted, privacy: .public) historyCount=\(history.count, privacy: .public) watermark=\(self.lastHRVQueryEndDate?.description ?? "nil", privacy: .public)")
-        // 注意：不在 init 里立刻发起 HealthKit 查询；
-        // 由 App 在主数据加载完成后再调用 bootstrap()，避免和 DataManager 启动 I/O 竞争。
+        // 注意:磁盘读 30 天 history + 计算 PersonalBaselines 已移到 `bootstrap()`,
+        // 由 `Task.detached(priority: .utility)` 在后台执行,避免主线程启动期阻塞。
+        // personalBaselines 暂用 `.empty`(declared 处的默认值),由 bootstrap 阶段填充。
+        Log.healthKit.info("HealthKitManager 初始化 / HealthKitManager init; enabled=\(self.hrvEnabled, privacy: .public) onboarded=\(self.hrvOnboardingCompleted, privacy: .public) watermark=\(self.lastHRVQueryEndDate?.description ?? "nil", privacy: .public)")
+        // 注意:不在 init 里立刻发起 HealthKit 查询;
+        // 由 App 在主数据加载完成后再调用 bootstrap(),避免和 DataManager 启动 I/O 竞争。
     }
 
     /// 启动时调用：在主数据加载就绪后再去请求 HealthKit 授权与刷新数据。
@@ -279,6 +278,15 @@ final class HealthKitManager: ObservableObject {
     ///     single UI refresh.
     func bootstrap() async {
         Log.healthKit.info("HealthKit bootstrap 开始 / start (two-phase)")
+        // 后台加载 30 天 history + 计算 PersonalBaselines(原 init 同步执行,现已移至此处)。
+        // Background-load 30-day history + compute PersonalBaselines (moved here from `init`).
+        let (history, baselines) = await Task.detached(priority: .utility) {
+            let h = HealthHistoryStore.load()
+            let b = PersonalBaselines.compute(from: h)
+            return (h, b)
+        }.value
+        self.personalBaselines = baselines
+        Log.healthKit.info("HealthKit baselines 已加载 / baselines loaded; historyCount=\(history.count, privacy: .public)")
         await checkAuthorizationStatus()
         Log.healthKit.info("HealthKit 授权状态 / auth: isAuthorized=\(self.isAuthorized, privacy: .public) bodyStatusAuthorized=\(self.bodyStatusAuthorized, privacy: .public)")
         guard hrvEnabled, hrvOnboardingCompleted else {

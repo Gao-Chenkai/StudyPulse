@@ -57,7 +57,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
 
     /// 成员初始化器
     /// Memberwise initializer.
-    init(
+    nonisolated init(
         id: UUID,
         startDate: Date,
         durationSeconds: Int,
@@ -83,7 +83,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
         case heartRateSamples, difficultyAnnotations
     }
 
-    init(from decoder: Decoder) throws {
+    nonisolated init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         startDate = try c.decode(Date.self, forKey: .startDate)
@@ -168,7 +168,7 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
 
     /// 从 `StudyIntensity`（算法层）映射到 `SessionIntensity`（持久化层）。
     /// Convert from `StudyIntensity` (algorithm) to `SessionIntensity` (persistence).
-    static func fromAlgorithmIntensity(_ intensity: StudyIntensity) -> SessionIntensity {
+    nonisolated static func fromAlgorithmIntensity(_ intensity: StudyIntensity) -> SessionIntensity {
         switch intensity {
         case .peak: return .peak
         case .deepFocus: return .deepFocus
@@ -184,14 +184,14 @@ struct StudySession: Codable, Identifiable, Equatable, Sendable {
 enum StudySessionStore {
     /// 持久化文件名
     /// Persistence file name.
-    static let fileName = "study_sessions.json"
+    nonisolated static let fileName = "study_sessions.json"
     /// 最多保留 90 天的会话
     /// Keep at most 90 days of sessions.
-    static let retentionDays = 90
+    nonisolated static let retentionDays = 90
 
     /// 持久化文件 URL
     /// Persistence file URL.
-    static func fileURL() throws -> URL {
+    nonisolated static func fileURL() throws -> URL {
         let dir = try FileManager.default.url(
             for: .documentDirectory,
             in: .userDomainMask,
@@ -203,7 +203,7 @@ enum StudySessionStore {
 
     /// 加载全部已保存的会话
     /// Load all persisted sessions.
-    static func load() -> [StudySession] {
+    nonisolated static func load() -> [StudySession] {
         guard let url = try? fileURL(),
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
@@ -220,7 +220,7 @@ enum StudySessionStore {
 
     /// 保存全部会话（自动剔除 retentionDays 之外的旧记录）
     /// Save all sessions (auto-trims to retentionDays window).
-    static func save(_ sessions: [StudySession]) {
+    nonisolated static func save(_ sessions: [StudySession]) {
         guard let url = try? fileURL() else {
             Log.app.error("StudySessionStore save failed: cannot resolve file URL")
             return
@@ -243,7 +243,7 @@ enum StudySessionStore {
     /// 追加一条会话并落盘
     /// Append a new session and persist.
     @discardableResult
-    static func append(_ session: StudySession) -> [StudySession] {
+    nonisolated static func append(_ session: StudySession) -> [StudySession] {
         var sessions = load()
         sessions.append(session)
         save(sessions)
@@ -253,7 +253,7 @@ enum StudySessionStore {
     /// 通用更新:按 id 替换会话并落盘
     /// Replace a session by id and persist.
     @discardableResult
-    static func updateSession(_ updated: StudySession) -> [StudySession] {
+    nonisolated static func updateSession(_ updated: StudySession) -> [StudySession] {
         var sessions = load()
         guard let idx = sessions.firstIndex(where: { $0.id == updated.id }) else {
             return sessions
@@ -266,7 +266,7 @@ enum StudySessionStore {
     /// 仅更新某条会话的难题标注
     /// Update only the difficulty annotations of a session by id.
     @discardableResult
-    static func updateAnnotations(sessionId: UUID, annotations: [DifficultyAnnotation]) -> [StudySession] {
+    nonisolated static func updateAnnotations(sessionId: UUID, annotations: [DifficultyAnnotation]) -> [StudySession] {
         var sessions = load()
         guard let idx = sessions.firstIndex(where: { $0.id == sessionId }) else {
             return sessions
@@ -286,7 +286,7 @@ enum StudySessionStore {
 
     /// 提取最近 N 天内所有会话的难题标注(扁平化)
     /// Flatten all difficulty annotations from sessions within the last `days`.
-    static func recentAnnotations(days: Int = 7) -> [DifficultyAnnotation] {
+    nonisolated static func recentAnnotations(days: Int = 7) -> [DifficultyAnnotation] {
         let cal = Calendar.current
         let cutoff = cal.date(byAdding: .day, value: -days, to: Date()) ?? Date()
         return load()
@@ -296,7 +296,7 @@ enum StudySessionStore {
 
     /// 今日已完成专注分钟数
     /// Total completed minutes today.
-    static func todayTotalMinutes() -> Int {
+    nonisolated static func todayTotalMinutes() -> Int {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         return load()
@@ -306,7 +306,7 @@ enum StudySessionStore {
 
     /// 滚动 N 天每日已完成专注分钟数（含今日）
     /// Total completed minutes over the last `days` (including today).
-    static func rollingMinutes(days: Int) -> [(date: Date, minutes: Int)] {
+    nonisolated static func rollingMinutes(days: Int) -> [(date: Date, minutes: Int)] {
         let cal = Calendar.current
         let all = load().filter(\.completed)
         var result: [(Date, Int)] = []

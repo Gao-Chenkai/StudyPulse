@@ -64,6 +64,15 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var chartRule: SubjectSelectionRule = .lowestScore
     @Published private(set) var chartSelectedSubject: String? = nil
 
+    /// 上一次 recompute 时的输入签名(用于 dirty flag:相同输入则跳过重算)。
+    /// 8 个 `.recomputeOn*` modifier 在同一 RunLoop tick 内可能多次触发 `recompute()`,
+    /// 这个签名比对把"一次用户操作触发 2-3 次重算"降到 1 次(首次实际重算,后续被跳过)。
+    /// Signature of the last recompute's inputs (dirty flag: skip recompute when inputs match).
+    /// The 8 `.recomputeOn*` modifiers may trigger `recompute()` multiple times in the same
+    /// RunLoop tick; this signature reduces "2-3 recomputes per user action" to 1
+    /// (first call computes, the rest are skipped).
+    private var lastRecomputeSignature: Int = 0
+
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer, hrvManager: HealthKitManager) {
         self.container = container
@@ -81,10 +90,26 @@ final class HomeViewModel: ObservableObject {
     // MARK: - 业务方法:派生数据重算 / Business: derived-data recompute
     /// 一次性刷新 4 个缓存(SRS / recent grades / upcoming / unregistered)
     /// One-shot refresh of 4 caches.
+    ///
+    /// 内部用 dirty flag:输入签名与上次相同时直接 return,避免一次用户操作触发 2-3 次完整重算。
+    /// Dirty flag: when the input signature matches the last recompute,return immediately —
+    /// avoids the 2-3 full recomputes that one user action would otherwise trigger.
     func recompute() {
         let grades = container.gradeRepo.grades
         let mistakes = container.mistakeRepo.mistakeSets
         let filteredExams = container.examRepo.filteredExamSets
+        let taskItems = container.taskRepo.filteredTaskItems
+        let routineInstances = container.routineInstanceRepo.allInstances
+
+        // Dirty flag: 比对输入签名,相同则跳过重算。
+        let sig = recomputeSignature(
+            grades: grades, mistakes: mistakes, exams: filteredExams,
+            tasks: taskItems, instances: routineInstances,
+            readiness: hrvManager.readiness, bodyStatus: hrvManager.bodyStatus,
+            chartRule: chartRule
+        )
+        if sig == lastRecomputeSignature { return }
+        lastRecomputeSignature = sig
 
         // SRS
         srsOverview = SRSAlgorithm.overview(from: mistakes)
@@ -105,8 +130,6 @@ final class HomeViewModel: ObservableObject {
         )
 
         // 今日 Top-3 计划(2026-07-09) / Today's Top-3 plan.
-        let taskItems = container.taskRepo.filteredTaskItems
-        let routineInstances = container.routineInstanceRepo.allInstances
         let planContext = DailyPlanContext(
             grades: grades,
             mistakeSets: mistakes,
@@ -121,6 +144,46 @@ final class HomeViewModel: ObservableObject {
         // 图表选中科目可能因数据变化失效,刷新
         // Selected chart subject may be stale → refresh.
         applyChartRule(chartRule)
+    }
+
+    /// 计算 recompute 输入的签名(用 Hasher combine 元素 id + count)。
+    /// 同一进程内 `Hasher()` 的 seed 稳定,适合 dirty flag 比对。
+    /// Compute the input signature for `recompute` (Hasher over element ids + counts).
+    /// `Hasher()` seed is stable within a single process, suitable for dirty-flag comparison.
+    private func recomputeSignature(
+        grades: [Grade], mistakes: [MistakeNote], exams: [Exam],
+        tasks: [TaskItem], instances: [RoutineInstance],
+        readiness: HRVReadiness, bodyStatus: BodyStatus,
+        chartRule: SubjectSelectionRule
+    ) -> Int {
+        var hasher = Hasher()
+        hasher.combine(grades.count)
+        for g in grades { hasher.combine(g.id) }
+        hasher.combine(mistakes.count)
+        for m in mistakes { hasher.combine(m.id) }
+        hasher.combine(exams.count)
+        for e in exams { hasher.combine(e.id) }
+        hasher.combine(tasks.count)
+        for t in tasks { hasher.combine(t.id) }
+        hasher.combine(instances.count)
+        for i in instances { hasher.combine(i.id) }
+        hasher.combine(readiness.zScore)
+        hasher.combine(readiness.todayHRV)
+        hasher.combine(readiness.baselineMean)
+        hasher.combine(readiness.baselineSampleCount)
+        hasher.combine(readiness.category.rawValue)
+        hasher.combine(readiness.suggestion)
+        hasher.combine(bodyStatus.restingHeartRate)
+        hasher.combine(bodyStatus.latestHeartRate)
+        hasher.combine(bodyStatus.respiratoryRate)
+        hasher.combine(bodyStatus.lastNightSleepHours)
+        hasher.combine(bodyStatus.deepSleepHours)
+        hasher.combine(bodyStatus.remSleepHours)
+        hasher.combine(bodyStatus.sleepQuality.rawValue)
+        hasher.combine(bodyStatus.exerciseMinutesToday)
+        hasher.combine(bodyStatus.isUsable)
+        hasher.combine(chartRule)
+        return hasher.finalize()
     }
 
     // MARK: - 业务方法:图表选择 / Business: chart subject selection

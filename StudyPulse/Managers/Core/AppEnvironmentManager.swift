@@ -280,6 +280,9 @@ final class AppEnvironmentManager {
     func setActivePhaseId(_ id: UUID?) {
         Log.preferences.info("切换 phase / Active phase change: -> \(id?.uuidString ?? "all", privacy: .public)")
         preferences.activePhaseId = id
+        // 通知监听方(PhaseFilterRefresher)刷新 5 个 filtered 缓存。
+        // 替代原 0.5s polling,把每分钟 120 次 MainActor 唤醒降到事件驱动 0 次。
+        NotificationCenter.default.post(name: .activePhaseDidChange, object: nil)
     }
     
     private init() {

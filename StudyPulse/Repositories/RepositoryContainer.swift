@@ -149,8 +149,8 @@ final class RepositoryContainer {
     // MARK: - ModelContainer wiring
     // MARK: - ModelContainer 装配 / ModelContainer wiring
 
-    /// 顶层初始化:JSON 迁移 + 7 个 repo 并行 loadAll + 内嵌图片迁移 + 通知 / widget 调度。
-    /// Top-level init: JSON migration + 7 repo loadAll + inline image migration + notification / widget scheduling.
+    /// 顶层初始化:JSON 迁移 + 10 个 repo loadAll + 内嵌图片迁移 + 通知 / widget 调度。
+    /// Top-level init: JSON migration + 10 repo loadAll + inline image migration + notification / widget scheduling.
     ///
     /// 容器来自 `ModelContainerFactory.makeContainer()`(同进程单例缓存),
     /// 与 Scene 的 `.modelContainer(...)` modifier 共享同一 ModelContainer。
@@ -165,10 +165,9 @@ final class RepositoryContainer {
         // 一次性 SwiftData migration from JSON(老用户数据回填)
         ModelContainerFactory.migrateFromJSONIfNeeded(context: context)
 
-        // 7 个 repo 串行 loadAll(均为 @MainActor,ModelContext 跨 async let 边界
-        // 会被 Sendable 规则拒绝;走 TaskGroup 也同理,所以最稳妥是直接 await。
-        // 性能上每个 repo 内部已用 Task.detached 做 toSnapshot,主线程只做赋值,
-        // 7 个 repo 串行 await 总时长仍在 < 50ms 量级,用户感知不到。)
+        // Repository protocols are MainActor-isolated. Loading them in a task group
+        // would capture actor-isolated state in @Sendable closures and cannot provide
+        // real parallelism, so load in actor order instead.
         await gradeRepo.loadAll(context: context)
         await mistakeRepo.loadAll(context: context)
         await examRepo.loadAll(context: context)
@@ -180,7 +179,7 @@ final class RepositoryContainer {
         await routineInstanceRepo.loadAll(context: context)
         await diaryRepo.loadAll(context: context)
 
-        // 内嵌图片迁移
+        // 内嵌图片迁移(在 waitForAll 后,grades 已加载)
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
         if migrated > 0 {
             await gradeRepo.reloadFromSwiftData()

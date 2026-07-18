@@ -40,10 +40,12 @@ final class MistakeDetailEditViewModel: ObservableObject {
     @Published var selectedSection: EditSection = .question
 
     // MARK: - 图片状态 / Image state
-    @Published var questionImages: [UIImage] = []
-    @Published var reasonImages: [UIImage] = []
-    @Published var wrongSolutionImages: [UIImage] = []
-    @Published var correctSolutionImages: [UIImage] = []
+    // 持有 Data 而非 UIImage,避免主线程同步解码大图。
+    // Hold `Data` instead of `UIImage` to avoid synchronous full-image decode on the main thread.
+    @Published var questionImagesData: [Data] = []
+    @Published var reasonImagesData: [Data] = []
+    @Published var wrongSolutionImagesData: [Data] = []
+    @Published var correctSolutionImagesData: [Data] = []
 
     // MARK: - OCR & 弹窗状态 / OCR & sheet state
     @Published var showingImagePicker = false
@@ -78,12 +80,12 @@ final class MistakeDetailEditViewModel: ObservableObject {
         editedTags = mistakeSet.tags
         audioFileName = mistakeSet.audioFileName
 
-        // Data → UIImage;compactMap 丢弃解码失败的数据
-        // Data → UIImage; compactMap drops failures.
-        questionImages = mistakeSet.questionImages.compactMap { UIImage(data: $0) }
-        reasonImages = mistakeSet.reasonImages.compactMap { UIImage(data: $0) }
-        wrongSolutionImages = mistakeSet.wrongSolutionImages.compactMap { UIImage(data: $0) }
-        correctSolutionImages = mistakeSet.correctSolutionImages.compactMap { UIImage(data: $0) }
+        // 直接持有 Data;解码延迟到 CachedAsyncImage 的后台 Task
+        // Hold `Data` directly; decode is deferred to CachedAsyncImage's background task.
+        questionImagesData = mistakeSet.questionImages
+        reasonImagesData = mistakeSet.reasonImages
+        wrongSolutionImagesData = mistakeSet.wrongSolutionImages
+        correctSolutionImagesData = mistakeSet.correctSolutionImages
 
         reviewEnabled = mistakeSet.isInReviewQueue
     }
@@ -119,49 +121,69 @@ final class MistakeDetailEditViewModel: ObservableObject {
 
     /// 当前选中分区的图片数组绑定
     /// Image-array binding for the current section.
-    var currentSectionImagesBinding: Binding<[UIImage]> {
+    var currentSectionImagesBinding: Binding<[Data]> {
         Binding(
             get: {
                 switch self.selectedSection {
-                case .question: return self.questionImages
-                case .reason: return self.reasonImages
-                case .wrong: return self.wrongSolutionImages
-                case .correct: return self.correctSolutionImages
+                case .question: return self.questionImagesData
+                case .reason: return self.reasonImagesData
+                case .wrong: return self.wrongSolutionImagesData
+                case .correct: return self.correctSolutionImagesData
                 }
             },
             set: { newValue in
                 switch self.selectedSection {
-                case .question: self.questionImages = newValue
-                case .reason: self.reasonImages = newValue
-                case .wrong: self.wrongSolutionImages = newValue
-                case .correct: self.correctSolutionImages = newValue
+                case .question: self.questionImagesData = newValue
+                case .reason: self.reasonImagesData = newValue
+                case .wrong: self.wrongSolutionImagesData = newValue
+                case .correct: self.correctSolutionImagesData = newValue
                 }
             }
         )
     }
 
     // MARK: - 操作 / Actions
-    /// 把图片追加到当前选中分区
-    /// Append an image to the current section.
+    /// 把图片追加到当前选中分区(PHPicker / camera 回调天然给 UIImage)。
+    /// 内部 JPEG 0.8 编码,与原 saveChanges 路径一致,无质量损失。
+    /// Append an image to the current section (PHPicker / camera give UIImage).
+    /// Encodes JPEG at 0.8 internally, matching the original saveChanges path — no quality loss.
     func addImageToCurrentSection(_ image: UIImage) {
-        switch selectedSection {
-        case .question: questionImages.append(image)
-        case .reason: reasonImages.append(image)
-        case .wrong: wrongSolutionImages.append(image)
-        case .correct: correctSolutionImages.append(image)
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            appendImageData(data)
         }
     }
 
-    /// 触发 OCR:取当前分区的最后一张图片,识别文字并追加到该分区的文字字段
-    /// Trigger OCR: take the last image, recognize, append to text field.
+    /// 直接把 Data 追加到当前选中分区(handwriting PNG 等路径)。
+    /// Append raw `Data` to the current section (e.g. handwriting PNG).
+    func addImageDataToCurrentSection(_ data: Data) {
+        appendImageData(data)
+    }
+
+    private func appendImageData(_ data: Data) {
+        switch selectedSection {
+        case .question: questionImagesData.append(data)
+        case .reason:   reasonImagesData.append(data)
+        case .wrong:    wrongSolutionImagesData.append(data)
+        case .correct:  correctSolutionImagesData.append(data)
+        }
+    }
+
+    /// 触发 OCR:取当前分区的最后一张图片 Data,在后台线程解码并识别文字,
+    /// 追加到该分区的文字字段。
+    /// Trigger OCR: take the last image `Data`, decode + recognize on a
+    /// background task, and append the recognized text to the section.
     func triggerOCR() {
         let currentImages = currentSectionImagesBinding.wrappedValue
-        guard let lastImage = currentImages.last else { return }
+        guard let lastImageData = currentImages.last else { return }
         isProcessingOCR = true
 
         Task {
             do {
-                let recognizedText = try await OCRManager.recognizeText(in: lastImage)
+                // OCR 需要较高分辨率,单张全解(可接受)
+                // OCR needs higher resolution; decode one image fully (acceptable).
+                let recognizedText = try await Task.detached(priority: .userInitiated) {
+                    try await OCRManager.recognizeText(from: lastImageData)
+                }.value
                 if !recognizedText.isEmpty {
                     let currentText = currentSectionTextBinding.wrappedValue
                     if !currentText.isEmpty {
@@ -205,12 +227,12 @@ final class MistakeDetailEditViewModel: ObservableObject {
         updatedMistake.tags = editedTags
         updatedMistake.audioFileName = audioFileName
 
-        // UIImage → JPEG Data,0.8 是质量 / 体积折中值
-        // 0.8 is a quality / size trade-off.
-        updatedMistake.questionImages = questionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
-        updatedMistake.reasonImages = reasonImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
-        updatedMistake.wrongSolutionImages = wrongSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
-        updatedMistake.correctSolutionImages = correctSolutionImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+        // 数据已在 add 时编码,直接写回
+        // Data was encoded at add time; write straight through.
+        updatedMistake.questionImages = questionImagesData
+        updatedMistake.reasonImages = reasonImagesData
+        updatedMistake.wrongSolutionImages = wrongSolutionImagesData
+        updatedMistake.correctSolutionImages = correctSolutionImagesData
 
         // 同步 SRS 状态 / Sync SRS state.
         if reviewEnabled && !updatedMistake.isInReviewQueue {

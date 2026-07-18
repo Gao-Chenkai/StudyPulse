@@ -3,15 +3,30 @@
 //  StudyPulse
 //
 //  阶段过滤刷新:phase 切换时触发 5 个 filtered 缓存重算。
-//  - 启动 polling(每 0.5s 检查 active phase 变化),触发 filtered 缓存重算
+//  - 通过 NotificationCenter 监听 `activePhaseDidChange` 通知,事件驱动刷新
 //  - 提供手动重算入口
 //
 //  从原 `RepositoryContainer.recomputeAllFiltered` + `observeActivePhaseChanges` 拆出
 //  (Phase 3, 2026-07-14)。
 //
+//  2026-07-18:把 0.5s polling 改为 NotificationCenter 事件驱动(性能优化 P0-1)。
+//
 
 import Foundation
 import os
+import Combine
+
+extension Notification.Name {
+    /// 当前激活的 study phase 切换时 post(`AppEnvironmentManager.setActivePhaseId` 触发)。
+    /// Posted when the active study phase changes (triggered by `AppEnvironmentManager.setActivePhaseId`).
+    static let activePhaseDidChange = Notification.Name("activePhaseDidChange")
+
+    /// AchievementManager 的 snapshot 被赋值时 post(`AchievementManager.snapshot didSet` 触发)。
+    /// PlantManager 监听此通知以替代原 1.5s polling。
+    /// Posted whenever `AchievementManager.snapshot` is assigned (via its `didSet`).
+    /// PlantManager listens to this notification instead of the old 1.5s polling.
+    static let achievementsSnapshotDidChange = Notification.Name("achievementsSnapshotDidChange")
+}
 
 /// 阶段过滤刷新器
 /// Phase filter refresher.
@@ -28,7 +43,7 @@ final class PhaseFilterRefresher {
     private let envManager: AppEnvironmentManager
 
     @ObservationIgnored
-    private var observerTask: Task<Void, Never>?
+    private var observer: AnyCancellable?
 
     init(
         gradeRepo: any GradeRepository,
@@ -48,29 +63,24 @@ final class PhaseFilterRefresher {
         self.envManager = envManager
     }
 
-    /// 启动 active phase 变化监听(通常在 asyncInit 后调用一次)
+    /// 启动 active phase 变化监听(通常在 asyncInit 后调用一次)。
     /// Start active phase change observation (typically called once after asyncInit).
     ///
-    /// 用 polling(每 0.5s 检查)而非 Combine 桥接,避免引入 Combine 依赖。
+    /// 通过 NotificationCenter 监听 `activePhaseDidChange` 通知,替代原 0.5s polling。
+    /// Phase 切换是用户主动操作(每天 < 5 次),事件驱动完全足够。
     func startObserving() {
-        observerTask?.cancel()
-        observerTask = Task { @MainActor [weak self] in
-            var lastId: UUID? = self?.envManager.activePhaseId
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                let currentId = self?.envManager.activePhaseId
-                if currentId != lastId {
-                    lastId = currentId
-                    self?.recomputeAll()
-                }
+        observer?.cancel()
+        observer = NotificationCenter.default.publisher(for: .activePhaseDidChange)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.recomputeAll()
             }
-        }
     }
 
     /// 停止监听(container 销毁时调用)
     func stopObserving() {
-        observerTask?.cancel()
-        observerTask = nil
+        observer?.cancel()
+        observer = nil
     }
 
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)

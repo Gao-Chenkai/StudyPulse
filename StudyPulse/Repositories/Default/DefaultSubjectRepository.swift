@@ -43,6 +43,14 @@ final class DefaultSubjectRepository: SubjectRepository {
 
     /// 加载全部科目
     /// Load all subjects.
+    ///
+    /// 保持在主 actor 同步 fetch:subjectEntitiesByName 缓存持有 @Model SubjectRecord,
+    /// 必须绑定到主 context 才能在 saveSubjects() 中修改。数据量小(~10-15 条),
+    /// detached 化收益 < 5ms,不值得改造缓存层。
+    /// Keep sync on main actor: subjectEntitiesByName holds @Model SubjectRecord
+    /// refs that must be bound to the main context for saveSubjects() mutations.
+    /// Data is tiny (~10-15 records); detached fetch saves < 5ms — not worth a
+    /// cache refactor.
     func loadAll(context: ModelContext) async {
         self.modelContext = context
         do {
