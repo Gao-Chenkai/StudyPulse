@@ -1859,4 +1859,14 @@
 "1-tap quick record" = "ワンタップ簡易記録";
 "Record today's mood and reflection." = "今日の気分と振り返りを記録。";
 
-
+"Show Subject Mastery Radar" = "科目習熟度レーダーを表示";
+"Trends Cards" = "トレンドカード";
+"Show or hide the six-dimension subject mastery radar on the Trends page." = "トレンドページの6次元科目習熟度レーダーを表示または非表示にします。";
+"Subject Mastery Radar" = "科目習熟度レーダー";
+"Knowledge Coverage" = "知識カバー率";
+"Review Frequency" = "復習頻度";
+"Mistake Rate" = "ミス率";
+"Study Time" = "学習時間";
+"HRV Performance" = "HRVパフォーマンス";
+"30-day subject data: %d grades · %d mistakes · %d min study" = "過去30日：成績%d件 · ミス%d件 · 学習%d分";
+"AI Interpretation" = "AI解説";

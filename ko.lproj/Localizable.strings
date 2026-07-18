@@ -1859,4 +1859,14 @@
 "1-tap quick record" = "원탭 빠른 기록";
 "Record today's mood and reflection." = "오늘의 기분과 회고를 기록하세요.";
 
-
+"Show Subject Mastery Radar" = "과목 숙련도 레이더 표시";
+"Trends Cards" = "추세 카드";
+"Show or hide the six-dimension subject mastery radar on the Trends page." = "추세 페이지의 6차원 과목 숙련도 레이더를 표시하거나 숨깁니다.";
+"Subject Mastery Radar" = "과목 숙련도 레이더";
+"Knowledge Coverage" = "지식 범위";
+"Review Frequency" = "복습 빈도";
+"Mistake Rate" = "오답률";
+"Study Time" = "학습 시간";
+"HRV Performance" = "HRV 성과";
+"30-day subject data: %d grades · %d mistakes · %d min study" = "최근 30일: 성적 %d개 · 오답 %d개 · 학습 %d분";
+"AI Interpretation" = "AI 해석";

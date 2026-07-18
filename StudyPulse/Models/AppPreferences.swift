@@ -27,6 +27,8 @@ nonisolated struct AppPreferences: Codable {
     var glassEffectEnabled: Bool = false
     /// 是否在 Trends 页顶部显示 90 天学习热力图（默认开启）
     var learningHeatmapOnTrends: Bool = true
+    /// 是否在 Trends 页显示科目掌握度雷达卡片（默认开启）
+    var subjectMasteryRadarOnTrends: Bool = true
     /// 当前选中的 study phase id；nil = 全部数据视图（不过滤）
     /// Current active study phase id. nil = show all data (no filtering).
     var activePhaseId: UUID? = nil
@@ -149,7 +151,7 @@ nonisolated struct AppPreferences: Codable {
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
     // continue to decode instead of throwing.
     enum CodingKeys: String, CodingKey {
-        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, activePhaseId
+        case appLanguage, colorScheme, chartType, accentPaletteId, glassEffectEnabled, learningHeatmapOnTrends, subjectMasteryRadarOnTrends, activePhaseId
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
@@ -168,6 +170,7 @@ nonisolated struct AppPreferences: Codable {
         self.accentPaletteId = try c.decodeIfPresent(String.self, forKey: .accentPaletteId)
         self.glassEffectEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEffectEnabled) ?? false
         self.learningHeatmapOnTrends = try c.decodeIfPresent(Bool.self, forKey: .learningHeatmapOnTrends) ?? true
+        self.subjectMasteryRadarOnTrends = try c.decodeIfPresent(Bool.self, forKey: .subjectMasteryRadarOnTrends) ?? true
         self.activePhaseId = try c.decodeIfPresent(UUID.self, forKey: .activePhaseId)
         self.cardSkinId = try c.decodeIfPresent(String.self, forKey: .cardSkinId)
         self.timerAnimationId = try c.decodeIfPresent(String.self, forKey: .timerAnimationId)

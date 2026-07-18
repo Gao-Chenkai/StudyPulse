@@ -1109,6 +1109,64 @@ enum BodyRadarLLM {
     }
 }
 
+// MARK: - 9) Subject Mastery Radar AI
+
+enum SubjectRadarLLM {
+    private static let chineseSystem = """
+        你是 StudyPulse 的学习分析教练。输入是用户最近 30 天各科目的六维掌握度数据：知识点覆盖、复习频率、错题率（已反向为越高越好）、平均分、学习时长、HRV 表现。请找出最需要优先干预的弱势科目，并给出具体可执行的学习建议。
+        严格输出以下 Markdown 结构，不要输出 JSON、代码块或客套话：
+
+        ## 弱势科目
+        <列出 1-3 个科目，并引用最关键的低分维度>
+
+        ## 学习建议
+        <3-5 条具体建议，包含科目、复习频率或时间块>
+        输出总长度不超过 500 个汉字；每条建议不超过 60 个汉字。
+        """
+
+    private static let englishSystem = """
+        You are StudyPulse's learning analysis coach. The input contains each subject's six dimensions from the last 30 days: knowledge coverage, review frequency, mistake performance (higher is better), average score, study time, and HRV performance. Identify the subjects that need priority intervention and provide concrete, actionable study advice.
+        Strictly output this Markdown structure. Do not output JSON, code fences, or pleasantries:
+
+        ## Weak Subjects
+        <List 1-3 subjects and cite their most important low dimensions.>
+
+        ## Study Advice
+        <Give 3-5 concrete suggestions, including subjects, review frequency, or time blocks.>
+        Keep the total response under 500 words; keep each recommendation under 60 words.
+        """
+
+    static func makePrompt(_ snapshots: [SubjectRadarSnapshot], languageCode: String? = nil) -> LLMPrompt {
+        let lines = snapshots.map { s in
+            String(format: "- %@: coverage %.0f%%, review %.0f%%, mistake performance %.0f%%, average score %.0f%%, study time %d min, HRV performance %.0f%%; grades %d, mistakes %d, reviewed %d.",
+                   s.subject, s.coverage * 100, s.reviewFrequency * 100,
+                   s.mistakeRate * 100, s.averageScore * 100, s.studyMinutes,
+                   s.hrvPerformance * 100, s.gradeCount, s.mistakeCount, s.reviewedMistakes)
+        }.joined(separator: "\n")
+        let language = languageCode?.lowercased() ?? ""
+        let systemBase = language.hasPrefix("zh") ? chineseSystem : englishSystem
+        let outputLanguage: String
+        if language == "zh-hant" || language == "zh-tw" {
+            outputLanguage = "请使用繁體中文回答。"
+        } else if language.hasPrefix("zh") {
+            outputLanguage = "请使用简体中文回答。"
+        } else if language.hasPrefix("ja") {
+            outputLanguage = "Respond in Japanese."
+        } else if language.hasPrefix("ko") {
+            outputLanguage = "Respond in Korean."
+        } else {
+            outputLanguage = "Respond in English."
+        }
+        let system = systemBase + "\n" + outputLanguage
+        let user = language.hasPrefix("zh") ? "最近 30 天数据：\n\(lines)" : "Data from the last 30 days:\n\(lines)"
+        return LLMPrompt(system: system, messages: [.user(user)])
+    }
+
+    static func clean(_ output: String) -> String {
+        output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 // MARK: - 10) AI Quiz Generation (AI 自测出题)
 
 /// AI 自测出题 prompt 工厂

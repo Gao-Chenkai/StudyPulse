@@ -1859,4 +1859,14 @@
 "1-tap quick record" = "一鍵快速記錄";
 "Record today's mood and reflection." = "記錄今日心情和反思。";
 
-
+"Show Subject Mastery Radar" = "顯示科目掌握度雷達";
+"Trends Cards" = "趨勢卡片";
+"Show or hide the six-dimension subject mastery radar on the Trends page." = "在趨勢頁顯示或隱藏六維科目掌握度雷達。";
+"Subject Mastery Radar" = "科目掌握度雷達";
+"Knowledge Coverage" = "知識點覆蓋";
+"Review Frequency" = "複習頻率";
+"Mistake Rate" = "錯題率";
+"Study Time" = "學習時長";
+"HRV Performance" = "HRV 表現";
+"30-day subject data: %d grades · %d mistakes · %d min study" = "近 30 天：%d 筆成績 · %d 道錯題 · 學習 %d 分鐘";
+"AI Interpretation" = "AI 解讀";

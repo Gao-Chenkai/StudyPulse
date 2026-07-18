@@ -1874,3 +1874,14 @@
 "1-tap quick record" = "一键快速记录";
 "Record today's mood and reflection." = "记录今日心情和反思。";
 
+"Show Subject Mastery Radar" = "显示科目掌握度雷达";
+"Trends Cards" = "趋势卡片";
+"Show or hide the six-dimension subject mastery radar on the Trends page." = "在趋势页显示或隐藏六维科目掌握度雷达。";
+"Subject Mastery Radar" = "科目掌握度雷达";
+"Knowledge Coverage" = "知识点覆盖";
+"Review Frequency" = "复习频率";
+"Mistake Rate" = "错题率";
+"Study Time" = "学习时长";
+"HRV Performance" = "HRV 表现";
+"30-day subject data: %d grades · %d mistakes · %d min study" = "近 30 天：%d 条成绩 · %d 道错题 · 学习 %d 分钟";
+"AI Interpretation" = "AI 解读";

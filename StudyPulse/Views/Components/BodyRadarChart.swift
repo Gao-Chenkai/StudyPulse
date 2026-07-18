@@ -16,18 +16,26 @@ import SwiftUI
 /// 6 轴雷达 / 多边形图。
 /// 6-axis radar / polygon chart.
 struct BodyRadarChart: View {
-    let values: BodyRadarValues
+    let values: [Double]
 
     private let dimensionCount = 6
-    private let axisLabels: [String] = [
-        "HRV",
-        "Heart Rate".localized(),
-        "Recovery Sleep".localized(),
-        "Workout".localized(),
-        "Respiratory".localized(),
-        "Stability".localized()
-    ]
+    private let axisLabels: [String]
     private let axisColors: [Color] = [.purple, .pink, .indigo, .green, .cyan, .orange]
+
+    init(values: BodyRadarValues, axisLabels: [String]? = nil) {
+        self.values = values.all
+        self.axisLabels = axisLabels ?? [
+            "HRV", "Heart Rate".localized(), "Recovery Sleep".localized(),
+            "Workout".localized(), "Respiratory".localized(), "Stability".localized()
+        ]
+    }
+
+    init(normalizedValues: [Double], axisLabels: [String]) {
+        self.values = Array(normalizedValues.prefix(6)).map { max(0, min(1, $0)) }
+            + Array(repeating: 0.5, count: max(0, 6 - normalizedValues.count))
+        self.axisLabels = Array(axisLabels.prefix(6))
+            + Array(repeating: "", count: max(0, 6 - axisLabels.count))
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -81,7 +89,7 @@ struct BodyRadarChart: View {
                 ForEach(0..<dimensionCount, id: \.self) { i in
                     let p = pointAt(
                         angle: angleFor(index: i),
-                        radius: maxRadius * CGFloat(values.all[i]),
+                        radius: maxRadius * CGFloat(values[i]),
                         from: center
                     )
                     Circle()
@@ -144,7 +152,7 @@ struct BodyRadarChart: View {
             for i in 0..<dimensionCount {
                 let p = pointAt(
                     angle: angleFor(index: i),
-                    radius: radius * CGFloat(values.all[i]),
+                    radius: radius * CGFloat(values[i]),
                     from: center
                 )
                 if i == 0 { path.move(to: p) }

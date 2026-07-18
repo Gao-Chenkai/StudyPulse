@@ -8,6 +8,25 @@
 import Foundation
 import Combine
 
+struct SubjectRadarSnapshot: Identifiable, Sendable, Equatable {
+    let id: String
+    let subject: String
+    let coverage: Double
+    let reviewFrequency: Double
+    let mistakeRate: Double
+    let averageScore: Double
+    let studyTime: Double
+    let hrvPerformance: Double
+    let gradeCount: Int
+    let mistakeCount: Int
+    let reviewedMistakes: Int
+    let studyMinutes: Int
+
+    var values: [Double] {
+        [coverage, reviewFrequency, mistakeRate, averageScore, studyTime, hrvPerformance]
+    }
+}
+
 @MainActor
 final class TrendsViewModel: ObservableObject {
 
@@ -21,6 +40,12 @@ final class TrendsViewModel: ObservableObject {
     @Published private(set) var activeSubjects: [String] = []
     /// 需要关注的科目(平均 < 70 或近期下滑 > 15) / Subjects needing attention.
     @Published private(set) var subjectsNeedingAttention: [String] = []
+    @Published private(set) var radarSnapshots: [SubjectRadarSnapshot] = []
+    @Published private(set) var radarAIAnalysis: String?
+    @Published private(set) var isRadarAILoading = false
+    @Published private(set) var radarAIError: String?
+
+    private var radarAITask: Task<Void, Never>?
 
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer) {
@@ -74,6 +99,95 @@ final class TrendsViewModel: ObservableObject {
             }
         }
         subjectsNeedingAttention = needAttention
+        radarSnapshots = makeRadarSnapshots(subjects: activeSubjects, grades: filteredGrades)
+    }
+
+    func requestRadarAIAnalysis() {
+        radarAITask?.cancel()
+        guard !radarSnapshots.isEmpty else { return }
+        isRadarAILoading = true
+        radarAIError = nil
+        radarAITask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let prompt = SubjectRadarLLM.makePrompt(
+                    radarSnapshots,
+                    languageCode: container.envManager.preferences.appLanguage
+                )
+                var accumulated = ""
+                _ = try await LLMClient.shared.stream(
+                    prompt: prompt,
+                    config: LLMConfig.from(container.envManager.preferences),
+                    caller: "SubjectRadar"
+                ) { delta in
+                    accumulated += delta
+                    self.radarAIAnalysis = accumulated
+                }
+                self.radarAIAnalysis = SubjectRadarLLM.clean(accumulated)
+            } catch is CancellationError {
+                return
+            } catch {
+                self.radarAIError = error.localizedDescription
+            }
+            self.isRadarAILoading = false
+        }
+    }
+
+    private func makeRadarSnapshots(subjects: [String], grades: [Grade]) -> [SubjectRadarSnapshot] {
+        let now = Date()
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now
+        let recentGrades = grades.filter { $0.date >= cutoff }
+        let mistakes = container.mistakeRepo.filteredMistakeSets.filter { $0.date >= cutoff }
+        let subjectRecords = container.subjectRepo.subjects
+        let fullScores = Dictionary(uniqueKeysWithValues: subjectRecords.map { ($0.name, $0.fullScore) })
+        let sessions = StudySessionStore.load().filter { $0.completed && $0.startDate >= cutoff }
+        let subjectIDs = Dictionary(uniqueKeysWithValues: subjectRecords.map { ($0.id, $0.name) })
+        let calendar = Calendar.current
+
+        var minutesBySubject: [String: Double] = [:]
+        var hrvDatesBySubject: [String: Set<String>] = [:]
+        for session in sessions {
+            let names = Set((session.difficultyAnnotations ?? []).compactMap { annotation in
+                annotation.subjectId.flatMap { subjectIDs[$0] }
+            })
+            guard !names.isEmpty else { continue }
+            let minutes = Double(session.durationSeconds) / 60.0 / Double(names.count)
+            for name in names {
+                minutesBySubject[name, default: 0] += minutes
+                hrvDatesBySubject[name, default: []].insert(calendar.startOfDay(for: session.startDate).ISO8601Format())
+            }
+        }
+        let hrvHistory = HealthHistoryStore.load().filter { $0.date >= cutoff }
+        let hrvByDay = Dictionary(uniqueKeysWithValues: hrvHistory.compactMap { snapshot in
+            snapshot.hrv.map { (calendar.startOfDay(for: snapshot.date).ISO8601Format(), $0) }
+        })
+        let hrvValues = hrvHistory.compactMap(\.hrv)
+        let overallHRV = hrvValues.isEmpty ? 0 : hrvValues.reduce(0, +) / Double(hrvValues.count)
+        let maxMinutes = max(minutesBySubject.values.max() ?? 0, 1)
+
+        return subjects.map { subject in
+            let subjectGrades = recentGrades.filter { $0.subject == subject }
+            let subjectMistakes = mistakes.filter { $0.subject == subject }
+            let taggedConcepts = Set(subjectMistakes.flatMap(\.tags).map { $0.lowercased() }).count
+            let coverage = min(1, Double(min(subjectGrades.count, 6)) / 6.0 * 0.6 + Double(min(taggedConcepts, 10)) / 10.0 * 0.4)
+            let reviewed = subjectMistakes.filter { $0.exposureCount > 0 }.count
+            let reviewFrequency = subjectMistakes.isEmpty ? (subjectGrades.isEmpty ? 0.5 : 0.65) : min(1, Double(reviewed) / Double(subjectMistakes.count))
+            let mistakeRate = 1 - min(1, Double(subjectMistakes.count) / Double(max(subjectGrades.count + subjectMistakes.count, 1)))
+            let averageScore = subjectGrades.isEmpty ? 0.5 : subjectGrades.map { $0.scoreRate(subjectFullScore: fullScores[subject] ?? 100) }.reduce(0, +) / Double(subjectGrades.count)
+            let minutes = minutesBySubject[subject, default: 0]
+            let hrvValues = (hrvDatesBySubject[subject] ?? []).compactMap { hrvByDay[$0] }
+            let hrvPerformance = hrvValues.isEmpty || overallHRV <= 0
+                ? 0.5
+                : max(0, min(1, 0.5 + ((hrvValues.reduce(0, +) / Double(hrvValues.count) / overallHRV) - 1) * 1.5))
+            return SubjectRadarSnapshot(
+                id: subject, subject: subject, coverage: coverage,
+                reviewFrequency: reviewFrequency, mistakeRate: mistakeRate,
+                averageScore: averageScore, studyTime: min(1, minutes / maxMinutes),
+                hrvPerformance: hrvPerformance, gradeCount: subjectGrades.count,
+                mistakeCount: subjectMistakes.count, reviewedMistakes: reviewed,
+                studyMinutes: Int(minutes.rounded())
+            )
+        }
     }
 
     // MARK: - SubjectDetailView 派生数据 / Derived data for SubjectDetailView

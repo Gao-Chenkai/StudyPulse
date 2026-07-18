@@ -17,6 +17,7 @@ import Combine
 /// Trends home view.
 struct TrendsView: View {
     @Environment(RepositoryContainer.self) private var container
+    @EnvironmentObject private var hrvManager: HealthKitManager
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var viewModel: TrendsViewModel
     @State private var showingAddGrade = false
@@ -25,6 +26,7 @@ struct TrendsView: View {
     /// 卡片显示模式：score / ranking
     /// Card display mode: score / ranking.
     @State var trendsShowingMode = "score"
+    @State private var selectedRadarSubject: String?
 
     init(container: RepositoryContainer) {
         _viewModel = StateObject(wrappedValue: TrendsViewModel.makeDefault(container: container))
@@ -53,6 +55,10 @@ struct TrendsView: View {
                         )
                         .padding(.top, 100)
                     } else {
+                        if container.envManager.preferences.subjectMasteryRadarOnTrends {
+                            subjectMasteryRadar
+                        }
+
                         if !viewModel.subjectsNeedingAttention.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
@@ -163,8 +169,88 @@ struct TrendsView: View {
             // 派生数据重算:仅在 grades/subjects 变化时触发
             .onAppear { viewModel.recompute() }
             .onChange(of: container.gradeRepo.filteredGrades) { _, _ in viewModel.recompute() }
+            .onChange(of: container.mistakeRepo.filteredMistakeSets) { _, _ in viewModel.recompute() }
             .onChange(of: container.subjectRepo.subjects) { _, _ in viewModel.recompute() }
         }
+    }
+
+    private var selectedRadarSnapshot: SubjectRadarSnapshot? {
+        let subject = selectedRadarSubject ?? viewModel.radarSnapshots.first?.subject
+        return viewModel.radarSnapshots.first { $0.subject == subject }
+    }
+
+    private var subjectMasteryRadar: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Subject Mastery Radar".localized(), systemImage: "hexagon.fill")
+                    .font(.headline.weight(.bold))
+                Spacer()
+                if viewModel.isRadarAILoading {
+                    ProgressView().controlSize(.small)
+                }
+            }
+
+            Picker("Subject".localized(), selection: Binding(
+                get: { selectedRadarSubject ?? viewModel.radarSnapshots.first?.subject ?? "" },
+                set: { selectedRadarSubject = $0 }
+            )) {
+                ForEach(viewModel.radarSnapshots) { snapshot in
+                    Text(snapshot.subject.localized()).tag(snapshot.subject)
+                }
+            }
+            .pickerStyle(.menu)
+
+            if let snapshot = selectedRadarSnapshot {
+                BodyRadarChart(
+                    normalizedValues: snapshot.values,
+                    axisLabels: [
+                        "Knowledge Coverage".localized(),
+                        "Review Frequency".localized(),
+                        "Mistake Rate".localized(),
+                        "Average Score".localized(),
+                        "Study Time".localized(),
+                        "HRV Performance".localized()
+                    ]
+                )
+                .frame(height: 250)
+
+                Text(String(format: "30-day subject data: %d grades · %d mistakes · %d min study".localized(), snapshot.gradeCount, snapshot.mistakeCount, snapshot.studyMinutes))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                viewModel.requestRadarAIAnalysis()
+            } label: {
+                Label("AI Interpretation".localized(), systemImage: "sparkles")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(viewModel.isRadarAILoading)
+
+            if let error = viewModel.radarAIError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let analysis = viewModel.radarAIAnalysis, !analysis.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(analysis)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(12)
+                .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(DesignToken.Spacing.cardPadding)
+        .cardSkin()
+        .onChange(of: viewModel.radarSnapshots) { _, snapshots in
+            if selectedRadarSubject == nil || !snapshots.contains(where: { $0.subject == selectedRadarSubject }) {
+                selectedRadarSubject = snapshots.first?.subject
+            }
+        }
+        .onChange(of: hrvManager.readiness) { _, _ in viewModel.recompute() }
     }
 
     // O(1) 字典查表(已在 ViewModel.recompute 排序)
@@ -563,9 +649,11 @@ struct AttentionSubjectCard: View {
 
 #Preview {
     TrendsView(container: RepositoryContainer())
+        .environmentObject(HealthKitManager.shared)
 }
 
 #Preview("Dark Mode") {
     TrendsView(container: RepositoryContainer())
+        .environmentObject(HealthKitManager.shared)
         .preferredColorScheme(.dark)
 }
