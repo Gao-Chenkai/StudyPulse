@@ -26,18 +26,29 @@ StudyPulse 帮助学生管理学习过程中的核心数据：
 - 可定制主页：卡片可启用 / 禁用、拖动重新排序，iPad 使用两栏网格，iPhone 使用单列。
 - 学期/假期阶段（Study Phase）：用户可创建"2026 春季学期" / "2026 暑假" / "高考冲刺"等自定义时间段，给历史数据划定边界；激活某个 phase 后主页 Trends / Mistakes / Exams / Todo 全部按 phase 过滤；Settings → Data Management 顶部 Phase Management 提供 active list + archived disclosure + overview 视图。`PhaseSelectorView` 胶囊 pill 放在 5 个主页面的 toolbar `.principal` 位置。
 - 阶段目标（Phase Goal）：每个 phase 可绑定一组 `PhaseGoal`（科目 + 目标分 + 自由文字备注，例如"期末数学 ≥ 120"），帮助用户在长周期内盯住目标。
+- 学习日记 + 心情记录（Diary）：每日 Markdown 日记 + 5 档心情 emoji + 7 种精力标签（专注 / 平静 / 兴奋 / 疲惫 / 焦虑 / 烦躁 / 迷茫）；日历视图按日显示心情色块，30 天心情趋势折线图；首页快速入口卡片 + 可配置时间的晚间提醒通知。
+- 周计划例程（Routines）：用户可创建"每日错题复习 21:00-22:00"等模板（mistakeReview / flashcard / general 三类，按 weekdays 重复）；`RoutineSpawner` 单例幂等物化当日 `RoutineInstance`（按 `routineId|yyyyMMdd` 去重）并自动清理 30 天前的 stale 实例；mistakeReview 类型 spawn 后启动 `RoutineActivityAttributes` Live Activity。
+- 虚拟植物养成（Plant）：8 阶段状态机（seed → sprout → seedling → young → mature → flowering → flourishing → withered）；`PlantManager` 订阅 `AchievementManager.snapshot` 变化触发 `PlantStage.derive(...)` 纯函数重算；主页 Canvas 渲染当前阶段 + Spring 阶段切换动画；Debug 面板可强制覆盖 / 模拟 streak / 模拟断签天数。
+- 主题商店（ThemeShop）：三类皮肤（`AccentPalette` 主色调色板 / `CardSkin` 卡片皮肤 / `TimerAnimation` 计时器动画），按 `AchievementDefinition.id` 解锁；商店内 `CardSkinRenderer` 预览皮肤效果；用户选中后写入 `AppPreferences`。
+- 习惯洞察（HabitInsight）：基于 90 天 `StudySession` 由 `HabitInsightEngine.computeInsights(...)` 纯函数派生 4 类 PatternKind（peakEfficiency / procrastination / streakDay / weakDay）+ HourSlot 时段分布；定时通知在用户历史峰值时段前提示"今日最佳学习窗口"。
+- AI 自测题（AIQuiz）：基于错题或科目由 `AIQuizLLM` 生成选择题 / 填空题（`QuizQuestion`，含 Markdown + LaTeX），用户作答后批改并解释错因；可一键把错题加入错题本。
+- AI 相似题（AISimilarQuestion）：基于一道错题由 `AISimilarQuestionLLM` 生成 3~5 道相似题，用户作答后批改。
+- AI 思维导图（AutoMindMap）：基于错题四块内容由 `AutoMindMapLLM` 输出节点 JSON，渲染为可折叠树。
+- 错题辩论（MistakeDebate）：多轮对话引导学生反思错解，由 `AIDiscussionLLM` 驱动；首条 AI 输出用 `isInitialContext` 标记 + 视觉弱化，仅作为 system prompt 引用。
 - 自定义主色：11 档预设调色板（system / blue / cyan / teal / green / mint / orange / red / pink / purple / indigo），在 `AppearanceSettingsView` 切换；通过 `effectiveAccentColor` 驱动 AccentColor、趋势图线/柱、闪卡进度条等。
 - iOS 26 Liquid Glass 效果：设置中可全局开启（`glassEffectEnabled`），启用后若干卡片会改用 `Color.clear` + `glassEffect(in: Capsule())` 获得真实透明质感（老版本系统回退 `.regularMaterial`）。
 - 自定义背景图：从相册选图后裁剪为 9:19.5 iPhone 屏幕比，写入 `Application Support/Backgrounds/bg_<uuid>.jpg`；`BackgroundImageView` 全屏 + 模糊 + 暗化遮罩铺在 `ContentView` 底部；为让图真正穿透，5 个主页面根使用 `Color(.systemGroupedBackground).opacity(0.4)`，`List` / `Form` 加 `.scrollContentBackground(.hidden)`。
+- 错题语音备忘录（Audio）：编辑错题时录制 `.m4a` 语音备忘录（`AVAudioRecorder`），详情页内嵌 `AudioPlaybackView` 播放 / 删除；文件写入 `~/Documents/audio/<uuid>.m4a`。
 - 全球教育系统：预置中国大陆、浙江、上海、台湾、香港、新加坡、UK (IGCSE / A-Level)、IB DP、US AP / SAT / ACT、GRE / GMAT、TOEFL / IELTS 等 15+ 种体系的科目与满分定义，并提供"智能推荐"一键套用。
 - 多语言：英语、简体中文、繁體中文、日本語、한국（5 套完整本地化，主应用与小组件各 5 份 Localizable.strings）。
 - 多主题：系统 / 浅色 / 深色三档。
 - iPad 适配：侧栏 + 居中内容，使用 `iPadLayout` 下的 `AdaptiveHStack` / `AdaptiveGridColumns` / `adaptiveMaxWidth` / `adaptiveCardPadding` 等辅助组件，在大屏上充分利用空间。
 - 小组件（WidgetKit）：四个小组件 —— ExamWidget（即将到来的考试）、TrendWidget（科目成绩趋势折线图）、HRVWidget（HRV 准备度）、StudyTimerLiveActivity（学习计时器 Lock Screen + Dynamic Island）；数据通过 App Group 容器与主应用同步。
-- 数据管理：CSV 导入 / 导出，开发者工具页提供批量删除与数据统计；运行期日志可通过"Export Log"按钮导出，便于复现问题；底层使用 SwiftData 作为新的实体层（`Models/SwiftData/StudyPulseModels.swift` + `Managers/Core/ModelContainerFactory.swift`），首次启动时自动从旧 JSON 迁移。
+- 数据管理：CSV 导入 / 导出，开发者工具页提供批量删除与数据统计；运行期日志可通过"Export Log"按钮导出，便于复现问题；底层使用 SwiftData 作为实体层（`Models/SwiftData/StudyPulseModels.swift` + `Managers/Core/ModelContainerFactory.swift`，12 个 `@Model` 实体），首次启动时自动从旧 JSON 迁移。
 - 启动引导：版本感知的欢迎页（首次启动 → 欢迎页；版本号变化 → 新功能介绍页；同版本不显示），原生 iOS 26 风格（TabView 分页 + 渐变背景 + 玻璃质感卡片），可附加 6 页「基础信息填写」步骤。
 - 用户协议：内置 `docs/USER_AGREEMENT.md` v1.0，设置页 → `UserAgreementView` 全文可读。
 - 快捷指令（Siri Shortcuts）：`StudyPulseShortcuts` 提供 AddGrade / RecordMistake / CheckUpcomingExams / CheckBodyStatus / CheckReadiness / CheckSubjectAverage 六个 AppIntent，跨进程通过 `IntentActionStore` 把 action 桥接到 `ContentView`。
+- 单元测试（StudyPulseTests）：`Infrastructure/` 共享 fixture + TestModelContainer / TestRepositoryContainer 工厂 + `TestDoubles/` 10 个 Mock Repository + Services / Algorithm 单元测试（DailyPlanEngine / DateFormatters / DifficultyTag / ExamFilter / MistakeFilter / PlantStageTransitions / QuoteProvider / RecoveryLevel / RepositoryContainer / SubjectAggregator / SuggestionEngine）。
 
 ---
 
@@ -52,13 +63,13 @@ StudyPulse 帮助学生管理学习过程中的核心数据：
 - 架构模式：MVVM + Repository
   - 视图层（`Views/`）只负责 SwiftUI 渲染与用户交互，**不**直接管理数据状态。
   - 5 个主页面（Home / Trends / Mistake / Exam / Todo）各持一个 `@MainActor final class XxxViewModel: ObservableObject`，状态为 `@Published private(set)`，由父 View 通过 `static func makeDefault(container:)` 工厂创建。
-  - 数据访问通过 7 个 Repository（`Repositories/Protocols/*Repository.swift` + `Default*Repository` 实现），由 `RepositoryContainer` 聚合（`@Observable @MainActor`）。ViewModel / View 通过 `@Environment(RepositoryContainer.self) var container` 注入。
-  - 纯函数业务逻辑抽到 `Services/`（DateFormatters / SubjectAggregator / SuggestionEngine / ExamFilter / MistakeFilter / QuoteProvider），**不依赖 SwiftUI**，便于复用与测试。
+  - 数据访问通过 10 个 Repository（`Repositories/Protocols/*Repository.swift` + `Default*Repository` 实现），由 `RepositoryContainer` 聚合（`@Observable @MainActor`）+ 3 个跨域编排子模块（`BulkOperationOrchestrator` / `TodoAggregator` / `PhaseFilterRefresher`）。ViewModel / View 通过 `@Environment(RepositoryContainer.self) var container` 注入。
+  - 纯函数业务逻辑抽到 `Services/`（DateFormatters / SubjectAggregator / SuggestionEngine / ExamFilter / MistakeFilter / DailyPlanEngine / QuoteProvider），**不依赖 SwiftUI**，便于复用与测试。
 - 数据持久化：
-  - SwiftData 实体层（`SubjectRecord` / `GradeRecord` / `MistakeNoteRecord` / `ExamRecord` / `ComprehensiveExamRecord` / `TaskItemRecord` / `ReviewStateRecord` / `StudyPhaseRecord` 等）作为新的持久化后端，由 `ModelContainerFactory.makeContainer()` 启动时创建，`ModelContainerFactory.migrateFromJSONIfNeeded(context:)` 一次性从老 JSON 迁移。
-  - 视图层使用 `nonisolated value type` 的 struct（`Subject` / `Grade` / `MistakeNote` / `Exam` / `comprehensiveExam` / `UserProfile` / `TaskItem` / `StudyPhase` / `PhaseGoal` / `ReviewState` 等），由 `Repository.toSnapshot()` / `init(from:)` 与 SwiftData 实体互转。
+  - SwiftData 实体层（12 个 `@Model` 实体：`SubjectRecord` / `GradeRecord` / `MistakeNoteRecord` / `ExamRecord` / `ComprehensiveExamRecord` / `UserProfileRecord` / `TaskItemRecord` / `ReviewStateRecord` / `StudyPhaseRecord` / `PlantStateRecord` / `RoutineRecord` / `RoutineInstanceRecord` / `DiaryEntryRecord`）作为持久化后端，由 `ModelContainerFactory.makeContainer()` 启动时创建，`ModelContainerFactory.migrateFromJSONIfNeeded(context:)` 一次性从老 JSON 迁移。
+  - 视图层使用 `nonisolated value type` 的 struct（`Subject` / `Grade` / `MistakeNote` / `Exam` / `comprehensiveExam` / `UserProfile` / `TaskItem` / `StudyPhase` / `PhaseGoal` / `ReviewState` / `Routine` / `RoutineInstance` / `DiaryEntry` / `QuizQuestion` / `HabitInsight` / `PlantStage` 等），由 `Repository.toSnapshot()` / `init(from:)` 与 SwiftData 实体互转。
   - 偏好设置、主页顺序、phase 激活、每日目标等保存在 UserDefaults；小组件数据保存在 App Group 容器。
-- 并发模型：Swift 6 Strict Concurrency，`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`；`@Observable @MainActor` RepositoryContainer 持有 7 个 Repository；`nonisolated value-type` 模型可安全跨 actor 传递；纯 I/O 枚举与 `ImageCache` 为 `nonisolated`。
+- 并发模型：Swift 6 Strict Concurrency，`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`；`@Observable @MainActor` RepositoryContainer 持有 10 个 Repository；`nonisolated value-type` 模型可安全跨 actor 传递；纯 I/O 枚举与 `ImageCache` 为 `nonisolated`。
 - 工程文件：`StudyPulse.xcodeproj`，含 StudyPulse 主应用 + StudyPulseWidgetExtension 小组件两个目标。
 
 ---
@@ -69,30 +80,39 @@ StudyPulse 帮助学生管理学习过程中的核心数据：
 
 - `StudyPulse.xcodeproj`：Xcode 工程，含主应用 + 小组件两个目标。
 - `StudyPulse/`：主应用源代码。
-  - `StudyPulseApp.swift`：`@main` 入口，持有 `RepositoryContainer`（7 个 Repository 聚合）+ 三个 `@StateObject` 单例（`AppEnvironmentManager` / `HealthKitManager` / `StudyTimerManager`），注册通知代理、启动 LagMonitor。`.task` 中 `await container.asyncInit()`（JSON 迁移 + 7 repo 串行 loadAll + 内嵌图片迁移），完成后 `isReady == true` 才 `await hrvManager.bootstrap()` 与 `AchievementManager.shared.bootstrap(container:)`；`scenePhase == .active` 时统一 sync widget + SRS / Exam Review 通知。
+  - `StudyPulseApp.swift`：`@main` 入口，持有 `RepositoryContainer`（10 个 Repository 聚合 + 3 个跨域编排子模块）+ 三个 `@StateObject` 单例（`AppEnvironmentManager` / `HealthKitManager` / `StudyTimerManager`），注册通知代理、启动 LagMonitor。`.task` 中 `await container.asyncInit()`（JSON 迁移 + 10 repo 串行 loadAll + 内嵌图片迁移 + `RoutineSpawner.runOnce()`），完成后 `isReady == true` 才 `await hrvManager.bootstrap()` / `AchievementManager.shared.bootstrap(container:)` / `PlantManager.shared.bootstrap(container:)`；`scenePhase == .active` 时统一 sync widget + SRS / Exam Review / Diary / HabitInsight 通知 + Reminders 完成态 + `RoutineSpawner.runOnce()`。
   - `StudyPulse.entitlements` / `StudyPulseWidgetExtension.entitlements`：开启 HealthKit、App Group、NSSupportsLiveActivities 权限。
   - `Models/`：数据模型。
-    - `DataModels.swift`（`StudyPhase` / `PhaseGoal` / `Subject` / `Grade` / `MistakeNote` / `Exam` / `comprehensiveExam` / `UserProfile` / `ExamTimeSlot` / `TaskItem` / `TaskType` / `TodoEntry` / `TodoEntryKind` / `ExamChecklistItem` / `ExamReview`）。
-    - `AppPreferences.swift`（语言 + 主题 + 图表类型 + 主色预设 + glassEffect 开关 + Trends 热力图开关 + 激活 phaseId，附带向后兼容的 `init(from:)`）。
-    - `HomeLayoutPreference.swift`（主页卡片顺序与开关）。
+    - `DataModels.swift`（`StudyPhase` / `PhaseGoal` / `Subject` / `Grade` / `MistakeNote` / `MasteryHistoryEntry` / `HandwritingAnswerEntry` / `Exam` / `comprehensiveExam` / `UserProfile` / `ExamTimeSlot` / `TaskItem` / `TaskType` / `TodoEntry` / `TodoEntryKind` / `ExamChecklistItem` / `ExamReview` / `RoutineType` / `Routine` / `RoutineInstance` / `DiaryEntry`）。
+    - `AppPreferences.swift`（语言 + 主题 + 图表类型 + 主色预设 + glassEffect 开关 + Trends 热力图开关 + 激活 phaseId + LLM 配置 + 雷达 / 学习建议 AI 请求冷却时间戳，附带向后兼容的 `init(from:)`）。
+    - `HomeLayoutPreference.swift`（主页卡片顺序与开关，17 个 `HomeCardType`）。
     - `HealthHistory.swift`（`DailyHealthSnapshot`）。
     - `StudySession.swift`（已完成学习会话记录）。
     - `SpacedRepetition.swift`（`ReviewState`，SM-2 算法核心字段）。
     - `Achievements.swift` + `AchievementCatalog.swift`（连续打卡 / 成就目录）。
     - `StudyReport.swift`（学习报告不可变 value type）。
     - `MistakePDFSnapshot.swift`（错题 PDF 导出快照）。
-    - `SwiftData/StudyPulseModels.swift`（`@Model` 实体层 + `toSnapshot()` / `init(from:)`，由 `ModelContainerFactory` 迁移工具统一管理；新增 `StudyPhaseRecord` 与 `phaseId` 字段索引）。
+    - `AIQuizModels.swift`（`QuizQuestion` AI 自测题模型）。
+    - `HabitInsight.swift`（`HabitInsight` + `HabitInsightEngine` 纯函数引擎）。
+    - `ThemeShop.swift`（`AccentPalette` / `CardSkin` / `TimerAnimation` + `ThemeShopCatalog`）。
+    - `PlantState.swift`（`PlantStage` 8 阶段 + `PlantStageTransition` + 纯函数 `derive(...)`）。
+    - `PlantStateRecord.swift`（植物 SwiftData 持久化）。
+    - `SwiftData/StudyPulseModels.swift`（`@Model` 实体层，12 个实体 + `toSnapshot()` / `init(from:)`，由 `ModelContainerFactory` 迁移工具统一管理；多个实体带 `phaseId` 字段索引）。
   - `Managers/`：业务逻辑层。
-    - `Core/`：`RepositoryContainer`（`@Observable @MainActor`，7 个 Repository 聚合 + ModelContainer 持有 + 跨域编排 + active phase 监听）；`AppEnvironmentManager`（语言 / 主题 / 主色 / glassEffect 开关 / activePhaseId + `effectiveAccentColor`）；`AppStyle`（设计系统骨架）；`DataExportManager`（CSV 导出）；`CSVDocument`；`ModelContainerFactory`（SwiftData 容器 + 自动迁移）。
+    - `Core/`：`RepositoryContainer`（`@Observable @MainActor`，10 个 Repository 聚合 + 3 个跨域编排子模块 + ModelContainer 持有 + 跨域 facade）；`AppEnvironmentManager`（语言 / 主题 / 主色 / glassEffect 开关 / activePhaseId + `effectiveAccentColor`）；`AppStyle`（设计系统骨架）；`DataExportManager`（CSV 导出）；`CSVDocument`；`ModelContainerFactory`（SwiftData 容器 + 自动迁移，12 个 modelTypes）。
     - `Health/`：`HealthKitManager`（HRV 准备度 + BodyStatus + PersonalBaselines）、`HealthHistoryStore`、`StudyReadinessAlgorithm`（5 强度 × 5 重点）。
     - `Logging/`：`Log`（`os.Logger` + `LogStore` 5000 条）、`LogDocument`（`.fileExporter` 导出）、`LagMonitor`（`CADisplayLink` 卡顿检测）。
     - `PDF/`：`MistakePDFRenderer`（Core Text + `NSAttributedString` 多页 A4）、`MistakePDFDocument`。
     - `Report/`：`ReportRenderer`（`ImageRenderer` + Core Graphics 输出 PNG / JPEG）、`ReportImageDocument`。
-    - `Study/`：`StudyTimerManager`（`@MainActor` ObservableObject，5 档强度 + Live Activity 协调）、`DailyGoalReminder`（晚间提醒）、`SRSReviewNotifications`（错题 SRS 通知）、`ExamReviewNotifications`（考试复盘提醒）。
+    - `Study/`：`StudyTimerManager`（`@MainActor` ObservableObject，5 档强度 + Live Activity 协调）、`DailyGoalReminder`（晚间提醒）、`SRSReviewNotifications`（错题 SRS 通知）、`ExamReviewNotifications`（考试复盘提醒）、`DiaryReminderNotifications`（日记晚间提醒）、`HabitInsightNotifications`（习惯洞察定时推送）。
+    - `Plan/`：`RoutineSpawner`（`@MainActor @Observable` 单例，幂等物化今日 RoutineInstance + cleanupStale）、`RoutineLiveActivityController`（ActivityKit Live Activity 协调器）。
+    - `Plant/`：`PlantManager`（`@MainActor @Observable` 单例，订阅 AchievementManager.snapshot 变化触发 derive）、`PetalColorCatalog`（花瓣配色目录）。
     - `Utility/`：`CalendarManager`（EventKit，支持具体时间段或全天）、`EducationConfig`、`ImageCache`（NSCache 缩略图，nonisolated）、`OCRManager`（Vision）、`StringsLocalized`、`SubjectInfo`。
     - `Widget/`：`ExamWidgetData` / `HRVWidgetData` / `TrendWidgetData` 与对应 `SyncManager`、`WidgetDataSyncManager`。
     - `Achievement/`：`AchievementManager`（`@MainActor` ObservableObject 单例，三个事件入口 `recordGradeRecorded` / `recordMistakeReviewed` / `recordFocusMinutes`）、`AchievementStore`（JSON 持久化 + NSLock）。
-  - `Repositories/`：7 域 Repository（`Repositories/Protocols/` 协议 + `Default*Repository` 实现），由 `RepositoryContainer` 聚合：
+    - `Audio/`：`AudioStorage`（`nonisolated` struct，封装 `~/Documents/audio/` 目录 + `<uuid>.m4a` 文件名）、`VoiceMemoManager`（`@MainActor` ObservableObject，封装 `AVAudioRecorder`）。
+    - `LLM/`（BYOK 大模型子系统）：`LLMConfig` / `LLMError` / `LLMPrompt` / `LLMRequestBuilder`（基类 + 6 caller-specific 文件：`MistakeAIAnalysisLLM` / `BodyRadarLLM` / `HomeAskLLM` / `AIQuizLLM` / `AISimilarQuestionLLM` / `AIDiscussionLLM`）/ `LLMResponseParser` / `LLMResponseCache` / `LLMClient`（`@MainActor` 单例，支持流式 + 非流式）/ `HomeAskDataProvider` / `AutoMindMapLLM`。
+  - `Repositories/`：10 域 Repository（`Repositories/Protocols/` 协议 + `Default*Repository` 实现）+ 3 个跨域编排子模块（`BulkOperationOrchestrator` / `TodoAggregator` / `PhaseFilterRefresher`），由 `RepositoryContainer` 聚合：
     - `GradeRepository`（含 `filteredGrades`）
     - `MistakeRepository`（含 `filteredMistakeSets`）
     - `ExamRepository`（单科 Exam + 综合 comprehensiveExam + `filtered*`）
@@ -100,45 +120,53 @@ StudyPulse 帮助学生管理学习过程中的核心数据：
     - `PhaseRepository`（StudyPhase CRUD + activate / archive + 跨域清理 phaseId 引用）
     - `ProfileRepository`（UserProfile + 头像）
     - `SubjectRepository`（科目 + 满分 + 智能推荐）
+    - `RoutineRepository`（周计划例程模板 + `enabledRoutines` / `filteredRoutines`）
+    - `RoutineInstanceRepository`（例程实例 + 幂等 `spawnIfMissing` + `cleanupStale`）
+    - `DiaryRepository`（学习日记 + `filteredDiaryEntries` + `entriesInRange`）
   - `Services/`：纯函数服务，不依赖 SwiftUI（`QuoteProvider` 例外）：
     - `DateFormatters`（统一日期格式 + locale 切换）。
     - `SubjectAggregator`（按科目分组聚合 avg / count / recentCount / sortedAsc）。
     - `SuggestionEngine`（学习建议生成，输入 `StudySuggestionsContext`）。
     - `ExamFilter`（`examsWithinDays` / `unregisteredExams`）。
     - `MistakeFilter`（错题筛选与排序）。
+    - `DailyPlanEngine`（今日 Top-3 计划生成器）。
     - `QuoteProvider`（每日金句；持有 `Color`，是唯一依赖 SwiftUI 的服务）。
-  - `ViewModels/`：5 主页面 + 1 子页面 ViewModel：
-    - `HomeViewModel`（SRS 概览 / 近期成绩 / 即将到来考试 / 未登记考试 / 图表选科）。
-    - `TrendsViewModel`（趋势图数据 + 关注科目聚合）。
-    - `MistakeViewModel`（错题列表 + 分组 + 搜索）。
-    - `SubjectMistakesViewModel`（按科目的错题子页）。
-    - `ExamViewModel`（考试列表 + 倒计时 + 复盘）。
-    - `TodoViewModel`（统一待办聚合 `container.todoEntries(...)`）。
+  - `ViewModels/`：14 个 ViewModel（5 主页面 + 1 子页面 + 8 个独立 sheet / 流程 ViewModel）：
+    - `HomeViewModel` / `TrendsViewModel` / `MistakeViewModel` / `SubjectMistakesViewModel` / `ExamViewModel` / `TodoViewModel`。
+    - `AddGradeViewModel` / `NewExamSetViewModel` / `NewMistakeSetViewModel` / `MistakeDetailEditViewModel` / `HomeAskViewModel` / `LLMChatViewModel` / `AutoMindMapViewModel` / `FlashcardStudyViewModel`。
     - `ViewModelError`（错误类型）。
   - `Views/`：UI 层（按子领域拆分子目录）。
     - `ContentView.swift`：根视图，iPhone 使用 `TabView`，iPad 使用 `NavigationSplitView`，并观察 `IntentActionStore` 处理 Siri Shortcuts 跨进程跳转。
-    - `Home/`：`HomeView`（主页仪表盘，分帧渲染 + 接收 `HomeViewModel`）、`HomeLayoutSettingsView`。
-    - `Trends/`：`TrendsView`。
-    - `Exam/`：`ExamView` / `ExamCalendarView` / `ExamDetailView` / `ExamDetailEditView` / `NewExamSetView` / `ExamReviewView` / `ScorePredictionEngine` / `ScorePredictionSheet`。
+    - `Home/`：`HomeView`（主页仪表盘，分帧渲染 + 接收 `HomeViewModel`）+ `HomeLayoutSettingsView` + `HomeCards/`（17 张卡片：`DailyPlanCard` / `WelcomeHeaderCard` / `MainStatsCard` / `QuickActionsCard` / `RecentGradesCard` / `TrendChartCard` / `UpcomingExamsCard` / `StudySuggestionsCard` / `HomeAskCard` / `DiaryHomeCard` / `HabitInsightCard` / `PlantHomeCard` / `StreakHomeCard` / `StudyTimerCard` 等）。
+    - `Trends/`：`TrendsView`（顶部可选 `LearningHeatmapView`，受 `AppPreferences.learningHeatmapOnTrends` 控制）。
+    - `Exam/`：`ExamView` / `ExamCalendarView`（Phase 3 拆分 + 3 sub-files）/ `ExamDetailView`（Phase 3 拆分 + 4 sub-files，入口改为 `examId: UUID`）/ `ComprehensiveExamDetailView` / `ExamDetailEditView` / `NewExamSetView` / `ExamReviewView` / `ScorePredictionEngine` / `ScorePredictionSheet` / `ScorePrediction/`。
     - `Grade/`：`AddGradeView`、`SubjectScoreCard`。
-    - `Mistake/`：`MistakeView`、`MistakeDetailEditView`、`NewMistakeSetView`、`PDF/`（`MistakePDFExportSheet`、`MistakePDFGenerationView`）。
-    - `Flashcard/`：`FlashcardStudyView`、`FlashcardCardView`、`FlashcardSessionSummaryView`、`FlashcardCalculatorView`。
-    - `Todo/`：`TodoView`、`TodoRowView`、`NewTaskView`、`TaskDetailView`、`TaskDetailEditView`。
+    - `Mistake/`：`MistakeView`（Phase 3 拆分 + 3 sub-files）/ `MistakeSetDetailView`（Phase 3 拆分 + 2 sub-files，toolbar 含 ✨ AI 解析 + AI 相似题 + AI 思维导图 + 错题辩论 Menu）/ `MistakeDetailEditView` / `MistakeToolbar` / `MistakeSearchBar` / `NewMistakeSetView` / `AutoMindMapView` / `MistakeDebateSheet` / `TagGraphView` / `HandwritingView` / `HandwritingSheet` / `PDF/` / `Audio/` / `LLM/`（`AISimilarQuestionFlowView` / `AIQuizSetupView` / `AIQuizView` / `AIQuizResultView`）。
+    - `Flashcard/`：`FlashcardStudyView` / `FlashcardCardView` / `FlashcardSessionSummaryView` / `FlashcardCalculatorView` / `FlashcardHandwritingCanvasView`。
+    - `Todo/`：`TodoView`（Phase 3 拆出 `TodoViewSheetsAndDestinations` ViewModifier）/ `TodoRootView` / `TodoRowView` / `NewTaskView` / `TaskDetailView` / `TaskDetailEditView` / `RoutineEditorSheet`。
+    - `Diary/`：`DiaryView` / `DiaryEntryEditView` / `DiaryCalendarView` + `DiaryCalendarModels` + `DiaryCalendarDayCell` / `MoodTrendChartView`。
+    - `Plant/`：`PlantHomeCard` / `PlantCanvasView` / `PlantAnimator` / `PlantDetailView` / `PlantDebugView`。
     - `Profile/`：`EditSubjectsView`、`PreferencesView`、`ProfileEditView`。
-    - `StudyTimer/`：`StudyTimerView`。
+    - `StudyTimer/`：`StudyTimerView` + Phase 3 拆分（`StudyTimerActiveCard` / `StudyTimerShared` / `StudyTimerSettingsSheet` / `StudyTimerHistoryList` / `StudySessionDetailView` / `StudySessionReviewSheet` / `AnnotationListView` / `DifficultyAnnotationEditor` / `HeartRateChartView`）。
     - `Report/`：`ReportContentView`、`ReportOptionsSheet`、`ReportShareSheet`。
-    - `Settings/`：`SettingsView` + 6 段式导航子页（`ProfileSettingsView` / `AppearanceSettingsView` / `HealthSettingsView` / `DataManagementSettingsView` / `AboutSettingsView` / `QASettingsView`）+ `AchievementsView` / `DailyGoalsConfigView` / `ChartTypeSettingsView` / `ContributionSettingsView` / `UserAgreementView` / `PhaseManagementView` / `PhaseEditView`。`SettingsCategory` 枚举驱动 6 段式导航。
+    - `Settings/`：`SettingsView` + 9 段式导航（`SettingsCategory`：appearance / themeShop / health / reports / llm / data / about / faq / contribution）+ `ProfileSettingsView` / `AppearanceSettingsView` / `ThemeShop/`（`ThemeShopView` + `CardSkinRenderer`）/ `HealthSettingsView` / `WeeklyReportSettingsView` / `LLMSettingsView` / `DataManagementSettingsView` / `AboutSettingsView` / `QASettingsView` / `ContributionSettingsView` / `AchievementsView` / `DailyGoalsConfigView` / `ChartTypeSettingsView` / `UserAgreementView` / `PhaseManagementView` / `PhaseEditView` / `DiarySettingsView`。
     - `About/`：`AboutView`、`CopyrightView`、`HRVOnboardingView`。
     - `Admin/`：`DataAdminView`（开发者工具页）。
     - `OnBoarding/`：`OnboardingView`（原生 iOS 26 风格）、`OnboardingConfig`、`OnboardingFlowState`、`OnboardingProfileFormView`（6 页基础信息表单）、`VersionedWelcomeModifier`。
-    - `Components/`：`GradeChartView`、`HRVStatusCard`、`LearningHeatmapView`（90 天热力图）、`MasteryCurveView`、`PhaseSelectorView`（全局 phase 切换器 pill）、`SectionHeader`、`StreakHomeCard`、`StudyTimerCard`、`SubjectPickerView`、`TrendChartView`。
-    - `Helpers/`：`AvatarView`（异步加载）、`ImagePicker`、`PhotoCaptureView`、`ScoreColor`、`ZoomableImageView`、`iPadLayout`。
-  - `Extensions/`：`AppleIntelligenceGradient`、`ColorExtensions`、`DateExtensions`、`GlassCardModifier`。
+    - `Components/`：`GradeChartView`、`HRVStatusCard`（Phase 3 拆分 + 3 sub-files：`BodyRadarValues` / `BodyRadarChart` / `FitnessRingView`）、`LearningHeatmapView`（90 天热力图）、`MasteryCurveView`、`PhaseSelectorView`（全局 phase 切换器 pill）、`SectionHeader`、`StreakHomeCard`、`StudyTimerCard`、`SubjectPickerView`、`TagChipsView`、`TagEditorView`、`DifficultyPicker`、`TrendChartView`、`Markdown/`。
+    - `LLM/`：`LLMSettingsView`、`LLMChatView` + `LLMChatViewModel`、`AIDiscussionSheet`、`MistakeAIAnalysisSheet`、`HomeAskSheet`、`AIWaitingView`、`ChatBubble`、`ChatInputBar`、`LLMDebugSheet`。
+    - `Debug/`：`DebugBannerView` / `DebugCacheView` / `DebugFPSOverlayView` / `DebugView` / `DebugModifiers` / `LogViewerView` / `PerformancePanelView`。
+    - `Helpers/`：`AvatarView`（异步加载）、`CachedAsyncImage`、`ImagePicker`、`PhotoCaptureView`、`ScoreColor`、`ZoomableImageView`、`iPadLayout`。
+  - `Extensions/`：`AppleIntelligenceGradient`、`ColorExtensions`、`DateExtensions`、`ExportModeEnvironment`（`@Environment(\.exportMode)` 用于 ImageRenderer 渲染时切换 glassEffect → .regularMaterial 兜底）、`GlassCardModifier`。
   - `Intents/`：`StudyPulseShortcuts`（6 个 AppIntent）、`SubjectEntity`（AppEntity）、`IntentAction` / `IntentDataLoader` / `IntentActionStore`（跨进程桥接）。
   - `NotificationsControl/`：`ExamPrepareNotifications`（考试倒计时通知，按 `countdownNotifyDays` 调度）。
 - `StudyPulseWidget/`：WidgetKit 小组件源码。
   - `ExamWidget` / `TrendWidget` / `HRVWidget` 三个静态小组件 + `StudyTimerLiveActivity`。
   - 每个 widget 完整本地化 en / zh-Hans / zh-Hant / ja / ko 五种语言。
+- `StudyPulseTests/`：单元测试目标。
+  - `Infrastructure/`：`TestDataFixtures` + `TestModelContainerFactory`（in-memory ModelContainer）+ `TestRepositoryContainerFactory`（注入 mock 的 RepositoryContainer）。
+  - `TestDoubles/`：10 个 Mock Repository。
+  - 单元测试覆盖：`DailyPlanEngineTests` / `DateFormattersTests` / `DifficultyTagTests` / `ExamFilterTests` / `MistakeFilterTests` / `PlantStageTransitionsTests` / `QuoteProviderTests` / `RecoveryLevelTests` / `RepositoryContainerTests` / `SubjectAggregatorTests` / `SuggestionEngineTests`。
 - `Packages/`：本地 / Vendored 包（`SwiftStreamingMarkdown-0.2.0/` 与 `Vendored/` 下的 `swift-cmark` / `swift-markdown` / `highlightswift` / `iosMath`）。
 - `en.lproj/`、`zh-Hans.lproj/`、`zh-Hant.lproj/`、`ja.lproj/`、`ko.lproj/`：主应用各语言 Localizable.strings。
 - `TestData/`：示例 CSV、`restore_sample_data.py` 还原脚本与生成数据。
@@ -202,7 +230,7 @@ xcodebuild -project StudyPulse.xcodeproj \
 
 ## 性能要点
 
-- `RepositoryContainer.asyncInit()` 在 `.task` 后台执行（JSON 迁移 + 7 repo 串行 `loadAll` + 内嵌图片迁移），主数据就绪前不写入 widget；`isReady == true` 后才执行 `HealthKitManager.bootstrap()` 与 `AchievementManager.bootstrap()`。
+- `RepositoryContainer.asyncInit()` 在 `.task` 后台执行（JSON 迁移 + 10 repo 串行 `loadAll` + 内嵌图片迁移 + 通知 widget 调度 + `RoutineSpawner.runOnce()`），主数据就绪前不写入 widget；`isReady == true` 后才执行 `HealthKitManager.bootstrap()` / `AchievementManager.bootstrap()` / `PlantManager.bootstrap()`。
 - `ImageCache` 使用 NSCache（最多 50 项、最大 300px），完全线程安全（nonisolated）。
 - `AvatarView` / `WelcomeHeaderView` / `SettingsView` 的头像加载改为异步 Task，不再阻塞主线程。
 - `HomeView` 采用分帧渲染（phased rendering），把首帧 long task 拆到多个 RunLoop 帧中绘制。
@@ -210,8 +238,9 @@ xcodebuild -project StudyPulse.xcodeproj \
 - iPad `HomeView` 使用 `LazyVGrid` 呈现仪表盘，保持内存占用低。
 - `ModelContainerFactory` 仅在首次启动时执行一次 SwiftData 迁移（UserDefaults flag 记录），避免重复迁移 I/O。
 - `StudyTimerLiveActivity` 通过 `ActivityKit` 在 Lock Screen / Dynamic Island 上呈现，所有像素由小组件扩展渲染，不增加主应用内存占用。
-- `RepositoryContainer.observeActivePhaseChanges()` 用 0.5s polling 监测 `activePhaseId` 变化，避免引入 Combine 依赖；切换 phase 触发 5 个 `filtered*` 缓存重算。
+- `RepositoryContainer.observeActivePhaseChanges()` 用 0.5s polling 监测 `activePhaseId` 变化，避免引入 Combine 依赖；切换 phase 触发 6 个 `filtered*` 缓存重算（grade / mistake / exam / task / routine / diary）。
 - `Services/` 是纯函数 enum，5 个 ViewModel 内部对 grade / mistake / exam 的过滤聚合全部走 `SubjectAggregator.aggregate` / `ExamFilter.examsWithinDays` 等共享服务，无重复实现。
+- `PlantManager` 通过 `NotificationCenter` 监听 `achievementsSnapshotDidChange` 替代原 1.5s polling（每分钟 40 次 MainActor 唤醒），事件驱动完全足够。
 
 ---
 
@@ -230,7 +259,7 @@ xcodebuild -project StudyPulse.xcodeproj \
   - **Services 是纯函数 `enum` / `struct`**，**不 import SwiftUI**（`QuoteProvider` 是唯一例外，因为 `StudySuggestion.color: Color`）。
   - **Repository 实现必须是 `@MainActor` class**（由 `RepositoryContainer` 持有），跨域操作由 `RepositoryContainer` 编排，不要在 Repository 之间互相调用。
   - **DataManager 双实例陷阱**：`StudyPulseApp` 写 `@State private var container = RepositoryContainer()`，**不要写** `DataManager.shared` 之类的双实例。
-- 新增功能：按照 MVVM + Repository 模式组织，视图层只持 ViewModel；ViewModel 通过 `RepositoryContainer` 读 7 域 Repository；跨域操作（widget sync、Achievement 事件、SRS 通知）封装在 `RepositoryContainer` 的 facade 方法（`addGrade` / `addMistake` / `addExams` / `addTask` / `deleteXxx` / `activatePhase`）。
+- 新增功能：按照 MVVM + Repository 模式组织，视图层只持 ViewModel；ViewModel 通过 `RepositoryContainer` 读 10 域 Repository；跨域操作（widget sync、Achievement 事件、SRS 通知、Plant recordActivity、Routine spawn）封装在 `RepositoryContainer` 的 facade 方法（`addGrade` / `addMistake` / `addExams` / `addTask` / `addDiary` / `addRoutine` / `deleteXxx` / `activatePhase`）。
 - 新增 phase 字段：在 `StudyPhaseRecord` 上添加 `@Attribute` 字段后，**必须**同步在 `StudyPhase` struct（`init(from:)` 用 `decodeIfPresent` 给默认值）、`StudyPhaseRecord.toSnapshot()` / `init(from:)` 与 `PhaseRepository` 双向映射中补齐；否则老用户迁移会丢字段。
 - 本地化：新增文案时，必须同步添加 en、zh-Hans、zh-Hant、ja、ko 五份 Localizable.strings 条目（主应用与小组件各 1 份，共 10 份）。
 - 小组件：写入 widget 前确认 `container.isReady == true`，避免在主数据加载完成前写入空数据。修改 `App Group` 名称后记得更新 `AppGroupConfig.identifier`。
