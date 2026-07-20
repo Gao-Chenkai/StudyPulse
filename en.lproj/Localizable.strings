@@ -1864,3 +1864,7 @@
 "HRV Performance" = "HRV Performance";
 "30-day subject data: %d grades · %d mistakes · %d min study" = "30-day subject data: %d grades · %d mistakes · %d min study";
 "AI Interpretation" = "AI Interpretation";
+"Recovery Excellent" = "Excellent";
+"Recovery Good" = "Good";
+"Recovery Critical" = "Critical";
+"Recovery Poor" = "Poor";

@@ -1870,3 +1870,7 @@
 "HRV Performance" = "HRVパフォーマンス";
 "30-day subject data: %d grades · %d mistakes · %d min study" = "過去30日：成績%d件 · ミス%d件 · 学習%d分";
 "AI Interpretation" = "AI解説";
+"Recovery Excellent" = "優秀";
+"Recovery Good" = "良好";
+"Recovery Critical" = "危険";
+"Recovery Poor" = "不調";

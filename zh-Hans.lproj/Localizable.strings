@@ -1885,3 +1885,7 @@
 "HRV Performance" = "HRV 表现";
 "30-day subject data: %d grades · %d mistakes · %d min study" = "近 30 天：%d 条成绩 · %d 道错题 · 学习 %d 分钟";
 "AI Interpretation" = "AI 解读";
+"Recovery Excellent" = "优秀";
+"Recovery Good" = "良好";
+"Recovery Critical" = "垂危";
+"Recovery Poor" = "不佳";

@@ -657,6 +657,7 @@ xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse -configuration Debug
 - **Xcode IDE 和 xcodebuild CLI 不要在同一 DerivedData 目录上并发运行**（会引起 `build.db` 锁）；`scripts/build.sh` 默认使用 `DerivedDataBuild/` 子目录以隔离。
 - Xcode 16+ 构建系统使用 `XCBuildData/build.db` SQLite 数据库做模块协调；异常退出或并发访问会导致数据库锁定，**需删除该文件**。构建数据库锁定后可能残留脏缓存导致 "invalid reuse after initialization failure" 错误，**需清空整个 `DerivedData` 目录**。
 - Xcode IDE 可能因 SPM 缓存不一致显示 "Missing package product" 错误；重置 package cache 或清空 `DerivedData` / build 目录可解决。
+- 不需要运行Test。
 
 ---
 
@@ -700,18 +701,7 @@ xcodebuild -project StudyPulse.xcodeproj -scheme StudyPulse -configuration Debug
 
 ---
 
-## 18. 已知问题与待办
-
-已知问题：
-- App Group 标识符 `group.com.chenkai.gao.studypulse` 需在 Apple Developer 门户创建并分别启用主应用与 `StudyPulseWidgetExtension` 的 App Group 能力。
-- 目前没有 iCloud 同步 —— 所有数据仅本地存储在设备沙盒（SwiftData 实体层是未来 iCloud 同步的承载层）。
-- `NewMistakeSheet.swift` / `Views/Sheets/` 目录已移除 —— 新的流程使用 `NewMistakeSetView`。
-- `StudyReadinessAlgorithm` 的「5 强度 × 5 重点」理论上 25 种组合，但实际可达组合是 HRV 硬覆盖 + 评分规则的子集；未覆盖组合统一回退到 steady / balanced。如需新增组合请同步更新 `docs/AlgorithmIntroduction.md`。
-- Live Activity 启动频率与系统配额：单设备同时 Live Activity 数有上限（一般 8 条），`StudyTimerManager` 会先 `Activity<X>.activities` 检查再启动，避免重复创建。
-
----
-
-## 19. Agent 工作规则
+## 18. Agent 工作规则
 
 AI 代理在本仓库工作时遵循以下规则：
 - 每次非 trivial 代码修改后，运行构建（Xcode Cmd+B 或 `./scripts/build.sh`）确认通过，留下语法或类型错误。
@@ -752,59 +742,20 @@ AI 代理在本仓库工作时遵循以下规则：
 - 任何用 `Log.xxx.info(...)` 的文件必须 `import os`。
 - **双实例陷阱自检**：所有 ViewModel 走 `container.xxxRepo.xxx` 路径访问，App 入口持有同一个 `RepositoryContainer` 单例；如果发现 ViewModel 用 `DataManager.shared` 而 App 用的是 `RepositoryContainer()`，**这就是 bug 信号**。
 
----
+## 19. 八荣八耻
 
-## 20. 变更记录
+以臆猜接口为耻，以查档求证为荣
 
-近期变更（给 Agent 参考）：
-- **HomeAsk 卡片 + 雷达 LLM 冷却 + LLM DEBUG 面板 + 错题语音备忘录 + AI 相似题组卷 + Chat 组件重构（2026-07-12, commit `3b364a5d`）**：
-  - **HomeAsk 主页 AI 问答主卡片**：新增 `HomeCardType.homeAsk` + `HomeCards/HomeAskCard.swift` + `Views/LLM/HomeAskSheet.swift` + `ViewModels/HomeAskViewModel.swift` + `Managers/LLM/HomeAskDataProvider.swift`（按用户输入关键词自动选择 `grade/mistake/trend/readiness` 4 类上下文）；`HomeView` 集成 + 跳过长按分享菜单（卡片含 Button 不能导出图片）。
-  - **雷达 LLM 40 分钟冷却**：`AppPreferences.lastRadarAIRequestTime` 持久化；`HRVStatusCard` 实现 `canRequestNow() / requestAIImmediately()` + 倒计时 UI + 「立刻分析」按钮绕过冷却。`StudyReadinessAlgorithm` 新增 `BodyReadinessContext` 封装 HRV + BodyStatus + 30 天基线 + 年龄参考范围 + 本地建议 + 4 个预校准分数；`LLMRequestBuilder.BodyRadarLLM` 喂给 LLM 后按 `## 强度/标题/建议/依据` 4 段解析，**保留本地 `icon/priority/color`**。`buildBodyReadinessContext` 必须在 `@MainActor` 调用。
-  - **LLM DEBUG 模式**：`LLMCallDebugInfo`（`startTime/endTime/url/model/temperature/systemPrompt/messages/response/error/caller` + `asDebugJSON()`）+ `LLMClient.lastCallInfo` + 20 条环形 `recentCalls`；`DebugModifiers` 新增 `.llmDebugHomeButton()`（`caller = nil` 显示全部分组）+ `LLMCallIndicator`（卡片底部 `🤖 [caller] · <time> ago · <duration>s` + 状态图标）；`LLMDebugSheet` 按 caller 分组显示历史 + JSON 详情；修复 `LLMChatViewModel` 用 `AppPreferences()` 而非环境注入导致 debug 面板看不到 override 的问题。
-  - **错题语音备忘录**：新增 `Managers/Audio/{AudioStorage, VoiceMemoManager}.swift` + `Views/Mistake/Audio/{AudioPlaybackView, VoiceMemoRecordingSheet}.swift`；`MistakeNote` 新增 `audioFileName: String?` 字段（`~/Documents/audio/<uuid>.m4a`）；`MistakeDetailEditView` 录音 + 删除；`MistakeSetDetailView` 详情页嵌入 `AudioPlaybackView`；Info.plist 新增 `NSMicrophoneUsageDescription`。
-  - **AI 相似题组卷**：`Views/Mistake/LLM/AISimilarQuestionFlowView.swift`；`MistakeView` toolbar 改 Menu 整合「AI 解析错因」 + 「AI 相似题组卷」。
-  - **Chat 组件重构**：删除 `LLMMessageBubbleView.swift`，拆为 `Views/LLM/ChatBubble.swift` + `ChatInputBar.swift`；`LLMChatView` + `AIDiscussionSheet` 共用。
-  - **`StudySuggestionsCard` 同样接入 40 分钟冷却**（`AppPreferences.lastStudySuggestionsAIRequestTime` + `canRequestNow()`）。
-  - 5 语言本地化同步（HomeAsk / 雷达 LLM / DEBUG / 语音 / 相似题 / 立刻分析等 ~30 个新 key）。
-- **MVVM + Repository 重构（2026-07-05）**：5 个主页面 + ViewModel + Service 全部落地。新增 `StudyPulse/ViewModels/`（Home/Trends/Mistake/Exam/Todo/SubjectMistakes/ViewModelError 共 7 文件）+ `StudyPulse/Services/`（DateFormatters/SubjectAggregator/SuggestionEngine/ExamFilter/MistakeFilter/QuoteProvider 共 6 文件）+ `StudyPulse/Repositories/`（7 个 protocol + 7 个 `Default*Repository` 实现）+ `RepositoryContainer`（`@Observable @MainActor`，替代老的 `DataManager`）。`StudyPulseApp` 改持有 `RepositoryContainer`（7 个 Repository 聚合）。
-- **学期 / 假期阶段 (Study Phase) 架构（2026-07-04）**：`StudyPhase` + `PhaseGoal` struct（`name` / `startDate` / `endDate` / `isArchived` / `archivedAt` / `goals` / `createdAt`）；`StudyPhaseRecord` (`@Model`) 落盘 + `gradeRepo` / `mistakeRepo` / `examRepo` / `taskRepo` 加 `phaseId: UUID?` 字段（带 `#Index<...>` 索引）；`AppPreferences.activePhaseId: UUID?`；`RepositoryContainer.recomputeAllFiltered()` 在 phase 切换时重算 5 个 `filtered*` 缓存；`PhaseSelectorView` 胶囊 pill 放 5 主页面 toolbar `.principal`；`Settings → Data Management` 顶部 `PhaseManagementView`（active list + archived disclosure + overview）+ `PhaseEditView`（含 goals 编辑）。新增数据自动跟随 active phase；删除 phase 会清空所有引用 `phaseId`。
-- **考前清单 + 考场信息 (Exam Pre-Exam Checklist + Location)**：`Exam` struct 新增 `checklist: [ExamChecklistItem]`（默认 `[]`）+ `locationSchool/locationClassroom/locationSeat: String`（默认 `""`）+ `countdownNotifyDays: [Int]?`（nil=默认 [1,3,5,10,30] / `[]`=关闭）+ `examReview: ExamReview?`；`ExamRecord` 落盘 `checklistData: Data?`（JSON-encoded `[ExamChecklistItem]`）+ `locationSchool/Classroom/Seat: String` + `countdownNotifyDaysData: Data?` + `examReviewData: Data?`。`RepositoryContainer.toggleExamChecklistItem` / `setExamChecklist` + `updateExamReview` 辅助。`ExamPrepareNotifications.scheduleNotifications(for:date:days:)` 接受可选 `days` 参数：先 `getPendingNotificationRequests` 取消该 exam 旧通知（按 `identifier.contains("Exam_<name>_")` 过滤），再按新 `days` 列表重排；空数组 = 关闭通知；过期日期自动跳过。`ExamDetailView` 新增考场信息 / 考前待办清单 / 倒计时通知 / 复盘 / 分享给家人 5 个 Section，分享用 `ShareLink`（iOS 16+ 自动处理 iPad popover anchor）分享 Markdown。
-- **90 天学习热力图 (GitHub 风格)**：`LearningHeatmapView`（7×13 格子）；数据源 `AchievementManager.shared.snapshot.logs`（90 天滚动窗口），`DailyActivityLog.totalActivityPoints`（`mistakeReviews + gradesRecorded×5 + focusMinutes`）作为强度；5 档颜色（`none/light/medium/strong/intense`）使用 `effectiveAccentColor` 不同 opacity；点击格子弹 sheet 显示当日详情（错题复习 / 成绩 / 专注分钟 / 总活动分）；顶部摘要（90 天活跃天数 + 当前连续天数）+ 底部图例（含最佳日）。集成方式：`HomeCardType.learningHeatmap` 参与 `HomeLayoutPreference` 排序，位置默认在顶部；`HomeCardType.isFullWidth` 标记全宽卡片，`HomeView.iPadDynamicCards` 按"块"渲染（全宽卡片独占整行）。`TrendsView` 顶部热力图单独受 `AppPreferences.learningHeatmapOnTrends` 控制（默认开启），开关放在 `TrendsView` 现有 toolbar Menu 底部，以 `Divider` 与模式选择分隔。
-- **自定义主色 + Liquid Glass 效果 + 自定义背景图**：
-  - 11 档 `ThemeAccent` 预设（system/blue/cyan/teal/green/mint/orange/red/pink/purple/indigo）持久化为 `AppPreferences.accentPaletteId: String?`；`AppEnvironmentManager.effectiveAccentColor` 单点消费；驱动 `ContentView.tint()` / `TrendChartView.tintColor`（line + bar）/ `FlashcardStudyView` 进度条；状态色 ProgressView（TodoView/ExamView 时间-剩余 / 掌握度）保持按状态着色。
-  - iOS 26 Liquid Glass：`AppPreferences.glassEffectEnabled` 全局开关；`.glassCard(enabled:cornerRadius:)` 修饰符（`Extensions/GlassCardModifier.swift`）让卡片 opt-in；启用后替换 `Color(.secondarySystemGroupedBackground)` 为 iOS 26 `glassEffect`（老系统回退 `.regularMaterial`）；**`glassEffect` 直接套 `Capsule()` 是不透明**，必须用 `Color.clear` + `glassEffect(in: Capsule())` 才有真实透明感。
-  - 自定义背景图：`Application Support/Backgrounds/bg_<uuid>.jpg`（`BackgroundImageCropper.cropToIPhoneAspect` 9:19.5 中心裁剪）；`BackgroundImageView` 全屏 `aspectRatio(.fill)` + `ignoresSafeArea()` + 模糊 + 暗化遮罩；为让图真正穿透，5 主页面根 `Color(.systemGroupedBackground).opacity(0.4)`；`List` / `Form` 加 `.scrollContentBackground(.hidden)`；**iOS 26 NavigationStack 有默认不透明 `containerBackground`**，必须在 NavigationStack 内根内容上加 `.containerBackground(.clear, for: .navigation)`；`TabView` 加 `.toolbarBackground(.hidden, for: .tabBar)`。
-- **AppIntents（Siri Shortcuts）**：`StudyPulseShortcuts` 提供 AddGrade / RecordMistake / CheckUpcomingExams / CheckBodyStatus / CheckReadiness / CheckSubjectAverage 六个 AppIntent；`IntentActionStore` 跨进程桥接 `pendingIntentAction`；`ContentView` 观察 `IntentActionStore` 路由处理。
-- **接入「连续打卡 & 成就系统」**：`Models/Achievements.swift`（`AchievementsSnapshot` / `DailyGoalConfig` / `DailyActivityLog` / `StreakState` / `AchievementDefinition` / `AchievementProgress`）+ `Models/AchievementCatalog.swift`（编译期成就目录）+ `Managers/Achievement/AchievementManager.swift`（`@MainActor` ObservableObject 单例，三个 `record*()` 事件入口）+ `Managers/Achievement/AchievementStore.swift`（NSLock 持久化 + 首次启动从 `grades.json` / `study_sessions.json` 反推 30 天历史）；新增主页 `StreakHomeCard` 卡片（`HomeCardType.streakProgress`），设置页 `AchievementsView` / `DailyGoalsConfigView`；新增 `DailyGoalReminder`（每日 20:00 晚间提醒）；详见 `docs/STREAK_ACHIEVEMENT_PLAN.md`。
-- **接入「学习计时器 + Live Activity」**：`Managers/Study/StudyTimerManager.swift`（5 档强度）+ `Views/StudyTimer/StudyTimerView.swift` + `Models/StudySession.swift`（`~/Documents/study_sessions.json`）；`StudyPulseWidget/StudyTimerActivityAttributes.swift` + `StudyTimerLiveActivity.swift`（Lock Screen + Dynamic Island compact / minimal / expanded）。完成会话时调用 `AchievementManager.recordFocusMinutes()` 纳入打卡。
-- **接入「学习报告」**：`Managers/Report/ReportRenderer.swift`（`ImageRenderer`）+ `ReportImageDocument.swift` + `Models/StudyReport.swift` + `Views/Report/{ReportContentView, ReportOptionsSheet, ReportShareSheet}.swift`；设置页 `ContributionSettingsView` 提供 GitHub 风格活动贡献图配置。
-- **接入「闪卡 SRS / SM-2」**：`Models/SpacedRepetition.swift`（`ReviewState` 嵌套在 `MistakeNote.reviewState`）；`Views/Flashcard/{FlashcardStudyView, FlashcardCardView, FlashcardSessionSummaryView, FlashcardCalculatorView}.swift`；`Managers/Study/SRSReviewNotifications.swift`（按 `nextReviewDate` 调度复习通知）。`MistakeView` toolbar 「加入复习队列」触发入队。
-- **接入「SwiftData 实体层」**：`Models/SwiftData/StudyPulseModels.swift`（`@Model final class` 实体层 + `toSnapshot()` / `init(from:)`）+ `Managers/Core/ModelContainerFactory.swift`（`ModelContainer` 单例工厂 + `migrateFromJSONIfNeeded(context:)` 启动时从 `~/Documents/*.json` 一次性迁移）。视图层继续使用 struct，每个 Repository 暴露 `[struct]`，SwiftData 实体在后台与 struct 互转。
-- **接入「Todo 统一待办」**：`Models/DataModels.swift` 新增 `TaskItem` / `TaskType` / `TodoEntry` / `TodoEntryKind`；`Views/Todo/{TodoView, TodoRowView, NewTaskView, TaskDetailView, TaskDetailEditView}.swift`；`CalendarManager` 新增 `addTaskToReminders` 把作业 / 阅读写入系统 Reminders。
-- **接入「OnBoarding 基础信息填写」**：`Views/OnBoarding/{OnboardingFlowState, OnboardingProfileFormConfig, OnboardingProfileFormView}.swift` 6 页基础信息表单（强杀可恢复草稿）。
-- **新增小组件 Live Activity**：`StudyPulseWidget/StudyTimerActivityAttributes.swift` + `StudyTimerLiveActivity.swift`；`StudyPulseWidgetBundle` 组合 3 个静态小组件 + 1 个 Live Activity。
-- **新增 Markdown 渲染三件套**：`Views/Components/Markdown/{MarkdownEditorView, MarkdownPreviewView, MarkdownTextEditor}.swift`；依赖迁移到 `Packages/SwiftStreamingMarkdown-0.2.0/` + `Vendored/{swift-cmark, swift-markdown, highlightswift, iosMath}`。
-- **新增 `ChartTypeSettingsView`（6 档：line / bar / pie / scatter / heatmap / histogram）、`UserAgreementView`（`docs/USER_AGREEMENT.md` v1.0 全文）**。
-- **移除 `WSOnBoarding` 依赖**，`OnBoarding` 改为原生 iOS 26 风格：新增 `Views/OnBoarding/OnboardingConfig.swift` + `OnboardingView.swift`（TabView 分页 + 渐变背景 + 玻璃质感卡片，iOS 26+ 使用 `glassEffect`、老版本回退到 `.regularMaterial`），`VersionedWelcomeModifier` 改用 `OnboardingView`，`project.pbxproj` 移除 `WSOnBoarding` 包引用与 Link 阶段配置。
-- **接入 `StudyPulseWidgetExtension` 目标 + 三个静态小组件（`ExamWidget` / `TrendWidget` / `HRVWidget`）及其 `*WidgetData.swift` / `*WidgetSyncManager.swift`**，每个 widget 完整本地化 en / zh-Hans / zh-Hant / ja / ko。
-- **新增 HealthKit 扩展**：`BodyStatus`（心率 / 呼吸率 / 深睡+REM / 锻炼）、`HealthHistory`（`DailyHealthSnapshot`）、`HealthHistoryStore`（30 天滚动持久化 `~/Documents/health_history.json`）、`StudyReadinessAlgorithm`（5 强度 × 5 重点）；详见 `docs/AlgorithmIntroduction.md`。
-- **新增 `Log.swift`（`LogLevel` / `LogEntry` / `LogStore`，5000 条上限，NSLock 线程安全）+ `LogDocument`（`FileDocument`）+ `DataManagementSettingsView` 的 Export Log 按钮**，统一 `os.Logger` + 内存双写日志。
-- **新增 `LagMonitor.swift`（`CADisplayLink` 主线程卡顿检测器）**，连续丢帧写入 `LogStore`。
-- **`HomeView` 引入分帧渲染（phased rendering）**，拆分首帧 long task；`AvatarView` / `WelcomeHeaderView` / `SettingsView` 头像加载改为异步 Task。
-- **`RepositoryContainer` 暴露 `isReady`**，所有 widget 同步在 `scenePhase == .active && isReady == true` 时执行；`asyncInit()` 完成后才调用 `HealthKitManager.bootstrap()` / `AchievementManager.bootstrap()`。
-- **`DataFileIO.imagesDir` 用 `NSLock` 缓存路径**。
-- **新增版本感知欢迎页 `Views/OnBoarding/VersionedWelcomeModifier.swift`**（首次启动 → 欢迎页；版本号变化 → 新功能介绍页；同版本不显示）。
-- **重构 Settings**：原 `SettingsView` 拆为 `Views/Settings/` 下多个聚焦子页（Profile / Appearance / Health / Data / About / FAQ + Achievements / Daily Goals / Chart Type / Contribution / User Agreement / **Phase Management** / **Phase Edit**），`SettingsCategory` 枚举驱动 6 段式导航；`EditSubjectsView` 改为 `NavigationLink` push。
-- **新增视图**：`AboutView` / `CopyrightView` / `ProfileEditView` / `SectionHeader`；新增 `Sections/AboutSettingsView` / `AppearanceSettingsView` / `DataManagementSettingsView` / `HealthSettingsView` / `ProfileSettingsView` / `QASettingsView` / `SettingsCategory` / `AchievementsView` / `DailyGoalsConfigView` / `ChartTypeSettingsView` / `ContributionSettingsView` / `UserAgreementView` / **`PhaseManagementView`** / **`PhaseEditView`**。
-- **Exam / comprehensiveExam 新增 `examEndDate?`（多日考试）、`timeSlot`（`ExamTimeSlot?`）、`checklist` / `locationSchool` / `locationClassroom` / `locationSeat` / `countdownNotifyDays` / `examReview`（考前清单 + 考场信息 + 复盘）**。
-- **`ExamPrepareNotifications` 调整默认提醒窗口**；`Localizable.strings` 在 5 种语言下统一增量更新。
-- **`AGENTS.md` / `docs/CODE_WIKI.md` / `docs/CODE_WIKI_CN.md` / `README.md` / `docs/SPEC.md` / `docs/DESIGN.md` 随新功能更新**；新增 `docs/AlgorithmIntroduction.md`（`StudyReadinessAlgorithm` 详解）、`docs/ScorePredictionAlgorithm.md`（`ScorePredictionEngine` / `MistakeGapAnalyzer` 详解）、`docs/STREAK_ACHIEVEMENT_PLAN.md`（连续打卡 / 成就详解）、`docs/USER_AGREEMENT.md`（v1.0 用户使用协议）、`docs/FAQ.json`、`docs/CONTRIBUTING.json`。
+以模糊开工为耻，以对齐需求为荣
 
-更早变更：
-- 错题本导出 PDF：`MistakeView` toolbar 新增 `square.and.arrow.up` 按钮 → `MistakePDFExportSheet` 选项（按科目 / 时间范围 / 手动勾选错题三选一 + 图片开关）；`MistakePDFRenderer` 用 **Core Text + `NSAttributedString`** 渲染多页 A4（595×842 pt）PDF（文字以矢量字体嵌入，可选 / 复制 / 搜索；`CTFramesetter` 自动分页），`MistakePDFDocument`（`FileDocument`，`.pdf`）走 `.fileExporter`。新增 `Models/MistakePDFSnapshot.swift`、`Managers/PDF/{MistakePDFRenderer, MistakePDFDocument}.swift`、`Views/Mistake/PDF/{MistakePDFExportSheet, MistakePDFGenerationView}.swift`；5 份 `Localizable.strings` 同步新增 ~30 个 key。
-- iPad 适配（`TARGETED_DEVICE_FAMILY = "1,2"`）通过 `iPadLayout.swift` 辅助组件（`adaptiveMaxWidth` / `AdaptiveHStack` / `AdaptiveGridColumns` / `adaptiveCardPadding`）。
-- 视图层全面重构与设计系统骨架。
-- 多语言：en / zh-Hans / zh-Hant / ja / ko。
-- 错题模块启动：四块错题编辑、每块照片 + OCR、Markdown 预览、日历 / 通知自动调度、可缩放图像查看。
-- 全球教育系统（15+ 种体系）。
+以脑补业务为耻，以请示规则为荣
 
+以新增冗余为耻，以复用存量为荣
+
+以省略校验为耻，以完备测例为荣
+
+以乱改架构为耻，以恪守规范为荣
+
+以不懂装懂为耻，以坦诚存疑为荣
+
+以批量乱改为耻，以分步迭代为荣

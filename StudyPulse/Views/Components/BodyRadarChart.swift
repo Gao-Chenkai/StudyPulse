@@ -20,7 +20,10 @@ struct BodyRadarChart: View {
 
     private let dimensionCount = 6
     private let axisLabels: [String]
-    private let axisColors: [Color] = [.purple, .pink, .indigo, .green, .cyan, .orange]
+    private let axisColors: [Color]
+    private let fillColors: [Color]
+    private let strokeColors: [Color]
+    private let pointColors: [Color]
 
     init(values: BodyRadarValues, axisLabels: [String]? = nil) {
         self.values = values.all
@@ -28,13 +31,23 @@ struct BodyRadarChart: View {
             "HRV", "Heart Rate".localized(), "Recovery Sleep".localized(),
             "Workout".localized(), "Respiratory".localized(), "Stability".localized()
         ]
+        let recoveryColor = values.recoveryLevel.color
+        self.axisColors = Array(repeating: recoveryColor, count: 6)
+        self.fillColors = [recoveryColor.opacity(0.45), recoveryColor.opacity(0.16)]
+        self.strokeColors = [recoveryColor, recoveryColor.opacity(0.72)]
+        self.pointColors = Array(repeating: recoveryColor, count: 6)
     }
 
     init(normalizedValues: [Double], axisLabels: [String]) {
+        let colors: [Color] = [.purple, .pink, .indigo, .green, .cyan, .orange]
         self.values = Array(normalizedValues.prefix(6)).map { max(0, min(1, $0)) }
             + Array(repeating: 0.5, count: max(0, 6 - normalizedValues.count))
         self.axisLabels = Array(axisLabels.prefix(6))
             + Array(repeating: "", count: max(0, 6 - axisLabels.count))
+        self.axisColors = colors
+        self.fillColors = [Color.blue.opacity(0.45), Color.purple.opacity(0.18)]
+        self.strokeColors = [.blue, .purple]
+        self.pointColors = colors
     }
 
     var body: some View {
@@ -71,15 +84,14 @@ struct BodyRadarChart: View {
                 // Filled data polygon (gradient).
                 dataPolygonPath(center: center, radius: maxRadius)
                     .fill(LinearGradient(
-                        colors: [Color.blue.opacity(0.45),
-                                 Color.purple.opacity(0.18)],
+                        colors: fillColors,
                         startPoint: .top, endPoint: .bottom))
 
                 // 数据多边形描边
                 // Data polygon outline.
                 dataPolygonPath(center: center, radius: maxRadius)
                     .stroke(
-                        LinearGradient(colors: [.blue, .purple],
+                        LinearGradient(colors: strokeColors,
                                        startPoint: .top, endPoint: .bottom),
                         lineWidth: 2
                     )
@@ -93,7 +105,7 @@ struct BodyRadarChart: View {
                         from: center
                     )
                     Circle()
-                        .fill(axisColors[i])
+                        .fill(pointColors[i])
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(Color.white, lineWidth: 2))
                         .position(p)

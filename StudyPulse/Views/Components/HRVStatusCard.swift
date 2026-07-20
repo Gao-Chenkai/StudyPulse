@@ -553,8 +553,10 @@ struct HRVStatusCard: View {
 
     // MARK: - Computed Properties / 计算属性
     private var accent: Color {
-        // 按 readiness category 取强调色
-        // Accent color per readiness category.
+        if let cachedRadar {
+            return cachedRadar.recoveryLevel.color
+        }
+
         switch hrvManager.readiness.category {
         case .excellent: return .green
         case .normal: return .blue
@@ -573,6 +575,10 @@ struct HRVStatusCard: View {
     }
 
     private var badgeLabel: String {
+        if let cachedRadar {
+            return "\(cachedRadar.recoveryScore) / 100 · \(cachedRadar.recoveryLevel.localizedLabel)"
+        }
+
         switch hrvManager.readiness.category {
         case .excellent: return "Excellent".localized()
         case .normal: return "Normal".localized()

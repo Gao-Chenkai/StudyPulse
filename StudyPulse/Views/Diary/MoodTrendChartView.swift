@@ -156,7 +156,7 @@ struct MoodTrendChartView: View {
                         x: .value("Date".localized(), p.date),
                         y: .value("Mood".localized(), p.value)
                     )
-                    .foregroundStyle(Color.orange)
+                    .foregroundStyle(by: .value("Metric", "Mood"))
                     .symbol(Circle())
                 }
                 ForEach(energyPoints) { p in
@@ -164,10 +164,15 @@ struct MoodTrendChartView: View {
                         x: .value("Date".localized(), p.date),
                         y: .value("Energy".localized(), p.value)
                     )
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(by: .value("Metric", "Energy"))
                     .symbol(.square)
                 }
             }
+            .chartForegroundStyleScale([
+                "Mood": Color.orange,
+                "Energy": Color.blue
+            ])
+            .chartLegend(.hidden)
             .chartYScale(domain: 0...5)
             .chartXAxis {
                 AxisMarks(values: .stride(by: .day)) { value in

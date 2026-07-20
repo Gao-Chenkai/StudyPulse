@@ -24,6 +24,17 @@ struct BodyRadarValues {
 
     var all: [Double] { [hrv, heartRate, sleep, exercise, respiratory, psychologicalStability] }
 
+    /// Equal-weight composite recovery score derived from all six radar axes.
+    /// Keeping this calculation beside the normalized values ensures the score,
+    /// badge, and radar color always describe the same snapshot.
+    var recoveryScore: Int {
+        Int((all.reduce(0, +) / Double(all.count) * 100).rounded())
+    }
+
+    var recoveryLevel: RecoveryLevel {
+        RecoveryLevel(score: recoveryScore)
+    }
+
     // Per-axis text (raw, un-normalized)
     let hrvValueText: String
     let heartRateValueText: String
@@ -196,6 +207,40 @@ struct BodyRadarValues {
         case ..<0.5:  return .orange
         case ..<0.75: return .blue
         default:      return .green
+        }
+    }
+}
+
+enum RecoveryLevel: Equatable {
+    case poor
+    case critical
+    case good
+    case excellent
+
+    init(score: Int) {
+        switch score {
+        case 75...: self = .excellent
+        case 50...: self = .good
+        case 34...: self = .critical
+        default: self = .poor
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .excellent: return .green
+        case .good: return .blue
+        case .critical: return .orange
+        case .poor: return .red
+        }
+    }
+
+    var localizedLabel: String {
+        switch self {
+        case .excellent: return "Recovery Excellent".localized()
+        case .good: return "Recovery Good".localized()
+        case .critical: return "Recovery Critical".localized()
+        case .poor: return "Recovery Poor".localized()
         }
     }
 }
