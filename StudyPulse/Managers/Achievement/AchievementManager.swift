@@ -129,6 +129,7 @@ final class AchievementManager: ObservableObject {
     /// DataManager.addGrade / addGrades 在写入 @Published grades 后调用。
     /// Invoked by DataManager.addGrade / addGrades after writing to @Published grades.
     func recordGradeRecorded(count: Int = 1) {
+        BrainUsageStore.append(kind: .gradeRecorded, units: count)
         var snap = snapshot
         snap.cumulative.gradesRecorded += count
         applyActivityToday(mistakeReviews: 0, grades: count, focusMinutes: 0, into: &snap)
@@ -139,6 +140,7 @@ final class AchievementManager: ObservableObject {
     /// Called from FlashcardSessionSummaryView onAppear (one session counts as one review).
     func recordMistakeReviewed(count: Int = 1) {
         guard count > 0 else { return }
+        BrainUsageStore.append(kind: .mistakeReview, units: count)
         var snap = snapshot
         snap.cumulative.mistakeReviews += count
         applyActivityToday(mistakeReviews: count, grades: 0, focusMinutes: 0, into: &snap)
@@ -149,6 +151,7 @@ final class AchievementManager: ObservableObject {
     /// Invoked by StudyTimerManager.complete() after writing to StudySessionStore.
     func recordFocusMinutes(_ minutes: Int) {
         guard minutes > 0 else { return }
+        BrainUsageStore.append(kind: .focusMinutes, units: minutes)
         var snap = snapshot
         snap.cumulative.focusMinutes += minutes
         applyActivityToday(mistakeReviews: 0, grades: 0, focusMinutes: minutes, into: &snap)

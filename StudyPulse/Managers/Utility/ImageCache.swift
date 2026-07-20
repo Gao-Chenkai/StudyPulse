@@ -87,7 +87,10 @@ nonisolated final class ImageCache {
     ///   - maxDimension: Max edge length (default 300px).
     /// - Returns: The downsampled thumbnail, or nil if decode fails.
     static func thumbnail(from data: Data, maxDimension: CGFloat = 300) -> UIImage? {
-        let maxPixels = Int(maxDimension * UIScreen.main.scale)
+        // Keep this helper usable from background decoding tasks. Accessing
+        // UIScreen.main is main-actor isolated under Swift 6; a 3x upper
+        // bound is a safe approximation for all supported iPhone/iPad scales.
+        let maxPixels = Int(maxDimension * 3.0)
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceShouldCacheImmediately: true,

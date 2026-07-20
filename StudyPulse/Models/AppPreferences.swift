@@ -158,6 +158,16 @@ nonisolated struct AppPreferences: Codable {
     /// report LLM falls back to the original 3-section output.
     var diaryLLMReflectionEnabled: Bool = true
 
+    // MARK: - Brain Usage
+    var brainUsageMode: BrainUsagePreferences.Mode = .manual
+    var brainUsageManualFiveHourQuota: Int = BrainUsageQuota.default.fiveHour
+    var brainUsageManualSevenDayQuota: Int = BrainUsageQuota.default.sevenDay
+    var brainUsageNotifyFiveHour: Bool = true
+    var brainUsageNotifySevenDay: Bool = true
+    var brainUsageDynamicFiveHourQuota: Int? = nil
+    var brainUsageDynamicSevenDayQuota: Int? = nil
+    var brainUsageDynamicQuotaGeneratedAt: Date? = nil
+
     // 自定义解码器：缺字段时使用默认值，兼容老版本 UserDefaults 数据
     // Custom decoder: fall back to defaults for missing fields so older
     // serialized preferences (without accentPaletteId / glassEffectEnabled)
@@ -171,6 +181,7 @@ nonisolated struct AppPreferences: Codable {
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
+        case brainUsageMode, brainUsageManualFiveHourQuota, brainUsageManualSevenDayQuota, brainUsageNotifyFiveHour, brainUsageNotifySevenDay, brainUsageDynamicFiveHourQuota, brainUsageDynamicSevenDayQuota, brainUsageDynamicQuotaGeneratedAt
     }
 
     init() {}
@@ -223,6 +234,14 @@ nonisolated struct AppPreferences: Codable {
         self.diaryDailyReminderHour = max(0, min(23, hour))
         self.diarySyncToHealthEnabled = try c.decodeIfPresent(Bool.self, forKey: .diarySyncToHealthEnabled) ?? true
         self.diaryLLMReflectionEnabled = try c.decodeIfPresent(Bool.self, forKey: .diaryLLMReflectionEnabled) ?? true
+        self.brainUsageMode = try c.decodeIfPresent(BrainUsagePreferences.Mode.self, forKey: .brainUsageMode) ?? .manual
+        self.brainUsageManualFiveHourQuota = try c.decodeIfPresent(Int.self, forKey: .brainUsageManualFiveHourQuota) ?? BrainUsageQuota.default.fiveHour
+        self.brainUsageManualSevenDayQuota = try c.decodeIfPresent(Int.self, forKey: .brainUsageManualSevenDayQuota) ?? BrainUsageQuota.default.sevenDay
+        self.brainUsageNotifyFiveHour = try c.decodeIfPresent(Bool.self, forKey: .brainUsageNotifyFiveHour) ?? true
+        self.brainUsageNotifySevenDay = try c.decodeIfPresent(Bool.self, forKey: .brainUsageNotifySevenDay) ?? true
+        self.brainUsageDynamicFiveHourQuota = try c.decodeIfPresent(Int.self, forKey: .brainUsageDynamicFiveHourQuota)
+        self.brainUsageDynamicSevenDayQuota = try c.decodeIfPresent(Int.self, forKey: .brainUsageDynamicSevenDayQuota)
+        self.brainUsageDynamicQuotaGeneratedAt = try c.decodeIfPresent(Date.self, forKey: .brainUsageDynamicQuotaGeneratedAt)
     }
     
     // MARK: - 语言常量

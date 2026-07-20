@@ -28,6 +28,9 @@ struct AppearanceSettingsView: View {
                     NavigationLink(destination: HomeLayoutSettingsView()) {
                         Label("Home Layout".localized(), systemImage: "rectangle.3.group")
                     }
+                    NavigationLink(destination: BrainUsageSettingsView()) {
+                        Label("Brain Usage".localized(), systemImage: "brain.head.profile")
+                    }
                 }
 
                 // Chart Type

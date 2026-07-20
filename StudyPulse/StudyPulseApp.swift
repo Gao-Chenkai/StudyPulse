@@ -99,6 +99,7 @@ struct StudyPulseApp: App {
                 .task {
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
                     await container.asyncInit()
+                    BrainUsageStore.migrateLegacyIfNeeded()
                     Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(container.isReady, privacy: .public)")
                     Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(container.isReady)")
                     // 主数据加载就绪后再去问 HealthKit，避免启动期 I/O 竞争
