@@ -39,6 +39,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// 学习日记 + 心情记录入口:点击 emoji cycle moodScore,点击其余区域打开 DiaryView sheet
     /// Study Diary + Mood entry: tap emoji cycles moodScore; tap the rest opens DiaryView sheet.
     case diary = "diary"
+    case habitInsight = "habitInsight"
 
     /// 本地化显示名称
     var displayName: String {
@@ -59,6 +60,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .plant: return "Plant".localized()
         case .homeAsk: return "Ask AI".localized()
         case .diary: return "Study Diary".localized()
+        case .habitInsight: return "Habit Insight".localized()
         }
     }
 
@@ -81,6 +83,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .plant: return "leaf.fill"
         case .homeAsk: return "text.bubble.fill"
         case .diary: return "book.fill"
+        case .habitInsight: return "waveform.path.ecg"
         }
     }
 
@@ -133,6 +136,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .upcomingExams, enabled: true),
         HomeCardItem(type: .dailyQuote, enabled: true),
         HomeCardItem(type: .recentGrades, enabled: true),
+        HomeCardItem(type: .habitInsight, enabled: false),
     ])
     
     /// 当前启用的卡片类型（按顺序）

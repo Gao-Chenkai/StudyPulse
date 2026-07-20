@@ -268,6 +268,14 @@ final class AppEnvironmentManager {
         preferences.radarAICooldownMinutes = clamped
     }
 
+    func setHabitInsightEnabled(_ value: Bool) { preferences.habitInsightEnabled = value }
+    func setHabitInsightNotificationEnabled(_ value: Bool) { preferences.habitInsightNotificationEnabled = value }
+    func setHabitInsightNotificationHour(_ value: Int) { preferences.habitInsightNotificationHour = max(0, min(23, value)) }
+    func setHabitInsightCooldownMinutes(_ value: Int) { preferences.habitInsightCooldownMinutes = max(5, min(180, value)) }
+    func setLastHabitInsightAIRequestTime(_ value: Date?) { preferences.lastHabitInsightAIRequestTime = value }
+    func setLastHabitInsightNotificationBody(_ value: String?) { preferences.lastHabitInsightNotificationBody = value }
+    func setLastHabitInsightNotificationDate(_ value: Date?) { preferences.lastHabitInsightNotificationDate = value }
+
     /// 设置 DEBUG 模式专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
     /// `nil` / 空字符串 → 清空覆盖,回退到默认 + appendix。
     /// DEBUG-only: globally override the LLM system prompt (visible in DEBUG only).

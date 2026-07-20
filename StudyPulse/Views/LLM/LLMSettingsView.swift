@@ -201,6 +201,46 @@ struct LLMSettingsView: View {
                 Text("Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown.".localized())
             }
 
+            Section {
+                Toggle("Enable Habit Insight".localized(), isOn: Binding(
+                    get: { container.envManager.preferences.habitInsightEnabled },
+                    set: { container.envManager.setHabitInsightEnabled($0) }
+                ))
+                Stepper(value: Binding(
+                    get: { container.envManager.preferences.habitInsightCooldownMinutes },
+                    set: { container.envManager.setHabitInsightCooldownMinutes($0) }
+                ), in: 5...180, step: 5) {
+                    Text("Habit Insight Cooldown".localized())
+                }
+            } header: {
+                Text("Habit Insight".localized())
+            } footer: {
+                Text("habitInsight.section.footer".localized())
+            }
+
+            Section {
+                Toggle("Daily Best-Window Notification".localized(), isOn: Binding(
+                    get: { container.envManager.preferences.habitInsightNotificationEnabled },
+                    set: { enabled in
+                        container.envManager.setHabitInsightNotificationEnabled(enabled)
+                        let p = container.envManager.preferences
+                        HabitInsightNotifications.shared.reschedule(enabled: enabled, hour: p.habitInsightNotificationHour, body: p.lastHabitInsightNotificationBody)
+                    }
+                ))
+                Stepper(value: Binding(
+                    get: { container.envManager.preferences.habitInsightNotificationHour },
+                    set: { hour in
+                        container.envManager.setHabitInsightNotificationHour(hour)
+                        let p = container.envManager.preferences
+                        HabitInsightNotifications.shared.reschedule(enabled: p.habitInsightNotificationEnabled, hour: hour, body: p.lastHabitInsightNotificationBody)
+                    }
+                ), in: 0...23) {
+                    Text("Notification Hour".localized())
+                }
+            } header: {
+                Text("Daily Notification".localized())
+            }
+
             // 3.6) DEBUG 模式专用:全局覆盖系统 prompt
             if container.envManager.debugModeEnabled {
                 Section {

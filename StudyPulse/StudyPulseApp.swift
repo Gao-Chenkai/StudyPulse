@@ -150,6 +150,17 @@ struct StudyPulseApp: App {
                         Task { await hrvManager.refreshBodyStatus() }
                         AchievementManager.shared.handleDayRolloverIfNeeded()
                         DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)
+                        let prefs = container.envManager.preferences
+                        let today = Calendar.current.startOfDay(for: Date())
+                        if prefs.lastHabitInsightNotificationDate == nil || !Calendar.current.isDateInToday(prefs.lastHabitInsightNotificationDate!) {
+                            let sessions = StudySessionStore.load()
+                            if let best = HabitInsightEngine.bestSlotForToday(sessions: sessions) {
+                                let body = HabitInsightEngine.notificationBody(for: best)
+                                container.envManager.setLastHabitInsightNotificationBody(body)
+                                container.envManager.setLastHabitInsightNotificationDate(today)
+                                HabitInsightNotifications.shared.reschedule(enabled: prefs.habitInsightNotificationEnabled, hour: prefs.habitInsightNotificationHour, body: body)
+                            }
+                        }
                     }
                     // 离开前台时收尾 routine Live Activity
                     if phase == .background {

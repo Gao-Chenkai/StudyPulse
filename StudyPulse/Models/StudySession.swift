@@ -321,3 +321,58 @@ enum StudySessionStore {
         return result.reversed()
     }
 }
+
+struct WeekdayHourSlotBucket: Sendable {
+    let weekday: Int
+    let hourSlot: HabitInsight.HourSlot
+    let sessionCount: Int
+    let avgDurationMinutes: Double
+    let completedRatio: Double
+    let peakIntensityRatio: Double
+}
+
+extension StudySessionStore {
+    nonisolated static func aggregateByWeekdayHourSlot(days: Int = 90) -> [WeekdayHourSlotBucket] {
+        let calendar = Calendar.current
+        let cutoff = calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        let sessions = load().filter { $0.startDate >= cutoff }
+        var grouped: [String: [StudySession]] = [:]
+        for session in sessions {
+            let weekday = calendar.component(.weekday, from: session.startDate)
+            let hour = calendar.component(.hour, from: session.startDate)
+            let slot = HabitInsight.HourSlot.from(hour: hour)
+            grouped["\(weekday)-\(slot.rawValue)", default: []].append(session)
+        }
+        return grouped.compactMap { key, values in
+            let parts = key.split(separator: "-")
+            guard parts.count == 2,
+                  let weekday = Int(parts[0]),
+                  let slotRawValue = Int(parts[1]),
+                  let hourSlot = HabitInsight.HourSlot(rawValue: slotRawValue),
+                  !values.isEmpty else { return nil }
+            let totalMinutes = values.reduce(0.0) { total, session in
+                total + Double(session.durationSeconds) / 60.0
+            }
+            let completedCount = values.reduce(into: 0) { count, session in
+                if session.completed { count += 1 }
+            }
+            let peakCount = values.reduce(into: 0) { count, session in
+                if session.intensity == .peak || session.intensity == .deepFocus { count += 1 }
+            }
+            let sampleCount = Double(values.count)
+            return WeekdayHourSlotBucket(
+                weekday: weekday,
+                hourSlot: hourSlot,
+                sessionCount: values.count,
+                avgDurationMinutes: totalMinutes / sampleCount,
+                completedRatio: Double(completedCount) / sampleCount,
+                peakIntensityRatio: Double(peakCount) / sampleCount
+            )
+        }
+    }
+
+    nonisolated static func sessionsForTodayWeekday(days: Int = 90) -> [StudySession] {
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        return load().filter { Calendar.current.component(.weekday, from: $0.startDate) == weekday && $0.startDate >= (Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()) }
+    }
+}

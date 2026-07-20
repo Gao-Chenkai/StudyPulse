@@ -1109,6 +1109,57 @@ enum BodyRadarLLM {
     }
 }
 
+// MARK: - Habit Insight AI Interpretation
+enum HabitInsightLLM {
+    static let defaultSystem = """
+    你是 StudyPulse 的学习习惯洞察教练。根据最近 90 天按星期和时段聚合的学习数据，以及本地检测出的模式，输出具体、可执行的中文解读。
+    严格使用以下结构：
+    ## 模式
+    <peakEfficiency / procrastination / streakDay / weakDay>
+    ## 标题
+    <8-18 字中文标题>
+    ## 解读
+    <2-4 句，引用具体数据点分析可能原因>
+    ## 建议
+    <2-4 条可执行的 Markdown bullet>
+    不要输出客套话、JSON 或代码块。
+    """
+
+    static func makePrompt(_ context: HabitInsightContext) -> LLMPrompt {
+        let insights = context.insights.map { "- \($0.patternKind.rawValue): \($0.title), confidence=\(String(format: "%.2f", $0.confidence))" }.joined(separator: "\n")
+        let buckets = context.allBuckets.map { "\($0.weekday)/\($0.hourSlot.displayName): n=\($0.sessionCount), avg=\(String(format: "%.1f", $0.avgDurationMinutes))m, completed=\(String(format: "%.2f", $0.completedRatio)), peak=\(String(format: "%.2f", $0.peakIntensityRatio))" }.joined(separator: "\n")
+        let user = "语言：\(context.languageCode)\n今日 weekday：\(context.todayWeekday)\n总样本：\(context.sessionTotal)\n\n本地模式：\n\(insights.isEmpty ? "无" : insights)\n\n聚合数据：\n\(buckets)"
+        return LLMPrompt(system: defaultSystem, messages: [.user(user)])
+    }
+
+    static func parse(_ output: String, fallback: HabitInsight) -> HabitInsight? {
+        var sections: [String: String] = [:]
+        var current: String?
+        for line in output.components(separatedBy: .newlines) {
+            if line.hasPrefix("## ") { current = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces); sections[current!] = "" }
+            else if let current {
+                let separator = sections[current, default: ""].isEmpty ? "" : "\n"
+                sections[current, default: ""] += separator + line
+            }
+        }
+        guard let title = sections["标题"]?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
+              let interpretation = sections["解读"]?.trimmingCharacters(in: .whitespacesAndNewlines), !interpretation.isEmpty,
+              let advice = sections["建议"]?.trimmingCharacters(in: .whitespacesAndNewlines), !advice.isEmpty else { return nil }
+        return HabitInsight(id: fallback.id, patternKind: fallback.patternKind, weekday: fallback.weekday, hourSlot: fallback.hourSlot,
+            title: title, description: interpretation + "\n\n建议：\n" + advice, icon: fallback.icon, color: fallback.color,
+            priority: fallback.priority, confidence: fallback.confidence)
+    }
+}
+
+struct HabitInsightContext: Sendable {
+    let insights: [HabitInsight]
+    let allBuckets: [WeekdayHourSlotBucket]
+    let todayWeekday: Int
+    let todayBestSlot: HabitInsight?
+    let sessionTotal: Int
+    let languageCode: String
+}
+
 // MARK: - 9) Subject Mastery Radar AI
 
 enum SubjectRadarLLM {

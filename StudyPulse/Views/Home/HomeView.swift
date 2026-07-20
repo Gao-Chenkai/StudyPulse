@@ -325,6 +325,9 @@ struct HomeView: View {
         case .diary:
             DiaryHomeCard()
                 .contextMenu { shareCardMenu(for: type) }
+        case .habitInsight:
+            HabitInsightCard()
+                .contextMenu { shareCardMenu(for: type) }
         }
     }
 
@@ -436,6 +439,7 @@ struct HomeView: View {
         case .plant: return "Plant".localized()
         case .homeAsk: return "Ask AI".localized()
         case .diary: return "Study Diary".localized()
+        case .habitInsight: return "Habit Insight".localized()
         }
     }
 
@@ -494,6 +498,8 @@ struct HomeView: View {
                     HomeAskCard()
                 case .diary:
                     DiaryHomeCard()
+                case .habitInsight:
+                    HabitInsightCard()
                 }
             }
             .frame(maxWidth: .infinity)

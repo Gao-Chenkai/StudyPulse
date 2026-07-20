@@ -1888,3 +1888,15 @@
 "Recovery Good" = "Good";
 "Recovery Critical" = "Critical";
 "Recovery Poor" = "Poor";
+"Habit Insight" = "Habit Insight";
+"Enable Habit Insight" = "Enable Habit Insight";
+"Habit Insight Cooldown" = "Habit Insight Cooldown";
+"Daily Best-Window Notification" = "Daily Best-Window Notification";
+"Notification Hour" = "Notification Hour";
+"Today's Best Study Window" = "Today's Best Study Window";
+"Not Enough Data" = "Not Enough Data";
+"Keep studying for a few more days to unlock insights." = "Keep studying for a few more days to unlock insights.";
+"Cooldown %@" = "Cooldown %@";
+"Analyze Now" = "Analyze Now";
+"habitInsight.section.footer" = "Use the LLM to interpret your local learning patterns.";
+"morning" = "morning"; "midday" = "midday"; "afternoon" = "afternoon"; "evening" = "evening"; "night" = "night";

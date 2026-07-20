@@ -1894,3 +1894,15 @@
 "Recovery Good" = "良好";
 "Recovery Critical" = "危険";
 "Recovery Poor" = "不調";
+"Habit Insight" = "学習習慣の洞察";
+"Enable Habit Insight" = "学習習慣の洞察を有効にする";
+"Habit Insight Cooldown" = "洞察のクールダウン";
+"Daily Best-Window Notification" = "毎日の最適時間通知";
+"Notification Hour" = "通知時刻";
+"Today's Best Study Window" = "今日の最適な学習時間";
+"Not Enough Data" = "データ不足";
+"Keep studying for a few more days to unlock insights." = "あと数日学習すると洞察を利用できます。";
+"Cooldown %@" = "クールダウン %@";
+"Analyze Now" = "今すぐ分析";
+"habitInsight.section.footer" = "LLMで学習パターンを解釈します。";
+"morning" = "午前"; "midday" = "昼"; "afternoon" = "午後"; "evening" = "夜"; "night" = "深夜";

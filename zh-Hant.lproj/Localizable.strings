@@ -1894,3 +1894,15 @@
 "Recovery Good" = "良好";
 "Recovery Critical" = "垂危";
 "Recovery Poor" = "不佳";
+"Habit Insight" = "學習習慣洞察";
+"Enable Habit Insight" = "啟用習慣洞察";
+"Habit Insight Cooldown" = "洞察冷卻時間";
+"Daily Best-Window Notification" = "每日最佳時段通知";
+"Notification Hour" = "通知時間";
+"Today's Best Study Window" = "今日最佳學習時段";
+"Not Enough Data" = "資料不足";
+"Keep studying for a few more days to unlock insights." = "再持續學習幾天，即可解鎖習慣洞察。";
+"Cooldown %@" = "冷卻 %@";
+"Analyze Now" = "立即分析";
+"habitInsight.section.footer" = "使用 LLM 解讀本地學習模式。";
+"morning" = "上午"; "midday" = "中午"; "afternoon" = "下午"; "evening" = "晚上"; "night" = "深夜";

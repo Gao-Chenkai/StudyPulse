@@ -1894,3 +1894,15 @@
 "Recovery Good" = "양호";
 "Recovery Critical" = "위험";
 "Recovery Poor" = "좋지 않음";
+"Habit Insight" = "학습 습관 인사이트";
+"Enable Habit Insight" = "학습 습관 인사이트 켜기";
+"Habit Insight Cooldown" = "인사이트 대기 시간";
+"Daily Best-Window Notification" = "매일 최적 시간 알림";
+"Notification Hour" = "알림 시간";
+"Today's Best Study Window" = "오늘의 최적 학습 시간";
+"Not Enough Data" = "데이터 부족";
+"Keep studying for a few more days to unlock insights." = "며칠 더 공부하면 인사이트가 열립니다.";
+"Cooldown %@" = "대기 %@";
+"Analyze Now" = "지금 분석";
+"habitInsight.section.footer" = "LLM으로 학습 패턴을 해석합니다.";
+"morning" = "오전"; "midday" = "정오"; "afternoon" = "오후"; "evening" = "저녁"; "night" = "심야";
