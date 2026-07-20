@@ -1787,6 +1787,14 @@
 
 // MARK: - Auto Mind Map (错题思维导图)
 "Auto Mind Map" = "マインドマップ";
+"Export Image" = "画像を書き出す";
+"Unable to export the mind map image." = "マインドマップ画像を書き出せません。";
+"Save to Photos" = "写真に保存";
+"Saved to Photos" = "写真に保存しました";
+"Save to Photos Failed" = "写真への保存に失敗しました";
+"Mind map image saved to Photos." = "マインドマップ画像を写真に保存しました。";
+"Photo library access is required to save this image." = "画像を保存するには写真へのアクセスが必要です。";
+"Unable to save the mind map image to Photos." = "マインドマップ画像を写真に保存できません。";
 "Generating mind map..." = "マインドマップを作成中...";
 "Extracting key topics and concepts..." = "主要な出題ポイントと構造を抽出中...";
 "Not enough mistake notes to generate a mind map. Please add some mistakes first." = "マインドマップを作成するためのミスノートが不足しています。先にミスノートを追加してください。";

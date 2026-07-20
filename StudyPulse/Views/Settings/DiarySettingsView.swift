@@ -114,7 +114,7 @@ struct DiarySettingsView: View {
                 // MARK: - 数据管理 / Data Management
                 Section {
                     Button(role: .destructive) {
-                        container.diaryRepo.clearAll()
+                        _ = container.diaryRepo.clearAll()
                     } label: {
                         Label("Clear All Diary Entries".localized(), systemImage: "trash")
                     }

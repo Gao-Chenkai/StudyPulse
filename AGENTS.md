@@ -741,6 +741,7 @@ AI 代理在本仓库工作时遵循以下规则：
 - `AchievementManager.record*()` 是事件入口：业务逻辑层不要直接修改 `AchievementsSnapshot`，统一通过 `record*()` 触发。
 - 任何用 `Log.xxx.info(...)` 的文件必须 `import os`。
 - **双实例陷阱自检**：所有 ViewModel 走 `container.xxxRepo.xxx` 路径访问，App 入口持有同一个 `RepositoryContainer` 单例；如果发现 ViewModel 用 `DataManager.shared` 而 App 用的是 `RepositoryContainer()`，**这就是 bug 信号**。
+- git暂存大概率会被沙箱拦截：权限只允许读取 `.git`，无法创建 `index.lock`。需要申请一次 Git 写权限来完成暂存和提交。
 
 ## 19. 八荣八耻
 

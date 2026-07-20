@@ -212,7 +212,7 @@ private extension MistakeDetailEditView {
             HStack {
                 Text("Voice Memo".localized())
                 Spacer()
-                if let audioFileName = viewModel.audioFileName {
+                if viewModel.audioFileName != nil {
                     Button(role: .destructive) {
                         viewModel.deleteVoiceMemo()
                     } label: {

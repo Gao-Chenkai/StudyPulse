@@ -1781,6 +1781,14 @@
 
 // MARK: - Auto Mind Map (错题思维导图)
 "Auto Mind Map" = "Auto Mind Map";
+"Export Image" = "Export Image";
+"Unable to export the mind map image." = "Unable to export the mind map image.";
+"Save to Photos" = "Save to Photos";
+"Saved to Photos" = "Saved to Photos";
+"Save to Photos Failed" = "Save to Photos Failed";
+"Mind map image saved to Photos." = "Mind map image saved to Photos.";
+"Photo library access is required to save this image." = "Photo library access is required to save this image.";
+"Unable to save the mind map image to Photos." = "Unable to save the mind map image to Photos.";
 "Generating mind map..." = "Generating mind map...";
 "Extracting key topics and concepts..." = "Extracting key topics and concepts...";
 "Not enough mistake notes to generate a mind map. Please add some mistakes first." = "Not enough mistake notes to generate a mind map. Please add some mistakes first.";

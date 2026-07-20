@@ -8,6 +8,9 @@
 
 import SwiftUI
 import SwiftStreamingMarkdown
+import UniformTypeIdentifiers
+import Photos
+import UIKit
 
 /// 错题交互式思维导图视图
 /// Interactive mind map view for mistakes.
@@ -42,6 +45,12 @@ struct AutoMindMapView: View {
     /// 传给 HomeAsk 通道的问题内容
     /// The pre-filled question text passed to the HomeAsk sheet.
     @State private var homeAskQuestion: String? = nil
+
+    /// 导出图片状态 / Image export state.
+    @State private var isExportingImage = false
+    @State private var imageDocument: ReportImageDocument?
+    @State private var exportErrorMessage: String?
+    @State private var exportFeedbackTitle = "Export Failed"
     
     // MARK: - Viewport Controls (Pan / Zoom) / 画布平移与缩放状态
     
@@ -124,6 +133,19 @@ struct AutoMindMapView: View {
                         }
                         .disabled(viewModel.nodes.isEmpty)
                         .accessibilityLabel("Recenter".localized())
+
+                        Menu {
+                            Button(action: exportMindMapImage) {
+                                Label("Export Image".localized(), systemImage: "square.and.arrow.up")
+                            }
+                            Button(action: saveMindMapToPhotos) {
+                                Label("Save to Photos".localized(), systemImage: "photo")
+                            }
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .disabled(viewModel.isLoading || viewModel.nodes.isEmpty)
+                        .accessibilityLabel("Export Image".localized())
                     }
                 }
             }
@@ -139,6 +161,28 @@ struct AutoMindMapView: View {
                     HomeAskSheet(container: container, envManager: container.envManager, initialQuestion: question)
                         .environment(container)
                 }
+            }
+            .fileExporter(
+                isPresented: $isExportingImage,
+                document: imageDocument,
+                contentType: .png,
+                defaultFilename: imageDocument?.fileName
+            ) { result in
+                switch result {
+                case .success(let url):
+                    Log.record(.info, category: "Export", message: "错题思维导图导出成功 / Mind map image exported: url=\(url.path)")
+                case .failure(let error):
+                    Log.record(.error, category: "Export", message: "错题思维导图导出失败 / Mind map image export failed: \(error.localizedDescription)")
+                }
+                imageDocument = nil
+            }
+            .alert(exportFeedbackTitle.localized(), isPresented: Binding(
+                get: { exportErrorMessage != nil },
+                set: { if !$0 { exportErrorMessage = nil } }
+            )) {
+                Button("OK".localized()) { exportErrorMessage = nil }
+            } message: {
+                Text(exportErrorMessage ?? "")
             }
         }
     }
@@ -247,6 +291,89 @@ struct AutoMindMapView: View {
                         )
                     }
             )
+        }
+    }
+
+    /// Content-sized, non-interactive canvas used for PNG export.
+    private var exportCanvas: some View {
+        let bounds = exportBounds
+        return ZStack {
+            Color(.systemGroupedBackground)
+            Canvas { context, _ in
+                for edge in viewModel.edges {
+                    drawRadialEdge(
+                        context: context,
+                        from: edge.from,
+                        to: edge.to,
+                        level: viewModel.nodes.first(where: { $0.id == edge.toNodeId })?.level ?? 2,
+                        translation: CGPoint(x: -bounds.minX, y: -bounds.minY)
+                    )
+                }
+            }
+            ForEach(viewModel.nodes) { node in
+                exportNodeComponent(for: node)
+                    .position(CGPoint(x: node.position.x - bounds.minX, y: node.position.y - bounds.minY))
+            }
+        }
+        .frame(width: bounds.width, height: bounds.height)
+        .clipped()
+    }
+
+    private var exportBounds: CGRect {
+        guard let first = viewModel.nodes.first else {
+            return CGRect(x: 0, y: 0, width: 800, height: 600)
+        }
+        var minX = first.position.x
+        var maxX = first.position.x
+        var minY = first.position.y
+        var maxY = first.position.y
+        for node in viewModel.nodes.dropFirst() {
+            minX = min(minX, node.position.x)
+            maxX = max(maxX, node.position.x)
+            minY = min(minY, node.position.y)
+            maxY = max(maxY, node.position.y)
+        }
+        let padding: CGFloat = 150
+        return CGRect(
+            x: minX - padding,
+            y: minY - padding,
+            width: max(maxX - minX + padding * 2, 800),
+            height: max(maxY - minY + padding * 2, 600)
+        )
+    }
+
+    @ViewBuilder
+    private func exportNodeComponent(for node: MindMapLayoutNode) -> some View {
+        switch node.kind {
+        case .root(let title):
+            Text(title)
+                .font(.system(.body, design: .rounded).weight(.bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 22).padding(.vertical, 11)
+                .background(Capsule().fill(container.envManager.effectiveAccentColor))
+        case .theme(let name):
+            Text(name)
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(Capsule().fill(Color(.secondarySystemGroupedBackground)))
+                .overlay(Capsule().stroke(container.envManager.effectiveAccentColor.opacity(0.55), lineWidth: 1.8))
+        case .knowledgePoint(let name):
+            Text(name)
+                .font(.system(.footnote, design: .rounded).weight(.medium))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Capsule().fill(Color(.tertiarySystemGroupedBackground)))
+                .overlay(Capsule().stroke(Color.purple.opacity(0.45), lineWidth: 1.2))
+        case .mistake(let note):
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.circle.fill").font(.caption2).foregroundColor(.red.opacity(0.85))
+                Text(note.title).font(.system(.caption, design: .rounded)).lineLimit(1)
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(Capsule().fill(Color(.secondarySystemGroupedBackground)))
+            .overlay(Capsule().stroke(Color.red.opacity(0.25), lineWidth: 0.8))
         }
     }
     
@@ -441,12 +568,12 @@ struct AutoMindMapView: View {
         context: GraphicsContext,
         from: CGPoint,
         to: CGPoint,
-        level: Int
+        level: Int,
+        translation: CGPoint = .zero
     ) {
         var path = Path()
-        path.move(to: from)
+        path.move(to: CGPoint(x: from.x + translation.x, y: from.y + translation.y))
         
-        let origin = CGPoint(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2) // Approximate center just to calculate radius vectors.
         // Use relative offsets from origin.
         let dx1 = from.x
         let dy1 = from.y
@@ -473,7 +600,11 @@ struct AutoMindMapView: View {
             c2 = CGPoint(x: rMid * cos(theta2), y: rMid * sin(theta2))
         }
         
-        path.addCurve(to: to, control1: c1, control2: c2)
+        path.addCurve(
+            to: CGPoint(x: to.x + translation.x, y: to.y + translation.y),
+            control1: CGPoint(x: c1.x + translation.x, y: c1.y + translation.y),
+            control2: CGPoint(x: c2.x + translation.x, y: c2.y + translation.y)
+        )
         
         let strokeColor: Color
         let strokeWidth: CGFloat
@@ -498,6 +629,62 @@ struct AutoMindMapView: View {
             with: .color(strokeColor),
             style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
         )
+    }
+
+    /// Render the complete map and present the system Save-to-Files/share flow.
+    private func exportMindMapImage() {
+        guard let image = renderedMindMapImage(),
+              let data = ReportRenderer.encode(image, format: .png) else {
+            exportErrorMessage = "Unable to export the mind map image.".localized()
+            return
+        }
+
+        exportFeedbackTitle = "Export Failed"
+        let fileName = "StudyPulse_MindMap_\(DateFormatters.fileTimestamp.string(from: Date())).png"
+        imageDocument = ReportImageDocument(data: data, fileName: fileName, contentType: .png)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isExportingImage = true
+        }
+    }
+
+    /// Render the complete map and save it directly to the user's Photos library.
+    private func saveMindMapToPhotos() {
+        guard let image = renderedMindMapImage() else {
+            exportFeedbackTitle = "Export Failed"
+            exportErrorMessage = "Unable to export the mind map image.".localized()
+            return
+        }
+
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    exportFeedbackTitle = "Save to Photos Failed"
+                    exportErrorMessage = "Photo library access is required to save this image.".localized()
+                }
+                return
+            }
+
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        exportFeedbackTitle = "Saved to Photos"
+                        exportErrorMessage = "Mind map image saved to Photos.".localized()
+                        Log.record(.info, category: "Export", message: "错题思维导图已保存到相册 / Mind map image saved to Photos")
+                    } else {
+                        exportFeedbackTitle = "Save to Photos Failed"
+                        exportErrorMessage = error?.localizedDescription ?? "Unable to save the mind map image to Photos.".localized()
+                        Log.record(.error, category: "Export", message: "错题思维导图保存到相册失败 / Failed to save mind map image to Photos: \(error?.localizedDescription ?? "unknown error")")
+                    }
+                }
+            }
+        }
+    }
+
+    private func renderedMindMapImage() -> UIImage? {
+        guard !viewModel.nodes.isEmpty else { return nil }
+        return ReportRenderer.render(exportCanvas, size: exportBounds.size, scale: 2.0)
     }
     
     /// 触发 AI 讲解知识点并弹出 HomeAsk 界面

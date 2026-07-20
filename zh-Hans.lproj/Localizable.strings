@@ -1789,6 +1789,14 @@
 
 // MARK: - Auto Mind Map (错题思维导图)
 "Auto Mind Map" = "智能思维导图";
+"Export Image" = "导出图片";
+"Unable to export the mind map image." = "无法导出思维导图图片。";
+"Save to Photos" = "保存到相册";
+"Saved to Photos" = "已保存到相册";
+"Save to Photos Failed" = "保存到相册失败";
+"Mind map image saved to Photos." = "思维导图图片已保存到相册。";
+"Photo library access is required to save this image." = "需要相册访问权限才能保存图片。";
+"Unable to save the mind map image to Photos." = "无法将思维导图图片保存到相册。";
 "Generating mind map..." = "正在生成思维导图...";
 "Extracting key topics and concepts..." = "正在提炼核心考点与知识结构...";
 "Not enough mistake notes to generate a mind map. Please add some mistakes first." = "暂无足够错题用于生成思维导图。请先添加一些错题。";

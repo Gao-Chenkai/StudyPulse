@@ -69,6 +69,20 @@ enum ReportRenderer {
         return image
     }
 
+    /// Render a view at an explicit size, for content-sized canvas exports.
+    static func render<Content: View>(
+        _ view: Content,
+        size: CGSize,
+        scale: CGFloat = 2.0
+    ) -> UIImage? {
+        let targetSize = CGSize(width: max(size.width, 1), height: max(size.height, 1))
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = scale
+        renderer.proposedSize = ProposedViewSize(width: targetSize.width, height: targetSize.height)
+        renderer.isOpaque = true
+        return renderer.uiImage
+    }
+
     /// 把 UIImage 编码为 PNG / JPEG Data。
     /// Encode UIImage to PNG / JPEG.
     static func encode(_ image: UIImage, format: ReportImageFormat, jpegQuality: CGFloat = 0.9) -> Data? {
