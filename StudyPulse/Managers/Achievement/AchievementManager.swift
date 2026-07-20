@@ -155,6 +155,28 @@ final class AchievementManager: ObservableObject {
         finalize(&snap, trigger: "focus_minutes:\(minutes)")
     }
 
+    /// 手动补录指定日期的学习活动，不能登记未来日期。
+    func recordManualActivity(kind: ManualActivityKind, count: Int, date: Date) {
+        guard count > 0 else { return }
+        let cal = Calendar.current
+        let day = cal.startOfDay(for: date)
+        guard day <= cal.startOfDay(for: Date()) else { return }
+
+        var snap = snapshot
+        switch kind {
+        case .mistakeReview:
+            snap.cumulative.mistakeReviews += count
+            applyActivity(on: day, mistakeReviews: count, grades: 0, focusMinutes: 0, into: &snap)
+        case .gradeRecorded:
+            snap.cumulative.gradesRecorded += count
+            applyActivity(on: day, mistakeReviews: 0, grades: count, focusMinutes: 0, into: &snap)
+        case .focusMinutes:
+            snap.cumulative.focusMinutes += count
+            applyActivity(on: day, mistakeReviews: 0, grades: 0, focusMinutes: count, into: &snap)
+        }
+        finalize(&snap, trigger: "manual_activity:\(kind.rawValue):\(count):\(day)")
+    }
+
     /// DailyGoalsConfigView 保存时调用。
     /// Invoked when DailyGoalsConfigView saves the user's daily goal config.
     func updateConfig(_ config: DailyGoalConfig, markCustomized: Bool = true) {
@@ -224,21 +246,28 @@ final class AchievementManager: ObservableObject {
                                     into snap: inout AchievementsSnapshot) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
+        applyActivity(on: today, mistakeReviews: mistakeReviews, grades: grades,
+                      focusMinutes: focusMinutes, into: &snap)
+    }
+
+    private func applyActivity(on day: Date, mistakeReviews: Int, grades: Int, focusMinutes: Int,
+                               into snap: inout AchievementsSnapshot) {
+        let cal = Calendar.current
         // 先确保 day rollover 正确（防御性调用）
         // Make sure day rollover is correct first (defensive call).
-        if let existing = snap.logs.first(where: { cal.startOfDay(for: $0.date) == today }) {
+        if let existing = snap.logs.first(where: { cal.startOfDay(for: $0.date) == day }) {
             let updated = DailyActivityLog(
-                date: today,
+                date: day,
                 mistakeReviews: existing.mistakeReviews + mistakeReviews,
                 gradesRecorded: existing.gradesRecorded + grades,
                 focusMinutes: existing.focusMinutes + focusMinutes
             )
-            snap.logs = snap.logs.filter { cal.startOfDay(for: $0.date) != today } + [updated]
+            snap.logs = snap.logs.filter { cal.startOfDay(for: $0.date) != day } + [updated]
         } else {
             // 新的一天开始
             // A new day has started.
             snap.logs.append(DailyActivityLog(
-                date: today,
+                date: day,
                 mistakeReviews: mistakeReviews,
                 gradesRecorded: grades,
                 focusMinutes: focusMinutes

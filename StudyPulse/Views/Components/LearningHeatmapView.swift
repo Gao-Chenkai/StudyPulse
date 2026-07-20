@@ -87,6 +87,7 @@ struct LearningHeatmapView: View {
     /// 当前选中的格子(用于显示详情 sheet)。
     /// Currently selected cell (used to show the day-detail sheet).
     @State private var selectedCell: HeatmapCell? = nil
+    @State private var showingManualActivitySheet = false
 
     private var accent: Color { container.envManager.effectiveAccentColor }
     private var emptyColor: Color { Color(.tertiarySystemFill) }
@@ -169,6 +170,11 @@ struct LearningHeatmapView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingManualActivitySheet) {
+            ManualActivitySheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Header
@@ -190,6 +196,17 @@ struct LearningHeatmapView: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
+            Button {
+                showingManualActivitySheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 30, height: 30)
+                    .background(accent.opacity(0.12), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("heatmap.manual.add".localized())
             // 90 天活跃天数
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(activeDaysIn90)")
@@ -325,6 +342,53 @@ private struct HeatmapCellView: View {
             return "\(dateString), no activity"
         }
         return "\(dateString), \(cell.points) activity points"
+    }
+}
+
+// MARK: - Manual Activity Sheet
+
+private struct ManualActivitySheet: View {
+    @EnvironmentObject private var achievementManager: AchievementManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var date = Date()
+    @State private var kind: ManualActivityKind = .focusMinutes
+    @State private var amountText = "25"
+
+    private var amount: Int { Int(amountText) ?? 0 }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker("heatmap.manual.date".localized(), selection: $date,
+                               in: ...Date(), displayedComponents: .date)
+                    Picker("heatmap.manual.category".localized(), selection: $kind) {
+                        Text("heatmap.detail.reviews".localized()).tag(ManualActivityKind.mistakeReview)
+                        Text("heatmap.detail.grades".localized()).tag(ManualActivityKind.gradeRecorded)
+                        Text("heatmap.detail.focusMinutes".localized()).tag(ManualActivityKind.focusMinutes)
+                    }
+                    TextField("heatmap.manual.amount".localized(), text: $amountText)
+                        .keyboardType(.numberPad)
+                } footer: {
+                    Text(String(format: "heatmap.manual.amountHint".localized(),
+                                kind == .focusMinutes ? "heatmap.manual.minutesUnit".localized() : "heatmap.manual.countUnit".localized()))
+                }
+            }
+            .navigationTitle("heatmap.manual.title".localized())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel".localized()) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save".localized()) {
+                        achievementManager.recordManualActivity(kind: kind, count: amount, date: date)
+                        dismiss()
+                    }
+                    .disabled(amount <= 0)
+                }
+            }
+        }
     }
 }
 

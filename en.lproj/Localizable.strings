@@ -863,6 +863,14 @@
 "Learning Heatmap" = "Learning Heatmap";
 "Show Learning Heatmap" = "Show Learning Heatmap";
 "heatmap.title" = "Learning Activity";
+"heatmap.manual.add" = "Add learning activity manually";
+"heatmap.manual.title" = "Log Learning Activity";
+"heatmap.manual.date" = "Date";
+"heatmap.manual.category" = "Category";
+"heatmap.manual.amount" = "Amount";
+"heatmap.manual.amountHint" = "Enter %@";
+"heatmap.manual.countUnit" = "count";
+"heatmap.manual.minutesUnit" = "minutes";
 "heatmap.subtitle" = "Last 90 days";
 "heatmap.activeDays" = "active days";
 "heatmap.less" = "Less";

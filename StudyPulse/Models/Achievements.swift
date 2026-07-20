@@ -131,6 +131,14 @@ nonisolated struct DailyActivityLog: Codable, Equatable, Identifiable {
     }
 }
 
+/// 可手动补录的学习活动类型。
+/// Activity categories available for manual logging.
+nonisolated enum ManualActivityKind: String, Codable, CaseIterable, Sendable {
+    case mistakeReview
+    case gradeRecorded
+    case focusMinutes
+}
+
 // MARK: - Streak State
 
 /// 连续打卡状态。

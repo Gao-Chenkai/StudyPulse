@@ -869,6 +869,14 @@
 "Learning Heatmap" = "学習ヒートマップ";
 "Show Learning Heatmap" = "学習ヒートマップを表示";
 "heatmap.title" = "学習アクティビティ";
+"heatmap.manual.add" = "学習アクティビティを手動登録";
+"heatmap.manual.title" = "学習アクティビティを登録";
+"heatmap.manual.date" = "日付";
+"heatmap.manual.category" = "カテゴリ";
+"heatmap.manual.amount" = "数量";
+"heatmap.manual.amountHint" = "%@を入力";
+"heatmap.manual.countUnit" = "回数";
+"heatmap.manual.minutesUnit" = "分";
 "heatmap.subtitle" = "直近 90 日間";
 "heatmap.activeDays" = "活動日数";
 "heatmap.less" = "少";

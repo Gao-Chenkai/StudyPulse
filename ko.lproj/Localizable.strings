@@ -869,6 +869,14 @@
 "Learning Heatmap" = "학습 히트맵";
 "Show Learning Heatmap" = "학습 히트맵 표시";
 "heatmap.title" = "학습 활동";
+"heatmap.manual.add" = "학습 활동 수동 기록";
+"heatmap.manual.title" = "학습 활동 기록";
+"heatmap.manual.date" = "날짜";
+"heatmap.manual.category" = "분류";
+"heatmap.manual.amount" = "수량";
+"heatmap.manual.amountHint" = "%@ 입력";
+"heatmap.manual.countUnit" = "횟수";
+"heatmap.manual.minutesUnit" = "분";
 "heatmap.subtitle" = "최근 90일";
 "heatmap.activeDays" = "활동일";
 "heatmap.less" = "적음";

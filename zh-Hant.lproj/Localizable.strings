@@ -869,6 +869,14 @@
 "Learning Heatmap" = "學習熱力圖";
 "Show Learning Heatmap" = "顯示學習熱力圖";
 "heatmap.title" = "學習活動";
+"heatmap.manual.add" = "手動登記學習活動";
+"heatmap.manual.title" = "登記學習活動";
+"heatmap.manual.date" = "日期";
+"heatmap.manual.category" = "分類";
+"heatmap.manual.amount" = "數量";
+"heatmap.manual.amountHint" = "請輸入%@";
+"heatmap.manual.countUnit" = "次數";
+"heatmap.manual.minutesUnit" = "分鐘";
 "heatmap.subtitle" = "最近 90 天";
 "heatmap.activeDays" = "活躍天數";
 "heatmap.less" = "少";
