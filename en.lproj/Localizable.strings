@@ -1900,3 +1900,13 @@
 "Analyze Now" = "Analyze Now";
 "habitInsight.section.footer" = "Use the LLM to interpret your local learning patterns.";
 "morning" = "morning"; "midday" = "midday"; "afternoon" = "afternoon"; "evening" = "evening"; "night" = "night";
+"错题辩论" = "Mistake Debate";
+"温和" = "Gentle";
+"严格" = "Strict";
+"刁钻" = "Tricky";
+"选择老师风格" = "Choose teacher style";
+"学生" = "Student";
+"出题老师" = "Questioning teacher";
+"为你的解法辩护…" = "Defend your solution…";
+"重新开始辩论" = "Restart debate";
+"老师会先质疑你的第一步。请不要只报答案，要解释为什么。" = "The teacher will question your first step. Explain why, not just the answer.";

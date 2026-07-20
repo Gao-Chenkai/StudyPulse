@@ -45,6 +45,9 @@ struct MistakeSetDetailView: View {
     /// 是否弹出 AI 同类题 sheet
     /// Whether to present the similar-question sheet.
     @State private var showingAISimilarQuestion = false
+    /// 是否弹出 AI 错题辩论 sheet
+    /// Whether to present the AI mistake-debate sheet.
+    @State private var showingAIDebate = false
     /// 最近一次成功的 AI 解析(供"深入探讨"sheet 当作 initial assistant 消息)
     /// Most recent successful AI analysis (used as the initial assistant
     /// message in the deep-discussion sheet).
@@ -80,7 +83,8 @@ struct MistakeSetDetailView: View {
                 onEdit: { showingEditSheet = true },
                 onQuickReview: { showingQuickReview = true },
                 onAIAnalysis: { showingAIAnalysis = true },
-                onAISimilarQuestion: { showingAISimilarQuestion = true }
+                onAISimilarQuestion: { showingAISimilarQuestion = true },
+                onAIDebate: { showingAIDebate = true }
             )
         }
         // 编辑 sheet
@@ -160,6 +164,14 @@ struct MistakeSetDetailView: View {
                 initialAssistantMessage: lastAIAnalysis,
                 onDismiss: { showingAIDiscussion = false }
             )
+            .adaptiveSheet(detents: [.large])
+        }
+        .sheet(isPresented: $showingAIDebate) {
+            MistakeDebateSheet(
+                mistake: liveMistake,
+                onDismiss: { showingAIDebate = false }
+            )
+            .environment(container)
             .adaptiveSheet(detents: [.large])
         }
         // AI 同类题 flow

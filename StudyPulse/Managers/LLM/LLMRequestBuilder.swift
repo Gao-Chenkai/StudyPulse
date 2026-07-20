@@ -726,6 +726,65 @@ enum AIDiscussionLLM {
     }
 }
 
+// MARK: - Mistake Debate (错题辩论)
+
+/// 辩论模式的追问强度。值类型可安全地跨并发任务传递。
+nonisolated enum MistakeDebateDifficulty: String, CaseIterable, Sendable {
+    case gentle
+    case strict
+    case tricky
+
+    var title: String {
+        switch self {
+        case .gentle: return "温和"
+        case .strict: return "严格"
+        case .tricky: return "刁钻"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .gentle: return "leaf"
+        case .strict: return "checkmark.seal"
+        case .tricky: return "bolt"
+        }
+    }
+
+    var instruction: String {
+        switch self {
+        case .gentle:
+            return "语气鼓励，先肯定合理部分；每次只指出一个关键漏洞，给学生足够提示。"
+        case .strict:
+            return "像认真批改的出题老师；要求学生说明每一步依据，发现跳步或概念混淆就追问。"
+        case .tricky:
+            return "像竞赛或口试老师；主动寻找边界条件、隐藏假设和反例，但仍必须基于题目事实。"
+        }
+    }
+
+    var localizedTitle: String { title.localized() }
+}
+
+/// 苏格拉底式错题辩论 prompt。
+enum MistakeDebateLLM {
+    static func defaultSystem(context: String, difficulty: MistakeDebateDifficulty) -> String {
+        """
+        你是 StudyPulse 的出题老师，正在和学生进行“错题辩论”。你的目标不是直接讲答案，而是让学生为自己的思路辩护，从而发现并修正深层理解漏洞。
+
+        辩论规则：
+        1. 当前难度是【\(difficulty.title)】：\(difficulty.instruction)
+        2. 每次只问一个清晰、可回答的问题，优先质疑学生刚刚说出的具体一步。
+        3. 不要一开始公布标准答案；除非学生已经连续解释清楚，才用简短总结确认关键原则。
+        4. 如果学生回答正确，继续追问“为什么”或边界条件；如果回答有误，先指出矛盾并给一个小提示，不要替他完成整道题。
+        5. 可以要求学生重算、举反例、解释公式来源或说明某一步成立的条件。不要编造题目中没有的信息。
+        6. 对话语言跟随学生；保持像真实老师一样简洁、有针对性。每轮最多 2 个短段落。
+        7. 当学生已经完整辩护时，输出“辩论总结”，列出：守住的关键点、最终修正点、下次遇到同类题的自检问题。
+
+        --- 错题资料（仅作为事实依据） ---
+        \(context)
+        """ + latexFormattingRule
+    }
+}
+
 // MARK: - 4) Free-form Chat (AI 助手)
 
 /// AI 助手对话 prompt 工厂。

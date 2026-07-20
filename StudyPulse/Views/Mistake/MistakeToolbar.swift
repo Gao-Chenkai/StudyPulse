@@ -184,6 +184,9 @@ struct MistakeDetailToolbar: ToolbarContent {
     /// AI 同类题回调
     /// AI similar-question callback.
     let onAISimilarQuestion: () -> Void
+    /// 错题辩论回调
+    /// Mistake debate callback.
+    let onAIDebate: () -> Void
 
     var body: some ToolbarContent {
         Group {
@@ -218,6 +221,9 @@ struct MistakeDetailToolbar: ToolbarContent {
                     }
                     Button(action: onAISimilarQuestion) {
                         Label("AI 相似题组卷".localized(), systemImage: "doc.badge.gearshape")
+                    }
+                    Button(action: onAIDebate) {
+                        Label("错题辩论".localized(), systemImage: "person.2.wave.2.fill")
                     }
                 } label: {
                     HStack(spacing: 4) {
