@@ -890,6 +890,10 @@
 "heatmap.detail.grades" = "成績記録";
 "heatmap.detail.focusMinutes" = "集中時間（分）";
 "heatmap.detail.minutesValue" = "%d 分";
+"Recovery Radar AI Cooldown" = "リカバリーレーダー AI クールダウン";
+"%d min" = "%d 分";
+"AI Rate Limits" = "AI リクエスト制限";
+"Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown." = "リカバリーレーダーが LLM に自動分析を依頼する頻度を設定します。「今すぐ分析」はこのクールダウンを無視できます。";
 "heatmap.detail.totalPoints" = "合計ポイント";
 
 // 実績カタログ — 入門

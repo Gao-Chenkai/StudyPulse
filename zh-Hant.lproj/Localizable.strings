@@ -890,6 +890,10 @@
 "heatmap.detail.grades" = "成績錄入";
 "heatmap.detail.focusMinutes" = "專注分鐘";
 "heatmap.detail.minutesValue" = "%d 分鐘";
+"Recovery Radar AI Cooldown" = "恢復雷達 AI 冷卻時間";
+"%d min" = "%d 分鐘";
+"AI Rate Limits" = "AI 請求限制";
+"Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown." = "控制恢復雷達自動請求大型語言模型的頻率。「立即分析」可以繞過此冷卻時間。";
 "heatmap.detail.totalPoints" = "總活動分";
 
 // 成就目錄 — 入門

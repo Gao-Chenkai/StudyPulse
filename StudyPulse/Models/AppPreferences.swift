@@ -101,10 +101,13 @@ nonisolated struct AppPreferences: Codable {
     /// 采样温度(0.0-2.0,默认 0.7)
     /// Sampling temperature (0.0-2.0, default 0.7).
     var llmTemperature: Double = 0.7
-    /// 主页雷达 LLM 增强建议冷却时间戳(用于 40 分钟最多 1 次的限流)。
+    /// 主页恢复雷达 LLM 自动分析冷却时间（分钟，默认 40）。
+    /// Recovery Radar LLM automatic-analysis cooldown in minutes (default 40).
+    var radarAICooldownMinutes: Int = 40
+    /// 主页雷达 LLM 增强建议冷却时间戳(用于按设置的时间限流)。
     /// 持久化以便跨 app 重启也生效;`立刻分析` 按钮可绕过此限制。
     /// Last request timestamp of the body-radar LLM-enhanced suggestion.
-    /// Used to enforce a 40-minute rate limit; the `Analyze now` button bypasses it.
+    /// Used to enforce the configured rate limit; the `Analyze now` button bypasses it.
     var lastRadarAIRequestTime: Date? = nil
 
     /// Debug 专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
@@ -155,7 +158,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
     }
@@ -188,6 +191,8 @@ nonisolated struct AppPreferences: Codable {
         self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)
         self.llmSystemPromptAppendix = try c.decodeIfPresent(String.self, forKey: .llmSystemPromptAppendix)
         self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
+        let radarCooldown = try c.decodeIfPresent(Int.self, forKey: .radarAICooldownMinutes) ?? 40
+        self.radarAICooldownMinutes = max(5, min(180, radarCooldown))
         self.lastRadarAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastRadarAIRequestTime)
         self.debugOverrideSystemPrompt = try c.decodeIfPresent(String.self, forKey: .debugOverrideSystemPrompt)
         self.lastStudySuggestionsAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastStudySuggestionsAIRequestTime)

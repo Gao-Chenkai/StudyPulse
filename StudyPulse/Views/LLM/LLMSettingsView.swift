@@ -40,6 +40,8 @@ struct LLMSettingsView: View {
     /// Temperature(0...2,默认 0.7)
     /// Temperature (0...2, default 0.7).
     @State private var temperature: Double = 0.7
+    /// Recovery Radar cooldown in minutes (default 40).
+    @State private var radarCooldownMinutes: Int = 40
     /// DEBUG 专用:全局覆盖系统 prompt(仅当 debugModeEnabled 时显示)
     /// DEBUG-only: global system-prompt override (only shown in DEBUG mode).
     @State private var overrideInput: String = ""
@@ -179,7 +181,27 @@ struct LLMSettingsView: View {
                 Text("Optional. Appended to the default system prompt for every AI feature.".localized())
             }
 
-            // 3.5) DEBUG 模式专用:全局覆盖系统 prompt
+            // 3.5) 恢复雷达 LLM 冷却时间
+            Section {
+                Stepper(value: $radarCooldownMinutes, in: 5...180, step: 5) {
+                    HStack {
+                        Label("Recovery Radar AI Cooldown".localized(), systemImage: "heart.text.square")
+                        Spacer()
+                        Text(String(format: "%d min".localized(), radarCooldownMinutes))
+                            .foregroundColor(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .onChange(of: radarCooldownMinutes) { _, newValue in
+                    container.envManager.setRadarAICooldownMinutes(newValue)
+                }
+            } header: {
+                Text("AI Rate Limits".localized())
+            } footer: {
+                Text("Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown.".localized())
+            }
+
+            // 3.6) DEBUG 模式专用:全局覆盖系统 prompt
             if container.envManager.debugModeEnabled {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
@@ -276,6 +298,7 @@ struct LLMSettingsView: View {
         modelInput = prefs.llmModel ?? ""
         appendixInput = prefs.llmSystemPromptAppendix ?? ""
         temperature = prefs.llmTemperature
+        radarCooldownMinutes = prefs.radarAICooldownMinutes
     }
 
     /// 把 API Key 脱敏:保留末 4 位

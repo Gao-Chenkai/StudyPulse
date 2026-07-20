@@ -884,6 +884,10 @@
 "heatmap.detail.grades" = "Grades Recorded";
 "heatmap.detail.focusMinutes" = "Focus Minutes";
 "heatmap.detail.minutesValue" = "%d min";
+"Recovery Radar AI Cooldown" = "Recovery Radar AI Cooldown";
+"%d min" = "%d min";
+"AI Rate Limits" = "AI Rate Limits";
+"Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown." = "Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown.";
 "heatmap.detail.totalPoints" = "Total Activity Points";
 
 // Achievement catalog — onboarding

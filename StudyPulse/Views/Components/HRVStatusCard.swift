@@ -38,10 +38,11 @@ struct HRVStatusCard: View {
     @State private var lastBodyReadinessContext: BodyReadinessContext? = nil
     @State private var showDiscussion: Bool = false
 
-    // 冷却:40 分钟内最多 1 次自动请求,除非用户点"立刻分析"
-    /// Radar LLM 增强建议的冷却时长(秒);默认 40 分钟。
-    /// Cooldown duration (seconds) for the body-radar LLM-enhanced suggestion. Default 40 min.
-    private static let radarAICooldownSeconds: TimeInterval = 40 * 60
+    // 冷却时间由设置页控制;“立刻分析”仍可绕过冷却。
+    /// Radar LLM cooldown in seconds, configured in LLM settings.
+    private var radarAICooldownSeconds: TimeInterval {
+        TimeInterval(container.envManager.preferences.radarAICooldownMinutes * 60)
+    }
     /// 距下次可自动请求的剩余秒数(基于 `lastRadarAIRequestTime` 计算)。
     /// 倒计时显示由 `TimelineView(.periodic(by: 1))` 每秒重绘,不再用 1Hz Timer 唤醒。
     /// Seconds remaining until the next automatic request is allowed (computed from `lastRadarAIRequestTime`).
@@ -49,7 +50,7 @@ struct HRVStatusCard: View {
     private var cooldownRemainingSeconds: Int {
         guard let last = container.envManager.preferences.lastRadarAIRequestTime else { return 0 }
         let elapsed = Date().timeIntervalSince(last)
-        return max(0, Int((Self.radarAICooldownSeconds - elapsed).rounded()))
+        return max(0, Int((radarAICooldownSeconds - elapsed).rounded()))
     }
 
     /// 缓存的雷达数值(避免主 body 与 axisValuesRow 各调用一次 compute)。
@@ -409,7 +410,7 @@ struct HRVStatusCard: View {
     // MARK: - AI 生命周期 / AI lifecycle
 
     /// 拉取最新数据后决定:本地建议立刻就位;若 LLM 已配置且不在冷却中则流式增强
-    /// - 冷却:距上次成功请求 < 40 分钟时跳过,显示本地建议 + 倒计时
+    /// - 冷却:距上次请求小于用户设置的时间时跳过,显示本地建议 + 倒计时
     /// - "立刻分析" 按钮调用 `requestAIImmediately()` 强制绕过冷却
     private func refreshAI() {
         // 数据变更时,本地建议永远是 fallback;AI 状态重置
@@ -430,7 +431,7 @@ struct HRVStatusCard: View {
         runLLMRequest(fallback: local)
     }
 
-    /// 用户点击"立刻分析":无视 40 分钟冷却,立刻发请求并重置冷却起点。
+    /// 用户点击"立刻分析":无视设置的冷却时间,立刻发请求并重置冷却起点。
     /// 公开入口:UI 上的 ⚡ 按钮直接调用此方法。
     func requestAIImmediately() {
         aiTask?.cancel()
@@ -513,7 +514,7 @@ struct HRVStatusCard: View {
     /// 是否在冷却中(且未强制)
     private func canRequestNow() -> Bool {
         guard let last = container.envManager.preferences.lastRadarAIRequestTime else { return true }
-        return Date().timeIntervalSince(last) >= Self.radarAICooldownSeconds
+        return Date().timeIntervalSince(last) >= radarAICooldownSeconds
     }
 
     /// 把剩余秒数格式化成 "mm:ss"(> 1 小时显示 "Hh Mm")

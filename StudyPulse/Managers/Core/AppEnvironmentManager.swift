@@ -260,6 +260,14 @@ final class AppEnvironmentManager {
         preferences.llmTemperature = clamped
     }
 
+    /// 设置恢复雷达 LLM 自动分析冷却时间（5–180 分钟）。
+    /// Set the Recovery Radar LLM automatic-analysis cooldown (5–180 minutes).
+    func setRadarAICooldownMinutes(_ minutes: Int) {
+        let clamped = max(5, min(180, minutes))
+        Log.preferences.info("更新恢复雷达 LLM 冷却时间 / Radar LLM cooldown: -> \(clamped, privacy: .public) min")
+        preferences.radarAICooldownMinutes = clamped
+    }
+
     /// 设置 DEBUG 模式专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
     /// `nil` / 空字符串 → 清空覆盖,回退到默认 + appendix。
     /// DEBUG-only: globally override the LLM system prompt (visible in DEBUG only).
