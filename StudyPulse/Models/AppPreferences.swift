@@ -85,6 +85,10 @@ nonisolated struct AppPreferences: Codable {
     /// Master switch for the BYOK LLM features. When off, every AI feature
     /// silently falls back to its local implementation.
     var llmEnabled: Bool = false
+    /// Explicit opt-in for the long-term AI Coach feature.
+    var coachEnabled: Bool = false
+    var coachNotificationEnabled: Bool = true
+    var coachNotificationHour: Int = 20
     /// Chat Completions 风格端点 base,例如 https://api.openai.com 或 https://api.deepseek.com
     /// OpenAI-compatible base URL (e.g. https://api.openai.com or https://api.deepseek.com).
     /// `nil` 表示未配置。
@@ -177,7 +181,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
@@ -207,6 +211,9 @@ nonisolated struct AppPreferences: Codable {
         self.debugLongPressInspect = try c.decodeIfPresent(Bool.self, forKey: .debugLongPressInspect) ?? false
         // LLM BYOK 配置 — 缺字段时使用安全默认值,保证旧版 UserDefaults 数据能继续 decode
         self.llmEnabled = try c.decodeIfPresent(Bool.self, forKey: .llmEnabled) ?? false
+        self.coachEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachEnabled) ?? false
+        self.coachNotificationEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachNotificationEnabled) ?? true
+        self.coachNotificationHour = max(0, min(23, try c.decodeIfPresent(Int.self, forKey: .coachNotificationHour) ?? 20))
         self.llmBaseURL = try c.decodeIfPresent(String.self, forKey: .llmBaseURL)
         self.llmAPIKey = try c.decodeIfPresent(String.self, forKey: .llmAPIKey)
         self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)

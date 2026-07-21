@@ -20,6 +20,7 @@
 #
 #  Options (apply to `build` / `release` / `archive` / `test`):
 #      -d, --device <name>   Simulator / device name to build for
+#      -r, --runtime <version>  iOS Simulator runtime version (default: 26.5)
 #      -c, --configuration <Debug|Release>
 #      -s, --scheme <name>   Xcode scheme (default: StudyPulse)
 #      -p, --project <path>  Xcode project (default: StudyPulse.xcodeproj)
@@ -55,6 +56,7 @@ PROJECT_PATH="${PROJECT_ROOT}/StudyPulse.xcodeproj"
 SCHEME="StudyPulse"
 CONFIGURATION="Debug"
 SIMULATOR_NAME="iPhone 17"
+SIMULATOR_RUNTIME="26.5"
 OUTPUT_DIR="${PROJECT_ROOT}/build"
 QUIET=0
 COMMAND="build"
@@ -113,6 +115,8 @@ parse_args() {
         case "$1" in
             -d|--device)
                 SIMULATOR_NAME="$2"; shift 2 ;;
+            -r|--runtime)
+                SIMULATOR_RUNTIME="$2"; shift 2 ;;
             -c|--configuration)
                 CONFIGURATION="$2"; shift 2 ;;
             -s|--scheme)
@@ -173,7 +177,7 @@ cmd_build() {
         -project "${PROJECT_PATH}" \
         -scheme "${SCHEME}" \
         -configuration "${CONFIGURATION}" \
-        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME}" \
+        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_RUNTIME}" \
         -derivedDataPath "${OUTPUT_DIR}/DerivedData" \
         -clonedSourcePackagesDirPath "${OUTPUT_DIR}/SourcePackages" \
         CODE_SIGNING_ALLOWED=NO \
@@ -210,7 +214,7 @@ cmd_clean() {
         -project "${PROJECT_PATH}" \
         -scheme "${SCHEME}" \
         -configuration "${CONFIGURATION}" \
-        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME}" \
+        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_RUNTIME}" \
         clean || log_warn "xcodebuild clean returned non-zero (ignoring)."
 
     log_success "Clean complete."
@@ -237,7 +241,7 @@ cmd_test() {
         -project "${PROJECT_PATH}" \
         -scheme "${SCHEME}" \
         -configuration "${CONFIGURATION}" \
-        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME}" \
+        -destination "platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_RUNTIME}" \
         -derivedDataPath "${OUTPUT_DIR}/DerivedData" \
         CODE_SIGNING_ALLOWED=NO \
         test || log_warn "xcodebuild test returned non-zero (no test target?)."

@@ -96,13 +96,14 @@ struct ChatBubble: View {
         // the convention of mainstream chat apps.
         .transition(.asymmetric(
             insertion: .scale(
-                scale: 0.85,
+                scale: 0.72,
                 anchor: role.isUser ? .bottomTrailing : .bottomLeading
             )
             .combined(with: .opacity)
             .combined(with: .move(edge: .bottom)),
             removal: .opacity
         ))
+        .animation(.spring(response: 0.38, dampingFraction: 0.58, blendDuration: 0.12), value: content)
     }
 
     // MARK: - User Bubble / 用户气泡

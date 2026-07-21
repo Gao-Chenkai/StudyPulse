@@ -79,8 +79,26 @@ struct LLMSettingsView: View {
                 )) {
                     Label("Enable LLM Features".localized(), systemImage: "brain")
                 }
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.coachEnabled },
+                    set: { container.envManager.preferences.coachEnabled = $0 }
+                )) {
+                    Label("Enable AI Coach".localized(), systemImage: "brain.head.profile")
+                }
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.coachNotificationEnabled },
+                    set: { container.envManager.preferences.coachNotificationEnabled = $0; CoachNotifications.shared.reschedule(enabled: $0, hour: container.envManager.preferences.coachNotificationHour) }
+                )) {
+                    Label("Daily Coach Notification".localized(), systemImage: "bell.badge")
+                }
+                Stepper(value: Binding(
+                    get: { container.envManager.preferences.coachNotificationHour },
+                    set: { container.envManager.preferences.coachNotificationHour = max(0, min(23, $0)); CoachNotifications.shared.reschedule(enabled: container.envManager.preferences.coachNotificationEnabled, hour: $0) }
+                ), in: 0...23) {
+                    Text(String(format: "Coach notification hour: %02d:00".localized(), container.envManager.preferences.coachNotificationHour))
+                }
             } footer: {
-                Text("When off, every AI feature silently falls back to its local implementation.".localized())
+                Text("AI Coach is a separate opt-in. It requires the LLM switch and a valid BYOK configuration; it never changes Todo without your confirmation.".localized())
             }
 
             // 2) 端点配置

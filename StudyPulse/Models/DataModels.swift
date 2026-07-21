@@ -581,6 +581,17 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
     var createdAt: Date
     /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
     var phaseId: UUID? = nil
+    /// Coach execution metadata. Nil for ordinary homework/reading items.
+    var coachExecutionData: Data? = nil
+    var coachGoalId: UUID? = nil
+    var coachProposalId: UUID? = nil
+
+    var coachExecutionSpec: CoachTaskSpec? {
+        guard let coachExecutionData else { return nil }
+        return try? JSONDecoder().decode(CoachTaskSpec.self, from: coachExecutionData)
+    }
+
+    var coachEvaluation: CoachTaskEvaluation? { coachExecutionSpec?.evaluation }
 
     init(
         id: UUID = UUID(),
@@ -595,7 +606,10 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
         reminderEventId: String? = nil,
         reminderCalendarId: String? = nil,
         createdAt: Date = Date(),
-        phaseId: UUID? = nil
+        phaseId: UUID? = nil,
+        coachExecutionData: Data? = nil,
+        coachGoalId: UUID? = nil,
+        coachProposalId: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -610,6 +624,9 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
         self.reminderCalendarId = reminderCalendarId
         self.createdAt = createdAt
         self.phaseId = phaseId
+        self.coachExecutionData = coachExecutionData
+        self.coachGoalId = coachGoalId
+        self.coachProposalId = coachProposalId
     }
 }
 

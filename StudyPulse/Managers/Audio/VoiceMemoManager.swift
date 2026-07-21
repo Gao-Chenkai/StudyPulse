@@ -41,14 +41,13 @@ final class VoiceMemoManager: NSObject, ObservableObject, AVAudioRecorderDelegat
     /// 检查 / 请求麦克风权限。
     /// Check or request microphone permission.
     func checkPermission() {
-        let session = AVAudioSession.sharedInstance()
-        switch session.recordPermission {
+        switch AVAudioApplication.shared.recordPermission {
         case .granted:
             self.hasPermission = true
         case .denied:
             self.hasPermission = false
         case .undetermined:
-            session.requestRecordPermission { [weak self] allowed in
+            AVAudioApplication.requestRecordPermission { [weak self] allowed in
                 DispatchQueue.main.async {
                     self?.hasPermission = allowed
                 }
@@ -73,7 +72,7 @@ final class VoiceMemoManager: NSObject, ObservableObject, AVAudioRecorderDelegat
         do {
             // playAndRecord + 默认扬声器 + 蓝牙：同时允许录音与外放
             // playAndRecord + defaultToSpeaker + bluetooth: record + play out loud simultaneously
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try session.setActive(true)
 
             let filename = AudioStorage.generateFileName()

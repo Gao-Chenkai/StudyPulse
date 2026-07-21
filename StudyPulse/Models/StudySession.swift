@@ -4,7 +4,7 @@ import Foundation
 
 /// 单次心率采样点（Apple Watch 通过 HealthKit 写入）。
 /// A single heart-rate sample written by Apple Watch via HealthKit.
-struct HeartRateSample: Codable, Equatable, Sendable, Identifiable {
+nonisolated struct HeartRateSample: Codable, Equatable, Sendable, Identifiable {
     let id: UUID
     let timestamp: Date
     let bpm: Double
@@ -13,7 +13,7 @@ struct HeartRateSample: Codable, Equatable, Sendable, Identifiable {
 /// 学习会话中遇到的难题标注（用户在心率峰值处手动登记）。
 /// A difficulty annotation logged by the user at a high-heart-rate point
 /// during a study session.
-struct DifficultyAnnotation: Codable, Equatable, Sendable, Identifiable {
+nonisolated struct DifficultyAnnotation: Codable, Equatable, Sendable, Identifiable {
     let id: UUID
     /// 在会话时间轴上的位置
     /// Position on the session timeline.
@@ -31,7 +31,7 @@ struct DifficultyAnnotation: Codable, Equatable, Sendable, Identifiable {
 
 /// 单次已完成的专注计时会话，持久化用于趋势分析。
 /// A single completed study timer session, persisted for trend analysis.
-struct StudySession: Codable, Identifiable, Equatable, Sendable {
+nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
     /// 唯一会话 id
     /// Unique session identifier.
     let id: UUID

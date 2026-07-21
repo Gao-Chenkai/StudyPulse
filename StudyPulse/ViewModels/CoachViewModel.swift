@@ -1,0 +1,119 @@
+import Foundation
+import Combine
+
+@MainActor
+final class CoachViewModel: ObservableObject {
+    @Published private(set) var goals: [CoachGoal] = []
+    @Published private(set) var selectedGoal: CoachGoal?
+    @Published private(set) var analysis: CoachAnalysis?
+    @Published private(set) var proposal: CoachProposal?
+    @Published private(set) var proposals: [CoachProposal] = []
+    @Published private(set) var isLoading = false
+    @Published var errorMessage: String?
+
+    let container: RepositoryContainer
+    private lazy var coordinator = CoachCoordinator(container: container)
+
+    init(container: RepositoryContainer) {
+        self.container = container
+        CoachCoordinator(container: container).expireStaleProposals()
+        selectedGoal = container.coachRepo.goals.first { $0.status == .active }
+        proposal = container.coachRepo.proposals.first { $0.status == .pending }
+        proposals = container.coachRepo.proposals
+        goals = container.coachRepo.goals.sorted { $0.updatedAt > $1.updatedAt }
+        if let selectedGoal, !CoachRefreshSignal.isDirty { analysis = container.coachRepo.analyses.first { $0.goalID == selectedGoal.id } }
+    }
+
+    func select(_ goal: CoachGoal) {
+        selectedGoal = goal
+        analysis = container.coachRepo.analyses.first { $0.goalID == goal.id }
+        proposal = container.coachRepo.proposals.first { $0.goalID == goal.id && $0.status == .pending }
+    }
+
+    func refreshGoals() {
+        goals = container.coachRepo.goals.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    @discardableResult
+    func createGoal(title: String, subjects: [CoachGoalSubject], targetDate: Date,
+                    dailyMinutes: Int, purpose: String, constraints: String,
+                    comprehensiveExamID: UUID? = nil) -> CoachGoal {
+        let goal = CoachGoal(title: title.isEmpty ? "My study goal" : title, subjects: subjects,
+                             comprehensiveExamID: comprehensiveExamID,
+                             targetDate: targetDate, dailyAvailableMinutes: dailyMinutes,
+                             purpose: purpose, constraints: constraints)
+        container.coachRepo.addGoal(goal)
+        container.coachRepo.addChat(CoachChat(goalID: goal.id))
+        select(goal); refreshGoals()
+        return goal
+    }
+
+    func updateGoal(_ goal: CoachGoal, title: String, subjects: [CoachGoalSubject], targetDate: Date,
+                    dailyMinutes: Int, purpose: String, constraints: String, changeNote: String,
+                    comprehensiveExamID: UUID? = nil) {
+        var updated = goal
+        updated.title = title
+        updated.subjects = subjects
+        updated.comprehensiveExamID = comprehensiveExamID
+        updated.targetDate = targetDate
+        updated.dailyAvailableMinutes = dailyMinutes
+        updated.purpose = purpose
+        updated.constraints = constraints
+        updated.version += 1
+        updated.updatedAt = Date()
+        updated.history.append(CoachGoalVersion(version: updated.version, subjects: subjects,
+                                                targetDate: targetDate, dailyAvailableMinutes: dailyMinutes,
+                                                createdAt: updated.updatedAt, changeNote: changeNote))
+        container.coachRepo.updateGoal(updated)
+        select(updated); refreshGoals()
+        CoachRefreshSignal.markDirty()
+    }
+
+    func setStatus(_ status: CoachGoalStatus, for goal: CoachGoal) {
+        var updated = goal; updated.status = status; updated.updatedAt = Date()
+        container.coachRepo.updateGoal(updated); refreshGoals()
+    }
+
+    func deleteGoal(_ goal: CoachGoal) {
+        container.coachRepo.deleteMessages(for: goal.id)
+        container.coachRepo.deleteGoal(goal)
+        if selectedGoal?.id == goal.id { selectedGoal = goals.first(where: { $0.id != goal.id && $0.status == .active }) }
+        refreshGoals()
+    }
+
+    func refresh() async {
+        guard let goal = selectedGoal else { return }
+        isLoading = true; defer { isLoading = false }
+        let result = coordinator.analyze(goal: goal)
+        analysis = result
+        do { proposal = try await coordinator.generateProposal(goal: goal, analysis: result) }
+        catch { errorMessage = error.localizedDescription }
+        coordinator.expireStaleProposals()
+        proposals = container.coachRepo.proposals
+    }
+
+    func approveProposal() {
+        approveProposal(selectedItems: nil)
+    }
+
+    func approveProposal(selectedItems: [CoachPlanItem]?) {
+        guard let proposal else { return }
+        do { try coordinator.approve(proposal, selectedItemIDs: selectedItems.map { Set($0.map(\.id)) }); self.proposal = nil }
+        catch { errorMessage = error.localizedDescription }
+        proposals = container.coachRepo.proposals
+    }
+
+    func regenerateProposal() async {
+        guard let proposal else { return }
+        isLoading = true; defer { isLoading = false }
+        do { self.proposal = try await coordinator.regenerateProposal(for: proposal) }
+        catch { errorMessage = error.localizedDescription }
+        proposals = container.coachRepo.proposals
+    }
+
+    func rejectProposal() {
+        guard let proposal else { return }
+        coordinator.reject(proposal); self.proposal = nil
+        proposals = container.coachRepo.proposals
+    }
+}

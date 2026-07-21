@@ -42,6 +42,8 @@ final class RepositoryContainer {
     /// 学习日记 Repository(2026-07-17 新增)
     /// Diary repository (added 2026-07-17).
     let diaryRepo: any DiaryRepository
+    let coachRepo: any CoachRepository
+    let studySessionRepo: any StudySessionRepository
 
     // 3 个跨域编排子模块(组合而非继承,避免注入面爆炸)
     // 3 cross-domain orchestration sub-modules (composition over inheritance,
@@ -83,7 +85,9 @@ final class RepositoryContainer {
         subjectRepo: (any SubjectRepository)? = nil,
         routineRepo: (any RoutineRepository)? = nil,
         routineInstanceRepo: (any RoutineInstanceRepository)? = nil,
-        diaryRepo: (any DiaryRepository)? = nil
+        diaryRepo: (any DiaryRepository)? = nil,
+        coachRepo: (any CoachRepository)? = nil,
+        studySessionRepo: (any StudySessionRepository)? = nil
     ) {
         self.envManager = envManager
         self.intentStore = intentStore
@@ -101,6 +105,8 @@ final class RepositoryContainer {
         self.routineRepo = routineRepo ?? DefaultRoutineRepository(envManager: envManager)
         self.routineInstanceRepo = routineInstanceRepo ?? DefaultRoutineInstanceRepository()
         self.diaryRepo = diaryRepo ?? DefaultDiaryRepository(envManager: envManager)
+        self.coachRepo = coachRepo ?? DefaultCoachRepository()
+        self.studySessionRepo = studySessionRepo ?? DefaultStudySessionRepository()
 
         // 注入跨域 weak 引用
         if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
@@ -178,6 +184,8 @@ final class RepositoryContainer {
         await routineRepo.loadAll(context: context)
         await routineInstanceRepo.loadAll(context: context)
         await diaryRepo.loadAll(context: context)
+        await self.coachRepo.loadAll(context: context)
+        await self.studySessionRepo.loadAll(context: context)
 
         // 内嵌图片迁移(在 waitForAll 后,grades 已加载)
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
@@ -228,6 +236,8 @@ final class RepositoryContainer {
         await routineRepo.loadAll(context: context)
         await routineInstanceRepo.loadAll(context: context)
         await diaryRepo.loadAll(context: context)
+        await self.coachRepo.loadAll(context: context)
+        await self.studySessionRepo.loadAll(context: context)
 
         if subjectRepo.subjects.isEmpty {
             subjectRepo.initializeDefaultSubjects()
@@ -291,6 +301,7 @@ final class RepositoryContainer {
     /// Toggle task completion (legacy `DataManager.setTaskCompletion`).
     func setTaskCompletion(_ taskId: UUID, isCompleted: Bool) {
         taskRepo.setCompletion(taskId, isCompleted: isCompleted)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 刷新系统 Reminders 完成态(原来 DataManager.refreshTaskCompletionStatesFromReminders)
@@ -347,6 +358,7 @@ final class RepositoryContainer {
         // Plant subscriber: 主页植物钩子（不影响 derive 逻辑，仅记录活动 + 订阅 1.5s 内 recompute）
         PlantManager.shared.recordActivity(trigger: .grade)
         TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 批量添加 grade(带 widget sync / Achievement 副作用)
@@ -357,6 +369,7 @@ final class RepositoryContainer {
         AchievementManager.shared.recordGradeRecorded(count: count)
         PlantManager.shared.recordActivity(trigger: .grade)
         TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 删除 grade(带 widget sync)
@@ -371,6 +384,7 @@ final class RepositoryContainer {
     func addMistake(_ mistake: MistakeNote) {
         mistakeRepo.add(mistake)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 批量添加错题
@@ -378,6 +392,7 @@ final class RepositoryContainer {
     func addMistakes(_ mistakes: [MistakeNote]) {
         mistakeRepo.add(mistakes)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 删除错题(带 SRS 取消)
@@ -392,6 +407,7 @@ final class RepositoryContainer {
     func addExams(single: [Exam], comprehensive: [comprehensiveExam]) {
         examRepo.add(single: single, comprehensive: comprehensive)
         ExamReviewNotifications.shared.rescheduleAll(exams: examRepo.examSets)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 删除单科考试
@@ -411,12 +427,14 @@ final class RepositoryContainer {
     /// Add a task.
     func addTask(_ task: TaskItem, syncToReminders: Bool = false, reminderResult: (calendarItemId: String, calendarId: String)? = nil) {
         taskRepo.add(task, syncToReminders: syncToReminders, reminderResult: reminderResult)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 批量添加待办
     /// Batch-add tasks.
     func addTasks(_ newTasks: [TaskItem]) {
         taskRepo.add(newTasks)
+        CoachRefreshSignal.markDirty()
     }
 
     /// 删除待办(带 Reminder 清理)

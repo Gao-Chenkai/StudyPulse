@@ -739,6 +739,10 @@ final class TaskItemRecord {
     /// 归属阶段 ID（关联 StudyPhaseRecord.id），nil = 未归类
     /// Owning phase id; nil = uncategorized.
     var phaseId: UUID?
+    /// Optional Coach execution metadata, encoded as JSON for schema stability.
+    var coachExecutionData: Data?
+    var coachGoalId: UUID?
+    var coachProposalId: UUID?
 
     init(
         id: UUID,
@@ -753,7 +757,10 @@ final class TaskItemRecord {
         reminderEventId: String?,
         reminderCalendarId: String?,
         createdAt: Date,
-        phaseId: UUID? = nil
+        phaseId: UUID? = nil,
+        coachExecutionData: Data? = nil,
+        coachGoalId: UUID? = nil,
+        coachProposalId: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -768,6 +775,9 @@ final class TaskItemRecord {
         self.reminderCalendarId = reminderCalendarId
         self.createdAt = createdAt
         self.phaseId = phaseId
+        self.coachExecutionData = coachExecutionData
+        self.coachGoalId = coachGoalId
+        self.coachProposalId = coachProposalId
     }
 
     convenience init(from task: TaskItem) {
@@ -784,7 +794,10 @@ final class TaskItemRecord {
             reminderEventId: task.reminderEventId,
             reminderCalendarId: task.reminderCalendarId,
             createdAt: task.createdAt,
-            phaseId: task.phaseId
+            phaseId: task.phaseId,
+            coachExecutionData: task.coachExecutionData,
+            coachGoalId: task.coachGoalId,
+            coachProposalId: task.coachProposalId
         )
     }
 
@@ -803,9 +816,106 @@ final class TaskItemRecord {
             reminderEventId: reminderEventId,
             reminderCalendarId: reminderCalendarId,
             createdAt: createdAt,
-            phaseId: phaseId
+            phaseId: phaseId,
+            coachExecutionData: coachExecutionData,
+            coachGoalId: coachGoalId,
+            coachProposalId: coachProposalId
         )
     }
+}
+
+// MARK: - AI Coach persistence
+
+@Model
+final class CoachGoalRecord {
+    @Attribute(.unique) var id: UUID
+    var payload: Data
+    var updatedAt: Date
+
+    init(from goal: CoachGoal) {
+        id = goal.id; payload = (try? JSONEncoder().encode(goal)) ?? Data(); updatedAt = goal.updatedAt
+    }
+
+    func toSnapshot() -> CoachGoal? { try? JSONDecoder().decode(CoachGoal.self, from: payload) }
+}
+
+@Model
+final class CoachAnalysisRecord {
+    @Attribute(.unique) var id: UUID
+    var goalID: UUID
+    var payload: Data
+    var calculatedAt: Date
+
+    init(from analysis: CoachAnalysis) {
+        id = analysis.id; goalID = analysis.goalID
+        payload = (try? JSONEncoder().encode(analysis)) ?? Data(); calculatedAt = analysis.calculatedAt
+    }
+
+    func toSnapshot() -> CoachAnalysis? { try? JSONDecoder().decode(CoachAnalysis.self, from: payload) }
+}
+
+@Model
+final class CoachProposalRecord {
+    @Attribute(.unique) var id: UUID
+    var goalID: UUID
+    var statusRaw: String
+    var payload: Data
+    var createdAt: Date
+
+    init(from proposal: CoachProposal) {
+        id = proposal.id; goalID = proposal.goalID; statusRaw = proposal.status.rawValue
+        payload = (try? JSONEncoder().encode(proposal)) ?? Data(); createdAt = proposal.createdAt
+    }
+
+    func toSnapshot() -> CoachProposal? { try? JSONDecoder().decode(CoachProposal.self, from: payload) }
+}
+
+@Model
+final class CoachConversationMessageRecord {
+    #Index<CoachConversationMessageRecord>([\.goalID], [\.createdAt])
+    @Attribute(.unique) var id: UUID
+    var goalID: UUID?
+    var roleRaw: String
+    var payload: Data
+    var createdAt: Date
+
+    init(from message: CoachConversationMessage) {
+        id = message.id; goalID = message.goalID; roleRaw = message.role.rawValue
+        payload = (try? JSONEncoder().encode(message)) ?? Data(); createdAt = message.createdAt
+    }
+
+    func toSnapshot() -> CoachConversationMessage? { try? JSONDecoder().decode(CoachConversationMessage.self, from: payload) }
+}
+
+@Model
+final class CoachChatRecord {
+    #Index<CoachChatRecord>([\.goalID], [\.updatedAt])
+    @Attribute(.unique) var id: UUID
+    var goalID: UUID?
+    var payload: Data
+    var updatedAt: Date
+
+    init(from chat: CoachChat) {
+        id = chat.id; goalID = chat.goalID
+        payload = (try? JSONEncoder().encode(chat)) ?? Data(); updatedAt = chat.updatedAt
+    }
+
+    func toSnapshot() -> CoachChat? { try? JSONDecoder().decode(CoachChat.self, from: payload) }
+}
+
+@Model
+final class StudySessionRecord {
+    #Index<StudySessionRecord>([\.startDate])
+    @Attribute(.unique) var id: UUID
+    var startDate: Date
+    var payload: Data
+
+    init(from session: StudySession) {
+        id = session.id; startDate = session.startDate
+        payload = (try? JSONEncoder().encode(session)) ?? Data()
+    }
+
+    func toSnapshot() -> StudySession? { try? JSONDecoder().decode(StudySession.self, from: payload) }
 }
 
 // MARK: - UserProfile (单例)

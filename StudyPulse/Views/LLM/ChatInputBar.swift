@@ -72,7 +72,7 @@ struct ChatInputBar: View {
                 }
             } else {
                 Button {
-                    onSend()
+                    submit()
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
@@ -121,7 +121,15 @@ struct ChatInputBar: View {
                     )
             )
             .onSubmit {
-                if canSend { onSend() }
+                submit()
             }
+    }
+
+    /// End editing before dispatching so the keyboard retracts immediately
+    /// instead of staying visible while the assistant streams its response.
+    private func submit() {
+        guard canSend else { return }
+        focused = false
+        onSend()
     }
 }

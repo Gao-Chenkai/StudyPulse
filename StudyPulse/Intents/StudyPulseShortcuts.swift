@@ -85,5 +85,14 @@ struct StudyPulseShortcuts: AppShortcutsProvider {
             shortTitle: "Body Status",
             systemImageName: "figure.walk"
         )
+        AppShortcut(
+            intent: OpenCoachIntent(),
+            phrases: [
+                "Open AI Coach in \(.applicationName)",
+                "Show my Coach plan in \(.applicationName)"
+            ],
+            shortTitle: "Open Coach",
+            systemImageName: "brain.head.profile"
+        )
     }
 }

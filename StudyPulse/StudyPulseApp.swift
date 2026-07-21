@@ -27,8 +27,10 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
         center.setBadgeCount(0)
         Log.notification.info("用户点击了通知，已强制清除角标 / User tapped notification, badge cleared")
 
-        // 这里可以添加跳转逻辑 / Navigation logic could be added here
-        // ...
+        if response.notification.request.content.userInfo["type"] as? String == "coach" {
+            let goalID = (response.notification.request.content.userInfo["goalID"] as? String).flatMap(UUID.init(uuidString:))
+            IntentActionStore.setPending(.openCoach(goalID: goalID))
+        }
 
         completionHandler()
     }
@@ -51,6 +53,7 @@ struct StudyPulseApp: App {
     private let notificationCoordinator = NotificationCoordinator()
 
     init() {
+        CoachBackgroundRefresh.register(container: container)
         // 3. 将代理设置为我们的协调器实例 / Set our coordinator as the delegate
         UNUserNotificationCenter.current().delegate = notificationCoordinator
         Log.notification.info("通知代理已注册 / Notification delegate registered")
@@ -99,6 +102,7 @@ struct StudyPulseApp: App {
                 .task {
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
                     await container.asyncInit()
+                    CoachBackgroundRefresh.schedule()
                     BrainUsageStore.migrateLegacyIfNeeded()
                     Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(container.isReady, privacy: .public)")
                     Log.record(.info, category: "App", message: "异步数据加载完成 / Async data load complete; isReady=\(container.isReady)")
@@ -148,7 +152,17 @@ struct StudyPulseApp: App {
                         // 从系统 Reminders 拉取任务完成态（幂等，重复调用安全）
                         // Pull task completion flags from the system Reminders app (idempotent)
                         container.taskRepo.refreshCompletionStatesFromReminders()
-                        Task { await hrvManager.refreshBodyStatus() }
+                        Task {
+                            await hrvManager.refreshBodyStatus()
+                            await hrvManager.refreshReadiness()
+                            CoachRefreshSignal.markDirty()
+                        }
+                        CoachCoordinator(container: container).evaluateCoachTasks()
+                        CoachNotifications.shared.reschedule(
+                            enabled: container.envManager.preferences.coachEnabled && container.envManager.preferences.coachNotificationEnabled,
+                            hour: container.envManager.preferences.coachNotificationHour,
+                            goalID: container.coachRepo.goals.first(where: { $0.status == .active })?.id
+                        )
                         AchievementManager.shared.handleDayRolloverIfNeeded()
                         DailyGoalReminder.shared.reschedule(for: Date(), config: AchievementManager.shared.snapshot.config)
                         let prefs = container.envManager.preferences

@@ -14,7 +14,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
     case trends = 1
     case mistake = 2
     case todo = 3
-    case settings = 4
+    case coach = 4
 
     var id: Int { rawValue }
 
@@ -24,7 +24,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
         case .trends: return "Trends".localized()
         case .mistake: return "Mistakes".localized()
         case .todo: return "Todo".localized()
-        case .settings: return "Settings".localized()
+        case .coach: return "Coach".localized()
         }
     }
 
@@ -34,7 +34,7 @@ enum AppTab: Int, CaseIterable, Identifiable, Hashable {
         case .trends: return "chart.bar.fill"
         case .mistake: return "exclamationmark.triangle.fill"
         case .todo: return "checklist"
-        case .settings: return "gearshape.fill"
+        case .coach: return "brain.head.profile"
         }
     }
 }
@@ -102,6 +102,9 @@ struct ContentView: View {
                 showingAddGradeFromIntent = true
             case .recordMistake:
                 showingNewMistakeFromIntent = true
+            case .openCoach(let goalID):
+                if let goalID { UserDefaults.standard.set(goalID.uuidString, forKey: "studyPulse.pendingCoachGoalID") }
+                selectedTab = .coach
             }
             IntentActionStore.setPending(nil)
         }
@@ -183,28 +186,18 @@ struct iPadSidebarLayout: View {
     private func detailView(for tab: AppTab) -> some View {
         switch tab {
         case .home:
-            HomeView(container: container, selectedTab: intBinding)
+            HomeView(container: container)
         case .trends:
             TrendsView(container: container)
         case .mistake:
             MistakeView(container: container)
         case .todo:
             TodoRootView(container: container)
-        case .settings:
-            SettingsView()
+        case .coach:
+            CoachView(container: container)
         }
     }
 
-    private var intBinding: Binding<Int> {
-        Binding<Int>(
-            get: { selectedTab.rawValue },
-            set: { newValue in
-                if let tab = AppTab(rawValue: newValue) {
-                    selectedTab = tab
-                }
-            }
-        )
-    }
 }
 
 // MARK: - iPhone 底部 Tab 栏布局
@@ -214,7 +207,7 @@ struct iPhoneTabLayout: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView(container: container, selectedTab: intBinding)
+            HomeView(container: container)
                 .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
                 .tag(AppTab.home)
 
@@ -230,22 +223,12 @@ struct iPhoneTabLayout: View {
                 .tabItem { Label(AppTab.todo.title, systemImage: AppTab.todo.icon) }
                 .tag(AppTab.todo)
 
-            SettingsView()
-                .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.icon) }
-                .tag(AppTab.settings)
+            CoachView(container: container)
+                .tabItem { Label(AppTab.coach.title, systemImage: AppTab.coach.icon) }
+                .tag(AppTab.coach)
         }
     }
 
-    private var intBinding: Binding<Int> {
-        Binding<Int>(
-            get: { selectedTab.rawValue },
-            set: { newValue in
-                if let tab = AppTab(rawValue: newValue) {
-                    selectedTab = tab
-                }
-            }
-        )
-    }
 }
 
 #Preview {

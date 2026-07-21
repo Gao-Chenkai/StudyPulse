@@ -34,6 +34,12 @@ enum ModelContainerFactory {
         RoutineRecord.self,
         RoutineInstanceRecord.self,
         DiaryEntryRecord.self,
+        CoachGoalRecord.self,
+        CoachAnalysisRecord.self,
+        CoachProposalRecord.self,
+        CoachConversationMessageRecord.self,
+        CoachChatRecord.self,
+        StudySessionRecord.self,
     ]
 
     /// 创建或获取共享 ModelContainer。

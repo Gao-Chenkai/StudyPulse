@@ -29,7 +29,6 @@ import UIKit
 /// and the user-configurable dynamic card list. Internal sub-MARKs cover
 /// init, layout, body, dynamic cards, and report export.
 struct HomeView: View {
-    @Binding var selectedTab: Int
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(RepositoryContainer.self) private var container
     @StateObject private var viewModel: HomeViewModel
@@ -40,9 +39,8 @@ struct HomeView: View {
 
     // MARK: - Init
 
-    init(container: RepositoryContainer, selectedTab: Binding<Int>) {
+    init(container: RepositoryContainer) {
         _viewModel = StateObject(wrappedValue: HomeViewModel.makeDefault(container: container))
-        self._selectedTab = selectedTab
     }
 
     // MARK: - Layout
@@ -60,7 +58,7 @@ struct HomeView: View {
                 // Use LazyVStack at the outer level so off-screen cards skip layout
                 LazyVStack(spacing: 20) {
                     // 顶部欢迎区域（全宽）
-                    WelcomeHeaderCard(selectedTab: $selectedTab)
+                    WelcomeHeaderCard()
                     // 主要统计卡片（全宽，4 个指标横排）
                     if uiState.renderPhase >= 1 {
                         MainStatsCard()
@@ -738,14 +736,14 @@ private struct DerivedRecomputeModifier: ViewModifier {
 
 // MARK: - Previews
 #Preview {
-    HomeView(container: RepositoryContainer(), selectedTab: .constant(0))
+    HomeView(container: RepositoryContainer())
         .environment(RepositoryContainer())
         .environmentObject(HealthKitManager.shared)
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
-    HomeView(container: RepositoryContainer(), selectedTab: .constant(0))
+    HomeView(container: RepositoryContainer())
         .environment(RepositoryContainer())
         .environmentObject(HealthKitManager.shared)
         .preferredColorScheme(.dark)

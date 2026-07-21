@@ -5,4 +5,5 @@ import Foundation
 enum IntentAction: Equatable, Sendable {
     case addGrade(subject: String, score: Double, examName: String?)  // 添加成绩 / Log a score.
     case recordMistake(subject: String, title: String)  // 记录错题 / Record a mistake.
+    case openCoach(goalID: UUID?)
 }
