@@ -25,15 +25,6 @@ import SwiftUI
 struct LLMSettingsView: View {
     @Environment(RepositoryContainer.self) private var container
 
-    /// Base URL 输入(临时,onChange 即写回 envManager)
-    /// Base URL input (temporary, written back to envManager on change).
-    @State private var baseURLInput: String = ""
-    /// API Key 输入(临时,onChange 即写回 envManager)
-    /// API Key input (temporary, written back to envManager on change).
-    @State private var apiKeyInput: String = ""
-    /// 模型名输入
-    /// Model name input.
-    @State private var modelInput: String = ""
     /// System Prompt 追加段
     /// System prompt appendix.
     @State private var appendixInput: String = ""
@@ -57,13 +48,6 @@ struct LLMSettingsView: View {
     @State private var testAlertSucceeded: Bool = false
     /// Whether a user-triggered Coach refresh is currently calling the configured LLM.
     @State private var isForceRefreshingCoach = false
-
-    /// 是否已经保存了 API Key(用于决定显示 SecureField 还是占位文字)
-    /// Whether an API Key is already saved (decides whether to show the
-    /// SecureField or the masked placeholder).
-    private var hasSavedAPIKey: Bool {
-        !(container.envManager.preferences.llmAPIKey?.isEmpty ?? true)
-    }
 
     var body: some View {
         List {
@@ -122,61 +106,37 @@ struct LLMSettingsView: View {
                 Text("AI Coach is a separate opt-in. Major health changes are judged on-device; only then is a proposed plan generated through your configured LLM. Force refresh replaces any pending proposal, but it never changes Todo without your confirmation.".localized())
             }
 
-            // 2) 端点配置
+            // 2) 供应商配置
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Base URL".localized())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("https://api.openai.com", text: $baseURLInput, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.URL)
-                        .onChange(of: baseURLInput) { _, newValue in
-                            container.envManager.setLLMBaseURL(newValue.isEmpty ? nil : newValue)
-                        }
+                if container.envManager.preferences.llmProviders.isEmpty {
+                    ContentUnavailableView("No provider configured".localized(), systemImage: "server.rack")
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("API Key".localized())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if hasSavedAPIKey {
-                        HStack {
-                            Text(maskedKey(container.envManager.preferences.llmAPIKey ?? ""))
-                                .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer()
-                            Button("Change".localized()) {
-                                // 清掉已保存的 key,这样 SecureField 才会重新出现
-                                // Clear the saved key so the SecureField reappears.
-                                container.envManager.setLLMAPIKey(nil)
-                                apiKeyInput = ""
-                            }
-                            .font(.caption)
+                ForEach(container.envManager.preferences.llmProviders) { provider in
+                    HStack(spacing: 12) {
+                        Button {
+                            container.envManager.selectLLMProvider(provider.id)
+                        } label: {
+                            Image(systemName: provider.id == container.envManager.preferences.activeLLMProviderId ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(provider.id == container.envManager.preferences.activeLLMProviderId ? .accentColor : .secondary)
                         }
-                    } else {
-                        SecureField("sk-...", text: $apiKeyInput)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .onChange(of: apiKeyInput) { _, newValue in
-                                container.envManager.setLLMAPIKey(newValue)
+                        .buttonStyle(.plain)
+                        NavigationLink(destination: LLMProviderEditor(provider: provider)) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(provider.name.isEmpty ? "Unnamed Provider".localized() : provider.name)
+                                Text(provider.isConfigured ? provider.model : "Incomplete configuration".localized())
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
+                        }
+                    }
+                    .swipeActions {
+                        Button(role: .destructive) { container.envManager.deleteLLMProvider(provider.id) } label: {
+                            Label("Delete".localized(), systemImage: "trash")
+                        }
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Model".localized())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("gpt-4o-mini", text: $modelInput, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .onChange(of: modelInput) { _, newValue in
-                            container.envManager.setLLMModel(newValue.isEmpty ? nil : newValue)
-                        }
+                Button { container.envManager.addLLMProvider() } label: {
+                    Label("Add Provider".localized(), systemImage: "plus.circle.fill")
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -197,9 +157,9 @@ struct LLMSettingsView: View {
                     }
                 }
             } header: {
-                Text("Provider".localized())
+                Text("Providers".localized())
             } footer: {
-                Text("StudyPulse never proxies your requests. The endpoint receives your API key directly.".localized())
+                Text("Add multiple OpenAI-compatible providers, then tap one to make it active. StudyPulse never proxies your requests; the active provider receives your API key directly.".localized())
             }
 
             // 3) System Prompt 追加
@@ -373,19 +333,9 @@ struct LLMSettingsView: View {
     /// (runs once on appear).
     private func syncFromPreferences() {
         let prefs = container.envManager.preferences
-        baseURLInput = prefs.llmBaseURL ?? ""
-        modelInput = prefs.llmModel ?? ""
         appendixInput = prefs.llmSystemPromptAppendix ?? ""
         temperature = prefs.llmTemperature
         radarCooldownMinutes = prefs.radarAICooldownMinutes
-    }
-
-    /// 把 API Key 脱敏:保留末 4 位
-    /// Mask the API key: keep the last 4 characters.
-    private func maskedKey(_ key: String) -> String {
-        guard key.count > 4 else { return "•" + String(repeating: "•", count: max(key.count, 4)) }
-        let suffix = key.suffix(4)
-        return "••••••••\(suffix)"
     }
 
     /// 真正发一次 minimal 请求来验证端点 / Key / 模型
@@ -422,5 +372,98 @@ struct LLMSettingsView: View {
             testAlertSucceeded = false
             testAlertMessage = error.localizedDescription
         }
+    }
+}
+
+private struct LLMProviderEditor: View {
+    @Environment(RepositoryContainer.self) private var container
+    @Environment(\.dismiss) private var dismiss
+
+    let provider: LLMProvider
+    @State private var name: String
+    @State private var baseURL: String
+    @State private var apiKey: String
+    @State private var model: String
+    @State private var multimodalEnabled: Bool
+    @State private var thinkingEnabled: Bool
+
+    init(provider: LLMProvider) {
+        self.provider = provider
+        _name = State(initialValue: provider.name)
+        _baseURL = State(initialValue: provider.baseURL)
+        _apiKey = State(initialValue: provider.apiKey)
+        _model = State(initialValue: provider.model)
+        _multimodalEnabled = State(initialValue: provider.multimodalEnabled)
+        _thinkingEnabled = State(initialValue: provider.thinkingEnabled)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Provider Name".localized(), text: $name)
+                TextField("https://api.openai.com", text: $baseURL, axis: .vertical)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                    .keyboardType(.URL)
+                SecureField("API Key".localized(), text: $apiKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                TextField("gpt-4o-mini", text: $model)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                Toggle("Enable Multimodal".localized(), isOn: $multimodalEnabled)
+                Toggle("Enable Thinking".localized(), isOn: $thinkingEnabled)
+            } header: {
+                Text("Connection".localized())
+            }
+
+            Section {
+                Text("Multimodal uses the content-array format for vision-capable models. Thinking uses the provider's thinking parameter when enabled.".localized())
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button {
+                    container.envManager.selectLLMProvider(provider.id)
+                } label: {
+                    Label(
+                        provider.id == container.envManager.preferences.activeLLMProviderId
+                            ? "Active Provider".localized()
+                            : "Use This Provider".localized(),
+                        systemImage: provider.id == container.envManager.preferences.activeLLMProviderId
+                            ? "checkmark.circle.fill" : "checkmark.circle"
+                    )
+                }
+                .disabled(provider.id == container.envManager.preferences.activeLLMProviderId)
+            } footer: {
+                Text("All AI features use the active provider.".localized())
+            }
+        }
+        .navigationTitle("Provider".localized())
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done".localized()) {
+                    save()
+                    dismiss()
+                }
+            }
+        }
+        .onDisappear { save() }
+    }
+
+    private func save() {
+        container.envManager.updateLLMProvider(
+            LLMProvider(
+                id: provider.id,
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                baseURL: baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
+                apiKey: apiKey,
+                model: model.trimmingCharacters(in: .whitespacesAndNewlines),
+                multimodalEnabled: multimodalEnabled,
+                thinkingEnabled: thinkingEnabled
+            )
+        )
     }
 }

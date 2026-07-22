@@ -14,6 +14,8 @@ struct MistakeDebateSheet: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
+                AIChatFlowingBackground()
+                    .ignoresSafeArea()
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 12) {
@@ -51,7 +53,6 @@ struct MistakeDebateSheet: View {
                     onCancel: { viewModel.cancel() }
                 )
             }
-            .background(Color(.systemGroupedBackground).opacity(0.4))
             .containerBackground(.clear, for: .navigation)
             .llmDebugButton(caller: "MistakeDebate")
             .navigationTitle("错题辩论".localized())

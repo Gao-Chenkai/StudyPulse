@@ -27,6 +27,10 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     var apiKey: String?
     /// 模型 id,例如 gpt-4o-mini / deepseek-chat
     var model: String?
+    /// 用户配置的供应商名称,用于供应商特有的请求参数适配。
+    var providerName: String? = nil
+    var multimodalEnabled: Bool
+    var thinkingEnabled: Bool
     /// 自定义系统 prompt 追加(在默认 prompt 之后)
     var systemPromptAppendix: String?
     /// 采样温度 (0.0-2.0)
@@ -57,6 +61,9 @@ extension LLMConfig {
         baseURL: nil,
         apiKey: nil,
         model: nil,
+        providerName: nil,
+        multimodalEnabled: false,
+        thinkingEnabled: false,
         systemPromptAppendix: nil,
         temperature: 0.7
     )
@@ -74,11 +81,15 @@ extension LLMConfig {
     /// Read-only; mutate through the `AppEnvironmentManager` setters.
     @MainActor
     static func from(_ prefs: AppPreferences) -> LLMConfig {
-        LLMConfig(
+        let provider = prefs.llmProviders.first { $0.id == prefs.activeLLMProviderId }
+        return LLMConfig(
             enabled: prefs.llmEnabled,
-            baseURL: prefs.llmBaseURL,
-            apiKey: prefs.llmAPIKey,
-            model: prefs.llmModel,
+            baseURL: provider?.baseURL ?? prefs.llmBaseURL,
+            apiKey: provider?.apiKey ?? prefs.llmAPIKey,
+            model: provider?.model ?? prefs.llmModel,
+            providerName: provider?.name,
+            multimodalEnabled: provider?.multimodalEnabled ?? false,
+            thinkingEnabled: provider?.thinkingEnabled ?? false,
             systemPromptAppendix: prefs.llmSystemPromptAppendix,
             temperature: prefs.llmTemperature,
             overrideSystemPrompt: prefs.debugOverrideSystemPrompt

@@ -34,17 +34,20 @@ nonisolated enum LLMRole: String, Codable, Sendable {
 nonisolated struct LLMMessage: Codable, Sendable, Equatable {
     var role: LLMRole
     var content: String
+    /// Base64 data URLs attached to this message for multimodal providers.
+    var imageDataURLs: [String]
 
-    init(role: LLMRole, content: String) {
+    init(role: LLMRole, content: String, imageDataURLs: [String] = []) {
         self.role = role
         self.content = content
+        self.imageDataURLs = imageDataURLs
     }
 
     static func system(_ content: String) -> LLMMessage {
         LLMMessage(role: .system, content: content)
     }
-    static func user(_ content: String) -> LLMMessage {
-        LLMMessage(role: .user, content: content)
+    static func user(_ content: String, imageDataURLs: [String] = []) -> LLMMessage {
+        LLMMessage(role: .user, content: content, imageDataURLs: imageDataURLs)
     }
     static func assistant(_ content: String) -> LLMMessage {
         LLMMessage(role: .assistant, content: content)

@@ -26,22 +26,27 @@ struct LLMChatView: View {
     /// 输入框文本
     /// Input bar text.
     @State private var inputText: String = ""
+    @State private var inputAttachments: [LLMImageAttachment] = []
     /// 输入框焦点状态
     /// Input focus state.
     @FocusState private var inputFocused: Bool
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            AIChatFlowingBackground()
+                .ignoresSafeArea()
             messagesList
             ChatInputBar(
                 text: $inputText,
                 isStreaming: viewModel.isStreaming,
                 canSend: canSend,
                 onSend: send,
-                onCancel: { viewModel.cancel() }
+                onCancel: { viewModel.cancel() },
+                multimodalEnabled: container.envManager.llmConfig.multimodalEnabled,
+                attachments: $inputAttachments,
+                onSendWithImages: { attachments in send(attachments: attachments) }
             )
         }
-        .background(Color(.systemGroupedBackground).opacity(0.4))
         .containerBackground(.clear, for: .navigation)
         .debugModeContainer()
         .debugLayoutBoundsAuto()
@@ -70,7 +75,7 @@ struct LLMChatView: View {
 
     private var canSend: Bool {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !viewModel.isStreaming && container.envManager.llmConfig.isConfigured
+        return (!trimmed.isEmpty || !inputAttachments.isEmpty) && !viewModel.isStreaming && container.envManager.llmConfig.isConfigured
     }
 
     // MARK: - Messages List / 消息列表
@@ -89,7 +94,8 @@ struct LLMChatView: View {
                                 role: message.role == .user ? .user : .assistant(dimmed: false),
                                 content: message.content,
                                 isStreaming: message.isStreaming,
-                                error: message.error
+                                error: message.error,
+                                attachments: message.attachments
                             )
                             .id(message.id)
                         }
@@ -158,10 +164,14 @@ struct LLMChatView: View {
     }
 
     private func send() {
+        send(attachments: inputAttachments)
+    }
+
+    private func send(attachments: [LLMImageAttachment]) {
         let text = inputText
         inputText = ""
         // 清空输入框后立刻把消息交给 viewModel
         // Hand off the message to the view model right after clearing the input.
-        viewModel.sendUserMessage(text, config: container.envManager.llmConfig, envManager: container.envManager)
+        viewModel.sendUserMessage(text, attachments: attachments, config: container.envManager.llmConfig, envManager: container.envManager)
     }
 }

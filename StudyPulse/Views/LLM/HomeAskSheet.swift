@@ -50,6 +50,8 @@ struct HomeAskSheet: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
+                AIChatFlowingBackground()
+                    .ignoresSafeArea()
                 if !viewModel.envManager.llmConfig.isConfigured {
                     notConfiguredView
                 } else if viewModel.messages.isEmpty {
@@ -68,7 +70,6 @@ struct HomeAskSheet: View {
                     onCancel: { viewModel.cancel() }
                 )
             }
-            .background(Color(.systemGroupedBackground).opacity(0.4))
             .containerBackground(.clear, for: .navigation)
             .navigationTitle("Ask AI".localized())
             .navigationBarTitleDisplayMode(.inline)

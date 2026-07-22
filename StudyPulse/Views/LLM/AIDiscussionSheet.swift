@@ -53,6 +53,8 @@ struct AIDiscussionSheet: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
+                AIChatFlowingBackground()
+                    .ignoresSafeArea()
                 messagesList
                 ChatInputBar(
                     text: $inputText,
@@ -62,7 +64,6 @@ struct AIDiscussionSheet: View {
                     onCancel: { viewModel.cancel() }
                 )
             }
-            .background(Color(.systemGroupedBackground).opacity(0.4))
             .containerBackground(.clear, for: .navigation)
             .llmDebugButton(caller: "AIDiscussion")
             .navigationTitle(title)

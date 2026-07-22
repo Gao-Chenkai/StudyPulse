@@ -26,19 +26,22 @@ final class LLMChatViewModel: ObservableObject {
         var isStreaming: Bool
         /// 流式错误信息 / Streaming error.
         var error: String?
+        var attachments: [LLMImageAttachment]
 
         init(
             id: UUID = UUID(),
             role: LLMRole,
             content: String = "",
             isStreaming: Bool = false,
-            error: String? = nil
+            error: String? = nil,
+            attachments: [LLMImageAttachment] = []
         ) {
             self.id = id
             self.role = role
             self.content = content
             self.isStreaming = isStreaming
             self.error = error
+            self.attachments = attachments
         }
     }
 
@@ -59,14 +62,14 @@ final class LLMChatViewModel: ObservableObject {
 
     /// 发送用户消息 → 触发 LLM 流式响应 → 追加 assistant 回复
     /// Send a user message, kick off streaming, append assistant reply.
-    func sendUserMessage(_ text: String, config: LLMConfig, envManager: AppEnvironmentManager) {
+    func sendUserMessage(_ text: String, attachments: [LLMImageAttachment] = [], config: LLMConfig, envManager: AppEnvironmentManager) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // 三道闸:非空、当前空闲、LLM 已配置
         // Three guards: non-empty, not streaming, LLM configured.
-        guard !trimmed.isEmpty, !isStreaming, config.isConfigured else { return }
+        guard (!trimmed.isEmpty || !attachments.isEmpty), !isStreaming, config.isConfigured else { return }
 
         // 1) 追加 user message
-        let userMessage = Message(role: .user, content: trimmed)
+        let userMessage = Message(role: .user, content: trimmed, attachments: attachments)
         messages.append(userMessage)
 
         // 2) 准备空 assistant message 占位
@@ -78,7 +81,7 @@ final class LLMChatViewModel: ObservableObject {
         // Placeholder excluded from history (no real content yet).
         let history = messages
             .filter { $0.id != assistantMessage.id }
-            .map { LLMMessage(role: $0.role, content: $0.content) }
+            .map { LLMMessage(role: $0.role, content: $0.content, imageDataURLs: $0.attachments.map(\.dataURL)) }
         let prompt = LLMPrompt(system: LLMChatLLM.defaultSystem, messages: history)
 
         isStreaming = true

@@ -413,13 +413,44 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
         // DEBUG override: when non-empty, replace default system + appendix entirely.
         let effective = effectiveSystem(prompt: prompt, config: config)
         let allMessages = [LLMMessage.system(effective)] + prompt.messages
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "model": config.model ?? "",
             "temperature": max(0, min(2, config.temperature)),
             "stream": stream,
-            "messages": allMessages.map { ["role": $0.role.rawValue, "content": $0.content] }
+            "messages": allMessages.map { message in
+                var body: [String: Any] = ["role": message.role.rawValue]
+                if config.multimodalEnabled {
+                    var parts: [[String: Any]] = [["type": "text", "text": message.content]]
+                    parts.append(contentsOf: message.imageDataURLs.map {
+                        ["type": "image_url", "image_url": ["url": $0]]
+                    })
+                    body["content"] = parts
+                } else {
+                    body["content"] = message.content
+                }
+                return body
+            }
         ]
+        // MiniMax does not accept the generic `enabled` value. Its OpenAI-
+        // compatible endpoint uses `adaptive` / `disabled` instead.
+        // Keep the old behavior for other providers for backwards compatibility.
+        if isMiniMax(config: config) {
+            payload["thinking"] = ["type": config.thinkingEnabled ? "adaptive" : "disabled"]
+        } else if config.thinkingEnabled {
+            payload["thinking"] = ["type": "enabled"]
+        }
         return try JSONSerialization.data(withJSONObject: payload, options: [])
+    }
+
+    nonisolated private func isMiniMax(config: LLMConfig) -> Bool {
+        if config.providerName?.localizedCaseInsensitiveContains("minimax") == true {
+            return true
+        }
+        guard let baseURL = config.baseURL,
+              let host = URL(string: baseURL)?.host?.lowercased() else {
+            return false
+        }
+        return host.contains("minimaxi.com") || host.contains("minimax.io") || host.contains("minimax.chat")
     }
 
     /// 拼接最终 system prompt:`override` 优先,否则 `default + appendix`。

@@ -28,15 +28,15 @@ final class CoachConversationViewModel: ObservableObject {
         // New conversations should wait for the user to decide what they want to ask.
     }
 
-    func send(_ text: String) {
+    func send(_ text: String, attachments: [LLMImageAttachment] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isStreaming else { return }
+        guard (!trimmed.isEmpty || !attachments.isEmpty), !isStreaming else { return }
         guard container.envManager.llmConfig.isConfigured else {
             errorMessage = LLMError.notConfigured.localizedDescription
             return
         }
 
-        let user = CoachConversationMessage(goalID: goal?.id, chatID: chat.id, role: .user, content: trimmed)
+        let user = CoachConversationMessage(goalID: goal?.id, chatID: chat.id, role: .user, content: trimmed, attachments: attachments)
         messages.append(user); container.coachRepo.addMessage(user)
         let assistant = CoachConversationMessage(goalID: goal?.id, chatID: chat.id, role: .assistant, isStreaming: true)
         messages.append(assistant); container.coachRepo.addMessage(assistant)
@@ -46,12 +46,24 @@ final class CoachConversationViewModel: ObservableObject {
             guard let self else { return }
             do {
                 let analysis = goal.map { coordinator.analyze(goal: $0) }
-                let prompt = CoachLLM.makeConversationPrompt(
+                let basePrompt = CoachLLM.makeConversationPrompt(
                     goal: goal,
                     analysis: analysis,
                     history: Array(messages.dropLast()),
                     context: contextSummary(),
                     languageCode: container.envManager.preferences.appLanguage
+                )
+                let prompt = LLMPrompt(
+                    system: basePrompt.system,
+                    messages: basePrompt.messages.enumerated().map { index, message in
+                        LLMMessage(
+                            role: message.role,
+                            content: message.content,
+                            imageDataURLs: index == basePrompt.messages.index(before: basePrompt.messages.endIndex)
+                                ? attachments.map(\.dataURL)
+                                : message.imageDataURLs
+                        )
+                    }
                 )
                 let raw = try await LLMClient.shared.stream(
                     prompt: prompt,

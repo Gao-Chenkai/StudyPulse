@@ -206,6 +206,33 @@ final class AppEnvironmentManager {
         }
     }
 
+    var activeLLMProvider: LLMProvider? {
+        preferences.llmProviders.first { $0.id == preferences.activeLLMProviderId }
+    }
+
+    func addLLMProvider() {
+        let provider = LLMProvider(name: "New Provider")
+        preferences.llmProviders.append(provider)
+        preferences.activeLLMProviderId = provider.id
+    }
+
+    func updateLLMProvider(_ provider: LLMProvider) {
+        guard let index = preferences.llmProviders.firstIndex(where: { $0.id == provider.id }) else { return }
+        preferences.llmProviders[index] = provider
+    }
+
+    func selectLLMProvider(_ id: UUID) {
+        guard preferences.llmProviders.contains(where: { $0.id == id }) else { return }
+        preferences.activeLLMProviderId = id
+    }
+
+    func deleteLLMProvider(_ id: UUID) {
+        preferences.llmProviders.removeAll { $0.id == id }
+        if preferences.activeLLMProviderId == id {
+            preferences.activeLLMProviderId = preferences.llmProviders.first?.id
+        }
+    }
+
     /// 设置 LLM baseURL。`nil` / 空字符串视作未配置。
     /// Set the LLM baseURL. `nil` / empty string is treated as unconfigured.
     func setLLMBaseURL(_ url: String?) {
@@ -216,7 +243,7 @@ final class AppEnvironmentManager {
             normalized = nil
         }
         Log.preferences.info("更新 LLM baseURL / LLM baseURL: -> \(normalized ?? "nil", privacy: .public)")
-        preferences.llmBaseURL = normalized
+        updateActiveLLMProvider { $0.baseURL = normalized ?? "" }
     }
 
     /// 设置 LLM API Key。`nil` / 空字符串视作清空。
@@ -225,7 +252,7 @@ final class AppEnvironmentManager {
         let normalized: String?
         if let key, !key.isEmpty { normalized = key } else { normalized = nil }
         Log.preferences.info("更新 LLM apiKey / LLM apiKey: -> \(normalized == nil ? "nil" : "<redacted>", privacy: .public)")
-        preferences.llmAPIKey = normalized
+        updateActiveLLMProvider { $0.apiKey = normalized ?? "" }
     }
 
     /// 设置 LLM 模型 id
@@ -238,7 +265,13 @@ final class AppEnvironmentManager {
             normalized = nil
         }
         Log.preferences.info("更新 LLM model / LLM model: -> \(normalized ?? "nil", privacy: .public)")
-        preferences.llmModel = normalized
+        updateActiveLLMProvider { $0.model = normalized ?? "" }
+    }
+
+    private func updateActiveLLMProvider(_ mutate: (inout LLMProvider) -> Void) {
+        guard let id = preferences.activeLLMProviderId,
+              let index = preferences.llmProviders.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&preferences.llmProviders[index])
     }
 
     /// 设置 LLM 自定义系统 prompt 追加
@@ -305,7 +338,14 @@ final class AppEnvironmentManager {
         // 从 UserDefaults 加载 / Load from UserDefaults
         if let data = UserDefaults.standard.data(forKey: defaultsKey),
            let prefs = try? JSONDecoder().decode(AppPreferences.self, from: data) {
-            self.preferences = prefs
+           self.preferences = prefs
+            // AppPreferences 会把旧版单一 LLM 配置转换为一个 Default provider；
+            // 首次读取后立刻回写，确保迁移不是只停留在本次内存中。
+            let hasProviderList = (try? JSONSerialization.jsonObject(with: data))
+                .flatMap { $0 as? [String: Any] }?["llmProviders"] != nil
+            if !hasProviderList, !prefs.llmProviders.isEmpty {
+                save()
+            }
             Log.preferences.info("已从 UserDefaults 恢复偏好 / Loaded preferences from UserDefaults: language=\(prefs.appLanguage ?? "auto", privacy: .public) scheme=\(prefs.colorScheme.rawValue, privacy: .public)")
         } else {
             self.preferences = AppPreferences()

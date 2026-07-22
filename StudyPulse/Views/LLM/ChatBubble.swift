@@ -58,6 +58,7 @@ struct ChatBubble: View {
     /// 错误信息(若有,会覆盖正文显示)
     /// Error text (if set, replaces the body for display).
     let error: String?
+    let attachments: [LLMImageAttachment]
     /// assistant 头部"AI"标签右侧的小文字(如 "·  身体 · 成绩" 或 "以下对话基于上一次的 AI 预测")
     /// Caption shown right of the "AI" header label
     /// (e.g. "·  body · grades" or "based on the previous AI prediction").
@@ -72,6 +73,7 @@ struct ChatBubble: View {
         content: String,
         isStreaming: Bool = false,
         error: String? = nil,
+        attachments: [LLMImageAttachment] = [],
         headerTag: String? = nil,
         footer: AnyView? = nil
     ) {
@@ -79,6 +81,7 @@ struct ChatBubble: View {
         self.content = content
         self.isStreaming = isStreaming
         self.error = error
+        self.attachments = attachments
         self.headerTag = headerTag
         self.footer = footer
     }
@@ -114,19 +117,29 @@ struct ChatBubble: View {
             // Reserve at least 40pt of trailing space so the user bubble
             // stays anchored to the right edge.
             Spacer(minLength: 40)
-            Text(content)
-                .font(.body)
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.accentColor)
-                )
-                // 320pt 上限,避免 user 输入超长时气泡铺满全宽
-                // 320pt cap so long user messages don't span the full width.
-                .frame(maxWidth: 320, alignment: .trailing)
-                .textSelection(.enabled)
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(content)
+                    .font(.body)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 18).fill(Color.accentColor))
+                    .frame(maxWidth: 320, alignment: .trailing)
+                    .textSelection(.enabled)
+                if !attachments.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(attachments) { attachment in
+                            if let image = UIImage(data: attachment.data) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 72, height: 72)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

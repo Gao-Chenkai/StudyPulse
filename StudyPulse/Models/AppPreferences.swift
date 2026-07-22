@@ -8,6 +8,47 @@
 import Foundation
 import SwiftUI
 
+/// 一个可独立选择的 OpenAI-compatible LLM 供应商配置。
+/// API Key 仅随应用偏好保存在当前设备上。
+nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID = UUID()
+    var name: String
+    var baseURL: String
+    var apiKey: String
+    var model: String
+    var multimodalEnabled: Bool
+    var thinkingEnabled: Bool
+
+    init(id: UUID = UUID(), name: String, baseURL: String = "", apiKey: String = "", model: String = "", multimodalEnabled: Bool = false, thinkingEnabled: Bool = false) {
+        self.id = id
+        self.name = name
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.model = model
+        self.multimodalEnabled = multimodalEnabled
+        self.thinkingEnabled = thinkingEnabled
+    }
+
+    enum CodingKeys: String, CodingKey { case id, name, baseURL, apiKey, model, multimodalEnabled, thinkingEnabled }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        baseURL = try c.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+        apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
+        model = try c.decodeIfPresent(String.self, forKey: .model) ?? ""
+        multimodalEnabled = try c.decodeIfPresent(Bool.self, forKey: .multimodalEnabled) ?? false
+        thinkingEnabled = try c.decodeIfPresent(Bool.self, forKey: .thinkingEnabled) ?? false
+    }
+
+    var isConfigured: Bool {
+        !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !apiKey.isEmpty
+            && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
 // MARK: - App Preferences (应用偏好设置)
 
 /// 应用内语言和主题偏好设置模型
@@ -116,6 +157,9 @@ nonisolated struct AppPreferences: Codable {
     /// 采样温度(0.0-2.0,默认 0.7)
     /// Sampling temperature (0.0-2.0, default 0.7).
     var llmTemperature: Double = 0.7
+    /// 可保存多个供应商，并由 `activeLLMProviderId` 指定当前实际发起请求的项。
+    var llmProviders: [LLMProvider] = []
+    var activeLLMProviderId: UUID? = nil
     /// 主页恢复雷达 LLM 自动分析冷却时间（分钟，默认 40）。
     /// Recovery Radar LLM automatic-analysis cooldown in minutes (default 40).
     var radarAICooldownMinutes: Int = 40
@@ -192,7 +236,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, llmProviders, activeLLMProviderId, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
@@ -237,6 +281,23 @@ nonisolated struct AppPreferences: Codable {
         self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)
         self.llmSystemPromptAppendix = try c.decodeIfPresent(String.self, forKey: .llmSystemPromptAppendix)
         self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
+        self.llmProviders = try c.decodeIfPresent([LLMProvider].self, forKey: .llmProviders) ?? []
+        self.activeLLMProviderId = try c.decodeIfPresent(UUID.self, forKey: .activeLLMProviderId)
+        // 从旧版单一配置无损迁移，既有用户升级后可立刻继续使用。
+        if self.llmProviders.isEmpty,
+           let baseURL = self.llmBaseURL,
+           let apiKey = self.llmAPIKey,
+           let model = self.llmModel,
+           !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !apiKey.isEmpty,
+           !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let provider = LLMProvider(name: "Default", baseURL: baseURL, apiKey: apiKey, model: model)
+            self.llmProviders = [provider]
+            self.activeLLMProviderId = provider.id
+        }
+        if let activeLLMProviderId, !self.llmProviders.contains(where: { $0.id == activeLLMProviderId }) {
+            self.activeLLMProviderId = self.llmProviders.first?.id
+        }
         let radarCooldown = try c.decodeIfPresent(Int.self, forKey: .radarAICooldownMinutes) ?? 40
         self.radarAICooldownMinutes = max(5, min(180, radarCooldown))
         self.lastRadarAIRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastRadarAIRequestTime)

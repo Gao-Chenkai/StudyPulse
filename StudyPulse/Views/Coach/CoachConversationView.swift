@@ -4,6 +4,7 @@ import SwiftStreamingMarkdown
 struct CoachConversationView: View {
     @StateObject private var viewModel: CoachConversationViewModel
     @State private var input = ""
+    @State private var inputAttachments: [LLMImageAttachment] = []
     @State private var emptyPromptKey = CoachConversationPrompts.all.randomElement() ?? "Coach prompt 01"
 
     init(goal: CoachGoal?, chat: CoachChat, container: RepositoryContainer) {
@@ -12,7 +13,7 @@ struct CoachConversationView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            CoachFlowingBackground()
+            AIChatFlowingBackground()
                 .ignoresSafeArea()
             ScrollViewReader { proxy in
                 ScrollView {
@@ -23,6 +24,7 @@ struct CoachConversationView: View {
                                        content: message.content,
                                        isStreaming: message.isStreaming,
                                        error: message.error,
+                                       attachments: message.attachments,
                                        footer: message.todoSuggestions.isEmpty ? nil : AnyView(
                                            VStack(alignment: .leading, spacing: 8) {
                                                ForEach(message.todoSuggestions) { suggestion in
@@ -42,8 +44,14 @@ struct CoachConversationView: View {
             }
             ChatInputBar(text: $input, placeholder: "Message AI Coach...".localized(),
                          isStreaming: viewModel.isStreaming,
-                         canSend: !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isStreaming,
-                         onSend: send, onCancel: viewModel.cancel)
+                         canSend: (!input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !inputAttachments.isEmpty)
+                            && !viewModel.isStreaming
+                            && viewModel.container.envManager.llmConfig.isConfigured,
+                         onSend: send,
+                         onCancel: viewModel.cancel,
+                         multimodalEnabled: viewModel.container.envManager.llmConfig.multimodalEnabled,
+                         attachments: $inputAttachments,
+                         onSendWithImages: { attachments in send(attachments: attachments) })
         }
         .navigationTitle(viewModel.chat.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -129,7 +137,13 @@ struct CoachConversationView: View {
         .animation(.spring(response: 0.46, dampingFraction: 0.8), value: suggestion.status)
     }
 
-    private func send() { let text = input; input = ""; viewModel.send(text) }
+    private func send() { send(attachments: inputAttachments) }
+
+    private func send(attachments: [LLMImageAttachment]) {
+        let text = input
+        input = ""
+        viewModel.send(text, attachments: attachments)
+    }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         guard let id = viewModel.messages.last?.id else { return }
@@ -145,7 +159,9 @@ private enum CoachConversationPrompts {
     ]
 }
 
-private struct CoachFlowingBackground: View {
+/// Shared visual background for every LLM conversation surface.
+/// Keeping this here preserves the AI Coach appearance as the canonical chat UI.
+struct AIChatFlowingBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private struct LightSource {

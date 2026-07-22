@@ -104,15 +104,18 @@ nonisolated struct CoachConversationMessage: Codable, Hashable, Sendable, Identi
     var isStreaming: Bool
     var error: String?
     var todoSuggestions: [CoachTodoSuggestion]
+    /// Current-turn image attachments. Deliberately excluded from persistence.
+    var attachments: [LLMImageAttachment]
 
     private enum CodingKeys: String, CodingKey { case id, goalID, chatID, role, content, createdAt, isStreaming, error, todoSuggestions }
 
     init(id: UUID = UUID(), goalID: UUID? = nil, chatID: UUID = UUID(), role: CoachMessageRole, content: String = "",
          createdAt: Date = Date(), isStreaming: Bool = false, error: String? = nil,
-         todoSuggestions: [CoachTodoSuggestion] = []) {
+         todoSuggestions: [CoachTodoSuggestion] = [], attachments: [LLMImageAttachment] = []) {
         self.id = id; self.goalID = goalID; self.chatID = chatID; self.role = role; self.content = content
         self.createdAt = createdAt; self.isStreaming = isStreaming; self.error = error
         self.todoSuggestions = todoSuggestions
+        self.attachments = attachments
     }
 
     init(from decoder: Decoder) throws {
