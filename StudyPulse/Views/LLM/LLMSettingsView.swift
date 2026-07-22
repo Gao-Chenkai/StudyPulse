@@ -55,6 +55,8 @@ struct LLMSettingsView: View {
     /// 最近一次测试是否成功(决定 alert 标题)
     /// Whether the most recent test succeeded (drives the alert title).
     @State private var testAlertSucceeded: Bool = false
+    /// Whether a user-triggered Coach refresh is currently calling the configured LLM.
+    @State private var isForceRefreshingCoach = false
 
     /// 是否已经保存了 API Key(用于决定显示 SecureField 还是占位文字)
     /// Whether an API Key is already saved (decides whether to show the
@@ -86,6 +88,12 @@ struct LLMSettingsView: View {
                     Label("Enable AI Coach".localized(), systemImage: "brain.head.profile")
                 }
                 Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.coachAdaptivePlanEnabled },
+                    set: { container.envManager.preferences.coachAdaptivePlanEnabled = $0 }
+                )) {
+                    Label("Adapt Coach plan for major health changes".localized(), systemImage: "heart.text.square")
+                }
+                Toggle(isOn: Binding(
                     get: { container.envManager.preferences.coachNotificationEnabled },
                     set: { container.envManager.preferences.coachNotificationEnabled = $0; CoachNotifications.shared.reschedule(enabled: $0, hour: container.envManager.preferences.coachNotificationHour) }
                 )) {
@@ -97,8 +105,21 @@ struct LLMSettingsView: View {
                 ), in: 0...23) {
                     Text(String(format: "Coach notification hour: %02d:00".localized(), container.envManager.preferences.coachNotificationHour))
                 }
+                Button {
+                    Task { await forceRefreshCoach() }
+                } label: {
+                    HStack {
+                        if isForceRefreshingCoach {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                        }
+                        Text("Force AI Coach Refresh".localized())
+                    }
+                }
+                .disabled(isForceRefreshingCoach || !container.envManager.preferences.coachEnabled || !container.envManager.llmConfig.isConfigured)
             } footer: {
-                Text("AI Coach is a separate opt-in. It requires the LLM switch and a valid BYOK configuration; it never changes Todo without your confirmation.".localized())
+                Text("AI Coach is a separate opt-in. Major health changes are judged on-device; only then is a proposed plan generated through your configured LLM. Force refresh replaces any pending proposal, but it never changes Todo without your confirmation.".localized())
             }
 
             // 2) 端点配置
@@ -380,6 +401,23 @@ struct LLMSettingsView: View {
         } catch let error as LLMError {
             testAlertSucceeded = false
             testAlertMessage = error.errorDescription
+        } catch {
+            testAlertSucceeded = false
+            testAlertMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func forceRefreshCoach() async {
+        isForceRefreshingCoach = true
+        defer { isForceRefreshingCoach = false }
+        do {
+            _ = try await CoachCoordinator(container: container).forceRefreshProposal()
+            testAlertSucceeded = true
+            testAlertMessage = "A fresh AI Coach proposal is ready to review.".localized()
+        } catch let error as LocalizedError {
+            testAlertSucceeded = false
+            testAlertMessage = error.errorDescription ?? error.localizedDescription
         } catch {
             testAlertSucceeded = false
             testAlertMessage = error.localizedDescription

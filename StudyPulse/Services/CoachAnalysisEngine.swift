@@ -71,10 +71,28 @@ enum CoachAnalysisEngine {
             let spread = max(1, prediction.upperBound - prediction.lowerBound)
             return max(0, min(1, 0.5 + (prediction.predicted - subject.targetScore) / spread))
         }
-        var probability = probabilities.isEmpty ? 0 : zip(goal.subjects, probabilities).map { $0.0.weight * $0.1 }.reduce(0, +) / weightTotal
+        let trajectoryProbability = probabilities.isEmpty ? 0 : zip(goal.subjects, probabilities).map { $0.0.weight * $0.1 }.reduce(0, +) / weightTotal
         let days = max(0, Calendar.current.dateComponents([.day], from: snapshot.now, to: goal.targetDate).day ?? 0)
         let completedMinutes = snapshot.sessions.filter { $0.completed }.reduce(0) { $0 + $1.durationSeconds / 60 }
         let recentMinutes = snapshot.sessions.filter { $0.completed && $0.startDate >= snapshot.now.addingTimeInterval(-7 * 86400) }.reduce(0) { $0 + $1.durationSeconds / 60 }
+
+        // Probability is intentionally a weighted evidence model. The score trajectory
+        // remains the strongest signal, but execution, mistakes and recovery all have
+        // an explicit contribution so the Coach does not ignore behavior data.
+        let mistakeProbability = mistakeReadiness(
+            grades: snapshot.grades, mistakes: snapshot.mistakes
+        )
+        let studyProbability = studyExecution(
+            recentMinutes: Double(recentMinutes), dailyMinutes: goal.dailyAvailableMinutes
+        )
+        let taskProbability = taskExecution(tasks: snapshot.tasks, now: snapshot.now)
+        let executionProbability = studyProbability * 0.6 + taskProbability * 0.4
+        let healthProbability = healthReadiness(snapshot.healthSignals, available: snapshot.healthDataAvailable)
+        var probability = predictions.isEmpty ? 0 :
+            trajectoryProbability * 0.45 +
+            mistakeProbability * 0.20 +
+            executionProbability * 0.20 +
+            healthProbability * 0.15
         var risks: [String] = []
         var evidence: [String] = []
         if days < 14 && target > predicted { risks.append("The target gap is large with limited time remaining.") }
@@ -91,9 +109,6 @@ enum CoachAnalysisEngine {
         if let exercise = snapshot.healthSignals.exerciseMinutes, exercise >= 20 { evidence.append("Recent movement supports today's learning capacity.") }
         if let z = snapshot.healthSignals.hrvZScore, z < -1 { risks.append("HRV is below the personal baseline (z=\(String(format: "%.2f", z))).") }
         if let restorative = snapshot.healthSignals.restorativeSleepHours, restorative < 2 { risks.append("Deep and REM sleep are below the recovery target.") }
-        if snapshot.healthSignals.readinessCategory == "low" { probability -= 0.08 }
-        if snapshot.healthSignals.readinessCategory == "excellent" { probability += 0.03 }
-        if let sleep = snapshot.healthSignals.sleepHours, sleep < 6 { probability -= 0.05 }
         probability = min(1, max(0, probability))
         for p in predictions where p.predicted < p.targetScore { risks.append("(p.subject) is below its target trajectory.") }
         if risks.isEmpty { evidence.append("All tracked subjects are currently on or above target trajectory.") }
@@ -108,5 +123,52 @@ enum CoachAnalysisEngine {
                              weightedUpperBound: upper, successProbability: probability,
                              predictions: predictions, risks: risks, evidence: evidence,
                              dataFingerprint: fingerprint, healthDataAvailable: snapshot.healthDataAvailable)
+    }
+
+    private static func mistakeReadiness(grades: [Grade], mistakes: [MistakeNote]) -> Double {
+        guard !mistakes.isEmpty else { return 0.5 }
+        let countCeiling = max(10.0, Double(max(1, grades.count)) * 2.0)
+        let countScore = 1 - min(1, Double(mistakes.count) / countCeiling)
+        let context = MistakeContext.build(from: mistakes)
+        let exposureScore = min(1, Double(context.totalExposureCount) / max(3, Double(mistakes.count) * 2))
+        let masteryScore = max(0, min(1, context.averageMastery))
+        return countScore * 0.30 + exposureScore * 0.35 + masteryScore * 0.35
+    }
+
+    private static func studyExecution(recentMinutes: Double, dailyMinutes: Int) -> Double {
+        guard dailyMinutes > 0 else { return 0.5 }
+        return min(1, max(0, recentMinutes / (Double(dailyMinutes) * 7)))
+    }
+
+    private static func taskExecution(tasks: [TaskItem], now: Date) -> Double {
+        let cutoff = now.addingTimeInterval(-14 * 86400)
+        let recentTasks = tasks.filter {
+            ($0.createdAt >= cutoff && $0.createdAt <= now) ||
+            ($0.dueDate >= cutoff && $0.dueDate <= now)
+        }
+        guard !recentTasks.isEmpty else { return 0.5 }
+        return Double(recentTasks.filter(\.isCompleted).count) / Double(recentTasks.count)
+    }
+
+    private static func healthReadiness(_ signals: CoachHealthSignals, available: Bool) -> Double {
+        guard available else { return 0.5 }
+        var values: [Double] = []
+        if let sleep = signals.sleepHours { values.append(min(1, max(0, (sleep - 4) / 4))) }
+        if let z = signals.hrvZScore { values.append(min(1, max(0, 0.5 + z * 0.2))) }
+        if let exercise = signals.exerciseMinutes { values.append(min(1, max(0, exercise / 30))) }
+        if let restorative = signals.restorativeSleepHours { values.append(min(1, max(0, restorative / 3))) }
+        if let psychological = signals.psychologicalStability { values.append(min(1, max(0, psychological))) }
+        if let mood = signals.moodScore { values.append(min(1, max(0, (mood - 1) / 4))) }
+        if let energy = signals.energyScore { values.append(min(1, max(0, (energy - 1) / 4))) }
+        if let readiness = signals.readinessCategory {
+            switch readiness {
+            case "low": values.append(0.2)
+            case "fair", "moderate": values.append(0.5)
+            case "good": values.append(0.75)
+            case "excellent": values.append(1.0)
+            default: break
+            }
+        }
+        return values.isEmpty ? 0.5 : values.reduce(0, +) / Double(values.count)
     }
 }

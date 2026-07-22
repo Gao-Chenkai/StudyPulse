@@ -12,6 +12,24 @@ final class CoachLLMTests: XCTestCase {
         XCTAssertTrue(prompt.system.contains("JSON keys, enum values, and ISO-8601 dates unchanged"))
     }
 
+    func testPlanningPromptIncludesStructuredHealthContext() {
+        let goal = CoachGoal(title: "Exam", subjects: [], targetDate: Date().addingTimeInterval(86400))
+        let signals = CoachHealthSignals(sleepHours: 5.5, restingHeartRate: 70, respiratoryRate: 15,
+                                         exerciseMinutes: 20, readinessCategory: "low", hrvZScore: -1.2,
+                                         todayHRV: 42, latestHeartRate: 78, restorativeSleepHours: 1.8,
+                                         psychologicalStability: 0.7, moodScore: 3, energyScore: 2)
+        let analysis = CoachAnalysisEngine.analyze(
+            goal: goal,
+            snapshot: CoachDataSnapshot(grades: [], mistakes: [], tasks: [], exams: [], healthDataAvailable: true, healthSignals: signals)
+        )
+        let context = CoachLLMHealthContext(signals: signals, dataAvailable: true)
+        let prompt = CoachLLM.makePrompt(goal: goal, analysis: analysis, healthContext: context)
+
+        XCTAssertTrue(prompt.messages.contains { $0.content.contains("healthContext") })
+        XCTAssertTrue(prompt.messages.contains { $0.content.contains("restorativeSleepHours") })
+        XCTAssertTrue(prompt.messages.contains { $0.content.contains("readinessCategory") && $0.content.contains("low") })
+    }
+
     func testStructuredResponseCreatesProposalWithoutChangingLocalAnalysis() throws {
         let goal = CoachGoal(title: "Exam", subjects: [CoachGoalSubject(subject: "Math", targetScore: 100)], targetDate: Date().addingTimeInterval(86400))
         let analysis = CoachAnalysisEngine.analyze(goal: goal, snapshot: CoachDataSnapshot(grades: [], mistakes: [], tasks: [], exams: []))

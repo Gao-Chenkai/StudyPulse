@@ -16,13 +16,12 @@ struct CoachHistoryView: View {
                         Text("Run Coach on more than one day to see a trend.".localized()).foregroundStyle(.secondary)
                     } else {
                         Chart(analyses) { analysis in
-                            LineMark(x: .value("Date", analysis.calculatedAt), y: .value("Prediction", analysis.weightedPredicted * 100))
+                            LineMark(x: .value("Date".localized(), analysis.calculatedAt), y: .value("Prediction".localized(), analysis.weightedPredicted))
                                 .foregroundStyle(.blue)
                                 .interpolationMethod(.catmullRom)
-                            PointMark(x: .value("Date", analysis.calculatedAt), y: .value("Prediction", analysis.weightedPredicted * 100))
+                            PointMark(x: .value("Date".localized(), analysis.calculatedAt), y: .value("Prediction".localized(), analysis.weightedPredicted))
                                 .foregroundStyle(.blue)
                         }
-                        .chartYScale(domain: 0...100)
                         .chartYAxis { AxisMarks(position: .leading) }
                         .frame(height: 190)
                     }
@@ -43,7 +42,7 @@ struct CoachHistoryView: View {
                     if items.isEmpty { Text("No previous proposals".localized()).foregroundStyle(.secondary) }
                     ForEach(items) { proposal in
                         VStack(alignment: .leading, spacing: 5) {
-                            HStack { Text(proposal.status.rawValue.capitalized); Spacer(); Text(proposal.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
+                            HStack { Text(proposalStatusLabel(proposal.status)); Spacer(); Text(proposal.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
                             Text(proposal.conclusion).font(.callout)
                             if let reason = proposal.failureReason { Text(reason).font(.caption).foregroundStyle(.orange) }
                             if let alternative = proposal.alternative, !alternative.isEmpty { Text("Alternative: %@".localized().replacingOccurrences(of: "%@", with: alternative)).font(.caption).foregroundStyle(.secondary) }
@@ -54,5 +53,9 @@ struct CoachHistoryView: View {
             .navigationTitle("Coach History".localized())
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".localized()) { dismiss() } } }
         }
+    }
+
+    private func proposalStatusLabel(_ status: CoachProposalStatus) -> String {
+        status.rawValue.capitalized.localized()
     }
 }

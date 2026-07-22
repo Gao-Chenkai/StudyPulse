@@ -89,6 +89,17 @@ nonisolated struct AppPreferences: Codable {
     var coachEnabled: Bool = false
     var coachNotificationEnabled: Bool = true
     var coachNotificationHour: Int = 20
+    /// When enabled, a material locally-detected recovery change can request a new Coach proposal.
+    /// The proposal remains pending until the user approves it.
+    var coachAdaptivePlanEnabled: Bool = false
+    /// Local health baseline used to detect material changes without sending health data just to decide.
+    var coachHealthBaselineCategory: String? = nil
+    var coachHealthBaselineZScore: Double? = nil
+    var coachHealthBaselineSleepHours: Double? = nil
+    var coachHealthBaselineRestingHeartRate: Double? = nil
+    var coachHealthBaselineRestorativeSleepHours: Double? = nil
+    /// Limits cloud plan generation after a meaningful health change.
+    var lastCoachAdaptivePlanRequestTime: Date? = nil
     /// Chat Completions 风格端点 base,例如 https://api.openai.com 或 https://api.deepseek.com
     /// OpenAI-compatible base URL (e.g. https://api.openai.com or https://api.deepseek.com).
     /// `nil` 表示未配置。
@@ -181,7 +192,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
@@ -214,6 +225,13 @@ nonisolated struct AppPreferences: Codable {
         self.coachEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachEnabled) ?? false
         self.coachNotificationEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachNotificationEnabled) ?? true
         self.coachNotificationHour = max(0, min(23, try c.decodeIfPresent(Int.self, forKey: .coachNotificationHour) ?? 20))
+        self.coachAdaptivePlanEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachAdaptivePlanEnabled) ?? false
+        self.coachHealthBaselineCategory = try c.decodeIfPresent(String.self, forKey: .coachHealthBaselineCategory)
+        self.coachHealthBaselineZScore = try c.decodeIfPresent(Double.self, forKey: .coachHealthBaselineZScore)
+        self.coachHealthBaselineSleepHours = try c.decodeIfPresent(Double.self, forKey: .coachHealthBaselineSleepHours)
+        self.coachHealthBaselineRestingHeartRate = try c.decodeIfPresent(Double.self, forKey: .coachHealthBaselineRestingHeartRate)
+        self.coachHealthBaselineRestorativeSleepHours = try c.decodeIfPresent(Double.self, forKey: .coachHealthBaselineRestorativeSleepHours)
+        self.lastCoachAdaptivePlanRequestTime = try c.decodeIfPresent(Date.self, forKey: .lastCoachAdaptivePlanRequestTime)
         self.llmBaseURL = try c.decodeIfPresent(String.self, forKey: .llmBaseURL)
         self.llmAPIKey = try c.decodeIfPresent(String.self, forKey: .llmAPIKey)
         self.llmModel = try c.decodeIfPresent(String.self, forKey: .llmModel)

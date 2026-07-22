@@ -22,4 +22,17 @@ final class CoachNotifications {
         center.add(UNNotificationRequest(identifier: identifier, content: content,
                                           trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)))
     }
+
+    /// Delivers only after a cloud-generated proposal has been saved locally for user review.
+    nonisolated func notifyAdaptivePlanReady(goalID: UUID?) {
+        let content = UNMutableNotificationContent()
+        content.title = "AI Coach".localized()
+        content.body = "Your recovery changed significantly, so AI Coach prepared an adjusted plan to review.".localized()
+        content.sound = .default
+        var userInfo: [AnyHashable: Any] = ["type": "coach"]
+        if let goalID { userInfo["goalID"] = goalID.uuidString }
+        content.userInfo = userInfo
+        let request = UNNotificationRequest(identifier: "studyPulse.coach.adaptive.\(UUID().uuidString)", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
 }

@@ -32,6 +32,39 @@ final class CoachViewModel: ObservableObject {
 
     func refreshGoals() {
         goals = container.coachRepo.goals.sorted { $0.updatedAt > $1.updatedAt }
+
+        // The summary card represents the single current analysis target. Keep
+        // its selection constrained to one active goal even when the repository
+        // contains several active goals or the previously selected goal changed
+        // status elsewhere.
+        let currentGoal = selectedGoal.flatMap { selected in
+            goals.first { $0.id == selected.id && $0.status == .active }
+        } ?? goals.first { $0.status == .active }
+        selectedGoal = currentGoal
+        analysis = currentGoal.flatMap { goal in
+            container.coachRepo.analyses
+                .filter { $0.goalID == goal.id }
+                .max(by: { $0.calculatedAt < $1.calculatedAt })
+        }
+        proposal = currentGoal.flatMap { goal in
+            container.coachRepo.proposals.first { $0.goalID == goal.id && $0.status == .pending }
+        }
+    }
+
+    /// Refresh once per calendar day, or whenever another process marked the
+    /// analysis dirty. Background refresh can also have produced a newer result,
+    /// so adopt that result before deciding whether another calculation is needed.
+    func refreshIfNeeded(now: Date = Date()) async {
+        guard let goal = selectedGoal, !isLoading else { return }
+        if let latest = container.coachRepo.analyses
+            .filter({ $0.goalID == goal.id })
+            .max(by: { $0.calculatedAt < $1.calculatedAt }),
+           analysis == nil || latest.calculatedAt > analysis!.calculatedAt {
+            analysis = latest
+        }
+        let needsRefresh = CoachRefreshSignal.isDirty || analysis == nil ||
+            !Calendar.current.isDate(analysis!.calculatedAt, inSameDayAs: now)
+        if needsRefresh { await refresh() }
     }
 
     @discardableResult

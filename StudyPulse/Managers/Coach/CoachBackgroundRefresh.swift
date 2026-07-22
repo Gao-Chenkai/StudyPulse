@@ -22,6 +22,7 @@ enum CoachBackgroundRefresh {
                 if let goal = activeGoal {
                     _ = coordinator.analyze(goal: goal)
                 }
+                await coordinator.refreshPlanForSignificantHealthChange()
                 CoachNotifications.shared.reschedule(
                     enabled: container.envManager.preferences.coachEnabled && container.envManager.preferences.coachNotificationEnabled,
                     hour: container.envManager.preferences.coachNotificationHour,

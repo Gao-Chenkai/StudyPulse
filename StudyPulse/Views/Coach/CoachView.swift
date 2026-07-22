@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CoachView: View {
     @Environment(RepositoryContainer.self) private var container
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: CoachViewModel
     @State private var showingGoalForm = false
     @State private var editingGoal: CoachGoal?
@@ -76,11 +77,18 @@ struct CoachView: View {
             }
         .onAppear {
             refresh()
+            Task { await viewModel.refreshIfNeeded() }
             if let raw = UserDefaults.standard.string(forKey: "studyPulse.pendingCoachGoalID"),
                let id = UUID(uuidString: raw), let goal = viewModel.goals.first(where: { $0.id == id }) {
                 viewModel.select(goal)
                 UserDefaults.standard.removeObject(forKey: "studyPulse.pendingCoachGoalID")
+                Task { await viewModel.refreshIfNeeded() }
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refresh()
+            Task { await viewModel.refreshIfNeeded() }
         }
         }
     }
@@ -104,45 +112,82 @@ struct CoachView: View {
             goalSection(.abandoned, title: "Abandoned Goals")
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     @ViewBuilder
     private var coachSummarySection: some View {
         if let goal = viewModel.selectedGoal {
             Section("Current analysis".localized()) {
-                HStack {
-                    Spacer()
-                    Button {
-                        Task { await viewModel.refresh() }
-                    } label: {
-                        Label("Refresh".localized(), systemImage: "arrow.clockwise")
-                    }
-                    .disabled(viewModel.isLoading)
-                }
-                if let analysis = viewModel.analysis {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(format: "Weighted prediction: %.1f%%".localized(), analysis.weightedPredicted * 100))
-                        Text(String(format: "Success probability: %.0f%%".localized(), analysis.successProbability * 100))
-                            .font(.caption).foregroundStyle(.secondary)
-                        ForEach(goal.subjects) { subject in
-                            let share = goal.contribution(of: subject)
-                            HStack { Text(subject.subject); Spacer(); Text(String(format: "%.0f%%".localized(), share * 100)).font(.caption.monospacedDigit()) }
-                        }
-                    }
-                    Button("View Coach history".localized()) { showingHistory = true }
-                } else {
-                    Text("Refresh Coach to generate an analysis.".localized()).foregroundStyle(.secondary)
-                }
-                if let proposal = viewModel.proposal {
-                    HStack {
-                        Label("Proposal ready".localized(), systemImage: "sparkles")
-                        Spacer()
-                        Button("Review".localized()) { showingProposalReview = true }
-                    }
-                    Button("Regenerate".localized()) { Task { await viewModel.regenerateProposal() } }
-                }
+                coachAnalysisCard(goal: goal)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 12, trailing: 0))
+                    .listRowBackground(Color.clear)
             }
         }
+    }
+
+    private func coachAnalysisCard(goal: CoachGoal) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(goal.title).font(.headline)
+                    Text(String(format: "Target date: %@".localized(), goal.targetDate.formatted(date: .abbreviated, time: .omitted)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    Task { await viewModel.refresh() }
+                } label: {
+                    if viewModel.isLoading { ProgressView() }
+                    else { Label("Refresh".localized(), systemImage: "arrow.clockwise") }
+                }
+                .buttonStyle(.borderless).tint(.blue).disabled(viewModel.isLoading)
+            }
+
+            Divider().padding(.vertical, 16)
+
+            if let analysis = viewModel.analysis {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(String(format: "Weighted prediction: %.1f".localized(), analysis.weightedPredicted))
+                        .font(.title3.weight(.medium))
+                    Text(String(format: "Success probability: %.0f%%".localized(), analysis.successProbability * 100))
+                        .foregroundStyle(.secondary)
+                    VStack(spacing: 0) {
+                        ForEach(Array(goal.subjects.enumerated()), id: \.element.id) { index, subject in
+                            let share = goal.contribution(of: subject)
+                            HStack(spacing: 10) {
+                                Text(subject.subject).lineLimit(1)
+                                Spacer(minLength: 8)
+                                Text(String(format: "%.0f%%".localized(), share * 100))
+                                    .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 11)
+                            if index < goal.subjects.count - 1 { Divider() }
+                        }
+                    }
+                }
+                Divider().padding(.top, 4)
+                Button("View Coach history".localized()) { showingHistory = true }
+                    .font(.body).foregroundStyle(.blue).padding(.top, 14)
+            } else {
+                Text("Refresh Coach to generate an analysis.".localized())
+                    .foregroundStyle(.secondary).padding(.vertical, 8)
+            }
+
+            if viewModel.proposal != nil {
+                Divider().padding(.vertical, 14)
+                HStack {
+                    Label("Proposal ready".localized(), systemImage: "sparkles")
+                    Spacer()
+                    Button("Review".localized()) { showingProposalReview = true }
+                }
+                Button("Regenerate".localized()) { Task { await viewModel.regenerateProposal() } }
+                    .font(.caption).padding(.top, 8)
+            }
+        }
+        .padding(20)
+        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     @ViewBuilder

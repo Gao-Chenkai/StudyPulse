@@ -156,6 +156,7 @@ struct StudyPulseApp: App {
                             await hrvManager.refreshBodyStatus()
                             await hrvManager.refreshReadiness()
                             CoachRefreshSignal.markDirty()
+                            await CoachCoordinator(container: container).refreshPlanForSignificantHealthChange()
                         }
                         CoachCoordinator(container: container).evaluateCoachTasks()
                         CoachNotifications.shared.reschedule(

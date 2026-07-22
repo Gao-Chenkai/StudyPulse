@@ -13,4 +13,18 @@ final class CoachViewModelTests: XCTestCase {
         XCTAssertEqual(vm.selectedGoal?.subjects.count, 2)
         XCTAssertEqual(vm.selectedGoal?.history.count, 1)
     }
+
+    func testCurrentAnalysisKeepsOnlyOneActiveGoalSelected() {
+        let (container, _) = TestRepositoryContainerFactory.makeMockContainer()
+        let vm = CoachViewModel(container: container)
+
+        _ = vm.createGoal(title: "First", subjects: [], targetDate: Date().addingTimeInterval(86400), dailyMinutes: 60, purpose: "", constraints: "")
+        _ = vm.createGoal(title: "Second", subjects: [], targetDate: Date().addingTimeInterval(172800), dailyMinutes: 60, purpose: "", constraints: "")
+
+        vm.refreshGoals()
+
+        XCTAssertEqual(vm.goals.filter { $0.status == .active }.count, 2)
+        XCTAssertNotNil(vm.selectedGoal)
+        XCTAssertEqual(vm.selectedGoal?.status, .active)
+    }
 }

@@ -18,6 +18,40 @@ nonisolated struct CoachLLMResponse: Codable, Sendable {
     let alternative: String?
 }
 
+/// The explicit, structured recovery context included in every Coach planning request.
+/// It is only sent after the user has enabled AI Coach and configured their BYOK LLM.
+nonisolated struct CoachLLMHealthContext: Codable, Sendable, Equatable {
+    let dataAvailable: Bool
+    let readinessCategory: String?
+    let hrvZScore: Double?
+    let todayHRV: Double?
+    let sleepHours: Double?
+    let restorativeSleepHours: Double?
+    let restingHeartRate: Double?
+    let latestHeartRate: Double?
+    let respiratoryRate: Double?
+    let exerciseMinutes: Double?
+    let psychologicalStability: Double?
+    let moodScore: Double?
+    let energyScore: Double?
+
+    init(signals: CoachHealthSignals, dataAvailable: Bool) {
+        self.dataAvailable = dataAvailable
+        self.readinessCategory = signals.readinessCategory
+        self.hrvZScore = signals.hrvZScore
+        self.todayHRV = signals.todayHRV
+        self.sleepHours = signals.sleepHours
+        self.restorativeSleepHours = signals.restorativeSleepHours
+        self.restingHeartRate = signals.restingHeartRate
+        self.latestHeartRate = signals.latestHeartRate
+        self.respiratoryRate = signals.respiratoryRate
+        self.exerciseMinutes = signals.exerciseMinutes
+        self.psychologicalStability = signals.psychologicalStability
+        self.moodScore = signals.moodScore
+        self.energyScore = signals.energyScore
+    }
+}
+
 nonisolated struct CoachConversationLLMResponse: Codable, Sendable {
     let message: String
     let todoSuggestions: [CoachConversationTodoJSON]
@@ -89,16 +123,23 @@ nonisolated struct CoachConversationTodoJSON: Codable, Sendable {
 enum CoachLLM {
     static let caller = "AICoach"
 
-    static func makePrompt(goal: CoachGoal, analysis: CoachAnalysis, languageCode: String? = nil) -> LLMPrompt {
+    static func makePrompt(goal: CoachGoal, analysis: CoachAnalysis, healthContext: CoachLLMHealthContext? = nil,
+                           healthChangeReason: String? = nil,
+                           languageCode: String? = nil) -> LLMPrompt {
         struct Payload: Codable {
             let goal: CoachGoal?
             let analysis: CoachAnalysis?
+            let healthContext: CoachLLMHealthContext?
+            let healthChangeReason: String?
         }
-        let payload = Payload(goal: goal, analysis: analysis)
+        let payload = Payload(goal: goal, analysis: analysis, healthContext: healthContext,
+                              healthChangeReason: healthChangeReason)
         let data = (try? JSONEncoder().encode(payload)) ?? Data()
         let json = String(data: data, encoding: .utf8) ?? "{}"
         return LLMPrompt(system: """
         You are a rigorous long-term study coach. The local app has already calculated every number.
+        The payload's healthContext is the current HealthKit-derived recovery snapshot. Use it to adapt
+        workload, session length, breaks, and recovery advice; do not invent unavailable health values.
         \(languageInstruction(for: languageCode))
         Never change scores, probabilities, dates, or targets. Return JSON only with keys:
         conclusion, rationale, shouldContinue, items, alternative.
@@ -150,8 +191,10 @@ enum CoachLLM {
     }
 
     @MainActor
-    static func generate(goal: CoachGoal, analysis: CoachAnalysis, config: LLMConfig, languageCode: String? = nil) async throws -> CoachProposal {
-        let output = try await LLMClient.shared.complete(prompt: makePrompt(goal: goal, analysis: analysis, languageCode: languageCode), config: config, caller: caller)
+    static func generate(goal: CoachGoal, analysis: CoachAnalysis, healthContext: CoachLLMHealthContext? = nil,
+                         healthChangeReason: String? = nil,
+                         config: LLMConfig, languageCode: String? = nil) async throws -> CoachProposal {
+        let output = try await LLMClient.shared.complete(prompt: makePrompt(goal: goal, analysis: analysis, healthContext: healthContext, healthChangeReason: healthChangeReason, languageCode: languageCode), config: config, caller: caller)
         return try parse(output: output, goal: goal, analysis: analysis)
     }
 
