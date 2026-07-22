@@ -98,15 +98,18 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
         Log.llm.info("LLMResponseCache cleared")
     }
 
-    /// 计算 key:caller + sha256(effectiveSystem + messages + model + temperature)。
-    /// 包含 temperature 与 model,避免不同采样参数的相同 prompt 串扰。
-    /// Compute the key: caller + sha256(effectiveSystem + messages + model + temperature).
-    /// Includes temperature and model so different sampling params don't collide.
+    /// 计算 key:caller + sha256(effectiveSystem + messages + images + model + temperature)。
+    /// 图片内容也必须参与 key，否则不同图片会错误命中同一个识别结果。
+    /// Compute the key from effectiveSystem, messages, images, model and temperature.
+    /// Image contents must be included or different photos can reuse one result.
     private func makeKey(caller: String, prompt: LLMPrompt, config: LLMConfig) -> String {
         let effectiveSystem = prompt.effectiveSystem(appendix: config.systemPromptAppendix)
         var messageContents = ""
         for m in prompt.messages {
             messageContents += m.role.rawValue + ":" + m.content + "\n"
+            for imageDataURL in m.imageDataURLs {
+                messageContents += "image:" + imageDataURL + "\n"
+            }
         }
         let model = config.model ?? ""
         let temperature = config.temperature

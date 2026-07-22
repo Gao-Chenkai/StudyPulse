@@ -69,6 +69,7 @@ struct MistakeDetailEditView: View {
         // System photo picker → appended to the current section's image array.
         .sheet(isPresented: $viewModel.showingImagePicker) {
             ImagePickerWithCompletion(onDismiss: { image in
+                viewModel.showingImagePicker = false
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()
@@ -77,6 +78,7 @@ struct MistakeDetailEditView: View {
         // Camera capture → same as above.
         .sheet(isPresented: $viewModel.showingPhotoCapture) {
             PhotoCaptureWithCompletion(onDismiss: { image in
+                viewModel.showingPhotoCapture = false
                 if let image = image { viewModel.addImageToCurrentSection(image) }
             })
             .ignoresSafeArea()

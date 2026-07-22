@@ -14,6 +14,8 @@ import Foundation
 import SwiftUI
 import Combine
 import UIKit
+import os
+import AVFoundation
 
 @MainActor
 final class NewMistakeSetViewModel: ObservableObject {
@@ -44,14 +46,30 @@ final class NewMistakeSetViewModel: ObservableObject {
     @Published var correctSolutionImagesData: [Data] = []
 
     // MARK: - OCR & 弹窗状态 / OCR & sheet state
-    @Published var showingImagePicker = false
-    @Published var showingPhotoCapture = false
+    @Published var imagePickerRoute: ImagePickerRoute?
     @Published var showingHandwritingSheet = false
     @Published var isProcessingOCR = false
     @Published var showingOCRAlert = false
     @Published var ocrErrorMessage = ""
+    @Published private(set) var aiPhotoRecognitionState: AIPhotoRecognitionState = .idle
+    @Published var showingAIPhotoRecognitionError = false
+    @Published var aiPhotoRecognitionErrorMessage = ""
+    @Published var showingCameraAccessError = false
+    @Published var cameraAccessErrorMessage = ""
     /// 新建错题是否直接加入复习队列 / Join the review queue immediately?
     @Published var reviewEnabled = true
+
+    private var aiRecognitionTask: Task<Void, Never>?
+    private var lastAIImageData: Data?
+
+    enum AIPhotoRecognitionState: Equatable {
+        case idle, loading, failed, succeeded
+    }
+
+    enum ImagePickerRoute: String, Identifiable {
+        case library, camera, aiLibrary, aiCamera
+        var id: String { rawValue }
+    }
 
     // MARK: - 初始化 / Initialization
     /// 默认选中第一个可用科目 / Pre-selects the first available subject.
@@ -94,12 +112,23 @@ final class NewMistakeSetViewModel: ObservableObject {
         editedTitle.isEmpty || editedOriginalQuestion.isEmpty
     }
 
+    var isAIPhotoRecognitionEnabled: Bool {
+        let config = container.envManager.llmConfig
+        return config.isConfigured && config.multimodalEnabled
+    }
+
     /// 当前选中分区的文字绑定(路由到对应字段)
     /// Text binding for the current section (routed to the matching field).
     var currentSectionTextBinding: Binding<String> {
+        textBinding(for: selectedSection)
+    }
+
+    /// Binding captures a concrete section. An outgoing editor can therefore
+    /// never write its delayed UIKit callback into the newly selected section.
+    func textBinding(for section: EditSection) -> Binding<String> {
         Binding(
             get: {
-                switch self.selectedSection {
+                switch section {
                 case .question: return self.editedOriginalQuestion
                 case .reason: return self.editedErrorReason
                 case .wrong: return self.editedWrongSolution
@@ -107,7 +136,7 @@ final class NewMistakeSetViewModel: ObservableObject {
                 }
             },
             set: { newValue in
-                switch self.selectedSection {
+                switch section {
                 case .question: self.editedOriginalQuestion = newValue
                 case .reason: self.editedErrorReason = newValue
                 case .wrong: self.editedWrongSolution = newValue
@@ -157,6 +186,90 @@ final class NewMistakeSetViewModel: ObservableObject {
         appendImageData(data)
     }
 
+    func presentImagePicker(_ route: ImagePickerRoute) {
+        guard route == .camera || route == .aiCamera else {
+            imagePickerRoute = route
+            return
+        }
+
+        #if targetEnvironment(simulator)
+        imagePickerRoute = route == .aiCamera ? .aiLibrary : .library
+        #else
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            imagePickerRoute = route
+        case .notDetermined:
+            Task { [weak self] in
+                let granted = await AVCaptureDevice.requestAccess(for: .video)
+                guard let self else { return }
+                if granted {
+                    self.imagePickerRoute = route
+                } else {
+                    self.showCameraAccessDenied()
+                }
+            }
+        case .denied, .restricted:
+            showCameraAccessDenied()
+        @unknown default:
+            showCameraAccessDenied()
+        }
+        #endif
+    }
+
+    private func showCameraAccessDenied() {
+        cameraAccessErrorMessage = "Camera access is unavailable. Enable it in Settings or choose a photo from the library.".localized()
+        showingCameraAccessError = true
+    }
+
+    /// AI only pre-fills the editable form. It never persists a mistake by itself.
+    func recognizeMistakePhoto(_ image: UIImage) {
+        guard isAIPhotoRecognitionEnabled, let data = image.jpegData(compressionQuality: 0.85) else { return }
+        questionImagesData.append(data)
+        lastAIImageData = data
+        aiRecognitionTask?.cancel()
+        aiPhotoRecognitionState = .loading
+        showingAIPhotoRecognitionError = false
+        runAIRecognition(with: data)
+    }
+
+    func retryAIPhotoRecognition() {
+        guard let data = lastAIImageData, isAIPhotoRecognitionEnabled else { return }
+        aiRecognitionTask?.cancel()
+        aiPhotoRecognitionState = .loading
+        showingAIPhotoRecognitionError = false
+        runAIRecognition(with: data)
+    }
+
+    func cancelAIPhotoRecognition() {
+        aiRecognitionTask?.cancel()
+        aiRecognitionTask = nil
+        aiPhotoRecognitionState = .idle
+    }
+
+    private func runAIRecognition(with data: Data) {
+        let config = container.envManager.llmConfig
+        aiRecognitionTask = Task { [weak self] in
+            do {
+                let result = try await MistakeImageRecognitionLLM.analyze(imageData: data, config: config)
+                guard !Task.isCancelled else { return }
+                self?.editedOriginalQuestion = result.question
+                self?.editedErrorReason = result.errorReason
+                self?.editedWrongSolution = result.wrongSolution
+                self?.editedCorrectSolution = result.correctSolution
+                self?.selectedSection = .question
+                self?.aiPhotoRecognitionState = .succeeded
+                Log.llm.info("Mistake image recognition applied question=\(result.question.count) reason=\(result.errorReason.count) wrong=\(result.wrongSolution.count) correct=\(result.correctSolution.count)")
+            } catch is CancellationError {
+                self?.aiPhotoRecognitionState = .idle
+            } catch {
+                guard !Task.isCancelled else { return }
+                self?.aiPhotoRecognitionState = .failed
+                self?.aiPhotoRecognitionErrorMessage = error.localizedDescription
+                self?.showingAIPhotoRecognitionError = true
+            }
+        }
+    }
+
     private func appendImageData(_ data: Data) {
         switch selectedSection {
         case .question: questionImagesData.append(data)
@@ -173,6 +286,7 @@ final class NewMistakeSetViewModel: ObservableObject {
     func triggerOCR() {
         let currentImages = currentSectionImagesBinding.wrappedValue
         guard let lastImageData = currentImages.last else { return }
+        let destinationText = textBinding(for: selectedSection)
         isProcessingOCR = true
 
         Task {
@@ -183,13 +297,13 @@ final class NewMistakeSetViewModel: ObservableObject {
                     try await OCRManager.recognizeText(from: lastImageData)
                 }.value
                 if !recognizedText.isEmpty {
-                    let currentText = currentSectionTextBinding.wrappedValue
+                    let currentText = destinationText.wrappedValue
                     if !currentText.isEmpty {
                         // 已有内容 → 空行分隔追加 / Append with blank-line sep.
-                        currentSectionTextBinding.wrappedValue = currentText + "\n\n" + recognizedText
+                        destinationText.wrappedValue = currentText + "\n\n" + recognizedText
                     } else {
                         // 空白 → 直接填充 / Fill directly when empty.
-                        currentSectionTextBinding.wrappedValue = recognizedText
+                        destinationText.wrappedValue = recognizedText
                     }
                 }
             } catch {

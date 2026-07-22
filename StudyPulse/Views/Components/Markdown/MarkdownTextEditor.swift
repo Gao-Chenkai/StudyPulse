@@ -65,12 +65,25 @@ struct MarkdownTextEditor: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
+        // UIViewRepresentable 的 Coordinator 会跨 SwiftUI 更新复用，必须同步
+        // 最新的 Binding；否则切换错题分区后，旧 Coordinator 可能把旧值写回表单。
+        // UIViewRepresentable reuses its Coordinator across SwiftUI updates, so keep
+        // its Binding in sync or a section switch can write stale text back to the form.
+        context.coordinator.parent = self
+
         // 当用户使用中文拼音或 IME 处于"标记文本(Marked Text)"组合状态时,
         // 切勿修改 uiView.text 或 uiView.selectedRange,否则一定会中断/吞除拼音或候选词。
         // When the user is composing with a Chinese pinyin IME or any IME is in a "marked text"
         // composing state, never modify `uiView.text` or `uiView.selectedRange`, otherwise
         // the pinyin / candidate will be eaten.
-        guard uiView.markedTextRange == nil else { return }
+        // 图片选择器关闭后 UITextView 偶尔仍会短暂保留 marked range。若外部
+        // 文本已经改变（例如 AI 识别结果），仍需同步；只有内容本身未改变时
+        // 才跳过更新，以免打断用户正在进行的拼音组合输入。
+        if uiView.markedTextRange != nil, uiView.isFirstResponder, uiView.text == text {
+            return
+        }
+        context.coordinator.isApplyingExternalText = true
+        defer { context.coordinator.isApplyingExternalText = false }
         if uiView.text != text {
             uiView.text = text
         }
@@ -113,6 +126,7 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: MarkdownTextEditor
+        var isApplyingExternalText = false
         /// 在底层 UIView 生命周期内一直持有,
         /// 让键盘附件保持存活。
         /// Retained for the lifetime of the underlying UIView so the
@@ -124,6 +138,9 @@ struct MarkdownTextEditor: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
+            // 只有正在交互的编辑器可以写回 Binding。已被分区切换淘汰的
+            // UITextView 可能仍收到延迟 delegate 回调，必须忽略。
+            guard !isApplyingExternalText, textView.isFirstResponder else { return }
             parent.text = textView.text
             // 拼音组合中不要回写 selectedRange,避免打断 IME。
             // Don't write back selectedRange during IME composing to avoid disrupting the IME.
@@ -133,6 +150,7 @@ struct MarkdownTextEditor: UIViewRepresentable {
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
+            guard !isApplyingExternalText, textView.isFirstResponder else { return }
             guard textView.markedTextRange == nil else { return }
             if parent.selectedRange != textView.selectedRange {
                 parent.selectedRange = textView.selectedRange

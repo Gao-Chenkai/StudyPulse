@@ -117,21 +117,35 @@ struct NewMistakeSetView: View {
         .navigationTitle("New Mistake".localized())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
-        // 系统图库 → 当前 section 的图片数组
-        // System photo library → the current section's image array.
-        .sheet(isPresented: $viewModel.showingImagePicker) {
-            ImagePickerWithCompletion(onDismiss: { image in
-                if let image = image { viewModel.addImageToCurrentSection(image) }
-            })
-            .ignoresSafeArea()
-        }
-        // 相机拍照 → 同上
-        // Camera capture → same.
-        .sheet(isPresented: $viewModel.showingPhotoCapture) {
-            PhotoCaptureWithCompletion(onDismiss: { image in
-                if let image = image { viewModel.addImageToCurrentSection(image) }
-            })
-            .ignoresSafeArea()
+        // All photo routes share one sheet so UIKit dismissal and SwiftUI state
+        // cannot diverge after a capture or selection.
+        .fullScreenCover(item: $viewModel.imagePickerRoute) { route in
+            switch route {
+            case .library:
+                ImagePickerWithCompletion { image in
+                    viewModel.imagePickerRoute = nil
+                    if let image { viewModel.addImageToCurrentSection(image) }
+                }
+                .ignoresSafeArea()
+            case .camera:
+                PhotoCaptureWithCompletion { image in
+                    viewModel.imagePickerRoute = nil
+                    if let image { viewModel.addImageToCurrentSection(image) }
+                }
+                .ignoresSafeArea()
+            case .aiLibrary:
+                ImagePickerWithCompletion { image in
+                    viewModel.imagePickerRoute = nil
+                    if let image { viewModel.recognizeMistakePhoto(image) }
+                }
+                .ignoresSafeArea()
+            case .aiCamera:
+                PhotoCaptureWithCompletion { image in
+                    viewModel.imagePickerRoute = nil
+                    if let image { viewModel.recognizeMistakePhoto(image) }
+                }
+                .ignoresSafeArea()
+            }
         }
         // PencilKit 手写 → 直接把 PNG Data 追加(P1-3:不再 UIImage 中转)
         // PencilKit hand-drawing → append the PNG Data directly (P1-3: no UIImage round-trip).
@@ -149,6 +163,36 @@ struct NewMistakeSetView: View {
             Button("OK".localized()) { }
         } message: {
             Text(viewModel.ocrErrorMessage)
+        }
+        .alert("AI Photo Recognition Failed".localized(), isPresented: $viewModel.showingAIPhotoRecognitionError) {
+            Button("Retry".localized()) { viewModel.retryAIPhotoRecognition() }
+            Button("Cancel".localized(), role: .cancel) { viewModel.cancelAIPhotoRecognition() }
+        } message: {
+            Text(viewModel.aiPhotoRecognitionErrorMessage)
+        }
+        // Use the system alert presentation for the AI recognition progress
+        // state so it follows the current iOS alert appearance automatically.
+        .alert(
+            "AI is reading the mistake photo...".localized(),
+            isPresented: Binding(
+                get: { viewModel.aiPhotoRecognitionState == .loading },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.cancelAIPhotoRecognition()
+                    }
+                }
+            )
+        ) {
+            Button("Cancel".localized(), role: .cancel) {
+                viewModel.cancelAIPhotoRecognition()
+            }
+        } message: {
+            Text("The result will only prefill the form. You can edit it before saving.".localized())
+        }
+        .alert("Camera Unavailable".localized(), isPresented: $viewModel.showingCameraAccessError) {
+            Button("OK".localized(), role: .cancel) { }
+        } message: {
+            Text(viewModel.cameraAccessErrorMessage)
         }
         // OCR 进行中的全屏 loading 蒙层
         // Full-screen overlay shown while OCR is in progress.
@@ -222,31 +266,10 @@ private extension NewMistakeSetView {
             }
             .pickerStyle(.segmented)
 
-            Group {
-                switch viewModel.selectedSection {
-                case .question:
-                    MarkdownEditorView(
-                        text: $viewModel.editedOriginalQuestion,
-                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-                    )
-                case .reason:
-                    MarkdownEditorView(
-                        text: $viewModel.editedErrorReason,
-                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-                    )
-                case .wrong:
-                    MarkdownEditorView(
-                        text: $viewModel.editedWrongSolution,
-                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-                    )
-                case .correct:
-                    MarkdownEditorView(
-                        text: $viewModel.editedCorrectSolution,
-                        placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
-                    )
-                }
-            }
-            .id(viewModel.selectedSection)
+            MistakeFormMarkdownEditor(
+                text: viewModel.textBinding(for: viewModel.selectedSection),
+                placeholder: "Supports Markdown, math $...$ and chemistry $\\ce{...}$"
+            )
             .frame(minHeight: 620)
         }
     }
@@ -256,28 +279,34 @@ private extension NewMistakeSetView {
         // Image section: four sources (library / camera / OCR / handwriting)
         // + horizontal preview strip.
         Section(header: Text("Images".localized())) {
-            HStack {
-                // 系统图库
-                // System photo library.
-                Button(action: { viewModel.showingImagePicker = true }) {
-                    Label("Library".localized(), systemImage: "photo.on.rectangle.angled")
+            VStack(spacing: 0) {
+                Button(action: { viewModel.presentImagePicker(.library) }) {
+                    imageActionLabel("Library".localized(), systemImage: "photo.on.rectangle.angled")
                 }
-                Spacer()
-                // 相机拍照
-                // Camera capture.
-                Button(action: { viewModel.showingPhotoCapture = true }) {
-                    Label("Camera".localized(), systemImage: "camera.fill")
+
+                Button(action: { viewModel.presentImagePicker(.camera) }) {
+                    imageActionLabel("Camera".localized(), systemImage: "camera.fill")
                 }
-                Spacer()
-                // OCR:把当前 section 的图 → 文本写回 markdown
-                // OCR: convert the current section's images into text written back into the markdown.
+
+                Button {
+                    viewModel.presentImagePicker(.aiCamera)
+                } label: {
+                    imageActionLabel("AI Camera Recognition".localized(), systemImage: "camera.fill")
+                }
+                .disabled(!viewModel.isAIPhotoRecognitionEnabled)
+
+                Button {
+                    viewModel.presentImagePicker(.aiLibrary)
+                } label: {
+                    imageActionLabel("AI Photo Recognition".localized(), systemImage: "photo.on.rectangle")
+                }
+                .disabled(!viewModel.isAIPhotoRecognitionEnabled)
+
                 Button(action: { viewModel.triggerOCR() }) {
-                    Label("OCR".localized(), systemImage: "text.viewfinder")
+                    imageActionLabel("OCR".localized(), systemImage: "text.viewfinder")
                 }
                 .disabled(viewModel.currentSectionImagesBinding.wrappedValue.isEmpty)
-                Spacer()
-                // iPad:手写页用 NavigationLink;iPhone:用 sheet
-                // iPad: NavigationLink to the handwriting page; iPhone: sheet.
+
                 if isIPad {
                     NavigationLink {
                         HandwritingView { pngData in
@@ -286,15 +315,15 @@ private extension NewMistakeSetView {
                             }
                         }
                     } label: {
-                        Label("Draw".localized(), systemImage: "pencil.tip")
+                        imageActionLabel("Draw".localized(), systemImage: "pencil.tip")
                     }
                 } else {
                     Button(action: { viewModel.showingHandwritingSheet = true }) {
-                        Label("Draw".localized(), systemImage: "pencil.tip")
+                        imageActionLabel("Draw".localized(), systemImage: "pencil.tip")
                     }
                 }
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
 
             // 当前 section 还没有图片 → 占位
             // Empty placeholder when there are no images in the current section.
@@ -354,6 +383,64 @@ private extension NewMistakeSetView {
                 .fontWeight(.semibold)
                 .disabled(viewModel.isSaveDisabled)
             }
+        }
+    }
+
+    private func imageActionLabel(_ title: String, systemImage: String, showsChevron: Bool = false) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 28)
+                .foregroundStyle(.tint)
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+            if showsChevron {
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .padding(.vertical, 12)
+    }
+}
+
+/// A SwiftUI-native editor for the AI-prefilled form. Keeping this path free of
+/// UIViewRepresentable avoids delayed UITextView delegate callbacks overwriting
+/// fields after camera dismissal or an async recognition result.
+private struct MistakeFormMarkdownEditor: View {
+    @Binding var text: String
+    let placeholder: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+                TextEditor(text: $text)
+                    .scrollContentBackground(.hidden)
+                    .background(.clear)
+            }
+            .frame(minHeight: 280, maxHeight: .infinity)
+
+            Divider()
+
+            MarkdownPreviewView(text: text)
+                .overlay(alignment: .topTrailing) {
+                    Text("Preview".localized())
+                        .font(.caption2)
+                        .foregroundStyle(.secondary.opacity(0.6))
+                        .padding(8)
+                }
+                .frame(minHeight: 280, maxHeight: .infinity)
         }
     }
 }
@@ -529,12 +616,10 @@ struct ImagePickerWithCompletion: UIViewControllerRepresentable {
             } else {
                 parent.onDismiss(nil)
             }
-            picker.dismiss(animated: true)
         }
         
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.onDismiss(nil)
-            picker.dismiss(animated: true)
         }
     }
 }
@@ -545,8 +630,18 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraCaptureMode = .photo
+        #if targetEnvironment(simulator)
+        // Simulator camera devices are not reliable and can dismiss immediately
+        // with FigCaptureSourceRemote errors. Use the library as a safe fallback.
+        picker.sourceType = .photoLibrary
+        #else
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            picker.sourceType = .camera
+            picker.cameraCaptureMode = .photo
+        } else {
+            picker.sourceType = .photoLibrary
+        }
+        #endif
         picker.delegate = context.coordinator
         return picker
     }
@@ -567,12 +662,10 @@ struct PhotoCaptureWithCompletion: UIViewControllerRepresentable {
             } else {
                 parent.onDismiss(nil)
             }
-            picker.dismiss(animated: true)
         }
         
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.onDismiss(nil)
-            picker.dismiss(animated: true)
         }
     }
 }
