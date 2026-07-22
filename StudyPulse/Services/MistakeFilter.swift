@@ -248,10 +248,21 @@ extension MistakeFilter {
         let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) ?? now
         let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
         return mistakes.sorted { a, b in
-            let pa = (a.date > oneWeekAgo ? 2 : a.date < oneMonthAgo ? 1 : 0)
-            let pb = (b.date > oneWeekAgo ? 2 : b.date < oneMonthAgo ? 1 : 0)
+            let shelfA = MistakeShelfLife.estimate(for: a, now: now)
+            let shelfB = MistakeShelfLife.estimate(for: b, now: now)
+            let pa = shelfPriority(shelfA.status) * 10 + (a.date > oneWeekAgo ? 2 : a.date < oneMonthAgo ? 1 : 0)
+            let pb = shelfPriority(shelfB.status) * 10 + (b.date > oneWeekAgo ? 2 : b.date < oneMonthAgo ? 1 : 0)
             if pa != pb { return pa > pb }
             return a.date > b.date
         }.prefix(limit).map { $0 }
+    }
+
+    private static func shelfPriority(_ status: MistakeShelfLifeStatus) -> Int {
+        switch status {
+        case .recurrentlyFailing: return 4
+        case .expired: return 3
+        case .expiring: return 2
+        case .fresh: return 0
+        }
     }
 }

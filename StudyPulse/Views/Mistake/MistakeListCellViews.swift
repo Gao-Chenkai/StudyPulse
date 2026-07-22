@@ -302,18 +302,20 @@ struct MistakeCardView: View {
 
     @ViewBuilder
     private var cardDetails: some View {
-        if !mistake.originalQuestion.isEmpty {
-            Text(mistake.originalQuestion)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-                .padding(.top, 2)
-        }
-
-        if !mistake.source.isEmpty {
-            Text(String(format: "Source: %@".localized(), mistake.source))
-                .font(.caption)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            if !mistake.originalQuestion.isEmpty {
+                Text(mistake.originalQuestion)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .padding(.top, 2)
+            }
+            if !mistake.source.isEmpty {
+                Text(String(format: "Source: %@".localized(), mistake.source))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            MistakeShelfLifeView(mistake: mistake)
         }
     }
 }
