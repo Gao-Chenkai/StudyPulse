@@ -127,6 +127,8 @@ nonisolated struct Grade: Identifiable, Codable, Hashable {
     var date: Date
     /// 考试名称
     var examName: String
+    /// 关联的考试 ID；nil 表示未关联考试
+    var examId: UUID?
     /// 该成绩对应的满分（为空时取科目配置的满分）
     var fullScore: Double? = nil
     /// 归属阶段(学期/假期),nil = 未归类 / 全部数据视图
@@ -144,7 +146,7 @@ nonisolated struct Grade: Identifiable, Codable, Hashable {
     /// 创建成绩记录
     init(id: UUID = UUID(), subject: String, score: Double, rawScore: Double? = nil, ranking: Int? = nil,
          importance: Int = 3, image: Data? = nil, imageFileName: String? = nil,
-         date: Date = Date(), examName: String = "", fullScore: Double? = nil, phaseId: UUID? = nil) {
+         date: Date = Date(), examName: String = "", examId: UUID? = nil, fullScore: Double? = nil, phaseId: UUID? = nil) {
         self.id = id
         self.subject = subject
         self.score = score
@@ -155,6 +157,7 @@ nonisolated struct Grade: Identifiable, Codable, Hashable {
         self.imageFileName = imageFileName
         self.date = date
         self.examName = examName
+        self.examId = examId
         self.fullScore = fullScore
         self.phaseId = phaseId
     }

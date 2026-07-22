@@ -44,6 +44,7 @@ final class RepositoryContainer {
     let diaryRepo: any DiaryRepository
     let coachRepo: any CoachRepository
     let studySessionRepo: any StudySessionRepository
+    let examAutopsyRepo: any ExamAutopsyRepository
 
     // 3 个跨域编排子模块(组合而非继承,避免注入面爆炸)
     // 3 cross-domain orchestration sub-modules (composition over inheritance,
@@ -87,7 +88,8 @@ final class RepositoryContainer {
         routineInstanceRepo: (any RoutineInstanceRepository)? = nil,
         diaryRepo: (any DiaryRepository)? = nil,
         coachRepo: (any CoachRepository)? = nil,
-        studySessionRepo: (any StudySessionRepository)? = nil
+        studySessionRepo: (any StudySessionRepository)? = nil,
+        examAutopsyRepo: (any ExamAutopsyRepository)? = nil
     ) {
         self.envManager = envManager
         self.intentStore = intentStore
@@ -107,6 +109,7 @@ final class RepositoryContainer {
         self.diaryRepo = diaryRepo ?? DefaultDiaryRepository(envManager: envManager)
         self.coachRepo = coachRepo ?? DefaultCoachRepository()
         self.studySessionRepo = studySessionRepo ?? DefaultStudySessionRepository()
+        self.examAutopsyRepo = examAutopsyRepo ?? DefaultExamAutopsyRepository()
 
         // 注入跨域 weak 引用
         if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
@@ -186,6 +189,7 @@ final class RepositoryContainer {
         await diaryRepo.loadAll(context: context)
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
+        await self.examAutopsyRepo.loadAll(context: context)
 
         // 内嵌图片迁移(在 waitForAll 后,grades 已加载)
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
@@ -238,6 +242,7 @@ final class RepositoryContainer {
         await diaryRepo.loadAll(context: context)
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
+        await self.examAutopsyRepo.loadAll(context: context)
 
         if subjectRepo.subjects.isEmpty {
             subjectRepo.initializeDefaultSubjects()

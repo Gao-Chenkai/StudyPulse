@@ -116,6 +116,8 @@ final class GradeRecord {
     /// 考试名称
     /// Exam name.
     var examName: String
+    /// 关联的考试 ID；nil 表示未关联考试
+    var examId: UUID?
     /// 该条成绩的满分（nil = 用科目默认）
     /// Full score for this grade (nil = use subject default).
     var fullScore: Double?
@@ -134,6 +136,7 @@ final class GradeRecord {
         imageFileName: String?,
         date: Date,
         examName: String,
+        examId: UUID?,
         fullScore: Double?,
         phaseId: UUID? = nil
     ) {
@@ -147,6 +150,7 @@ final class GradeRecord {
         self.imageFileName = imageFileName
         self.date = date
         self.examName = examName
+        self.examId = examId
         self.fullScore = fullScore
         self.phaseId = phaseId
     }
@@ -163,6 +167,7 @@ final class GradeRecord {
             imageFileName: grade.imageFileName,
             date: grade.date,
             examName: grade.examName,
+            examId: grade.examId,
             fullScore: grade.fullScore,
             phaseId: grade.phaseId
         )
@@ -180,6 +185,7 @@ final class GradeRecord {
             imageFileName: imageFileName,
             date: date,
             examName: examName,
+            examId: examId,
             fullScore: fullScore,
             phaseId: phaseId
         )

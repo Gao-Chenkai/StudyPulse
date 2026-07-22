@@ -32,6 +32,19 @@ final class AddGradeViewModel: ObservableObject {
     @Published var selectedMultipleSubjects: [String] = []
     /// 各科目的分项成绩 / Per-subject score entries
     @Published var subjectScores: [SubjectScore] = []
+    /// 当前关联考试 ID；nil 表示“未归档”（暂不关联考试）
+    @Published var selectedExamID: UUID?
+    @Published var selectedExamIsComprehensive = false
+    @Published var isExamListExpanded = false
+
+    struct ExamOption: Identifiable, Hashable {
+        let id: UUID
+        let name: String
+        let subjectText: String
+        let date: Date
+        let endedAt: Date
+        let isComprehensive: Bool
+    }
 
     /// 单个科目的成绩条目(支持原分 / 排名)
     /// Per-subject score entry (supports raw-score and ranking).
@@ -93,6 +106,50 @@ final class AddGradeViewModel: ObservableObject {
         CGFloat(availableSubjects.count * 60)
     }
 
+    /// 已结束且未归档的考试。默认显示 15 天，展开后显示最近 3 个月。
+    var examOptions: [ExamOption] {
+        let calendar = Calendar.current
+        let now = Date()
+        let recentCutoff = calendar.date(byAdding: .day, value: -15, to: now) ?? now
+        let expandedCutoff = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+        let archivedPhaseIDs = Set(container.phaseRepo.phases.filter(\.isArchived).map(\.id))
+
+        let singles = container.examRepo.filteredExamSets.compactMap { exam -> ExamOption? in
+            guard exam.phaseId.map({ !archivedPhaseIDs.contains($0) }) ?? true else { return nil }
+            let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: exam.examEndDate ?? exam.examDate) ?? exam.examEndDate ?? exam.examDate
+            guard end <= now, end >= expandedCutoff else { return nil }
+            return ExamOption(id: exam.id, name: exam.name, subjectText: displayName(forSubject: exam.subject), date: exam.examDate, endedAt: end, isComprehensive: false)
+        }
+        let comprehensives = container.examRepo.filteredComprehensiveExamSets.compactMap { exam -> ExamOption? in
+            guard exam.phaseId.map({ !archivedPhaseIDs.contains($0) }) ?? true else { return nil }
+            let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: exam.examEndDate ?? exam.examDate) ?? exam.examEndDate ?? exam.examDate
+            guard end <= now, end >= expandedCutoff else { return nil }
+            return ExamOption(id: exam.id, name: exam.name, subjectText: exam.subject.map(displayName(forSubject:)).joined(separator: ", "), date: exam.examDate, endedAt: end, isComprehensive: true)
+        }
+        let cutoff = isExamListExpanded ? expandedCutoff : recentCutoff
+        return (singles + comprehensives).filter { $0.endedAt >= cutoff }.sorted { $0.endedAt > $1.endedAt }
+    }
+
+    func selectExam(_ option: ExamOption?) {
+        guard let option else {
+            selectedExamID = nil
+            selectedExamIsComprehensive = false
+            return
+        }
+        selectedExamID = option.id
+        selectedExamIsComprehensive = option.isComprehensive
+        examName = option.name
+        selectedDate = option.date
+        if option.isComprehensive, let exam = container.examRepo.comprehensiveExamSets.first(where: { $0.id == option.id }) {
+            selectedMultipleSubjects = exam.subject
+            isComprehensiveExam = true
+        } else if let exam = container.examRepo.examSets.first(where: { $0.id == option.id }) {
+            selectedSingleSubject = exam.subject
+            isComprehensiveExam = false
+        }
+        syncSubjectScores()
+    }
+
     /// 某科目的满分 / Full-score for a subject
     func fullScore(for subject: String) -> Double {
         container.fullScore(for: subject)
@@ -136,7 +193,8 @@ final class AddGradeViewModel: ObservableObject {
                 ranking: subjectScore.useRanking ? subjectScore.ranking : nil,
                 importance: importance,
                 date: selectedDate,
-                examName: examName
+                examName: examName,
+                examId: selectedExamID
             )
             // 记录此次成绩对应的满分
             // Record the full-score for this entry.

@@ -163,6 +163,7 @@ final class DefaultGradeRepository: GradeRepository {
                 entity.imageFileName = grade.imageFileName
                 entity.date = grade.date
                 entity.examName = grade.examName
+                entity.examId = grade.examId
                 entity.fullScore = grade.fullScore
                 entity.phaseId = grade.phaseId
                 try context.save()

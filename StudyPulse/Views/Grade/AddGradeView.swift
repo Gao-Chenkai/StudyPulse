@@ -81,7 +81,39 @@ private extension AddGradeView {
             DatePicker("Exam Date".localized(), selection: $viewModel.selectedDate, in: ...Date(), displayedComponents: .date)
 
             examTypePicker
+
+            examAssociationPicker
         }
+    }
+
+    var examAssociationPicker: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("关联考试".localized()).font(.headline)
+            examAssociationRow(title: "未归档".localized(), subtitle: "暂不关联考试".localized(), isSelected: viewModel.selectedExamID == nil) { viewModel.selectExam(nil) }
+            ForEach(viewModel.examOptions) { option in
+                examAssociationRow(title: option.name, subtitle: "\(option.subjectText) · \(option.date.formatted(date: .abbreviated, time: .omitted))", isSelected: viewModel.selectedExamID == option.id) { viewModel.selectExam(option) }
+            }
+            if viewModel.examOptions.isEmpty {
+                Text("最近 3 个月内没有可关联的已结束考试".localized()).font(.footnote).foregroundStyle(.secondary).padding(.vertical, 8)
+            }
+            if !viewModel.isExamListExpanded {
+                Button("查看最近 3 个月的考试".localized()) {
+                    viewModel.isExamListExpanded = true
+                }
+                .font(.footnote)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    func examAssociationRow(title: String, subtitle: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) { Text(title).foregroundStyle(.primary); Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+                if isSelected { Image(systemName: "checkmark").foregroundStyle(.tint) }
+            }.padding(.vertical, 8).contentShape(Rectangle())
+        }.buttonStyle(.plain)
     }
     
     // 2. 考试类型选择器

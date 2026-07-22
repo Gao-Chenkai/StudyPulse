@@ -45,6 +45,7 @@ struct ExamDetailView: View {
     @State private var animateIn = false
     @State private var showLinkedMistakesView = false
     @State private var showingChecklistEditor = false
+    @State private var showingAutopsy = false
 
     /// 实时从 repo 拿最新版本的考试
     /// Live copy of the exam from the repo.
@@ -103,6 +104,11 @@ struct ExamDetailView: View {
             // Section 0:Overview
             Section {
                 overviewContent(exam: exam)
+                Button { showingAutopsy = true } label: {
+                    Label("考试复盘", systemImage: "stethoscope")
+                        .font(.headline)
+                        .foregroundStyle(.purple)
+                }
             } header: {
                 Text("Overview".localized())
             }
@@ -234,6 +240,9 @@ struct ExamDetailView: View {
                     } label: {
                         Label("Edit Checklist".localized(), systemImage: "checklist")
                     }
+                    Button { showingAutopsy = true } label: {
+                        Label("考试复盘", systemImage: "stethoscope")
+                    }
                     if let review = exam.examReview {
                         Button {
                             copyMessage = review.summary
@@ -263,6 +272,12 @@ struct ExamDetailView: View {
             ExamChecklistEditView(exam: exam)
                 .environment(container)
                 .adaptiveSheet()
+        }
+        .sheet(isPresented: $showingAutopsy) {
+            NavigationStack {
+                ExamAutopsyView(exam: exam, container: container)
+                    .environment(container)
+            }
         }
         .alert("Delete Exam".localized(), isPresented: $showingDeleteConfirm) {
             Button("Cancel".localized(), role: .cancel) { }

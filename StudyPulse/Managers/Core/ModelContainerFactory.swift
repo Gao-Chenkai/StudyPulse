@@ -40,6 +40,7 @@ enum ModelContainerFactory {
         CoachConversationMessageRecord.self,
         CoachChatRecord.self,
         StudySessionRecord.self,
+        ExamAutopsyRecord.self,
     ]
 
     /// 创建或获取共享 ModelContainer。
