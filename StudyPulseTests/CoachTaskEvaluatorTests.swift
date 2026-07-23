@@ -1,6 +1,7 @@
 import XCTest
 @testable import StudyPulse
 
+@MainActor
 final class CoachTaskEvaluatorTests: XCTestCase {
     func testMistakeReviewConditionCompletesAfterReviews() {
         var mistake = MistakeNote(title: "Q", subject: "Math", originalQuestion: "Q", source: "Book", errorReason: "x", wrongSolution: "x", correctSolution: "y")

@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 @testable import StudyPulse
 
+@MainActor
 struct RecoveryLevelTests {
     @Test("Recovery score uses the rounded six-axis average")
     func recoveryScore() {

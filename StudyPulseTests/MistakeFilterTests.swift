@@ -129,12 +129,12 @@ final class MistakeFilterTests: XCTestCase {
 
     // MARK: - suggestedForReview
 
-    func test_suggestedForReview_ranksRecentFirst() {
+    func test_suggestedForReview_ranksShelfLifeUrgencyBeforeRecency() {
         let recent = makeMistake(title: "Recent", subject: "Math", daysAgo: 1)
         let medium = makeMistake(title: "Medium", subject: "Math", daysAgo: 15)
         let old = makeMistake(title: "Old", subject: "Math", daysAgo: 90)
         let result = MistakeFilter.suggestedForReview([old, recent, medium], now: now)
-        XCTAssertEqual(result.first?.title, "Recent")
+        XCTAssertEqual(result.first?.title, "Old")
     }
 
     func test_suggestedForReview_respectsLimit() {

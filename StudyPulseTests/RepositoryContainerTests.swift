@@ -127,4 +127,21 @@ final class RepositoryContainerTests: XCTestCase {
         XCTAssertTrue(entries.contains(where: { $0.title == "English Essay" }))
         XCTAssertTrue(entries.contains(where: { $0.title == "Midterm English" }))
     }
+
+    func test_inMemoryRealContainer_updatesReloadsAndDeletesPersistedGrade() async throws {
+        let container = try await TestRepositoryContainerFactory.makeInMemoryRealContainer()
+        let original = TestDataFixtures.makeGrade(subject: "Physics", score: 72)
+
+        container.addGrade(original)
+        var updated = original
+        updated.score = 91
+        container.gradeRepo.update(updated)
+
+        await container.gradeRepo.reloadFromSwiftData()
+        XCTAssertEqual(container.gradeRepo.grades.first(where: { $0.id == original.id })?.score, 91)
+
+        container.deleteGrade(updated)
+        await container.gradeRepo.reloadFromSwiftData()
+        XCTAssertNil(container.gradeRepo.grades.first(where: { $0.id == original.id }))
+    }
 }

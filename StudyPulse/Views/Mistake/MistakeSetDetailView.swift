@@ -52,6 +52,7 @@ struct MistakeSetDetailView: View {
     /// Most recent successful AI analysis (used as the initial assistant
     /// message in the deep-discussion sheet).
     @State private var lastAIAnalysis: String? = nil
+    @State private var correctionPlan: MistakeCorrectionPlan? = nil
 
     /// 实时从 repo 取最新版本的错题(repo 是单一数据源,避免 caller 拿到旧拷贝)
     /// Live copy of the mistake from the repo (the repo is the single
@@ -69,6 +70,10 @@ struct MistakeSetDetailView: View {
             // 主体内容:原题 / 错因 / 错解 / 正解 四段 Markdown
             // Main content: 4 markdown sections (question / reason / wrong / correct).
             MistakeSetContentSection(mistake: liveMistake)
+
+            KnowledgeDepthEntrySection(mistakeID: liveMistake.id, container: container)
+
+            MistakeCorrectionPlanSection(summary: derivedPatternSummary, plan: $correctionPlan)
         }
         .listStyle(.insetGrouped)
         .navigationTitle(liveMistake.title)
@@ -144,6 +149,9 @@ struct MistakeSetDetailView: View {
                 onAnalysisComplete: { fullText in
                     lastAIAnalysis = fullText
                 },
+                onPatternDecision: { state in
+                    MistakePatternResolutionStore.shared.set(state, for: liveMistake.id)
+                },
                 onDiscuss: { context, lastAnalysis in
                     showingAIAnalysis = false
                     // 0.3s 延迟,避免 sheet 状态机冲突
@@ -203,7 +211,19 @@ struct MistakeSetDetailView: View {
         // Record one exposure on appear (exposureCount drives SRS scheduling).
         .onAppear {
             container.mistakeRepo.recordExposure(mistakeSet.id)
+            correctionPlan = MistakeCorrectionPlanStore.shared.plan
         }
+    }
+
+    private var derivedPatternSummary: MistakePatternSummary? {
+        guard let match = MistakePatternEngine.classify(
+            liveMistake,
+            userState: MistakePatternResolutionStore.shared.states[liveMistake.id]
+        ) else { return nil }
+        return MistakePatternEngine.summaries(
+            from: container.mistakeRepo.filteredMistakeSets,
+            userStates: MistakePatternResolutionStore.shared.states
+        ).first { $0.pattern == match.pattern }
     }
 
     private func buildMistakeDiscussionContext() -> String {

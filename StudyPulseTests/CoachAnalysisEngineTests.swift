@@ -1,6 +1,7 @@
 import XCTest
 @testable import StudyPulse
 
+@MainActor
 final class CoachAnalysisEngineTests: XCTestCase {
     func testWeightedMultiSubjectForecastUsesConfiguredWeights() {
         let goal = CoachGoal(title: "Exam", subjects: [
@@ -16,7 +17,7 @@ final class CoachAnalysisEngineTests: XCTestCase {
         let goal = CoachGoal(title: "Impossible", subjects: [
             CoachGoalSubject(subject: "Math", baselineScore: 60, targetScore: 110, fullScore: 120)
         ], targetDate: Date().addingTimeInterval(2 * 86400))
-        let analysis = CoachAnalysisEngine.analyze(goal: goal, snapshot: CoachDataSnapshot(grades: [], mistakes: [], tasks: []))
+        let analysis = CoachAnalysisEngine.analyze(goal: goal, snapshot: CoachDataSnapshot(grades: [], mistakes: [], tasks: [], exams: []))
         XCTAssertEqual(analysis.decision, .notFeasible)
     }
 

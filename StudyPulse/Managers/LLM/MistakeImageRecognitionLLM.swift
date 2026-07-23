@@ -46,12 +46,11 @@ enum MistakeImageRecognitionLLM {
         }
 
         let json = String(trimmed[start...end])
-        if let result = decode(json) {
-            return try validated(result)
-        }
 
         // Vision models sometimes emit single LaTeX backslashes or literal
         // newlines inside JSON strings. Repair these common JSON violations.
+        // This must happen before decoding: `\frac` is technically parsed as
+        // the valid JSON escape `\f`, which would otherwise become a form-feed.
         let repaired = repairRelaxedJSON(json)
         guard let result = decode(repaired) else {
             throw LLMError.malformedResponse
@@ -67,6 +66,11 @@ enum MistakeImageRecognitionLLM {
     nonisolated private static func repairRelaxedJSON(_ json: String) -> String {
         let characters = Array(json)
         let validEscapes: Set<Character> = ["\"", "\\", "/", "b", "f", "n", "r", "t", "u"]
+        let latexCommands: Set<String> = [
+            "alpha", "beta", "cdot", "cos", "frac", "geq", "int", "left", "leq",
+            "lim", "ln", "log", "neq", "pm", "right", "sin", "sqrt", "sum", "tan",
+            "text", "times", "underbrace", "mathbf", "mathrm"
+        ]
         var output = ""
         output.reserveCapacity(json.count + 32)
         var isInsideString = false
@@ -93,7 +97,14 @@ enum MistakeImageRecognitionLLM {
                     continue
                 }
                 let next = characters[index + 1]
-                if validEscapes.contains(next) {
+                var command = ""
+                var commandIndex = index + 1
+                while commandIndex < characters.count, characters[commandIndex].isLetter {
+                    command.append(characters[commandIndex])
+                    commandIndex += 1
+                }
+                let isLatexCommand = latexCommands.contains(command)
+                if validEscapes.contains(next) && !isLatexCommand {
                     output.append(character)
                     output.append(next)
                     index += 2

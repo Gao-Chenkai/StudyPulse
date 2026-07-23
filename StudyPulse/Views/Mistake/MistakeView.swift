@@ -29,12 +29,16 @@ struct MistakeView: View {
     /// 主 ViewModel(过滤 / 分组 / SRS / 搜索)
     /// Main view model (filter / grouping / SRS / search).
     @StateObject private var viewModel: MistakeViewModel
+    /// Knowledge-gap scan VM. The local scan is immediate; AI enhancement is
+    /// started once per mistake-set fingerprint.
+    @StateObject private var knowledgeFaultViewModel: KnowledgeFaultLineViewModel
     /// 是否显示 AI Quiz setup sheet
     /// Whether the AI Quiz setup sheet is showing.
     @State private var showingAIQuizSetup = false
 
     init(container: RepositoryContainer) {
         _viewModel = StateObject(wrappedValue: MistakeViewModel.makeDefault(container: container))
+        _knowledgeFaultViewModel = StateObject(wrappedValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
     }
 
     // MARK: - AI Quiz Card / AI 自测卡片
@@ -115,6 +119,26 @@ struct MistakeView: View {
                     OverviewStatsCard(
                         totalCount: viewModel.groups.totalCount,
                         subjectCount: viewModel.groups.sortedSubjects.count
+                    )
+
+                    if knowledgeFaultViewModel.repeatedFaultLines.isEmpty {
+                        KnowledgeFaultLineEmptyCard()
+                    } else {
+                        KnowledgeFaultLineCard(
+                            scan: knowledgeFaultViewModel.scan,
+                            container: container
+                        )
+                    }
+
+                    if viewModel.patternSummaries.isEmpty {
+                        MistakePatternEmptyCard()
+                    }
+                }
+
+                if let topPattern = viewModel.patternSummaries.first {
+                    MistakePatternCard(
+                        summary: topPattern,
+                        summaries: viewModel.patternSummaries
                     )
                 }
 
@@ -321,9 +345,15 @@ struct MistakeView: View {
             // Search bar: drives both the "subjectsList" header and
             // the subject list filtering.
             .searchable(text: $viewModel.searchText, prompt: "Search subjects or mistakes...".localized())
-            .onAppear { viewModel.recompute() }
+            .onAppear {
+                viewModel.recompute()
+                knowledgeFaultViewModel.recompute()
+            }
             .onChange(of: viewModel.searchText) { _, _ in viewModel.recompute() }
-            .onChange(of: container.mistakeRepo.filteredMistakeSets) { _, _ in viewModel.recompute() }
+            .onChange(of: container.mistakeRepo.filteredMistakeSets) { _, _ in
+                viewModel.recompute()
+                knowledgeFaultViewModel.recompute()
+            }
             .toolbar {
                 // 左侧:SRS 复习入口
                 // Leading: SRS review entry.

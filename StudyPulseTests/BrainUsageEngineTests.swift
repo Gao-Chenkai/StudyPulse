@@ -1,6 +1,7 @@
 import XCTest
 @testable import StudyPulse
 
+@MainActor
 final class BrainUsageEngineTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 

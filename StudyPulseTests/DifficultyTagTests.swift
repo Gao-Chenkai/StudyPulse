@@ -34,7 +34,7 @@ final class DifficultyTagTests: XCTestCase {
         // 难度=1 → 乘子 0.5 → 7 或 8
         let initial = ReviewState.initial()
         let s1 = SRSAlgorithm.apply(quality: .good, to: initial)
-        let s2 = SRSAlgorithm.apply(quality: .good, to: s1, difficulty: 1)
+        let s2 = SRSAlgorithm.apply(quality: .good, to: s1)
         let s3 = SRSAlgorithm.apply(quality: .good, to: s2, difficulty: 1)
         XCTAssertEqual(s1.intervalDays, 1, "first .good is 1 day")
         XCTAssertEqual(s2.intervalDays, 6, "second .good base is 6 days (no multiplier when difficulty=0)")
@@ -47,7 +47,7 @@ final class DifficultyTagTests: XCTestCase {
         // 第三次 .good:6 * 2.5 = 15 → 15 * 1.6 = 24
         let initial = ReviewState.initial()
         let s1 = SRSAlgorithm.apply(quality: .good, to: initial)
-        let s2 = SRSAlgorithm.apply(quality: .good, to: s1, difficulty: 5)
+        let s2 = SRSAlgorithm.apply(quality: .good, to: s1)
         let s3 = SRSAlgorithm.apply(quality: .good, to: s2, difficulty: 5)
         XCTAssertEqual(s3.intervalDays, 24, "third .good with difficulty=5 should be 15*1.6=24 days, got \(s3.intervalDays)")
     }

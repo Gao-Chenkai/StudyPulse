@@ -491,7 +491,7 @@ enum DailyPlanEngine {
     /// SRS 到期错题
     /// SRS-overdue mistakes (single summary item, no per-mistake detail).
     static func srsReviewItem(context: DailyPlanContext) -> DailyPlanItem? {
-        let overview = SRSAlgorithm.overview(from: context.mistakeSets)
+        let overview = SRSAlgorithm.overview(from: context.mistakeSets, now: context.now)
         guard overview.dueCount > 0 else { return nil }
         let reason: String
         if overview.dueCount == 1 {

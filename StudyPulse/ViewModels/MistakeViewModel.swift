@@ -16,6 +16,7 @@ import SwiftUI
 final class MistakeViewModel: ObservableObject {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
+    private var patternStateObserver: AnyCancellable?
 
     // MARK: - 输入 & 界面状态 / Input & UI states
     /// 顶部搜索框的当前文本 / Current search field text.
@@ -52,10 +53,14 @@ final class MistakeViewModel: ObservableObject {
     @Published private(set) var groups: MistakeGroups = .empty
     /// SRS 总览 / SRS overview.
     @Published private(set) var srsOverview: SRSOverview = .empty
+    @Published private(set) var patternSummaries: [MistakePatternSummary] = []
 
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer) {
         self.container = container
+        patternStateObserver = NotificationCenter.default.publisher(for: .mistakePatternStateDidChange)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.recompute() }
     }
 
     /// 工厂方法 / Factory.
@@ -72,6 +77,14 @@ final class MistakeViewModel: ObservableObject {
             searchText: searchText
         )
         srsOverview = SRSAlgorithm.overview(from: filteredMistakes)
+        let parsed = MistakeFilter.parseSearchQuery(searchText)
+        let patternMistakes = (parsed.tags.isEmpty && parsed.text.isEmpty)
+            ? filteredMistakes
+            : filteredMistakes.filter { MistakeFilter.matches($0, parsed: parsed) }
+        patternSummaries = MistakePatternEngine.summaries(
+            from: patternMistakes,
+            userStates: MistakePatternResolutionStore.shared.states
+        )
     }
 
     /// 单科目内的搜索(代理到 Service) / Per-subject search (delegated).

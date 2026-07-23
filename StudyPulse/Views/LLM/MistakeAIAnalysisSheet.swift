@@ -50,6 +50,7 @@ struct MistakeAIAnalysisSheet: View {
     /// Called after a successful stream with the full LLM output
     /// (used as the initial message by the "deep discussion" sheet).
     var onAnalysisComplete: ((String) -> Void)? = nil
+    var onPatternDecision: ((MistakePatternUserState) -> Void)? = nil
     /// 用户点击"深入探讨"时回调,传入用于讨论的上下文(含原错题信息) + 上一次的 AI 输出
     /// Called when the user taps "Deep discussion", passing the discussion
     /// context (original mistake info) and the previous AI output.
@@ -70,6 +71,8 @@ struct MistakeAIAnalysisSheet: View {
     /// 是否处于加载中(首字未到)
     /// Whether we are still loading (first token not yet received).
     @State private var isLoading: Bool = false
+    @State private var patternResult: MistakePatternAIResult?
+    @State private var selectedPattern: MistakePattern = .other
 
     var body: some View {
         NavigationStack {
@@ -193,9 +196,37 @@ struct MistakeAIAnalysisSheet: View {
                     // 我们用一个内部 AsyncStream 把 streamedText 喂给 StreamedMarkdownView
                     MarkdownStreamedContent(text: streamedText)
                 }
+                if let patternResult, !patternResult.patternIDs.isEmpty {
+                    patternDecisionView(patternResult)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func patternDecisionView(_ result: MistakePatternAIResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("mistake.ai.pattern.title".localized(), systemImage: "scope").font(.headline)
+            Text(String(format: "mistake.ai.pattern.evidence".localized(), result.evidence)).font(.caption).foregroundStyle(.secondary)
+            Picker("mistake.ai.pattern.picker".localized(), selection: $selectedPattern) {
+                ForEach(MistakePattern.allCases, id: \.self) { pattern in
+                    Text(pattern.displayName).tag(pattern)
+                }
+            }
+            .pickerStyle(.menu)
+            HStack {
+                Button("mistake.ai.pattern.accept".localized()) { commit(.accepted(selectedPattern)) }.buttonStyle(.borderedProminent)
+                Button("mistake.ai.pattern.ignore".localized()) { commit(.ignoredState) }.buttonStyle(.bordered)
+                Button("mistake.ai.pattern.resolved".localized()) { commit(.resolvedState) }.buttonStyle(.bordered)
+            }
+        }
+        .padding(12)
+        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func commit(_ state: MistakePatternUserState) {
+        onPatternDecision?(state)
+        patternResult = nil
     }
 
     private var summaryHeader: some View {
@@ -229,6 +260,7 @@ struct MistakeAIAnalysisSheet: View {
         streamedText = ""
         errorMessage = nil
         isLoading = true
+        patternResult = nil
         let config = container.envManager.llmConfig
         let prompt = MistakeAnalysisLLM.makePrompt(
             subject: subject,
@@ -246,6 +278,10 @@ struct MistakeAIAnalysisSheet: View {
                 isLoading = false
                 // 流式结束后,把完整输出交给 caller,便于"深入探讨" sheet 使用
                 onAnalysisComplete?(streamedText)
+                if let result = MistakeAnalysisLLM.parsePatternResult(from: streamedText), !result.patternIDs.isEmpty {
+                    patternResult = result
+                    selectedPattern = result.patternIDs[0]
+                }
             } catch is CancellationError {
                 isLoading = false
             } catch {

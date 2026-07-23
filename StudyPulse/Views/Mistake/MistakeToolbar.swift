@@ -217,7 +217,7 @@ struct MistakeDetailToolbar: ToolbarContent {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button(action: onAIAnalysis) {
-                        Label("AI 解析错因".localized(), systemImage: "sparkles.magnifyingglass")
+                        Label("AI 解析错因".localized(), systemImage: "sparkles")
                     }
                     Button(action: onAISimilarQuestion) {
                         Label("AI 相似题组卷".localized(), systemImage: "doc.badge.gearshape")

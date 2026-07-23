@@ -1,6 +1,7 @@
 import XCTest
 @testable import StudyPulse
 
+@MainActor
 final class CoachLLMTests: XCTestCase {
     func testPromptRequestsTheSelectedLanguageForHumanReadableFields() {
         let goal = CoachGoal(title: "Exam", subjects: [], targetDate: Date().addingTimeInterval(86400))

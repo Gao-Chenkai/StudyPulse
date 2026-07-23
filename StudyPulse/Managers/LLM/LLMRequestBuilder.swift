@@ -183,7 +183,12 @@ enum MistakeAnalysisLLM {
         ## 类似题建议
         <1-3 条,具体可练习的方向>
 
-        严禁输出解释、客套话、JSON、代码块语言标签。
+        ## 错误模式
+        {"pattern_ids":["condition_omission"],"confidence":0.0,"evidence":"用一句话指出证据"}
+
+        pattern_ids 只能从以下 ID 中选择: condition_omission, concept_confusion, formula_misuse, calculation_error, unit_error, incomplete_reading, logic_jump, boundary_omission, memory_error, unclear_expression, method_selection, other。没有足够证据时返回空数组。
+
+        严禁输出解释、客套话、代码块语言标签。错误模式段中的 JSON 必须是单行、可直接解析的合法 JSON。
         """ + latexFormattingRule
 
     /// 构造 prompt。
@@ -297,6 +302,21 @@ enum MistakeAnalysisLLM {
         }
         
         return sectionLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Parse the structured error-pattern JSON without making the rest of the
+    /// Markdown response depend on JSON parsing.
+    static func parsePatternResult(from text: String) -> MistakePatternAIResult? {
+        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start <= end else { return nil }
+        let jsonText = String(text[start...end])
+        struct Payload: Decodable {
+            let pattern_ids: [String]
+            let confidence: Double
+            let evidence: String
+        }
+        guard let data = jsonText.data(using: .utf8), let payload = try? JSONDecoder().decode(Payload.self, from: data) else { return nil }
+        let patterns = payload.pattern_ids.compactMap { MistakePattern(rawValue: $0) }
+        return MistakePatternAIResult(patternIDs: patterns, confidence: min(1, max(0, payload.confidence)), evidence: payload.evidence)
     }
 }
 

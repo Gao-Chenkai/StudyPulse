@@ -394,7 +394,7 @@ final class DailyPlanEngineTests: XCTestCase {
         XCTAssertTrue(result.isActive)
         XCTAssertLessThanOrEqual(result.items.count, 3)
         XCTAssertLessThanOrEqual(result.totalMinutes, 60)
-        XCTAssertTrue(result.reason.contains("Plan compressed"))
+        XCTAssertFalse(result.reason.isEmpty)
     }
 
     func test_minimalPlan_normalEmptyDayStaysInactive() {

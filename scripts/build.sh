@@ -13,7 +13,7 @@
 #      release     Build with the Release configuration
 #      clean       Remove the build folder and DerivedData
 #      resolve     Resolve Swift Package Manager dependencies
-#      test        Run unit / UI tests (none yet, placeholder)
+#      test        Run unit / UI tests
 #      archive     Archive the app for distribution
 #      list        List available simulators and runtimes
 #      help        Show this help
@@ -233,7 +233,6 @@ cmd_resolve() {
 cmd_test() {
     require_xcode
     log_title "Test  (${CONFIGURATION}, ${SIMULATOR_NAME})"
-    log_warn "No test target is configured in this project yet."
 
     mkdir -p "${OUTPUT_DIR}"
 
@@ -244,7 +243,7 @@ cmd_test() {
         -destination "platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_RUNTIME}" \
         -derivedDataPath "${OUTPUT_DIR}/DerivedData" \
         CODE_SIGNING_ALLOWED=NO \
-        test || log_warn "xcodebuild test returned non-zero (no test target?)."
+        test
 }
 
 cmd_archive() {

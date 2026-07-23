@@ -107,6 +107,12 @@ enum MistakeFilter {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return ([], "") }
 
+        // A lone hash (or hash/comma separators) means “no tag selected”.
+        // Treat it as an empty query instead of searching for the literal '#'.
+        if trimmed.allSatisfy({ $0 == "#" || $0 == "," || $0 == " " || $0 == "\t" }) {
+            return ([], "")
+        }
+
         // 提取所有 #tag 标记(支持中英文 tag)
         let pattern = #"#([^\s#,]+)"#
         var tagFilters: [String] = []
@@ -154,8 +160,8 @@ enum MistakeFilter {
 
 extension MistakeFilter {
 
-    /// 在指定 subject 的错题上做搜索过滤 + 按日期降序排序。
-    /// Filter a subject's mistakes by search text + sort by date desc.
+    /// 在指定 subject 的错题上做搜索过滤 + 按复习紧急度排序。
+    /// Filter a subject's mistakes by search text + review urgency, then date desc.
     /// 多标签:用空格或逗号分隔的 `#tag1 #tag2` 视为 AND 过滤。
     /// Multi-tag: `#tag1 #tag2` (space- or comma-separated) = AND filter.
     /// Plain 文本(无 `#`)走 title / originalQuestion / source / tags 子串匹配(向后兼容)。
