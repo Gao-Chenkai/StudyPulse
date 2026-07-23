@@ -223,6 +223,37 @@ final class RepositoryContainer {
         Log.data.info("RepositoryContainer asyncInit done: g=\(self.gradeRepo.grades.count, privacy: .public) m=\(self.mistakeRepo.mistakeSets.count, privacy: .public) e=\(self.examRepo.examSets.count, privacy: .public) t=\(self.taskRepo.taskItems.count, privacy: .public)")
     }
 
+    /// Reload every repository after an atomic backup restore, then rebuild
+    /// phase caches and all external projections.
+    func reloadAllAfterBackupRestore() async {
+        guard let modelContainer else { return }
+        let context = modelContainer.mainContext
+        await gradeRepo.loadAll(context: context)
+        await mistakeRepo.loadAll(context: context)
+        await examRepo.loadAll(context: context)
+        await taskRepo.loadAll(context: context)
+        await phaseRepo.loadAll(context: context)
+        await profileRepo.loadAll(context: context)
+        await subjectRepo.loadAll(context: context)
+        await routineRepo.loadAll(context: context)
+        await routineInstanceRepo.loadAll(context: context)
+        await diaryRepo.loadAll(context: context)
+        await coachRepo.loadAll(context: context)
+        await studySessionRepo.loadAll(context: context)
+        await examAutopsyRepo.loadAll(context: context)
+        await examSimulationRepo.loadAll(context: context)
+        phaseRefresher.recomputeAll()
+        PlantManager.shared.attach(container: self)
+        AchievementManager.shared.bootstrap(container: self)
+        SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
+        ExamReviewNotifications.shared.rescheduleAll(exams: examRepo.examSets)
+        WidgetDataSyncManager.syncUpcomingExams(
+            examSets: examRepo.examSets,
+            comprehensiveExamSets: examRepo.comprehensiveExamSets
+        )
+        TrendWidgetSyncManager.syncTrend(grades: gradeRepo.grades, subjects: subjectRepo.subjects)
+    }
+
 #if DEBUG
     /// 仅限测试与预览(Unit Tests & Previews):注入纯内存的 ModelContainer 完成全套 Repo 初始化
     /// Tests & previews only: boot the whole repo stack against an in-memory ModelContainer.

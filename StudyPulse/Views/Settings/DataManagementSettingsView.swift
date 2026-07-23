@@ -86,6 +86,14 @@ struct DataManagementSettingsView: View {
                 Text("Phase Management".localized())
             }
 
+                Section {
+                    NavigationLink(destination: BackupRestoreView()) {
+                        Label("Full Backup & Restore".localized(), systemImage: "archivebox.fill")
+                    }
+                } header: {
+                    Text("Backup".localized())
+                }
+
                 // Export
                 Section {
                     Menu {
