@@ -45,6 +45,7 @@ final class RepositoryContainer {
     let coachRepo: any CoachRepository
     let studySessionRepo: any StudySessionRepository
     let examAutopsyRepo: any ExamAutopsyRepository
+    let examSimulationRepo: any ExamSimulationRepository
 
     // 3 个跨域编排子模块(组合而非继承,避免注入面爆炸)
     // 3 cross-domain orchestration sub-modules (composition over inheritance,
@@ -89,7 +90,8 @@ final class RepositoryContainer {
         diaryRepo: (any DiaryRepository)? = nil,
         coachRepo: (any CoachRepository)? = nil,
         studySessionRepo: (any StudySessionRepository)? = nil,
-        examAutopsyRepo: (any ExamAutopsyRepository)? = nil
+        examAutopsyRepo: (any ExamAutopsyRepository)? = nil,
+        examSimulationRepo: (any ExamSimulationRepository)? = nil
     ) {
         self.envManager = envManager
         self.intentStore = intentStore
@@ -110,6 +112,7 @@ final class RepositoryContainer {
         self.coachRepo = coachRepo ?? DefaultCoachRepository()
         self.studySessionRepo = studySessionRepo ?? DefaultStudySessionRepository()
         self.examAutopsyRepo = examAutopsyRepo ?? DefaultExamAutopsyRepository()
+        self.examSimulationRepo = examSimulationRepo ?? DefaultExamSimulationRepository()
 
         // 注入跨域 weak 引用
         if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
@@ -190,6 +193,7 @@ final class RepositoryContainer {
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
         await self.examAutopsyRepo.loadAll(context: context)
+        await self.examSimulationRepo.loadAll(context: context)
 
         // 内嵌图片迁移(在 waitForAll 后,grades 已加载)
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
@@ -243,6 +247,7 @@ final class RepositoryContainer {
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
         await self.examAutopsyRepo.loadAll(context: context)
+        await self.examSimulationRepo.loadAll(context: context)
 
         if subjectRepo.subjects.isEmpty {
             subjectRepo.initializeDefaultSubjects()

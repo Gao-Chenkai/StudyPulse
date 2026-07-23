@@ -9,7 +9,7 @@ import Foundation
 
 /// AI 自测题目模型
 /// AI self-quiz question model.
-public struct QuizQuestion: Codable, Identifiable, Hashable, Sendable {
+nonisolated public struct QuizQuestion: Codable, Identifiable, Hashable, Sendable {
     public var id: UUID
     /// 题目类型: "multiple_choice" 或 "fill_in_the_blank"
     /// Question type: "multiple_choice" or "fill_in_the_blank".
@@ -68,7 +68,7 @@ public struct QuizQuestion: Codable, Identifiable, Hashable, Sendable {
 
 /// 用户自测答案状态
 /// User's submitted answer for one quiz question.
-public struct UserQuizAnswer: Codable, Equatable, Sendable {
+nonisolated public struct UserQuizAnswer: Codable, Equatable, Sendable {
     public let questionId: UUID
     public var answerText: String
     
@@ -80,7 +80,7 @@ public struct UserQuizAnswer: Codable, Equatable, Sendable {
 
 /// LLM 评分单题结果
 /// LLM grading result for a single question.
-public struct QuizQuestionGradingResult: Codable, Identifiable, Hashable, Sendable {
+nonisolated public struct QuizQuestionGradingResult: Codable, Identifiable, Hashable, Sendable {
     public var id: UUID
     /// 对应第几道题 (0-indexed)
     /// Index of the question (0-based).
@@ -131,7 +131,7 @@ public struct QuizQuestionGradingResult: Codable, Identifiable, Hashable, Sendab
 
 /// LLM 自测评分整卷结果
 /// LLM grading response for the whole quiz.
-public struct QuizGradingResponse: Codable, Sendable {
+nonisolated public struct QuizGradingResponse: Codable, Sendable {
     public let totalScore: Int
     public let results: [QuizQuestionGradingResult]
 

@@ -924,6 +924,24 @@ final class StudySessionRecord {
     func toSnapshot() -> StudySession? { try? JSONDecoder().decode(StudySession.self, from: payload) }
 }
 
+@Model
+final class ExamSimulationRecord {
+    #Index<ExamSimulationRecord>([\.createdAt])
+    @Attribute(.unique) var id: UUID
+    var createdAt: Date
+    var payload: Data
+
+    init(from simulation: ExamSimulation) {
+        id = simulation.id
+        createdAt = simulation.createdAt
+        payload = (try? JSONEncoder().encode(simulation)) ?? Data()
+    }
+
+    func toSnapshot() -> ExamSimulation? {
+        try? JSONDecoder().decode(ExamSimulation.self, from: payload)
+    }
+}
+
 // MARK: - UserProfile (单例)
 // MARK: - 用户资料(单例) / User Profile (singleton)
 

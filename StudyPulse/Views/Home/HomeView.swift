@@ -122,7 +122,14 @@ struct HomeView: View {
                                 .accessibilityLabel("Close".localized())
                             }
                         }
+                    }
                 }
+            .fullScreenCover(isPresented: Binding(
+                get: { uiState.showingExamRoleSimulator },
+                set: { uiState.showingExamRoleSimulator = $0 }
+            )) {
+                ExamRoleSimulatorView(container: container)
+                    .environment(container)
             }
             .sheet(isPresented: Binding(
                 get: { uiState.showingReportOptions },
@@ -332,6 +339,10 @@ struct HomeView: View {
         case .brainUsage:
             BrainUsageCard()
                 .contextMenu { shareCardMenu(for: type) }
+        case .examRoleSimulator:
+            ExamRoleSimulatorHomeCard {
+                uiState.showingExamRoleSimulator = true
+            }
         }
     }
 
@@ -446,6 +457,7 @@ struct HomeView: View {
         case .diary: return "Study Diary".localized()
         case .habitInsight: return "Habit Insight".localized()
         case .brainUsage: return "Brain Usage".localized()
+        case .examRoleSimulator: return "考场人格模拟器".localized()
         }
     }
 
@@ -511,6 +523,8 @@ struct HomeView: View {
                     HabitInsightCard()
                 case .brainUsage:
                     BrainUsageCard()
+                case .examRoleSimulator:
+                    ExamRoleSimulatorHomeCard(onOpen: {})
                 }
             }
             .frame(maxWidth: .infinity)

@@ -43,6 +43,8 @@ enum HomeCardType: String, CaseIterable, Codable {
     case diary = "diary"
     case habitInsight = "habitInsight"
     case brainUsage = "brainUsage"
+    /// 限时模拟考试行为分析入口。
+    case examRoleSimulator = "examRoleSimulator"
 
     /// 本地化显示名称
     var displayName: String {
@@ -66,6 +68,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .diary: return "Study Diary".localized()
         case .habitInsight: return "Habit Insight".localized()
         case .brainUsage: return "Brain Usage".localized()
+        case .examRoleSimulator: return "考场人格模拟器".localized()
         }
     }
 
@@ -91,6 +94,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .diary: return "book.fill"
         case .habitInsight: return "waveform.path.ecg"
         case .brainUsage: return "brain.head.profile"
+        case .examRoleSimulator: return "person.crop.circle.badge.questionmark"
         }
     }
 
@@ -98,7 +102,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// 宽幅可视化卡片（如 90 天热力图、即将考试大卡）应标记为 true。
     var isFullWidth: Bool {
         switch self {
-        case .learningHeatmap: return true
+        case .learningHeatmap, .examRoleSimulator: return true
         default: return false
         }
     }
@@ -133,6 +137,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .hrvStatus, enabled: true),
         HomeCardItem(type: .diary, enabled: true),
         HomeCardItem(type: .homeAsk, enabled: true),
+        HomeCardItem(type: .examRoleSimulator, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),

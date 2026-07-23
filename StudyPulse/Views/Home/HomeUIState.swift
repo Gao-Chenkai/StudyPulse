@@ -47,6 +47,10 @@ struct HomeUIState {
     /// Whether to show the flashcard review full-screen view.
     var showingFlashcards: Bool = false
 
+    /// 是否显示考场人格模拟器。放在 HomeView 根层，避免 LazyVStack 重建卡片时
+    /// 一并重建正在答题的 fullScreenCover。
+    var showingExamRoleSimulator: Bool = false
+
     // MARK: - 学习报告导出
     // MARK: - Study Report Export
 
