@@ -2021,3 +2021,22 @@
 "Refresh Coach to generate an analysis." = "Coach を更新して分析を生成します。";
 "Weighted prediction: %.1f" = "加重予測：%.1f";
 "Success probability: %.0f%%" = "達成確率：%.0f%%";
+
+// MinimalCompletionPlan
+"Minimum Viable Plan" = "最低限の実行プラン";
+"Ready when your day gets heavy." = "一日の負担が大きいときに使えます。";
+"Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day." = "通常のプランを利用できます。体力、時間、タスク量に余裕がないとき、このカードが自動でプランを縮小します。";
+"No compression needed right now" = "現在、縮小は必要ありません";
+"%d min · 3 small wins at most" = "%d 分 · 小さな達成は最大 3 件";
+"Your regular plan is available today." = "今日は通常のプランを利用できます。";
+"Plan compressed: %@. Keep a small win today." = "プランを縮小しました：%@。今日は小さな達成を一つ守りましょう。";
+"Minimal plan reason separator" = "、";
+"Low recovery" = "回復度が低い";
+"Backlog" = "タスクの滞留";
+"Limited time" = "残り時間が少ない";
+"Exam deadline" = "試験が近い";
+"Exam in %d day(s); secure the essentials." = "%d 日後に試験；重要事項を優先しましょう。";
+"Clear one overdue task first." = "期限切れのタスクを一つ先に片付けましょう。";
+"Due soon — finish the smallest complete version." = "期限が近いタスクです——最小限の完了形を目指しましょう。";
+"Review the highest-risk mistake briefly." = "リスクの高い間違いを短時間で復習しましょう。";
+"Use one short focus block, then stop." = "短い集中ブロックを一つ行ったら、そこで止めましょう。";

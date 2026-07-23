@@ -219,3 +219,59 @@ extension Notification.Name {
     /// Notification posted when a today-plan item is tapped (host View takes over navigation).
     static let dailyPlanItemTapped = Notification.Name("StudyPulse.dailyPlanItemTapped")
 }
+
+/// 压力或身体恢复不足时显示的“最小可完成计划”入口。
+struct MinimalCompletionPlanCard: View {
+    let result: MinimalPlanResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 25, weight: .semibold))
+                    .foregroundStyle(.green)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Minimum Viable Plan".localized())
+                        .font(.headline)
+                    Text(result.isActive
+                         ? String(format: "%d min · 3 small wins at most".localized(), result.totalMinutes)
+                         : "Ready when your day gets heavy.".localized())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            Text(result.isActive ? result.reason : "Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day.".localized())
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if result.items.isEmpty {
+                Label("No compression needed right now".localized(), systemImage: "checkmark.seal.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.green)
+            }
+            ForEach(Array(result.items.prefix(3).enumerated()), id: \.element.id) { index, item in
+                HStack(spacing: 10) {
+                    Text("\(index + 1)")
+                        .font(.caption.bold())
+                        .foregroundStyle(item.color)
+                        .frame(width: 24, height: 24)
+                        .background(item.color.opacity(0.14), in: Circle())
+                    Image(systemName: item.icon)
+                        .foregroundStyle(item.color)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                        Text("\(item.estimatedMinutes) min · \(item.reason)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(DesignToken.Spacing.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSkin()
+    }
+}

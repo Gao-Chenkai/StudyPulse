@@ -53,6 +53,148 @@ struct DailyPlanContext {
     }
 }
 
+// MARK: - Minimal completion plan
+
+struct MinimalPlanContext {
+    let mistakeSets: [MistakeNote]
+    let examSets: [Exam]
+    let taskItems: [TaskItem]
+    let routineInstances: [RoutineInstance]
+    let hrvReadiness: HRVReadiness?
+    let hrvBodyStatus: BodyStatus?
+    let now: Date
+    let availableMinutes: Int
+
+    init(mistakeSets: [MistakeNote], examSets: [Exam], taskItems: [TaskItem],
+         routineInstances: [RoutineInstance], hrvReadiness: HRVReadiness?,
+         hrvBodyStatus: BodyStatus?, now: Date = Date(), availableMinutes: Int? = nil) {
+        self.mistakeSets = mistakeSets
+        self.examSets = examSets
+        self.taskItems = taskItems
+        self.routineInstances = routineInstances
+        self.hrvReadiness = hrvReadiness
+        self.hrvBodyStatus = hrvBodyStatus
+        self.now = now
+        if let availableMinutes {
+            self.availableMinutes = Swift.max(30, availableMinutes)
+        } else {
+            let endOfStudyDay = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: now) ?? now
+            self.availableMinutes = Swift.max(30, Int(endOfStudyDay.timeIntervalSince(now) / 60))
+        }
+    }
+}
+
+nonisolated struct MinimalPlanItem: Identifiable, Equatable, Hashable {
+    let id: UUID
+    let kind: Kind
+    let title: String
+    let reason: String
+    let estimatedMinutes: Int
+    let priorityScore: Double
+    let sourceRef: DailyPlanItem.SourceRef
+
+    enum Kind: Equatable, Hashable { case exam, homework, mistake, focus }
+
+    init(kind: Kind, title: String, reason: String, estimatedMinutes: Int,
+         priorityScore: Double, sourceRef: DailyPlanItem.SourceRef) {
+        self.id = UUID()
+        self.kind = kind
+        self.title = title
+        self.reason = reason
+        self.estimatedMinutes = estimatedMinutes
+        self.priorityScore = priorityScore
+        self.sourceRef = sourceRef
+    }
+
+    var icon: String {
+        switch kind {
+        case .exam: return "calendar.badge.exclamationmark"
+        case .homework: return "checklist"
+        case .mistake: return "rectangle.stack.fill"
+        case .focus: return "timer"
+        }
+    }
+
+    var color: Color {
+        switch kind {
+        case .exam: return .red
+        case .homework: return .orange
+        case .mistake: return .purple
+        case .focus: return .blue
+        }
+    }
+}
+
+struct MinimalPlanResult: Equatable {
+    let isActive: Bool
+    let reason: String
+    let items: [MinimalPlanItem]
+    let totalMinutes: Int
+}
+
+enum MinimalCompletionPlanEngine {
+    static func generate(from context: MinimalPlanContext, max: Int = 3) -> MinimalPlanResult {
+        let pending = context.taskItems.filter { !$0.isCompleted }
+        let calendar = Calendar.current
+        let dueMistakes = context.mistakeSets.filter { $0.reviewState?.nextReviewDate ?? .distantFuture <= context.now }
+        let overdue = pending.filter { $0.dueDate < calendar.startOfDay(for: context.now) }.count
+        let dueSoonExams = context.examSets.filter { $0.examDate >= context.now && $0.examDate.timeIntervalSince(context.now) <= 2 * 86400 }.count
+        let lowRecovery = context.hrvReadiness?.category == .low || context.hrvBodyStatus?.sleepQuality == .poor
+        let estimatedDemand = pending.reduce(0) { $0 + estimatedMinutes(for: $1) } + dueMistakes.count * 10 + dueSoonExams * 25
+        let insufficientTime = estimatedDemand > context.availableMinutes || (context.availableMinutes < 120 && !pending.isEmpty)
+        let backlog = pending.count >= 6 || overdue >= 2
+        let pressure = (lowRecovery ? 2 : 0) + (backlog ? 2 : 0) + (dueSoonExams > 0 ? 1 : 0) + (dueMistakes.count >= 8 ? 1 : 0) + (insufficientTime ? 1 : 0)
+        let active = pressure >= 2 && (!pending.isEmpty || !dueMistakes.isEmpty || !context.examSets.isEmpty || !context.routineInstances.isEmpty)
+        guard active else { return MinimalPlanResult(isActive: false, reason: "Your regular plan is available today.".localized(), items: [], totalMinutes: 0) }
+
+        let reasons = [lowRecovery ? "Low recovery" : nil, backlog ? "Backlog" : nil, insufficientTime ? "Limited time" : nil, dueSoonExams > 0 ? "Exam deadline" : nil].compactMap { $0?.localized() }
+        let budget = Swift.max(30, Swift.min(context.availableMinutes, lowRecovery ? 60 : 90))
+        var candidates = examCandidates(context: context) + taskCandidates(context: context) + mistakeCandidates(context: context) + focusCandidates(context: context)
+        candidates.sort { $0.priorityScore > $1.priorityScore }
+        var selected: [MinimalPlanItem] = []
+        var used = 0
+        for item in candidates where selected.count < max {
+            guard used + item.estimatedMinutes <= budget || selected.isEmpty else { continue }
+            selected.append(item)
+            used += item.estimatedMinutes
+        }
+        return MinimalPlanResult(isActive: true, reason: String(format: "Plan compressed: %@. Keep a small win today.".localized(), reasons.joined(separator: "Minimal plan reason separator".localized())), items: selected, totalMinutes: used)
+    }
+
+    private static func estimatedMinutes(for task: TaskItem) -> Int { task.type == .reading ? 15 : 25 }
+
+    private static func examCandidates(context: MinimalPlanContext) -> [MinimalPlanItem] {
+        context.examSets.filter { $0.examDate >= context.now && $0.examDate.timeIntervalSince(context.now) <= 7 * 86400 }.sorted { $0.examDate < $1.examDate }.prefix(1).map { exam in
+            let days = max(0, Int(exam.examDate.timeIntervalSince(context.now) / 86400))
+            return MinimalPlanItem(kind: .exam, title: exam.name, reason: String(format: "Exam in %d day(s); secure the essentials.".localized(), days), estimatedMinutes: 25, priorityScore: 150 - Double(days * 15) + Double(exam.importance * 8), sourceRef: .exam(id: exam.id))
+        }
+    }
+
+    private static func taskCandidates(context: MinimalPlanContext) -> [MinimalPlanItem] {
+        let start = Calendar.current.startOfDay(for: context.now)
+        return context.taskItems.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate }.prefix(2).map { task in
+            let overdue = task.dueDate < start
+            return MinimalPlanItem(kind: .homework, title: task.title, reason: overdue ? "Clear one overdue task first.".localized() : "Due soon — finish the smallest complete version.".localized(), estimatedMinutes: estimatedMinutes(for: task), priorityScore: (overdue ? 125.0 : 95.0) + Double(task.importance * 6), sourceRef: .task(id: task.id))
+        }
+    }
+
+    private static func mistakeCandidates(context: MinimalPlanContext) -> [MinimalPlanItem] {
+        context.mistakeSets.filter { $0.reviewState?.nextReviewDate ?? .distantFuture <= context.now }.sorted {
+            if $0.difficulty != $1.difficulty { return $0.difficulty > $1.difficulty }
+            return $0.masteryScore < $1.masteryScore
+        }.prefix(1).map { mistake in
+            MinimalPlanItem(kind: .mistake, title: mistake.title, reason: "Review the highest-risk mistake briefly.".localized(), estimatedMinutes: 15, priorityScore: 110 + Double(mistake.difficulty * 5) + (1 - mistake.masteryScore) * 20, sourceRef: .mistake(id: mistake.id))
+        }
+    }
+
+    private static func focusCandidates(context: MinimalPlanContext) -> [MinimalPlanItem] {
+        context.routineInstances.filter { !$0.isCompleted && $0.endTime > context.now }.prefix(1).map { routine in
+            let minutes = Swift.max(10, Swift.min(30, Int(routine.endTime.timeIntervalSince(Swift.max(routine.startTime, context.now)) / 60)))
+            return MinimalPlanItem(kind: .focus, title: routine.title, reason: "Use one short focus block, then stop.".localized(), estimatedMinutes: minutes, priorityScore: 90, sourceRef: .routineInstance(id: routine.id))
+        }
+    }
+}
+
 // MARK: - Daily Plan Item
 // MARK: - 今日计划项 / Daily plan item
 

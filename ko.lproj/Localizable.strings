@@ -2021,3 +2021,22 @@
 "Refresh Coach to generate an analysis." = "Coach를 새로 고쳐 분석을 생성하세요.";
 "Weighted prediction: %.1f" = "가중 예측: %.1f";
 "Success probability: %.0f%%" = "달성 확률: %.0f%%";
+
+// MinimalCompletionPlan
+"Minimum Viable Plan" = "최소 실행 계획";
+"Ready when your day gets heavy." = "하루가 버거울 때 사용할 수 있습니다.";
+"Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day." = "현재는 일반 계획을 사용할 수 있습니다. 에너지, 시간 또는 할 일의 부담이 커지면 이 카드가 계획을 자동으로 줄여 줍니다.";
+"No compression needed right now" = "지금은 계획을 줄일 필요가 없습니다";
+"%d min · 3 small wins at most" = "%d분 · 작은 목표 최대 3개";
+"Your regular plan is available today." = "오늘은 일반 학습 계획을 사용할 수 있습니다.";
+"Plan compressed: %@. Keep a small win today." = "계획을 줄였습니다: %@. 오늘은 작은 성공 하나를 지켜 보세요.";
+"Minimal plan reason separator" = ", ";
+"Low recovery" = "회복 상태 낮음";
+"Backlog" = "할 일 누적";
+"Limited time" = "남은 시간 부족";
+"Exam deadline" = "시험 임박";
+"Exam in %d day(s); secure the essentials." = "%d일 후 시험입니다. 핵심 내용을 우선하세요.";
+"Clear one overdue task first." = "기한이 지난 할 일을 하나 먼저 처리하세요.";
+"Due soon — finish the smallest complete version." = "마감이 임박했습니다. 최소한의 완료 형태부터 끝내세요.";
+"Review the highest-risk mistake briefly." = "위험도가 가장 높은 오답을 짧게 복습하세요.";
+"Use one short focus block, then stop." = "짧은 집중 블록 하나를 진행한 뒤 멈추세요.";

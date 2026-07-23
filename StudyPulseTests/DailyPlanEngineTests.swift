@@ -375,4 +375,37 @@ final class DailyPlanEngineTests: XCTestCase {
         let result = DailyPlanEngine.generate(from: context, max: 3)
         XCTAssertEqual(result.count, 3)
     }
+
+    // MARK: - Minimal completion plan
+
+    func test_minimalPlan_lowRecoverySelectsAtMostThreeWithinBudget() {
+        let context = MinimalPlanContext(
+            mistakeSets: [makeMistake()],
+            examSets: [makeExam(daysFromNow: 1)],
+            taskItems: [makeTask(title: "Homework")],
+            routineInstances: [],
+            hrvReadiness: makeHRV(category: .low),
+            hrvBodyStatus: nil,
+            now: now,
+            availableMinutes: 60
+        )
+
+        let result = MinimalCompletionPlanEngine.generate(from: context)
+        XCTAssertTrue(result.isActive)
+        XCTAssertLessThanOrEqual(result.items.count, 3)
+        XCTAssertLessThanOrEqual(result.totalMinutes, 60)
+        XCTAssertTrue(result.reason.contains("Plan compressed"))
+    }
+
+    func test_minimalPlan_normalEmptyDayStaysInactive() {
+        let context = MinimalPlanContext(
+            mistakeSets: [], examSets: [], taskItems: [], routineInstances: [],
+            hrvReadiness: makeHRV(category: .normal), hrvBodyStatus: nil,
+            now: now, availableMinutes: 90
+        )
+
+        let result = MinimalCompletionPlanEngine.generate(from: context)
+        XCTAssertFalse(result.isActive)
+        XCTAssertTrue(result.items.isEmpty)
+    }
 }

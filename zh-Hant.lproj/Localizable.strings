@@ -2021,3 +2021,22 @@
 "Refresh Coach to generate an analysis." = "重新整理 Coach 以產生分析。";
 "Weighted prediction: %.1f" = "加權預測：%.1f";
 "Success probability: %.0f%%" = "達成機率：%.0f%%";
+
+// MinimalCompletionPlan
+"Minimum Viable Plan" = "最小可完成計畫";
+"Ready when your day gets heavy." = "當今天負擔變重時，它會隨時準備好。";
+"Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day." = "目前可以繼續完整計畫。當精力、時間或任務量需要減負時，這張卡片會自動壓縮計畫。";
+"No compression needed right now" = "目前不需要壓縮計畫";
+"%d min · 3 small wins at most" = "%d 分鐘 · 最多完成 3 個小目標";
+"Your regular plan is available today." = "今天可以繼續完整學習計畫。";
+"Plan compressed: %@. Keep a small win today." = "計畫已壓縮：%@。今天先完成一個小目標。";
+"Minimal plan reason separator" = "、";
+"Low recovery" = "身體恢復較低";
+"Backlog" = "待辦積壓";
+"Limited time" = "剩餘時間不足";
+"Exam deadline" = "考試臨近";
+"Exam in %d day(s); secure the essentials." = "%d 天後考試；先掌握最關鍵內容。";
+"Clear one overdue task first." = "先清理一項逾期任務。";
+"Due soon — finish the smallest complete version." = "即將到期——先完成最小可交付版本。";
+"Review the highest-risk mistake briefly." = "簡短複習風險最高的錯題。";
+"Use one short focus block, then stop." = "完成一個短專注時段後就停下。";

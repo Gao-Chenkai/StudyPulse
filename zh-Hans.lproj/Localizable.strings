@@ -2036,3 +2036,22 @@
 "Refresh Coach to generate an analysis." = "刷新 Coach 以生成分析。";
 "Weighted prediction: %.1f" = "加权预测：%.1f";
 "Success probability: %.0f%%" = "达成概率：%.0f%%";
+
+// MinimalCompletionPlan
+"Minimum Viable Plan" = "最小可完成计划";
+"Ready when your day gets heavy." = "当今天负担变重时，它会随时准备好。";
+"Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day." = "当前可以继续完整计划。当精力、时间或任务量需要减负时，这张卡片会自动将计划压缩。";
+"No compression needed right now" = "当前无需压缩计划";
+"%d min · 3 small wins at most" = "%d 分钟 · 最多完成 3 个小目标";
+"Your regular plan is available today." = "今天可以继续完整学习计划。";
+"Plan compressed: %@. Keep a small win today." = "计划已压缩：%@。今天先完成一个小目标。";
+"Minimal plan reason separator" = "、";
+"Low recovery" = "身体恢复较低";
+"Backlog" = "待办积压";
+"Limited time" = "剩余时间不足";
+"Exam deadline" = "考试临近";
+"Exam in %d day(s); secure the essentials." = "%d 天后考试；先掌握最关键内容。";
+"Clear one overdue task first." = "先清理一项逾期任务。";
+"Due soon — finish the smallest complete version." = "即将到期——先完成最小可交付版本。";
+"Review the highest-risk mistake briefly." = "简短复习风险最高的错题。";
+"Use one short focus block, then stop." = "完成一个短专注时段后就停下。";

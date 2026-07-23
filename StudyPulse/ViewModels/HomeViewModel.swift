@@ -59,6 +59,8 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var unregisteredExams: [Exam] = []
     /// 今日 Top-3 计划(2026-07-09) / Today's Top-3 plan (2026-07-09).
     @Published private(set) var dailyPlan: [DailyPlanItem] = []
+    /// 状态不佳时的压缩计划；未触发时为空。
+    @Published private(set) var minimalPlan: MinimalPlanResult = MinimalPlanResult(isActive: false, reason: "", items: [], totalMinutes: 0)
 
     /// 图表卡片的当前规则 + 选中科目 / Current chart rule & subject.
     @Published private(set) var chartRule: SubjectSelectionRule = .lowestScore
@@ -140,6 +142,16 @@ final class HomeViewModel: ObservableObject {
             hrvBodyStatus: hrvManager.bodyStatus
         )
         dailyPlan = DailyPlanEngine.generate(from: planContext, max: 3)
+
+        let minimalContext = MinimalPlanContext(
+            mistakeSets: mistakes,
+            examSets: filteredExams,
+            taskItems: taskItems,
+            routineInstances: routineInstances,
+            hrvReadiness: hrvManager.readiness,
+            hrvBodyStatus: hrvManager.bodyStatus
+        )
+        minimalPlan = MinimalCompletionPlanEngine.generate(from: minimalContext)
 
         // 图表选中科目可能因数据变化失效,刷新
         // Selected chart subject may be stale → refresh.

@@ -2015,3 +2015,22 @@
 "Refresh Coach to generate an analysis." = "Refresh Coach to generate an analysis.";
 "Weighted prediction: %.1f" = "Weighted prediction: %.1f";
 "Success probability: %.0f%%" = "Success probability: %.0f%%";
+
+// MinimalCompletionPlan
+"Minimum Viable Plan" = "Minimum Viable Plan";
+"Ready when your day gets heavy." = "Ready when your day gets heavy.";
+"Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day." = "Your regular plan is available. This card will shrink it automatically when your energy, time, or workload needs a lighter day.";
+"No compression needed right now" = "No compression needed right now";
+"%d min · 3 small wins at most" = "%d min · 3 small wins at most";
+"Your regular plan is available today." = "Your regular plan is available today.";
+"Plan compressed: %@. Keep a small win today." = "Plan compressed: %@. Keep a small win today.";
+"Minimal plan reason separator" = ", ";
+"Low recovery" = "Low recovery";
+"Backlog" = "Backlog";
+"Limited time" = "Limited time";
+"Exam deadline" = "Exam deadline";
+"Exam in %d day(s); secure the essentials." = "Exam in %d day(s); secure the essentials.";
+"Clear one overdue task first." = "Clear one overdue task first.";
+"Due soon — finish the smallest complete version." = "Due soon — finish the smallest complete version.";
+"Review the highest-risk mistake briefly." = "Review the highest-risk mistake briefly.";
+"Use one short focus block, then stop." = "Use one short focus block, then stop.";

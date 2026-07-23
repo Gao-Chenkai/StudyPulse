@@ -16,6 +16,8 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// 今日 Top-3 计划卡(由 DailyPlanEngine 派生)
     /// Today's Top-3 plan card (derived by DailyPlanEngine).
     case dailyPlan = "dailyPlan"
+    /// 状态不佳时自动压缩到三项可完成任务的计划卡。
+    case minimalPlan = "minimalPlan"
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
     case flashcardReview = "flashcardReview"
@@ -46,6 +48,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .dailyPlan: return "Today's Top 3".localized()
+        case .minimalPlan: return "Minimum Viable Plan".localized()
         case .studyTimer: return "Study Timer".localized()
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
@@ -70,6 +73,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     var icon: String {
         switch self {
         case .dailyPlan: return "sparkles"
+        case .minimalPlan: return "checkmark.circle.fill"
         case .studyTimer: return "timer"
         case .hrvStatus: return "heart.text.square"
         case .unregisteredExamsReminder: return "exclamationmark.bubble.fill"
@@ -124,6 +128,7 @@ struct HomeLayoutPreference: Codable, Equatable {
     /// Default: all enabled, standard order.
     static let `default` = HomeLayoutPreference(items: [
         HomeCardItem(type: .dailyPlan, enabled: true),
+        HomeCardItem(type: .minimalPlan, enabled: true),
         HomeCardItem(type: .learningHeatmap, enabled: true),
         HomeCardItem(type: .hrvStatus, enabled: true),
         HomeCardItem(type: .diary, enabled: true),

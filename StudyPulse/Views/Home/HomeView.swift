@@ -266,6 +266,9 @@ struct HomeView: View {
         case .dailyPlan:
             DailyPlanCard(items: viewModel.dailyPlan)
                 .contextMenu { shareCardMenu(for: type) }
+        case .minimalPlan:
+            MinimalCompletionPlanCard(result: viewModel.minimalPlan)
+                .contextMenu { shareCardMenu(for: type) }
         case .studyTimer:
             StudyTimerCard()
                 .contextMenu { shareCardMenu(for: type) }
@@ -425,6 +428,7 @@ struct HomeView: View {
     private func cardShareTitle(for type: HomeCardType) -> String {
         switch type {
         case .dailyPlan: return "Today's Top 3".localized()
+        case .minimalPlan: return "Minimum Viable Plan".localized()
         case .hrvStatus: return "Recovery Radar".localized()
         case .unregisteredExamsReminder: return "Pending Grades".localized()
         case .flashcardReview: return "Flashcard Review".localized()
@@ -456,6 +460,9 @@ struct HomeView: View {
             Group {
                 switch type {
                 case .dailyPlan: DailyPlanCard(items: viewModel.dailyPlan)
+                case .minimalPlan:
+                    if viewModel.minimalPlan.isActive { MinimalCompletionPlanCard(result: viewModel.minimalPlan) }
+                    else { Text("No data in this period".localized()) }
                 case .studyTimer: StudyTimerCard()
                 case .hrvStatus: HRVStatusCard()
                 case .unregisteredExamsReminder:
