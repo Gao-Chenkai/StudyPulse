@@ -164,13 +164,9 @@ final class RepositoryContainer {
     /// 顶层初始化:JSON 迁移 + 10 个 repo loadAll + 内嵌图片迁移 + 通知 / widget 调度。
     /// Top-level init: JSON migration + 10 repo loadAll + inline image migration + notification / widget scheduling.
     ///
-    /// 容器来自 `ModelContainerFactory.makeContainer()`(同进程单例缓存),
-    /// 与 Scene 的 `.modelContainer(...)` modifier 共享同一 ModelContainer。
-    /// The container comes from `ModelContainerFactory.makeContainer()`
-    /// (in-process singleton cache), shared with the Scene's
-    /// `.modelContainer(...)` modifier.
-    func asyncInit() async {
-        let container = ModelContainerFactory.makeContainer()
+    /// The successfully opened container is supplied by the launch coordinator
+    /// and is the same instance injected into SwiftUI.
+    func asyncInit(using container: ModelContainer) async {
         self.modelContainer = container
         let context = container.mainContext
 

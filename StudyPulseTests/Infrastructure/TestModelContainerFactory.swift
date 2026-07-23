@@ -17,9 +17,13 @@ enum TestModelContainerFactory {
 
     /// 创建并返回一个新的只在内存中运行的 ModelContainer（包含与生产完全一致的 Schema）。
     static func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema(ModelContainerFactory.modelTypes)
+        let schema = Schema(versionedSchema: StudyPulseSchemaV2.self)
         let config = ModelConfiguration("TestStudyPulse", schema: schema, isStoredInMemoryOnly: true)
-        return try ModelContainer(for: schema, configurations: [config])
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: StudyPulseMigrationPlan.self,
+            configurations: [config]
+        )
     }
 
     /// 创建一个预载入默认科目（Math, English, Physics, Chemistry, Biology, History）的内存 ModelContainer。

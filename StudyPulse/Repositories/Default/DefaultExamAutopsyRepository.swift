@@ -1,5 +1,7 @@
 import Foundation
 import SwiftData
+// Persisted shape frozen as part of StudyPulseSchemaV1. Future changes require
+// a new versioned record type and migration stage.
 @Model final class ExamAutopsyRecord {
     @Attribute(.unique) var id: UUID; var examId: UUID; var subject: String
     @Attribute(.externalStorage) var paperImagesData: [Data]; @Attribute(.externalStorage) var itemsData: Data?; @Attribute(.externalStorage) var reportData: Data?

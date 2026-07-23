@@ -5,6 +5,7 @@
 //  SwiftData @Model for persisting the home plant's stage + history + debug override.
 //  Singleton semantics: at most one record per device (singleton enforced by the
 //  `migratePlantStateIfNeeded` factory and the `attach` bootstrap).
+//  Its persisted shape is frozen as part of StudyPulseSchemaV1.
 //
 
 import Foundation

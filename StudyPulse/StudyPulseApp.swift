@@ -39,6 +39,7 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct StudyPulseApp: App {
     @State private var container: RepositoryContainer = RepositoryContainer()
+    @State private var storeLaunchController = PersistentStoreLaunchController()
     @StateObject private var hrvManager = HealthKitManager.shared
     @StateObject private var timerManager = StudyTimerManager.shared
     @StateObject private var achievementManager = AchievementManager.shared
@@ -89,7 +90,7 @@ struct StudyPulseApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            launchContent
                 .environment(container)
                 .environmentObject(hrvManager)
                 .environmentObject(timerManager)
@@ -100,8 +101,11 @@ struct StudyPulseApp: App {
                 #endif
                 .preferredColorScheme(container.envManager.effectiveColorScheme)
                 .task {
+                    guard let modelContainer = storeLaunchController.modelContainer,
+                          !container.isReady
+                    else { return }
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
-                    await container.asyncInit()
+                    await container.asyncInit(using: modelContainer)
                     refreshMemoryClimate()
                     CoachBackgroundRefresh.schedule()
                     BrainUsageStore.migrateLegacyIfNeeded()
@@ -186,9 +190,6 @@ struct StudyPulseApp: App {
                     }
                 }
         }
-        // 注入 SwiftData 容器,与 RepositoryContainer.asyncInit 通过 ModelContainerFactory
-        // 的进程内单例缓存共享同一 ModelContainer。
-        .modelContainer(ModelContainerFactory.makeContainer())
         // Markdown 编辑器的场景级菜单(iPadOS 26 窗口化模式顶部菜单栏
         // + 外接键盘快捷键)。菜单项仅在 MarkdownEditorView 在屏时显示。
         // Scene-level menu commands that surface the markdown editor's
@@ -197,6 +198,16 @@ struct StudyPulseApp: App {
         // hide themselves when no `MarkdownEditorView` is on screen.
         .commands {
             MarkdownCommands()
+        }
+    }
+
+    @ViewBuilder
+    private var launchContent: some View {
+        if let modelContainer = storeLaunchController.modelContainer {
+            ContentView()
+                .modelContainer(modelContainer)
+        } else {
+            PersistentStoreRecoveryView(controller: storeLaunchController)
         }
     }
 
