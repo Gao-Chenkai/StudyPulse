@@ -9,43 +9,50 @@ import Foundation
 import SwiftUI
 
 /// 一个可独立选择的 OpenAI-compatible LLM 供应商配置。
-/// API Key 仅随应用偏好保存在当前设备上。
+/// API Key 存储在 Keychain；`legacyAPIKey` 仅用于解码并迁移旧偏好。
 nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
     var id: UUID = UUID()
     var name: String
     var baseURL: String
-    var apiKey: String
+    var legacyAPIKey: String?
     var model: String
     var multimodalEnabled: Bool
     var thinkingEnabled: Bool
 
-    init(id: UUID = UUID(), name: String, baseURL: String = "", apiKey: String = "", model: String = "", multimodalEnabled: Bool = false, thinkingEnabled: Bool = false) {
+    init(id: UUID = UUID(), name: String, baseURL: String = "", legacyAPIKey: String? = nil, model: String = "", multimodalEnabled: Bool = false, thinkingEnabled: Bool = false) {
         self.id = id
         self.name = name
         self.baseURL = baseURL
-        self.apiKey = apiKey
+        self.legacyAPIKey = legacyAPIKey
         self.model = model
         self.multimodalEnabled = multimodalEnabled
         self.thinkingEnabled = thinkingEnabled
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, baseURL, apiKey, model, multimodalEnabled, thinkingEnabled }
+    enum CodingKeys: String, CodingKey {
+        case id, name, baseURL, model, multimodalEnabled, thinkingEnabled
+        case legacyAPIKey = "apiKey"
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         baseURL = try c.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
-        apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
+        legacyAPIKey = try c.decodeIfPresent(String.self, forKey: .legacyAPIKey)
         model = try c.decodeIfPresent(String.self, forKey: .model) ?? ""
         multimodalEnabled = try c.decodeIfPresent(Bool.self, forKey: .multimodalEnabled) ?? false
         thinkingEnabled = try c.decodeIfPresent(Bool.self, forKey: .thinkingEnabled) ?? false
     }
 
-    var isConfigured: Bool {
-        !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !apiKey.isEmpty
-            && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(baseURL, forKey: .baseURL)
+        try c.encode(model, forKey: .model)
+        try c.encode(multimodalEnabled, forKey: .multimodalEnabled)
+        try c.encode(thinkingEnabled, forKey: .thinkingEnabled)
     }
 }
 
@@ -145,8 +152,8 @@ nonisolated struct AppPreferences: Codable {
     /// OpenAI-compatible base URL (e.g. https://api.openai.com or https://api.deepseek.com).
     /// `nil` 表示未配置。
     var llmBaseURL: String? = nil
-    /// 用户自备的 API Key,仅在设备本地 UserDefaults 存储。
-    /// User-provided API key. Stored in local UserDefaults only.
+    /// 旧版本 UserDefaults 中的 API Key；只用于启动迁移，保存前必须清空。
+    /// Legacy API key decoded only for one-time Keychain migration.
     var llmAPIKey: String? = nil
     /// 模型 id,例如 gpt-4o-mini / deepseek-chat
     /// Model id (e.g. gpt-4o-mini / deepseek-chat).
@@ -291,7 +298,7 @@ nonisolated struct AppPreferences: Codable {
            !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            !apiKey.isEmpty,
            !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let provider = LLMProvider(name: "Default", baseURL: baseURL, apiKey: apiKey, model: model)
+            let provider = LLMProvider(name: "Default", baseURL: baseURL, legacyAPIKey: apiKey, model: model)
             self.llmProviders = [provider]
             self.activeLLMProviderId = provider.id
         }

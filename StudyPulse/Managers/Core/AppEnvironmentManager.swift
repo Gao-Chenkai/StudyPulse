@@ -18,6 +18,7 @@ final class AppEnvironmentManager {
 
     // UserDefaults 键名 / UserDefaults key for the preferences blob
     private let defaultsKey = "appPreferences"
+    private let keychain = KeychainStore.shared
 
     var preferences: AppPreferences {
         didSet {
@@ -193,7 +194,7 @@ final class AppEnvironmentManager {
     /// 当前 LLM 配置快照(只读)。调用方按需构造 `LLMPrompt`。
     /// Current LLM config snapshot (read-only). Callers build `LLMPrompt` as needed.
     var llmConfig: LLMConfig {
-        LLMConfig.from(preferences)
+        LLMConfig.from(preferences, keychain: keychain)
     }
 
     /// LLM 总开关
@@ -216,9 +217,17 @@ final class AppEnvironmentManager {
         preferences.activeLLMProviderId = provider.id
     }
 
-    func updateLLMProvider(_ provider: LLMProvider) {
+    func updateLLMProvider(_ provider: LLMProvider, apiKey: String) throws {
         guard let index = preferences.llmProviders.firstIndex(where: { $0.id == provider.id }) else { return }
-        preferences.llmProviders[index] = provider
+        let account = LLMAPIKeyAccount.provider(provider.id)
+        if apiKey.isEmpty {
+            try keychain.delete(account: account)
+        } else {
+            try keychain.write(apiKey, account: account)
+        }
+        var metadata = provider
+        metadata.legacyAPIKey = nil
+        preferences.llmProviders[index] = metadata
     }
 
     func selectLLMProvider(_ id: UUID) {
@@ -227,6 +236,12 @@ final class AppEnvironmentManager {
     }
 
     func deleteLLMProvider(_ id: UUID) {
+        do {
+            try keychain.delete(account: LLMAPIKeyAccount.provider(id))
+        } catch {
+            Log.preferences.error("删除 LLM Keychain 项失败 / Failed to delete LLM Keychain item")
+            return
+        }
         preferences.llmProviders.removeAll { $0.id == id }
         if preferences.activeLLMProviderId == id {
             preferences.activeLLMProviderId = preferences.llmProviders.first?.id
@@ -252,7 +267,26 @@ final class AppEnvironmentManager {
         let normalized: String?
         if let key, !key.isEmpty { normalized = key } else { normalized = nil }
         Log.preferences.info("更新 LLM apiKey / LLM apiKey: -> \(normalized == nil ? "nil" : "<redacted>", privacy: .public)")
-        updateActiveLLMProvider { $0.apiKey = normalized ?? "" }
+        guard let id = preferences.activeLLMProviderId else { return }
+        do {
+            if let normalized {
+                try keychain.write(normalized, account: LLMAPIKeyAccount.provider(id))
+            } else {
+                try keychain.delete(account: LLMAPIKeyAccount.provider(id))
+            }
+        } catch {
+            Log.preferences.error("更新 LLM Keychain 项失败 / Failed to update LLM Keychain item")
+        }
+    }
+
+    func llmAPIKey(for providerID: UUID) -> String {
+        (try? keychain.read(account: LLMAPIKeyAccount.provider(providerID))) ?? ""
+    }
+
+    func isLLMProviderConfigured(_ provider: LLMProvider) -> Bool {
+        !provider.baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !llmAPIKey(for: provider.id).isEmpty
+            && !provider.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// 设置 LLM 模型 id
@@ -337,13 +371,17 @@ final class AppEnvironmentManager {
     private init() {
         // 从 UserDefaults 加载 / Load from UserDefaults
         if let data = UserDefaults.standard.data(forKey: defaultsKey),
-           let prefs = try? JSONDecoder().decode(AppPreferences.self, from: data) {
-           self.preferences = prefs
+           var prefs = try? JSONDecoder().decode(AppPreferences.self, from: data) {
+            let migratedSecrets = LLMAPIKeyMigrator.migrate(
+                preferences: &prefs,
+                keychain: KeychainStore.shared
+            )
+            self.preferences = prefs
             // AppPreferences 会把旧版单一 LLM 配置转换为一个 Default provider；
             // 首次读取后立刻回写，确保迁移不是只停留在本次内存中。
             let hasProviderList = (try? JSONSerialization.jsonObject(with: data))
                 .flatMap { $0 as? [String: Any] }?["llmProviders"] != nil
-            if !hasProviderList, !prefs.llmProviders.isEmpty {
+            if migratedSecrets || (!hasProviderList && !prefs.llmProviders.isEmpty) {
                 save()
             }
             Log.preferences.info("已从 UserDefaults 恢复偏好 / Loaded preferences from UserDefaults: language=\(prefs.appLanguage ?? "auto", privacy: .public) scheme=\(prefs.colorScheme.rawValue, privacy: .public)")

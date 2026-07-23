@@ -112,23 +112,7 @@ struct LLMSettingsView: View {
                     ContentUnavailableView("No provider configured".localized(), systemImage: "server.rack")
                 }
                 ForEach(container.envManager.preferences.llmProviders) { provider in
-                    HStack(spacing: 12) {
-                        Button {
-                            container.envManager.selectLLMProvider(provider.id)
-                        } label: {
-                            Image(systemName: provider.id == container.envManager.preferences.activeLLMProviderId ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(provider.id == container.envManager.preferences.activeLLMProviderId ? .accentColor : .secondary)
-                        }
-                        .buttonStyle(.plain)
-                        NavigationLink(destination: LLMProviderEditor(provider: provider)) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(provider.name.isEmpty ? "Unnamed Provider".localized() : provider.name)
-                                Text(provider.isConfigured ? provider.model : "Incomplete configuration".localized())
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
+                    providerRow(provider)
                     .swipeActions {
                         Button(role: .destructive) { container.envManager.deleteLLMProvider(provider.id) } label: {
                             Label("Delete".localized(), systemImage: "trash")
@@ -326,6 +310,31 @@ struct LLMSettingsView: View {
         }
     }
 
+    private func providerRow(_ provider: LLMProvider) -> some View {
+        let isActive = provider.id == container.envManager.preferences.activeLLMProviderId
+        let isConfigured = container.envManager.isLLMProviderConfigured(provider)
+        let providerName = provider.name.isEmpty ? "Unnamed Provider".localized() : provider.name
+        let detail = isConfigured ? provider.model : "Incomplete configuration".localized()
+
+        return HStack(spacing: 12) {
+            Button {
+                container.envManager.selectLLMProvider(provider.id)
+            } label: {
+                Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isActive ? .accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            NavigationLink(destination: LLMProviderEditor(provider: provider)) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(providerName)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
     // MARK: - Helpers / 辅助方法
 
     /// 从 `container.envManager.preferences` 拉一份初始值填到本地 @State(只跑一次)
@@ -386,12 +395,13 @@ private struct LLMProviderEditor: View {
     @State private var model: String
     @State private var multimodalEnabled: Bool
     @State private var thinkingEnabled: Bool
+    @State private var saveError: String?
 
     init(provider: LLMProvider) {
         self.provider = provider
         _name = State(initialValue: provider.name)
         _baseURL = State(initialValue: provider.baseURL)
-        _apiKey = State(initialValue: provider.apiKey)
+        _apiKey = State(initialValue: "")
         _model = State(initialValue: provider.model)
         _multimodalEnabled = State(initialValue: provider.multimodalEnabled)
         _thinkingEnabled = State(initialValue: provider.thinkingEnabled)
@@ -445,25 +455,42 @@ private struct LLMProviderEditor: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done".localized()) {
-                    save()
-                    dismiss()
+                    if save() {
+                        dismiss()
+                    }
                 }
             }
         }
-        .onDisappear { save() }
+        .task {
+            apiKey = container.envManager.llmAPIKey(for: provider.id)
+        }
+        .alert("Unable to Save API Key".localized(), isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK".localized(), role: .cancel) {}
+        } message: {
+            Text(saveError ?? "")
+        }
     }
 
-    private func save() {
-        container.envManager.updateLLMProvider(
-            LLMProvider(
-                id: provider.id,
-                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                baseURL: baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
-                apiKey: apiKey,
-                model: model.trimmingCharacters(in: .whitespacesAndNewlines),
-                multimodalEnabled: multimodalEnabled,
-                thinkingEnabled: thinkingEnabled
+    private func save() -> Bool {
+        do {
+            try container.envManager.updateLLMProvider(
+                LLMProvider(
+                    id: provider.id,
+                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    baseURL: baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
+                    model: model.trimmingCharacters(in: .whitespacesAndNewlines),
+                    multimodalEnabled: multimodalEnabled,
+                    thinkingEnabled: thinkingEnabled
+                ),
+                apiKey: apiKey
             )
-        )
+            return true
+        } catch {
+            saveError = "The API key could not be stored securely. Your previous key was kept.".localized()
+            return false
+        }
     }
 }

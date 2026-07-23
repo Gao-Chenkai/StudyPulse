@@ -23,7 +23,7 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     /// Chat Completions 风格 base URL,例如 https://api.openai.com
     /// (URL 末尾的 `/` 会在 `LLMClient` 内部自动 trim)
     var baseURL: String?
-    /// 用户自备的 API Key。仅在设备本地 UserDefaults 存储。
+    /// 用户自备的 API Key。仅从本机 Keychain 读取。
     var apiKey: String?
     /// 模型 id,例如 gpt-4o-mini / deepseek-chat
     var model: String?
@@ -80,12 +80,17 @@ extension LLMConfig {
     /// Build an `LLMConfig` snapshot from the current `AppPreferences`.
     /// Read-only; mutate through the `AppEnvironmentManager` setters.
     @MainActor
-    static func from(_ prefs: AppPreferences) -> LLMConfig {
+    static func from(
+        _ prefs: AppPreferences,
+        keychain: KeychainStore = .shared
+    ) -> LLMConfig {
         let provider = prefs.llmProviders.first { $0.id == prefs.activeLLMProviderId }
+        let account = provider.map { LLMAPIKeyAccount.provider($0.id) } ?? LLMAPIKeyAccount.legacy
+        let apiKey = try? keychain.read(account: account)
         return LLMConfig(
             enabled: prefs.llmEnabled,
             baseURL: provider?.baseURL ?? prefs.llmBaseURL,
-            apiKey: provider?.apiKey ?? prefs.llmAPIKey,
+            apiKey: apiKey ?? nil,
             model: provider?.model ?? prefs.llmModel,
             providerName: provider?.name,
             multimodalEnabled: provider?.multimodalEnabled ?? false,

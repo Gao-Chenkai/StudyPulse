@@ -75,6 +75,32 @@ nonisolated struct LLMCallDebugInfo: Equatable, Sendable {
         // 取首尾的引号(数组形式 = ["..."])
         return String(arr.dropFirst().dropLast())
     }
+
+    func redacting(secret: String?) -> LLMCallDebugInfo {
+        guard let secret, !secret.isEmpty else { return self }
+        func redact(_ value: String) -> String {
+            value.replacingOccurrences(of: secret, with: "<redacted>")
+        }
+        return LLMCallDebugInfo(
+            startTime: startTime,
+            endTime: endTime,
+            url: redact(url),
+            model: redact(model),
+            temperature: temperature,
+            systemPrompt: redact(systemPrompt),
+            messages: messages.map {
+                LLMMessage(
+                    role: $0.role,
+                    content: redact($0.content),
+                    imageDataURLs: $0.imageDataURLs.map(redact)
+                )
+            },
+            streaming: streaming,
+            response: response.map(redact),
+            error: error.map(redact),
+            caller: redact(caller)
+        )
+    }
 }
 
 /// OpenAI Chat Completions 兼容客户端。
@@ -159,7 +185,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: nil, error: LLMError.timeout.errorDescription,
                 caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             throw LLMError.timeout
         } catch {
             let info = LLMCallDebugInfo(
@@ -171,11 +197,11 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: nil, error: error.localizedDescription,
                 caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             throw LLMError.network(error.localizedDescription)
         }
         do {
-            try validateHTTP(response: response, data: data)
+            try validateHTTP(response: response, data: data, apiKey: config.apiKey)
         } catch {
             let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
             let info = LLMCallDebugInfo(
@@ -187,7 +213,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: String(data: data, encoding: .utf8),
                 error: desc, caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             throw error
         }
         let result = try await Task.detached(priority: .userInitiated) {
@@ -201,7 +227,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
             messages: prompt.messages, streaming: false,
             response: result, error: nil, caller: caller
         )
-        recordCall(info)
+        recordCall(info, apiKey: config.apiKey)
         // 写入缓存:相同 prompt 在 TTL 内不重复请求网络。
         // Cache the response so the same prompt doesn't hit the network within TTL.
         LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
@@ -256,7 +282,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: nil, error: error.localizedDescription,
                 caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             if let urlErr = error as? URLError, urlErr.code == .timedOut {
                 throw LLMError.timeout
             }
@@ -270,7 +296,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 buffer.append(byte)
             }
             do {
-                try validateHTTP(response: response, data: buffer)
+                try validateHTTP(response: response, data: buffer, apiKey: config.apiKey)
             } catch {
                 let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
                 let info = LLMCallDebugInfo(
@@ -282,11 +308,11 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                     response: String(data: buffer, encoding: .utf8),
                     error: desc, caller: caller
                 )
-                recordCall(info)
+                recordCall(info, apiKey: config.apiKey)
                 throw error
             }
         }
-        try validateHTTP(response: response, data: Data())
+        try validateHTTP(response: response, data: Data(), apiKey: config.apiKey)
 
         var accumulated = ""
         var pending = ""
@@ -312,7 +338,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: accumulated.isEmpty ? nil : accumulated,
                 error: error.localizedDescription, caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             throw error
         }
         if accumulated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -325,7 +351,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
                 response: nil, error: LLMError.emptyResponse.errorDescription,
                 caller: caller
             )
-            recordCall(info)
+            recordCall(info, apiKey: config.apiKey)
             throw LLMError.emptyResponse
         }
         let info = LLMCallDebugInfo(
@@ -336,7 +362,7 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
             messages: prompt.messages, streaming: true,
             response: accumulated, error: nil, caller: caller
         )
-        recordCall(info)
+        recordCall(info, apiKey: config.apiKey)
         // 写入缓存:与 complete() 一致,使流式调用的结果也可被后续命中。
         // Cache the response so the same prompt doesn't hit the network within TTL.
         LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
@@ -392,7 +418,8 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
         // DEBUG 模式 verbose 开启时才进入 LogStore。
         // Route through the unified Log system at .debug level. Release builds
         // (minCaptureLevel=.info) drop it; DEBUG + verbose captures into LogStore.
-        Log.llm.debug("\(output, privacy: .public)")
+        let sanitized = redact(output, secret: config.apiKey)
+        Log.llm.debug("\(sanitized, privacy: .public)")
     }
 
     nonisolated private func buildURL(baseURL: String?) throws -> URL {
@@ -465,18 +492,19 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
 
     /// 把一次调用写入 `lastCallInfo` + `recentCalls`,并 log 到 `Log.llm`。
     /// Record a call into `lastCallInfo` and `recentCalls`, and emit a Log.llm entry.
-    private func recordCall(_ info: LLMCallDebugInfo) {
-        lastCallInfo = info
-        recentCalls.append(info)
+    private func recordCall(_ info: LLMCallDebugInfo, apiKey: String?) {
+        let sanitized = info.redacting(secret: apiKey)
+        lastCallInfo = sanitized
+        recentCalls.append(sanitized)
         if recentCalls.count > recentCallsLimit {
             recentCalls.removeFirst(recentCalls.count - recentCallsLimit)
         }
-        let elapsedStr = String(format: "%.2fs", info.elapsedSeconds)
-        let okOrErr = info.error == nil ? "OK" : "ERR: \(info.error ?? "")"
-        Log.llm.info("LLM call [\(info.caller, privacy: .public)] \(info.url, privacy: .public) elapsed=\(elapsedStr, privacy: .public) status=\(okOrErr, privacy: .public)")
+        let elapsedStr = String(format: "%.2fs", sanitized.elapsedSeconds)
+        let okOrErr = sanitized.error == nil ? "OK" : "ERR: \(sanitized.error ?? "")"
+        Log.llm.info("LLM call [\(sanitized.caller, privacy: .public)] \(sanitized.url, privacy: .public) elapsed=\(elapsedStr, privacy: .public) status=\(okOrErr, privacy: .public)")
     }
 
-    private func validateHTTP(response: URLResponse, data: Data) throws {
+    private func validateHTTP(response: URLResponse, data: Data, apiKey: String?) throws {
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.network("Non-HTTP response")
         }
@@ -488,8 +516,14 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
             // 把响应体一并抛出,UI 才能看到 "Model not found" / "Invalid API key" 之类
             // Include the response body so the UI can show the server's real error message.
             let body = String(data: data, encoding: .utf8)
+                .map { redact($0, secret: apiKey) }
             throw LLMError.serverError(statusCode: http.statusCode, body: body)
         }
+    }
+
+    nonisolated private func redact(_ text: String, secret: String?) -> String {
+        guard let secret, !secret.isEmpty else { return text }
+        return text.replacingOccurrences(of: secret, with: "<redacted>")
     }
 }
 
