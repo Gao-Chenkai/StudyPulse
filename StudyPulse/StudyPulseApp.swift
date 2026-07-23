@@ -102,6 +102,7 @@ struct StudyPulseApp: App {
                 .task {
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
                     await container.asyncInit()
+                    refreshMemoryClimate()
                     CoachBackgroundRefresh.schedule()
                     BrainUsageStore.migrateLegacyIfNeeded()
                     Log.app.info("异步数据加载完成 / Async data load complete; isReady=\(container.isReady, privacy: .public)")
@@ -146,6 +147,7 @@ struct StudyPulseApp: App {
                         )
                         TrendWidgetSyncManager.syncTrend(grades: container.gradeRepo.grades, subjects: container.subjectRepo.subjects)
                         HRVWidgetSyncManager.syncHRV(from: hrvManager)
+                        refreshMemoryClimate()
                         // 同步 SRS 复习通知（错题已 opt-in 但尚未到期的）
                         timerManager.cleanupStaleActivities()
                         SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
@@ -196,5 +198,15 @@ struct StudyPulseApp: App {
         .commands {
             MarkdownCommands()
         }
+    }
+
+    @MainActor
+    private func refreshMemoryClimate(now: Date = Date()) {
+        let snapshot = MemoryClimateEngine.generate(
+            mistakes: container.mistakeRepo.filteredMistakeSets,
+            phaseId: container.envManager.activePhaseId,
+            now: now
+        )
+        MemoryClimateHistoryStore.upsert(snapshot, now: now)
     }
 }

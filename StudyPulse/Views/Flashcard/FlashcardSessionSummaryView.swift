@@ -59,6 +59,24 @@ struct FlashcardSessionSummaryView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+
+                if stats.earlyContrastReviewed > 0 {
+                    Divider()
+                    Label(
+                        String(
+                            format: "memory.climate.summary.interleavedCount".localized(),
+                            stats.earlyContrastReviewed
+                        ),
+                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.purple)
+                    if !stats.interleavedPairs.isEmpty {
+                        Text(stats.interleavedPairs.joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding(20)
             .background(

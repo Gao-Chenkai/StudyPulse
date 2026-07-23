@@ -23,6 +23,8 @@ struct FlashcardSessionStats: Equatable {
     var hard: Int = 0
     var good: Int = 0
     var easy: Int = 0
+    var earlyContrastReviewed: Int = 0
+    var interleavedPairs: [String] = []
     var startTime: Date = Date()
     var endTime: Date? = nil
 
@@ -46,6 +48,13 @@ struct FlashcardSessionStats: Equatable {
         case .hard:  hard += 1
         case .good:  good += 1
         case .easy:  easy += 1
+        }
+    }
+
+    mutating func recordEarlyContrast(_ pair: ConceptInterference) {
+        earlyContrastReviewed += 1
+        if !interleavedPairs.contains(pair.displayName) {
+            interleavedPairs.append(pair.displayName)
         }
     }
 }
@@ -240,6 +249,19 @@ struct FlashcardStudyView: View {
             // 主内容:ScrollView 内,卡片 + (手写时)画布
             ScrollView {
                 VStack(spacing: 16) {
+                    if let pair = viewModel.currentQueueItem?.interference {
+                        Label(
+                            String(format: "memory.climate.interleavedBadge".localized(), pair.displayName),
+                            systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
+                        )
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.purple)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(.purple.opacity(0.12), in: Capsule())
+                        .accessibilityHint("memory.climate.earlyDueUnchanged".localized())
+                    }
+
                     // 主卡片
                     FlashcardCardView(mistake: mistake, isFlipped: $viewModel.isFlipped)
                         .frame(maxWidth: 720)

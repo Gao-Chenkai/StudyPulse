@@ -294,6 +294,16 @@ struct HomeView: View {
                 }
                 .contextMenu { shareCardMenu(for: type) }
             }
+        case .memoryClimate:
+            if !viewModel.memoryClimate.subjects.isEmpty {
+                MemoryClimateCard(
+                    snapshot: viewModel.memoryClimate,
+                    history: viewModel.memoryClimateHistory
+                ) {
+                    uiState.showingFlashcards = true
+                }
+                .contextMenu { shareCardMenu(for: type) }
+            }
         case .quickActions:
             QuickActionsCard()
                 .contextMenu { shareCardMenu(for: type) }
@@ -443,6 +453,7 @@ struct HomeView: View {
         case .hrvStatus: return "Recovery Radar".localized()
         case .unregisteredExamsReminder: return "Pending Grades".localized()
         case .flashcardReview: return "Flashcard Review".localized()
+        case .memoryClimate: return "memory.climate.title".localized()
         case .quickActions: return "Quick Actions".localized()
         case .studyTimer: return "Study Timer".localized()
         case .studySuggestions: return "Study Suggestions".localized()
@@ -486,6 +497,16 @@ struct HomeView: View {
                 case .flashcardReview:
                     if viewModel.srsOverview.dueCount > 0 {
                         FlashcardReviewHomeCard(overview: viewModel.srsOverview) {}
+                    } else {
+                        Text("No data in this period".localized())
+                    }
+                case .memoryClimate:
+                    if !viewModel.memoryClimate.subjects.isEmpty {
+                        MemoryClimateCard(
+                            snapshot: viewModel.memoryClimate,
+                            history: viewModel.memoryClimateHistory,
+                            onStartReview: {}
+                        )
                     } else {
                         Text("No data in this period".localized())
                     }

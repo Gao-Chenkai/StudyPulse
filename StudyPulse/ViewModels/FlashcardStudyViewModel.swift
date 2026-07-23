@@ -20,12 +20,13 @@ import os
 final class FlashcardStudyViewModel: ObservableObject {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
+    private let climateHistoryURL: URL?
     /// 触发本次学习的筛选条件 / Filter for this study session.
     let filter: FlashcardFilter
 
     // MARK: - 输出状态 / Output states
     /// 剩余待复习错题队列 / Remaining mistakes queue.
-    @Published var queue: [MistakeNote] = []
+    @Published var queue: [FlashcardQueueItem] = []
     /// 当前卡片在 queue 中的索引 / Index of the current card.
     @Published var currentIndex: Int = 0
     /// 是否翻到答案面 / Flipped to answer side?
@@ -35,7 +36,7 @@ final class FlashcardStudyViewModel: ObservableObject {
     /// 是否显示总结页 / Show session summary?
     @Published var showingSummary: Bool = false
     /// "再来一次"重新插入的错题 / Mistakes re-queued for "Again".
-    @Published var reinsertQueue: [MistakeNote] = []
+    @Published var reinsertQueue: [FlashcardQueueItem] = []
     /// 是否显示计算器 / Show calculator?
     @Published var showingCalculator: Bool = false
     /// 是否启用手写板 / Handwriting board enabled?
@@ -50,16 +51,27 @@ final class FlashcardStudyViewModel: ObservableObject {
     @Published var showHandwritingRequiredAlert: Bool = false
 
     // MARK: - 初始化 / Initialization
-    init(container: RepositoryContainer, filter: FlashcardFilter, handwritingEnabled: Bool = false) {
+    init(
+        container: RepositoryContainer,
+        filter: FlashcardFilter,
+        handwritingEnabled: Bool = false,
+        climateHistoryURL: URL? = nil
+    ) {
         self.container = container
         self.filter = filter
         self.handwritingEnabled = handwritingEnabled
+        self.climateHistoryURL = climateHistoryURL
         loadQueue()
     }
 
     // MARK: - 计算属性 / Computed properties
     /// 当前展示的错题(越界返回 nil) / Currently displayed mistake (nil if OOB).
     var currentMistake: MistakeNote? {
+        guard currentIndex < queue.count else { return nil }
+        return queue[currentIndex].mistake
+    }
+
+    var currentQueueItem: FlashcardQueueItem? {
         guard currentIndex < queue.count else { return nil }
         return queue[currentIndex]
     }
@@ -81,12 +93,22 @@ final class FlashcardStudyViewModel: ObservableObject {
     func loadQueue() {
         switch filter {
         case .dueQueue:
-            queue = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
+            let mistakes = container.mistakeRepo.filteredMistakeSets
+            let due = SRSAlgorithm.dueMistakes(from: mistakes)
+            let climate = MemoryClimateEngine.generate(
+                mistakes: mistakes,
+                phaseId: container.envManager.activePhaseId
+            )
+            queue = ClimateInterleavingEngine.buildQueue(
+                due: due,
+                allMistakes: mistakes,
+                climate: climate
+            )
         case .single(let note):
-            queue = [note]
+            queue = [.scheduled(note)]
         case .tag(let tag):
             let due = SRSAlgorithm.dueMistakes(from: container.mistakeRepo.mistakeSets)
-            queue = MistakeFilter.tagged(due, tag: tag)
+            queue = MistakeFilter.tagged(due, tag: tag).map(FlashcardQueueItem.scheduled)
         }
         // 重置会话状态 / Reset all session-scoped state.
         currentIndex = 0
@@ -133,25 +155,35 @@ final class FlashcardStudyViewModel: ObservableObject {
     /// 处理用户评分:更新 SRS + 记录手写 + 决定是否重抽
     /// Handle a user rating: update SRS, record handwriting, decide on re-queue.
     func handleRating(_ quality: ReviewQuality) {
-        guard let current = currentMistake else { return }
+        guard let current = currentMistake, let currentItem = currentQueueItem else { return }
         stats.record(quality)
+        if let pair = currentItem.interference {
+            stats.recordEarlyContrast(pair)
+        }
 
-        switch filter {
-        case .dueQueue, .tag:
+        switch currentItem.source {
+        case .earlyContrast:
+            // Early contrast cards contribute retrieval evidence but must not
+            // move the scheduled SRS due date.
+            break
+        case .scheduled:
+            switch filter {
+            case .dueQueue, .tag:
             // 队列模式:正常推进 SRS / Queue mode: run SRS progression.
-            if var state = current.reviewState {
-                state = SRSAlgorithm.apply(quality: quality, to: state, difficulty: current.difficulty)
-                container.mistakeRepo.updateReviewState(current.id, newState: state)
-            }
-        case .single:
-            // 单题模式:只记时间,不参与真实 SRS / Single mode: stamp time only.
-            if var state = current.reviewState {
-                state.lastReviewDate = Date()
-                // 强制 1 天后再看 / Force 1-day follow-up.
-                if let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
-                    state.nextReviewDate = nextDay
+                if var state = current.reviewState {
+                    state = SRSAlgorithm.apply(quality: quality, to: state, difficulty: current.difficulty)
+                    container.mistakeRepo.updateReviewState(current.id, newState: state)
                 }
-                container.mistakeRepo.updateReviewState(current.id, newState: state)
+            case .single:
+            // 单题模式:只记时间,不参与真实 SRS / Single mode: stamp time only.
+                if var state = current.reviewState {
+                    state.lastReviewDate = Date()
+                    // 强制 1 天后再看 / Force 1-day follow-up.
+                    if let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
+                        state.nextReviewDate = nextDay
+                    }
+                    container.mistakeRepo.updateReviewState(current.id, newState: state)
+                }
             }
         }
 
@@ -164,10 +196,11 @@ final class FlashcardStudyViewModel: ObservableObject {
         }
 
         // "再来一次" → 队列模式重抽 / "Again" → re-insert in queue mode.
-        if quality == .again, !filter.isSingleMode {
-            reinsertQueue.append(current)
+        if quality == .again, !filter.isSingleMode, !currentItem.isEarlyContrast {
+            reinsertQueue.append(currentItem)
         }
 
+        refreshMemoryClimate()
         advance()
     }
 
@@ -205,5 +238,14 @@ final class FlashcardStudyViewModel: ObservableObject {
         stats.endTime = Date()
         showingSummary = true
         SRSReviewNotifications.shared.rescheduleAll(mistakes: container.mistakeRepo.mistakeSets)
+    }
+
+    private func refreshMemoryClimate(now: Date = Date()) {
+        let snapshot = MemoryClimateEngine.generate(
+            mistakes: container.mistakeRepo.filteredMistakeSets,
+            phaseId: container.envManager.activePhaseId,
+            now: now
+        )
+        MemoryClimateHistoryStore.upsert(snapshot, at: climateHistoryURL, now: now)
     }
 }

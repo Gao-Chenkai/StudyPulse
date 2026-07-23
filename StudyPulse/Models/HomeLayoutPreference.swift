@@ -21,6 +21,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     case hrvStatus = "hrvStatus"
     case unregisteredExamsReminder = "unregisteredExamsReminder"
     case flashcardReview = "flashcardReview"
+    case memoryClimate = "memoryClimate"
     case streakProgress = "streakProgress"
     case quickActions = "quickActions"
     case studySuggestions = "studySuggestions"
@@ -55,6 +56,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .hrvStatus: return "HRV Readiness".localized()
         case .unregisteredExamsReminder: return "Exam Grade Reminder".localized()
         case .flashcardReview: return "Flashcard Review".localized()
+        case .memoryClimate: return "memory.climate.title".localized()
         case .streakProgress: return "Streak Progress".localized()
         case .quickActions: return "Quick Actions".localized()
         case .studySuggestions: return "Study Suggestions".localized()
@@ -81,6 +83,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .hrvStatus: return "heart.text.square"
         case .unregisteredExamsReminder: return "exclamationmark.bubble.fill"
         case .flashcardReview: return "rectangle.stack.fill"
+        case .memoryClimate: return "cloud.sun.rain.fill"
         case .quickActions: return "bolt.fill"
         case .studySuggestions: return "lightbulb.fill"
         case .streakProgress: return "flame.circle.fill"
@@ -102,7 +105,7 @@ enum HomeCardType: String, CaseIterable, Codable {
     /// 宽幅可视化卡片（如 90 天热力图、即将考试大卡）应标记为 true。
     var isFullWidth: Bool {
         switch self {
-        case .learningHeatmap, .examRoleSimulator: return true
+        case .learningHeatmap, .memoryClimate, .examRoleSimulator: return true
         default: return false
         }
     }
@@ -140,6 +143,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .examRoleSimulator, enabled: true),
         HomeCardItem(type: .unregisteredExamsReminder, enabled: true),
         HomeCardItem(type: .flashcardReview, enabled: true),
+        HomeCardItem(type: .memoryClimate, enabled: true),
         HomeCardItem(type: .quickActions, enabled: true),
         HomeCardItem(type: .studyTimer, enabled: true),
         HomeCardItem(type: .streakProgress, enabled: true),

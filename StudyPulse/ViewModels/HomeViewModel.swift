@@ -61,6 +61,9 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var dailyPlan: [DailyPlanItem] = []
     /// 状态不佳时的压缩计划；未触发时为空。
     @Published private(set) var minimalPlan: MinimalPlanResult = MinimalPlanResult(isActive: false, reason: "", items: [], totalMinutes: 0)
+    /// 今日记忆气候与当前阶段近 90 天历史。
+    @Published private(set) var memoryClimate: MemoryClimateSnapshot = .empty()
+    @Published private(set) var memoryClimateHistory: [MemoryClimateSnapshot] = []
 
     /// 图表卡片的当前规则 + 选中科目 / Current chart rule & subject.
     @Published private(set) var chartRule: SubjectSelectionRule = .lowestScore
@@ -153,6 +156,15 @@ final class HomeViewModel: ObservableObject {
         )
         minimalPlan = MinimalCompletionPlanEngine.generate(from: minimalContext)
 
+        // 今日记忆气候：同日同阶段幂等覆盖，并加载当前阶段 90 天历史。
+        memoryClimate = MemoryClimateEngine.generate(
+            mistakes: container.mistakeRepo.filteredMistakeSets,
+            phaseId: container.envManager.activePhaseId
+        )
+        memoryClimateHistory = MemoryClimateHistoryStore
+            .upsert(memoryClimate)
+            .filter { $0.phaseId == container.envManager.activePhaseId }
+
         // 图表选中科目可能因数据变化失效,刷新
         // Selected chart subject may be stale → refresh.
         applyChartRule(chartRule)
@@ -172,7 +184,16 @@ final class HomeViewModel: ObservableObject {
         hasher.combine(grades.count)
         for g in grades { hasher.combine(g.id) }
         hasher.combine(mistakes.count)
-        for m in mistakes { hasher.combine(m.id) }
+        for m in mistakes {
+            hasher.combine(m.id)
+            hasher.combine(m.subject)
+            hasher.combine(m.phaseId)
+            hasher.combine(m.masteryScore)
+            hasher.combine(m.tags)
+            hasher.combine(m.reviewState)
+            hasher.combine(m.masteryHistory)
+        }
+        hasher.combine(container.envManager.activePhaseId)
         hasher.combine(exams.count)
         for e in exams { hasher.combine(e.id) }
         hasher.combine(tasks.count)
