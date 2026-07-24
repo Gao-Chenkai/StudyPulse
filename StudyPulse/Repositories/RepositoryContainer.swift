@@ -71,6 +71,16 @@ final class RepositoryContainer {
     @ObservationIgnored
     private(set) var modelContainer: ModelContainer?
 
+    /// Shared SwiftData actor for the high-frequency repositories.
+    @ObservationIgnored
+    private(set) var persistenceExecutor: PersistenceExecutor?
+
+    @ObservationIgnored
+    private static let persistenceSignposter = OSSignposter(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.chenkai.gao.studypulse",
+        category: "Persistence"
+    )
+
     /// 是否完成 asyncInit 全部加载。View 用这个 gating loader。
     /// Whether `asyncInit` has finished loading. Views use this to gate a loader.
     private(set) var isReady: Bool = false
@@ -167,8 +177,11 @@ final class RepositoryContainer {
     /// The successfully opened container is supplied by the launch coordinator
     /// and is the same instance injected into SwiftUI.
     func asyncInit(using container: ModelContainer) async {
+        let interval = Self.persistenceSignposter.beginInterval("RepositoryContainer.asyncInit")
+        defer { Self.persistenceSignposter.endInterval("RepositoryContainer.asyncInit", interval) }
         self.modelContainer = container
         let context = container.mainContext
+        attachPersistenceExecutor(to: container)
 
         // 一次性 SwiftData migration from JSON(老用户数据回填)
         ModelContainerFactory.migrateFromJSONIfNeeded(context: context)
@@ -176,10 +189,7 @@ final class RepositoryContainer {
         // Repository protocols are MainActor-isolated. Loading them in a task group
         // would capture actor-isolated state in @Sendable closures and cannot provide
         // real parallelism, so load in actor order instead.
-        await gradeRepo.loadAll(context: context)
-        await mistakeRepo.loadAll(context: context)
-        await examRepo.loadAll(context: context)
-        await taskRepo.loadAll(context: context)
+        await loadHighFrequencyRepositories(context: context)
         await phaseRepo.loadAll(context: context)
         await profileRepo.loadAll(context: context)
         await subjectRepo.loadAll(context: context)
@@ -193,8 +203,8 @@ final class RepositoryContainer {
 
         // 内嵌图片迁移(在 waitForAll 后,grades 已加载)
         let migrated = gradeRepo.migrateInlineImagesIfNeeded()
-        if migrated > 0 {
-            await gradeRepo.reloadFromSwiftData()
+        if migrated > 0, let backed = gradeRepo as? any PersistenceExecutorBacked {
+            await backed.flushPendingPersistence()
         }
 
         // SubjectRepo 默认科目(空库时)
@@ -228,10 +238,8 @@ final class RepositoryContainer {
     func reloadAllAfterBackupRestore() async {
         guard let modelContainer else { return }
         let context = modelContainer.mainContext
-        await gradeRepo.loadAll(context: context)
-        await mistakeRepo.loadAll(context: context)
-        await examRepo.loadAll(context: context)
-        await taskRepo.loadAll(context: context)
+        attachPersistenceExecutor(to: modelContainer)
+        await loadHighFrequencyRepositories(context: context)
         await phaseRepo.loadAll(context: context)
         await profileRepo.loadAll(context: context)
         await subjectRepo.loadAll(context: context)
@@ -260,11 +268,9 @@ final class RepositoryContainer {
     func asyncTestInit(with testContainer: ModelContainer) async {
         self.modelContainer = testContainer
         let context = testContainer.mainContext
+        attachPersistenceExecutor(to: testContainer)
 
-        await gradeRepo.loadAll(context: context)
-        await mistakeRepo.loadAll(context: context)
-        await examRepo.loadAll(context: context)
-        await taskRepo.loadAll(context: context)
+        await loadHighFrequencyRepositories(context: context)
         await phaseRepo.loadAll(context: context)
         await profileRepo.loadAll(context: context)
         await subjectRepo.loadAll(context: context)
@@ -484,7 +490,61 @@ final class RepositoryContainer {
     /// Activate a phase (updates `AppEnvironmentManager` + recomputes filtered caches).
     func activatePhase(_ phase: StudyPhase?) {
         phaseRepo.activate(phase)
-        recomputeAllFiltered()
+    }
+
+    /// Await all currently queued high-frequency writes. Used by lifecycle
+    /// coordination and deterministic integration tests.
+    func flushPendingPersistence() async {
+        await (gradeRepo as? any PersistenceExecutorBacked)?.flushPendingPersistence()
+        await (mistakeRepo as? any PersistenceExecutorBacked)?.flushPendingPersistence()
+        await (examRepo as? any PersistenceExecutorBacked)?.flushPendingPersistence()
+        await (taskRepo as? any PersistenceExecutorBacked)?.flushPendingPersistence()
+    }
+
+    func cancelPendingPersistence() {
+        (gradeRepo as? any PersistenceExecutorBacked)?.cancelPendingPersistence()
+        (mistakeRepo as? any PersistenceExecutorBacked)?.cancelPendingPersistence()
+        (examRepo as? any PersistenceExecutorBacked)?.cancelPendingPersistence()
+        (taskRepo as? any PersistenceExecutorBacked)?.cancelPendingPersistence()
+    }
+
+    private func attachPersistenceExecutor(to container: ModelContainer) {
+        let executor = PersistenceExecutor(modelContainer: container)
+        persistenceExecutor = executor
+        (gradeRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+        (mistakeRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+        (examRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+        (taskRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+    }
+
+    private func loadHighFrequencyRepositories(context: ModelContext) async {
+        guard let executor = persistenceExecutor,
+              let grades = gradeRepo as? DefaultGradeRepository,
+              let mistakes = mistakeRepo as? DefaultMistakeRepository,
+              let exams = examRepo as? DefaultExamRepository,
+              let tasks = taskRepo as? DefaultTaskRepository else {
+            await gradeRepo.loadAll(context: context)
+            await mistakeRepo.loadAll(context: context)
+            await examRepo.loadAll(context: context)
+            await taskRepo.loadAll(context: context)
+            return
+        }
+
+        do {
+            let snapshots = try await executor.loadHighFrequencySnapshots()
+            try Task.checkCancellation()
+            grades.publishStartupSnapshots(snapshots.grades)
+            mistakes.publishStartupSnapshots(snapshots.mistakes)
+            exams.publishStartupSnapshots(
+                single: snapshots.exams,
+                comprehensive: snapshots.comprehensiveExams
+            )
+            tasks.publishStartupSnapshots(snapshots.tasks)
+        } catch is CancellationError {
+            Log.data.debug("High-frequency repository startup load cancelled")
+        } catch {
+            Log.data.error("High-frequency repository startup load failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - 例程 (Routine) 域 facade

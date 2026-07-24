@@ -2,70 +2,58 @@
 //  DefaultTaskRepository.swift
 //  StudyPulse
 //
-//  待办 (TaskItem) Repository 默认实现。
-//  Default TaskRepository implementation backed by SwiftData + EKReminder 同步。
-//
 
 import Foundation
 import SwiftData
 import os
 
 @Observable @MainActor
-final class DefaultTaskRepository: TaskRepository {
+final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
     var taskItems: [TaskItem] = []
     var filteredTaskItems: [TaskItem] = []
 
-    @ObservationIgnored
-    private var modelContext: ModelContext?
-
-    /// 用于 background fetch 的容器引用(Sendable)
-    /// Container reference for background fetches (Sendable).
-    @ObservationIgnored
-    private var modelContainer: ModelContainer?
-
-    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
-    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
-    @ObservationIgnored
-    private let envManager: AppEnvironmentManager
+    @ObservationIgnored private let envManager: AppEnvironmentManager
+    @ObservationIgnored private var executor: PersistenceExecutor?
+    @ObservationIgnored private var persistenceTail: Task<Void, Never>?
+    @ObservationIgnored private var reminderRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var phaseIndex: [UUID: [TaskItem]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
     }
 
-    // MARK: - Lifecycle
-
-    func loadAll(context: ModelContext) async {
-        self.modelContext = context
-        self.modelContainer = context.container
-        guard let container = modelContainer else { return }
-        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
-        // Use an independent background ModelContext inside a detached task.
-        let snapshots: [TaskItem] = await Task.detached(priority: .utility) {
-            let ctx = ModelContext(container)
-            // fetchLimit=200 + sort by dueDate desc:取最近 200 个待办(覆盖即将到期 + 近期已完成)。
-            // fetchLimit=200 + sort by dueDate desc: take the 200 most recent tasks
-            // (upcoming + recently completed). Sort desc so heavy users keep the newest.
-            var descriptor = FetchDescriptor<TaskItemRecord>(
-                sortBy: [SortDescriptor(\.dueDate, order: .reverse)]
-            )
-            descriptor.fetchLimit = 200
-            let entities = (try? ctx.fetch(descriptor)) ?? []
-            return entities.map { $0.toSnapshot() }
-        }.value
-        // 回到 MainActor 赋值
-        // add() 内部会按 dueDate 升序重排,初始 desc 不影响后续不变量。
-        // add() re-sorts ascending by dueDate, so the initial desc order doesn't break invariants.
-        self.taskItems = snapshots
-        recomputeFiltered()
+    func attachPersistenceExecutor(_ executor: PersistenceExecutor) {
+        self.executor = executor
     }
 
-    // MARK: - CRUD
+    func loadAll(context: ModelContext) async {
+        if executor == nil {
+            executor = PersistenceExecutor(modelContainer: context.container)
+        }
+        guard let executor else { return }
+        await persistenceTail?.value
+        do {
+            publish(try await executor.fetchTasks())
+        } catch is CancellationError {
+            Log.data.debug("TaskRepository load cancelled")
+        } catch {
+            Log.data.error("TaskRepository load failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
-    func add(_ task: TaskItem, syncToReminders: Bool, reminderResult: (calendarItemId: String, calendarId: String)?) {
+    func publishStartupSnapshots(_ snapshots: [TaskItem]) {
+        publish(snapshots)
+    }
+
+    func add(
+        _ task: TaskItem,
+        syncToReminders: Bool,
+        reminderResult: (calendarItemId: String, calendarId: String)?
+    ) {
         var stored = task
-        if syncToReminders, let result = reminderResult {
-            stored.reminderEventId = result.calendarItemId
-            stored.reminderCalendarId = result.calendarId
+        if syncToReminders, let reminderResult {
+            stored.reminderEventId = reminderResult.calendarItemId
+            stored.reminderCalendarId = reminderResult.calendarId
         } else if !syncToReminders {
             stored.reminderEventId = nil
             stored.reminderCalendarId = nil
@@ -73,228 +61,179 @@ final class DefaultTaskRepository: TaskRepository {
         if stored.phaseId == nil {
             stored.phaseId = envManager.activePhaseId
         }
-        if let context = modelContext {
-            context.insert(TaskItemRecord(from: stored))
-            try? context.save()
-        }
-        taskItems.append(stored)
-        taskItems.sort { $0.dueDate < $1.dueDate }
-        Log.data.info("TaskRepository added: title=\(stored.title, privacy: .public) type=\(stored.type.rawValue, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
-        Log.record(.info, category: "Data", message: "TaskRepository added: title=\(stored.title) type=\(stored.type.rawValue) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
-        recomputeFiltered()
+        add([stored])
     }
 
     func add(_ newTasks: [TaskItem]) {
         guard !newTasks.isEmpty else { return }
-        let activeId = envManager.activePhaseId
-        let stored: [TaskItem] = newTasks.map { t in
-            var s = t
-            if s.phaseId == nil { s.phaseId = activeId }
-            return s
+        let activeID = envManager.activePhaseId
+        let stored = newTasks.map { task in
+            var value = task
+            if value.phaseId == nil { value.phaseId = activeID }
+            return value
         }
-        if let context = modelContext {
-            for t in stored {
-                context.insert(TaskItemRecord(from: t))
-            }
-            try? context.save()
+        enqueue { executor in
+            try await executor.insertTasks(stored)
+            self.publish((self.taskItems + stored).sorted { $0.dueDate < $1.dueDate })
         }
-        taskItems.append(contentsOf: stored)
-        taskItems.sort { $0.dueDate < $1.dueDate }
-        let count = stored.count
-        Log.data.info("TaskRepository batch added: count=\(count, privacy: .public)")
-        Log.record(.info, category: "Data", message: "TaskRepository batch added: count=\(count)")
-        recomputeFiltered()
     }
 
-    func update(_ task: TaskItem, reminderResult: (calendarItemId: String, calendarId: String)?) {
+    func update(
+        _ task: TaskItem,
+        reminderResult: (calendarItemId: String, calendarId: String)?
+    ) {
         var stored = task
-        if let result = reminderResult {
-            stored.reminderEventId = result.calendarItemId
-            stored.reminderCalendarId = result.calendarId
+        if let reminderResult {
+            stored.reminderEventId = reminderResult.calendarItemId
+            stored.reminderCalendarId = reminderResult.calendarId
         }
-        if let index = taskItems.firstIndex(where: { $0.id == stored.id }) {
-            taskItems[index] = stored
-            taskItems.sort { $0.dueDate < $1.dueDate }
-        }
-        updateRecord(stored)
-        Log.data.info("TaskRepository updated: title=\(stored.title, privacy: .public) id=\(stored.id.uuidString, privacy: .public)")
-        Log.record(.info, category: "Data", message: "TaskRepository updated: title=\(stored.title) id=\(stored.id.uuidString)")
+        persistAndPublish(stored)
     }
 
     func delete(_ task: TaskItem) {
-        let reminderId = task.reminderEventId
-        removeRecord(id: task.id)
-        if let index = taskItems.firstIndex(where: { $0.id == task.id }) {
-            taskItems.remove(at: index)
-        }
-        if let reminderId = reminderId {
-            Task {
+        enqueue { executor in
+            try await executor.deleteTask(id: task.id)
+            self.publish(self.taskItems.filter { $0.id != task.id })
+            if let reminderID = task.reminderEventId {
                 do {
-                    _ = try await CalendarManager.shared.removeTaskFromReminders(calendarItemId: reminderId)
+                    _ = try await CalendarManager.shared.removeTaskFromReminders(
+                        calendarItemId: reminderID
+                    )
                 } catch {
-                    Log.data.warning("TaskRepository delete: failed to remove system Reminder: \(error.localizedDescription, privacy: .public)")
+                    Log.data.warning("TaskRepository reminder delete failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
-        Log.data.info("TaskRepository deleted: title=\(task.title, privacy: .public) id=\(task.id.uuidString, privacy: .public)")
-        Log.record(.info, category: "Data", message: "TaskRepository deleted: title=\(task.title) id=\(task.id.uuidString)")
-        recomputeFiltered()
     }
 
     func setCompletion(_ taskId: UUID, isCompleted: Bool) {
-        guard let index = taskItems.firstIndex(where: { $0.id == taskId }) else {
-            Log.data.warning("TaskRepository setCompletion: not found id=\(taskId.uuidString, privacy: .public)")
-            return
-        }
-        var updated = taskItems[index]
-        updated.isCompleted = isCompleted
-        taskItems[index] = updated
-        updateRecord(updated)
-        if let reminderId = updated.reminderEventId {
+        guard var task = taskItems.first(where: { $0.id == taskId }) else { return }
+        task.isCompleted = isCompleted
+        persistAndPublish(task)
+        if let reminderID = task.reminderEventId {
             Task {
                 do {
                     _ = try await CalendarManager.shared.setTaskCompletionInReminders(
-                        calendarItemId: reminderId,
+                        calendarItemId: reminderID,
                         isCompleted: isCompleted
                     )
                 } catch {
-                    Log.data.warning("TaskRepository setCompletion: failed to sync reminder: \(error.localizedDescription, privacy: .public)")
+                    Log.data.warning("TaskRepository completion sync failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
-        Log.data.info("TaskRepository setCompletion: id=\(taskId.uuidString, privacy: .public) completed=\(isCompleted, privacy: .public)")
     }
 
     @discardableResult
     func clearAll() -> Int {
-        guard let context = modelContext else { return 0 }
-        let count = taskItems.count
-        let reminderIds: [(eventId: String, calendarId: String?)] = taskItems
-            .compactMap { task in
-                guard let eventId = task.reminderEventId else { return nil }
-                return (eventId, task.reminderCalendarId)
-            }
-        do {
-            let entities = try context.fetch(FetchDescriptor<TaskItemRecord>())
-            for entity in entities { context.delete(entity) }
-            try context.save()
-        } catch {
-            Log.data.error("TaskRepository clearAll failed: \(error.localizedDescription, privacy: .public)")
-            return 0
-        }
-        taskItems.removeAll()
-        if !reminderIds.isEmpty {
-            Task {
-                var okCount = 0
-                for item in reminderIds {
-                    do {
-                        _ = try await CalendarManager.shared.removeTaskFromReminders(calendarItemId: item.eventId)
-                        okCount += 1
-                    } catch {
-                        Log.data.warning("TaskRepository clearAll: remove Reminder failed: \(error.localizedDescription, privacy: .public)")
-                    }
+        let expectedCount = taskItems.count
+        let reminderIDs = taskItems.compactMap(\.reminderEventId)
+        enqueue { executor in
+            _ = try await executor.deleteAllTasks()
+            self.publish([])
+            for reminderID in reminderIDs {
+                try Task.checkCancellation()
+                do {
+                    _ = try await CalendarManager.shared.removeTaskFromReminders(
+                        calendarItemId: reminderID
+                    )
+                } catch {
+                    Log.data.warning("TaskRepository reminder clear failed: \(error.localizedDescription, privacy: .public)")
                 }
-                Log.data.info("TaskRepository clearAll: reminders cleaned ok=\(okCount, privacy: .public) total=\(reminderIds.count, privacy: .public)")
             }
         }
-        Log.data.warning("TaskRepository clearAll: count=\(count, privacy: .public)")
-        Log.record(.warning, category: "Data", message: "TaskRepository clearAll: count=\(count)")
-        recomputeFiltered()
-        return count
+        return expectedCount
     }
-
-    // MARK: - Reminders 同步
 
     func refreshCompletionStatesFromReminders() {
-        let tasksToRefresh = taskItems.filter { $0.reminderEventId != nil }
-        guard !tasksToRefresh.isEmpty else { return }
-        Task {
-            var changed = 0
-            var cleared = 0
-            for task in tasksToRefresh {
-                guard let reminderId = task.reminderEventId else { continue }
+        reminderRefreshTask?.cancel()
+        let values = taskItems.filter { $0.reminderEventId != nil }
+        reminderRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            var updates: [TaskItem] = []
+            for var task in values {
+                try? Task.checkCancellation()
+                guard !Task.isCancelled, let reminderID = task.reminderEventId else { return }
                 do {
-                    if let isCompleted = try await CalendarManager.shared.getTaskCompletionFromReminders(calendarItemId: reminderId) {
-                        if task.isCompleted != isCompleted {
-                            await MainActor.run {
-                                if let idx = self.taskItems.firstIndex(where: { $0.id == task.id }) {
-                                    self.taskItems[idx].isCompleted = isCompleted
-                                    self.updateRecord(self.taskItems[idx])
-                                }
-                            }
-                            changed += 1
+                    if let completed = try await CalendarManager.shared
+                        .getTaskCompletionFromReminders(calendarItemId: reminderID) {
+                        if task.isCompleted != completed {
+                            task.isCompleted = completed
+                            updates.append(task)
                         }
                     } else {
-                        await MainActor.run {
-                            if let idx = self.taskItems.firstIndex(where: { $0.id == task.id }) {
-                                self.taskItems[idx].reminderEventId = nil
-                                self.taskItems[idx].reminderCalendarId = nil
-                                self.updateRecord(self.taskItems[idx])
-                            }
-                        }
-                        cleared += 1
+                        task.reminderEventId = nil
+                        task.reminderCalendarId = nil
+                        updates.append(task)
                     }
                 } catch {
-                    Log.data.warning("TaskRepository refreshCompletionStates: \(error.localizedDescription, privacy: .public)")
+                    Log.data.warning("TaskRepository reminder refresh failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
-            if changed > 0 || cleared > 0 {
-                Log.data.info("TaskRepository refreshCompletionStates: changed=\(changed, privacy: .public) cleared=\(cleared, privacy: .public)")
-                Log.record(.info, category: "Data", message: "TaskRepository refreshCompletionStates: changed=\(changed) cleared=\(cleared)")
+            for task in updates {
+                self.persistAndPublish(task)
             }
         }
     }
 
-    // MARK: - Internals
-
     func recomputeFiltered() {
-        let activeId = envManager.activePhaseId
-        if let id = activeId {
-            filteredTaskItems = taskItems.filter { $0.phaseId == id }
+        if let activeID = envManager.activePhaseId {
+            filteredTaskItems = phaseIndex[activeID] ?? []
         } else {
             filteredTaskItems = taskItems
         }
     }
 
-    private func removeRecord(id: UUID) {
-        guard let context = modelContext else { return }
-        do {
-            if let entity = try context.fetch(
-                FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == id })
-            ).first {
-                context.delete(entity)
-                try context.save()
+    func flushPendingPersistence() async {
+        await persistenceTail?.value
+    }
+
+    func cancelPendingPersistence() {
+        persistenceTail?.cancel()
+        persistenceTail = nil
+        reminderRefreshTask?.cancel()
+        reminderRefreshTask = nil
+    }
+
+    private func persistAndPublish(_ task: TaskItem) {
+        enqueue { executor in
+            try await executor.upsertTask(task)
+            var next = self.taskItems
+            if let index = next.firstIndex(where: { $0.id == task.id }) {
+                next[index] = task
+            } else {
+                next.append(task)
             }
-        } catch {
-            Log.data.error("TaskRepository removeRecord failed: \(error.localizedDescription, privacy: .public)")
+            self.publish(next.sorted { $0.dueDate < $1.dueDate })
         }
     }
 
-    private func updateRecord(_ task: TaskItem) {
-        guard let context = modelContext else { return }
-        do {
-            if let entity = try context.fetch(
-                FetchDescriptor<TaskItemRecord>(predicate: #Predicate { $0.id == task.id })
-            ).first {
-                entity.title = task.title
-                entity.typeRaw = task.type.rawValue
-                entity.dueDate = task.dueDate
-                entity.reminderDate = task.reminderDate
-                entity.subject = task.subject
-                entity.importance = task.importance
-                entity.notes = task.notes
-                entity.isCompleted = task.isCompleted
-                entity.reminderEventId = task.reminderEventId
-                entity.reminderCalendarId = task.reminderCalendarId
-                entity.createdAt = task.createdAt
-                entity.phaseId = task.phaseId
-                try context.save()
-            } else {
-                context.insert(TaskItemRecord(from: task))
-                try context.save()
+    private func publish(_ snapshots: [TaskItem]) {
+        taskItems = snapshots
+        phaseIndex = Dictionary(grouping: snapshots.compactMap { task in
+            task.phaseId.map { ($0, task) }
+        }, by: \.0).mapValues { $0.map(\.1) }
+        recomputeFiltered()
+    }
+
+    private func enqueue(
+        _ operation: @escaping @MainActor @Sendable (PersistenceExecutor) async throws -> Void
+    ) {
+        guard let executor else {
+            Log.data.error("TaskRepository persistence executor is not attached")
+            return
+        }
+        let predecessor = persistenceTail
+        persistenceTail = Task {
+            await predecessor?.value
+            guard !Task.isCancelled else { return }
+            do {
+                try await operation(executor)
+            } catch is CancellationError {
+                Log.data.debug("TaskRepository mutation cancelled")
+            } catch {
+                Log.data.error("TaskRepository mutation failed: \(error.localizedDescription, privacy: .public)")
             }
-        } catch {
-            Log.data.error("TaskRepository updateRecord failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

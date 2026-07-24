@@ -107,7 +107,7 @@ nonisolated struct Subject: Identifiable, Codable, Hashable {
 // MARK: - Grade Records (成绩记录)
 
 /// 单条成绩记录，包含科目、分数、排名等信息
-nonisolated struct Grade: Identifiable, Codable, Hashable {
+nonisolated struct Grade: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     /// 科目名称
     var subject: String
@@ -174,7 +174,7 @@ nonisolated struct Grade: Identifiable, Codable, Hashable {
 // MARK: - Mistake Notes (错题笔记)
 
 /// 错题笔记模型，支持四段式编辑（原题/错因/错误解法/正确解法）
-nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
+nonisolated struct MistakeNote: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     /// 题目标题
     var title: String
@@ -306,7 +306,7 @@ nonisolated struct MistakeNote: Identifiable, Codable, Hashable {
 
 /// 掌握度历史的一个点：某次复习后记录的 (时间, 掌握度, 自评档位)。
 /// One point in the mastery history: (timestamp, score, quality) recorded after each review.
-nonisolated struct MasteryHistoryEntry: Identifiable, Codable, Hashable {
+nonisolated struct MasteryHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     /// 记录时间
     var timestamp: Date
@@ -343,7 +343,7 @@ nonisolated struct MasteryHistoryEntry: Identifiable, Codable, Hashable {
 /// One handwriting answer: appended when the user submits their PKCanvasView
 /// drawing and rates the card. PNG snapshot of the PKDrawing + timestamp +
 /// quality (mirrors `MasteryHistoryEntry`).
-nonisolated struct HandwritingAnswerEntry: Identifiable, Codable, Hashable {
+nonisolated struct HandwritingAnswerEntry: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     /// 提交时间
     /// Timestamp when the user submitted the drawing.
@@ -637,7 +637,7 @@ nonisolated struct TaskItem: Identifiable, Codable, Hashable, Sendable {
 
 /// 考前待办条目:身份证 / 准考证 / 文具 / 复习清单等,可勾选。
 /// Pre-exam checklist item (ID, admission ticket, stationery, review list, etc).
-nonisolated struct ExamChecklistItem: Identifiable, Codable, Hashable {
+nonisolated struct ExamChecklistItem: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     /// 待办标题（如 "身份证"、"2B 铅笔"）
     var title: String
@@ -659,7 +659,7 @@ nonisolated struct ExamChecklistItem: Identifiable, Codable, Hashable {
 /// 考试复盘:考完 24h 内填写的 4 段 Markdown 总结 + 关联错题。
 /// Exam review: a 4-section Markdown summary + linked mistakes, filled in
 /// within 24h after the exam ends. Stored as JSON inside `Exam.examReview`.
-nonisolated struct ExamReview: Identifiable, Codable, Hashable {
+nonisolated struct ExamReview: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     /// 复盘填写时间
     /// Timestamp when the user filled the review.
@@ -758,7 +758,7 @@ private nonisolated let NextStrategyLabel: String = "Next Strategy"
 // MARK: - Exam Models (考试)
 
 /// 单科目考试
-nonisolated struct Exam: Identifiable, Codable, Hashable {
+nonisolated struct Exam: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     /// 考试名称
     var name: String
@@ -845,7 +845,7 @@ nonisolated struct Exam: Identifiable, Codable, Hashable {
 }
 
 /// 多科目综合考试
-nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable {
+nonisolated struct comprehensiveExam: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     /// 考试名称
     var name: String

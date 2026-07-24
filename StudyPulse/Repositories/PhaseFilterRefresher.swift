@@ -34,6 +34,10 @@ extension Notification.Name {
 /// `RepositoryContainer` 通过 `phaseRefresher` 字段持有实例,保持调用方式不变。
 @MainActor
 final class PhaseFilterRefresher {
+    private static let signposter = OSSignposter(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.chenkai.gao.studypulse",
+        category: "PhaseFiltering"
+    )
     private let gradeRepo: any GradeRepository
     private let mistakeRepo: any MistakeRepository
     private let examRepo: any ExamRepository
@@ -86,6 +90,8 @@ final class PhaseFilterRefresher {
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)
     /// Recompute the 5 filtered caches (called on phase switch).
     func recomputeAll() {
+        let interval = Self.signposter.beginInterval("recomputeAll")
+        defer { Self.signposter.endInterval("recomputeAll", interval) }
         if let g = gradeRepo as? DefaultGradeRepository { g.recomputeFiltered() }
         if let m = mistakeRepo as? DefaultMistakeRepository { m.recomputeFiltered() }
         if let e = examRepo as? DefaultExamRepository { e.recomputeFiltered() }

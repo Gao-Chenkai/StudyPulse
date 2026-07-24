@@ -6,6 +6,8 @@
 	<array>
 		<string>Gao.Chenkai.StudyPulse.coach.refresh</string>
 	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

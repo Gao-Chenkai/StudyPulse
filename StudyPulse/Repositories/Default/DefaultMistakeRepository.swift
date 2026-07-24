@@ -2,303 +2,220 @@
 //  DefaultMistakeRepository.swift
 //  StudyPulse
 //
-//  错题 (MistakeNote) Repository 默认实现。
-//  Default MistakeRepository implementation backed by SwiftData.
-//
 
 import Foundation
 import SwiftData
 import SwiftUI
 import os
 
-/// 错题 (MistakeNote) Repository 默认实现。
-/// Default MistakeRepository implementation backed by SwiftData.
 @Observable @MainActor
-final class DefaultMistakeRepository: MistakeRepository {
-    /// 全部错题（按 date desc 排序）
-    /// All mistake notes, sorted by date desc.
+final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBacked {
     var mistakeSets: [MistakeNote] = []
-    /// 按 active phase 过滤后的错题缓存
-    /// Cached mistakes filtered by the active phase.
     var filteredMistakeSets: [MistakeNote] = []
 
-    @ObservationIgnored
-    private var modelContext: ModelContext?
-
-    /// 用于 background fetch 的容器引用(Sendable)
-    /// Container reference for background fetches (Sendable).
-    @ObservationIgnored
-    private var modelContainer: ModelContainer?
-
-    /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
-    /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
-    @ObservationIgnored
-    private let envManager: AppEnvironmentManager
+    @ObservationIgnored private let envManager: AppEnvironmentManager
+    @ObservationIgnored private var executor: PersistenceExecutor?
+    @ObservationIgnored private var persistenceTail: Task<Void, Never>?
+    @ObservationIgnored private var phaseIndex: [UUID: [MistakeNote]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
     }
 
-    // MARK: - Lifecycle
-    // MARK: - 生命周期 / Lifecycle
-
-    /// 加载所有错题
-    /// Load all mistake notes.
-    func loadAll(context: ModelContext) async {
-        self.modelContext = context
-        self.modelContainer = context.container
-        guard let container = modelContainer else { return }
-        // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
-        // Use an independent background ModelContext inside a detached task.
-        let snapshots: [MistakeNote] = await Task.detached(priority: .utility) {
-            let ctx = ModelContext(container)
-            // fetchLimit=500:错题量大时按 date desc 取最近 500 条,覆盖绝大多数用户。
-            // fetchLimit=500: for users with many mistakes, take the most recent 500 by date desc.
-            var descriptor = FetchDescriptor<MistakeNoteRecord>(
-                sortBy: [SortDescriptor(\.date, order: .reverse)]
-            )
-            descriptor.fetchLimit = 500
-            let entities = (try? ctx.fetch(descriptor)) ?? []
-            return entities.map { $0.toSnapshot() }
-        }.value
-        // 回到 MainActor 赋值
-        self.mistakeSets = snapshots
-        recomputeFiltered()
+    func attachPersistenceExecutor(_ executor: PersistenceExecutor) {
+        self.executor = executor
     }
 
-    // MARK: - CRUD
-    // MARK: - 增删改查 / CRUD
+    func loadAll(context: ModelContext) async {
+        if executor == nil {
+            executor = PersistenceExecutor(modelContainer: context.container)
+        }
+        guard let executor else { return }
+        await persistenceTail?.value
+        do {
+            let snapshots = try await executor.fetchMistakes()
+            try Task.checkCancellation()
+            publish(snapshots)
+        } catch is CancellationError {
+            Log.data.debug("MistakeRepository load cancelled")
+        } catch {
+            Log.data.error("MistakeRepository load failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
-    /// 新增一条错题
-    /// Add a single mistake note.
+    func publishStartupSnapshots(_ snapshots: [MistakeNote]) {
+        publish(snapshots)
+    }
+
     func add(_ mistake: MistakeNote) {
-        var stored = mistake
-        if stored.phaseId == nil {
-            stored.phaseId = envManager.activePhaseId
-        }
-        if let context = modelContext {
-            context.insert(MistakeNoteRecord(from: stored))
-            try? context.save()
-        }
-        mistakeSets.append(stored)
-        Log.data.info("MistakeRepository added: title=\(stored.title, privacy: .public) subject=\(stored.subject, privacy: .public) phaseId=\(stored.phaseId?.uuidString ?? "nil", privacy: .public)")
-        Log.record(.info, category: "Data", message: "MistakeRepository added: title=\(stored.title) subject=\(stored.subject) phaseId=\(stored.phaseId?.uuidString ?? "nil")")
-        recomputeFiltered()
+        add([mistake])
     }
 
     func add(_ newMistakes: [MistakeNote]) {
-        if let context = modelContext {
-            for m in newMistakes {
-                context.insert(MistakeNoteRecord(from: m))
-            }
-            try? context.save()
+        guard !newMistakes.isEmpty else { return }
+        let activeID = envManager.activePhaseId
+        let stored = newMistakes.map { note in
+            var value = note
+            if value.phaseId == nil { value.phaseId = activeID }
+            return value
         }
-        mistakeSets.append(contentsOf: newMistakes)
-        let count = newMistakes.count
-        Log.data.info("MistakeRepository batch added: count=\(count, privacy: .public)")
-        Log.record(.info, category: "Data", message: "MistakeRepository batch added: count=\(count)")
-        recomputeFiltered()
+        enqueue { executor in
+            try await executor.insertMistakes(stored)
+            self.publish((self.mistakeSets + stored).sorted { $0.date > $1.date })
+            Log.data.info("MistakeRepository batch persisted: count=\(stored.count, privacy: .public)")
+        }
     }
 
     func update(_ mistake: MistakeNote) {
-        if let index = mistakeSets.firstIndex(where: { $0.id == mistake.id }) {
-            mistakeSets[index] = mistake
-        }
-        updateRecord(mistake)
-        recomputeFiltered()
+        persistAndPublish(mistake)
     }
 
     func delete(_ mistake: MistakeNote) {
-        SRSReviewNotifications.shared.cancel(for: mistake.id)
-        removeRecord(id: mistake.id)
-        if let index = mistakeSets.firstIndex(where: { $0.id == mistake.id }) {
-            mistakeSets.remove(at: index)
-        }
-        Log.data.info("MistakeRepository deleted: title=\(mistake.title, privacy: .public)")
-        Log.record(.info, category: "Data", message: "MistakeRepository deleted: title=\(mistake.title)")
-        recomputeFiltered()
+        delete(ids: [mistake.id], titles: [mistake.title])
     }
 
     func delete(at offsets: IndexSet, in set: inout [MistakeNote]) {
-        let removed = offsets.map { set[$0] }
-        for note in removed {
-            removeRecord(id: note.id)
-        }
+        let removed = offsets.compactMap { set.indices.contains($0) ? set[$0] : nil }
         set.remove(atOffsets: offsets)
-        mistakeSets.removeAll { note in removed.contains(where: { $0.id == note.id }) }
-        Log.data.info("MistakeRepository batch deleted: \(removed.map(\.title).joined(separator: ", "), privacy: .public)")
-        recomputeFiltered()
+        delete(ids: Set(removed.map(\.id)), titles: removed.map(\.title))
     }
 
     @discardableResult
     func clearAll() -> Int {
-        guard let context = modelContext else { return 0 }
-        let count = mistakeSets.count
-        for m in mistakeSets {
-            SRSReviewNotifications.shared.cancel(for: m.id)
+        let expectedCount = mistakeSets.count
+        let ids = mistakeSets.map(\.id)
+        enqueue { executor in
+            _ = try await executor.deleteAllMistakes()
+            for id in ids {
+                SRSReviewNotifications.shared.cancel(for: id)
+            }
+            self.publish([])
         }
-        do {
-            let entities = try context.fetch(FetchDescriptor<MistakeNoteRecord>())
-            for entity in entities { context.delete(entity) }
-            try context.save()
-        } catch {
-            Log.data.error("MistakeRepository clearAll failed: \(error.localizedDescription, privacy: .public)")
-            return 0
-        }
-        mistakeSets.removeAll()
-        Log.data.warning("MistakeRepository clearAll: count=\(count, privacy: .public)")
-        Log.record(.warning, category: "Data", message: "MistakeRepository clearAll: count=\(count)")
-        recomputeFiltered()
-        return count
+        return expectedCount
     }
 
-    // MARK: - SRS & Mastery
-    // MARK: - SRS & 掌握度 / SRS & Mastery
-
-    /// 收集当前错题库的所有 tag(去重、保序)
-    /// Collect all tags in the current mistake pool (deduped, ordered).
     func allTags() -> [String] {
         MistakeFilter.allTags(mistakeSets)
     }
 
-    /// 标签计数(降序)
-    /// Tag counts (descending).
     func tagCounts() -> [(tag: String, count: Int)] {
         MistakeFilter.tagCounts(mistakeSets)
     }
 
-    /// 更新某条错题的 SRS 复习状态
-    /// Update SRS review state for a single mistake.
     func updateReviewState(_ mistakeId: UUID, newState: ReviewState?) {
-        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
-            Log.data.warning("MistakeRepository updateReviewState: not found id=\(mistakeId.uuidString, privacy: .public)")
-            return
-        }
-        mistakeSets[index].reviewState = newState
-        updateRecord(mistakeSets[index])
-        Log.data.info("MistakeRepository updateReviewState: id=\(mistakeId.uuidString, privacy: .public) enrolled=\(newState != nil, privacy: .public)")
+        guard var note = mistakeSets.first(where: { $0.id == mistakeId }) else { return }
+        note.reviewState = newState
+        persistAndPublish(note)
     }
 
     func recordExposure(_ mistakeId: UUID) {
-        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else { return }
-        mistakeSets[index].exposureCount += 1
-        updateRecord(mistakeSets[index])
+        guard var note = mistakeSets.first(where: { $0.id == mistakeId }) else { return }
+        note.exposureCount += 1
+        persistAndPublish(note)
     }
 
     func recordReview(_ mistakeId: UUID, quality: ReviewQuality, now: Date) {
-        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
-            Log.data.warning("MistakeRepository recordReview: not found id=\(mistakeId.uuidString, privacy: .public)")
-            return
-        }
-        var note = mistakeSets[index]
-        let oldExposure = note.exposureCount
+        guard var note = mistakeSets.first(where: { $0.id == mistakeId }) else { return }
         let result = MasteryAlgorithm.apply(
             oldScore: note.masteryScore,
-            exposureCount: oldExposure,
+            exposureCount: note.exposureCount,
             quality: quality,
             now: now
         )
-        note.exposureCount = oldExposure + 1
+        note.exposureCount += 1
         note.masteryScore = result.score
-        // 限制历史长度(最多 200)
-        let maxHistory = 200
         note.masteryHistory.append(result.entry)
-        if note.masteryHistory.count > maxHistory {
-            note.masteryHistory.removeFirst(note.masteryHistory.count - maxHistory)
+        if note.masteryHistory.count > 200 {
+            note.masteryHistory.removeFirst(note.masteryHistory.count - 200)
         }
-        mistakeSets[index] = note
-        updateRecord(note)
-        Log.data.info("MistakeRepository recordReview: id=\(mistakeId.uuidString, privacy: .public) quality=\(quality.rawValue, privacy: .public) oldScore=\(oldExposure, privacy: .public)->\(result.score, privacy: .public)")
+        persistAndPublish(note)
     }
 
-    func recordHandwriting(_ mistakeId: UUID, pngData: Data, quality: ReviewQuality?, now: Date) {
-        guard let index = mistakeSets.firstIndex(where: { $0.id == mistakeId }) else {
-            Log.data.warning("MistakeRepository recordHandwriting: not found id=\(mistakeId.uuidString, privacy: .public)")
-            return
-        }
-        var note = mistakeSets[index]
-        let entry = HandwritingAnswerEntry(
-            timestamp: now,
-            imageData: pngData,
-            quality: quality?.rawValue ?? 0
+    func recordHandwriting(
+        _ mistakeId: UUID,
+        pngData: Data,
+        quality: ReviewQuality?,
+        now: Date
+    ) {
+        guard var note = mistakeSets.first(where: { $0.id == mistakeId }) else { return }
+        note.handwritingHistory.append(
+            HandwritingAnswerEntry(
+                timestamp: now,
+                imageData: pngData,
+                quality: quality?.rawValue ?? 0
+            )
         )
-        note.handwritingHistory.append(entry)
-        mistakeSets[index] = note
-        updateRecord(note)
-        Log.data.info("MistakeRepository recordHandwriting: id=\(mistakeId.uuidString, privacy: .public) bytes=\(pngData.count, privacy: .public) quality=\(quality?.rawValue ?? 0, privacy: .public) total=\(note.handwritingHistory.count, privacy: .public)")
+        persistAndPublish(note)
     }
 
-    // MARK: - Internals
-    // MARK: - 内部工具 / Internals
-
-    /// 重新计算 filteredMistakeSets
-    /// Recompute filteredMistakeSets from the active phase.
     func recomputeFiltered() {
-        let activeId = envManager.activePhaseId
-        if let id = activeId {
-            filteredMistakeSets = mistakeSets.filter { $0.phaseId == id }
+        if let activeID = envManager.activePhaseId {
+            filteredMistakeSets = phaseIndex[activeID] ?? []
         } else {
             filteredMistakeSets = mistakeSets
         }
     }
 
-    private func removeRecord(id: UUID) {
-        guard let context = modelContext else { return }
-        do {
-            if let entity = try context.fetch(
-                FetchDescriptor<MistakeNoteRecord>(predicate: #Predicate { $0.id == id })
-            ).first {
-                context.delete(entity)
-                try context.save()
+    func flushPendingPersistence() async {
+        await persistenceTail?.value
+    }
+
+    func cancelPendingPersistence() {
+        persistenceTail?.cancel()
+        persistenceTail = nil
+    }
+
+    private func persistAndPublish(_ note: MistakeNote) {
+        enqueue { executor in
+            try await executor.upsertMistake(note)
+            var next = self.mistakeSets
+            if let index = next.firstIndex(where: { $0.id == note.id }) {
+                next[index] = note
+            } else {
+                next.append(note)
             }
-        } catch {
-            Log.data.error("MistakeRepository removeRecord failed: \(error.localizedDescription, privacy: .public)")
+            self.publish(next.sorted { $0.date > $1.date })
         }
     }
 
-    private func updateRecord(_ note: MistakeNote) {
-        guard let context = modelContext else { return }
-        do {
-            if let entity = try context.fetch(
-                FetchDescriptor<MistakeNoteRecord>(predicate: #Predicate { $0.id == note.id })
-            ).first {
-                let srs = note.reviewState
-                entity.title = note.title
-                entity.subject = note.subject
-                entity.originalQuestion = note.originalQuestion
-                entity.source = note.source
-                entity.date = note.date
-                entity.errorReason = note.errorReason
-                entity.wrongSolution = note.wrongSolution
-                entity.correctSolution = note.correctSolution
-                entity.srsRepetitions = srs?.repetitions ?? 0
-                entity.srsEaseFactor = srs?.easeFactor ?? 2.5
-                entity.srsIntervalDays = srs?.intervalDays ?? 0
-                entity.srsNextReviewDate = srs?.nextReviewDate
-                entity.srsLastReviewDate = srs?.lastReviewDate
-                entity.srsLapses = srs?.lapses ?? 0
-                entity.questionImagesData = note.questionImages
-                entity.reasonImagesData = note.reasonImages
-                entity.wrongSolutionImagesData = note.wrongSolutionImages
-                entity.correctSolutionImagesData = note.correctSolutionImages
-                entity.phaseId = note.phaseId
-                entity.exposureCount = note.exposureCount
-                entity.masteryScore = note.masteryScore
-                entity.masteryHistoryData = note.masteryHistory.isEmpty
-                    ? nil
-                    : try? JSONEncoder().encode(note.masteryHistory)
-                entity.handwritingHistoryData = note.handwritingHistory.isEmpty
-                    ? nil
-                    : try? JSONEncoder().encode(note.handwritingHistory)
-                entity.difficulty = note.difficulty
-                entity.tags = note.tags
-                try context.save()
-            } else {
-                context.insert(MistakeNoteRecord(from: note))
-                try context.save()
+    private func delete(ids: Set<UUID>, titles: [String]) {
+        guard !ids.isEmpty else { return }
+        enqueue { executor in
+            try await executor.deleteMistakes(ids: ids)
+            for id in ids {
+                SRSReviewNotifications.shared.cancel(for: id)
             }
-        } catch {
-            Log.data.error("MistakeRepository updateRecord failed: \(error.localizedDescription, privacy: .public)")
+            self.publish(self.mistakeSets.filter { !ids.contains($0.id) })
+            Log.data.info("MistakeRepository deleted: \(titles.joined(separator: ", "), privacy: .public)")
+        }
+    }
+
+    private func publish(_ snapshots: [MistakeNote]) {
+        mistakeSets = snapshots
+        phaseIndex = Dictionary(grouping: snapshots.compactMap { note in
+            note.phaseId.map { ($0, note) }
+        }, by: \.0).mapValues { $0.map(\.1) }
+        recomputeFiltered()
+    }
+
+    private func enqueue(
+        _ operation: @escaping @MainActor @Sendable (PersistenceExecutor) async throws -> Void
+    ) {
+        guard let executor else {
+            Log.data.error("MistakeRepository persistence executor is not attached")
+            return
+        }
+        let predecessor = persistenceTail
+        persistenceTail = Task {
+            await predecessor?.value
+            guard !Task.isCancelled else { return }
+            do {
+                try await operation(executor)
+            } catch is CancellationError {
+                Log.data.debug("MistakeRepository mutation cancelled")
+            } catch {
+                Log.data.error("MistakeRepository mutation failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 }
