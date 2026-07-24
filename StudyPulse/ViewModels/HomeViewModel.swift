@@ -14,7 +14,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 /// 学科选择规则(图表卡片的"聚焦"模式)
 /// Subject-selection rule (the chart card's "focus" mode).
@@ -42,7 +41,8 @@ enum SubjectSelectionRule: Equatable {
 /// Home-page VM. Recomputes derived data, picks the chart subject, and
 /// generates study suggestions (does NOT own UI/share-sheet state).
 @MainActor
-final class HomeViewModel: ObservableObject {
+@Observable
+final class HomeViewModel {
 
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
@@ -50,24 +50,24 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - 输出状态(View 只读) / Output state (read-only for View)
     /// SRS 总览 / SRS overview.
-    @Published private(set) var srsOverview: SRSOverview = .empty
+    private(set) var srsOverview: SRSOverview = .empty
     /// 最近的 5 条成绩(按时间倒序) / Most recent 5 grades (newest first).
-    @Published private(set) var recentGrades: [Grade] = []
+    private(set) var recentGrades: [Grade] = []
     /// 14 天内的即将到来的考试 / Upcoming exams within 14 days.
-    @Published private(set) var upcomingExams: [Exam] = []
+    private(set) var upcomingExams: [Exam] = []
     /// 3~7 天前发生过、但还没登记的考试 / Unregistered exams (3–7 days ago).
-    @Published private(set) var unregisteredExams: [Exam] = []
+    private(set) var unregisteredExams: [Exam] = []
     /// 今日 Top-3 计划(2026-07-09) / Today's Top-3 plan (2026-07-09).
-    @Published private(set) var dailyPlan: [DailyPlanItem] = []
+    private(set) var dailyPlan: [DailyPlanItem] = []
     /// 状态不佳时的压缩计划；未触发时为空。
-    @Published private(set) var minimalPlan: MinimalPlanResult = MinimalPlanResult(isActive: false, reason: "", items: [], totalMinutes: 0)
+    private(set) var minimalPlan: MinimalPlanResult = MinimalPlanResult(isActive: false, reason: "", items: [], totalMinutes: 0)
     /// 今日记忆气候与当前阶段近 90 天历史。
-    @Published private(set) var memoryClimate: MemoryClimateSnapshot = .empty()
-    @Published private(set) var memoryClimateHistory: [MemoryClimateSnapshot] = []
+    private(set) var memoryClimate: MemoryClimateSnapshot = .empty()
+    private(set) var memoryClimateHistory: [MemoryClimateSnapshot] = []
 
     /// 图表卡片的当前规则 + 选中科目 / Current chart rule & subject.
-    @Published private(set) var chartRule: SubjectSelectionRule = .lowestScore
-    @Published private(set) var chartSelectedSubject: String? = nil
+    private(set) var chartRule: SubjectSelectionRule = .lowestScore
+    private(set) var chartSelectedSubject: String? = nil
 
     /// 上一次 recompute 时的输入签名(用于 dirty flag:相同输入则跳过重算)。
     /// 8 个 `.recomputeOn*` modifier 在同一 RunLoop tick 内可能多次触发 `recompute()`,

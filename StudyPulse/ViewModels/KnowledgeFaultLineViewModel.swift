@@ -4,10 +4,10 @@
 //
 
 import Foundation
-import Combine
 
 @MainActor
-final class KnowledgeFaultLineViewModel: ObservableObject {
+@Observable
+final class KnowledgeFaultLineViewModel {
     private let container: RepositoryContainer
     private let aiProvider: any KnowledgeFaultLineAIProviding
     private let configurationOverride: LLMConfig?
@@ -16,10 +16,10 @@ final class KnowledgeFaultLineViewModel: ObservableObject {
     private var aiTask: Task<Void, Never>?
     private var activeRequestID: UUID?
 
-    @Published private(set) var scan: KnowledgeFaultScan = .empty
-    @Published private(set) var isLoadingAI = false
-    @Published private(set) var aiErrorMessage: String?
-    @Published var repairFaultLine: KnowledgeFaultLine?
+    private(set) var scan: KnowledgeFaultScan = .empty
+    private(set) var isLoadingAI = false
+    private(set) var aiErrorMessage: String?
+    var repairFaultLine: KnowledgeFaultLine?
 
     init(
         container: RepositoryContainer,

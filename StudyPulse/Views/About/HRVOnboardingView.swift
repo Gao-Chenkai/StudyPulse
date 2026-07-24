@@ -10,7 +10,7 @@ import SwiftUI
 import HealthKit
 
 struct HRVOnboardingView: View {
-    @EnvironmentObject var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) var hrvManager: HealthKitManager
     @Environment(\.dismiss) private var dismiss
     @State private var currentPage = 0
     @State private var isAuthorizing = false
@@ -326,5 +326,5 @@ struct HRVOnboardingView: View {
 
 #Preview {
     HRVOnboardingView()
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
 }

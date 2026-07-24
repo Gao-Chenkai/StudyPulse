@@ -12,16 +12,18 @@ struct RecoveryLevelTests {
         #expect(values.recoveryLevel == .good)
     }
 
-    @Test("Recovery level thresholds cover all score bands")
-    func thresholds() {
-        #expect(RecoveryLevel(score: 100) == .excellent)
-        #expect(RecoveryLevel(score: 75) == .excellent)
-        #expect(RecoveryLevel(score: 74) == .good)
-        #expect(RecoveryLevel(score: 50) == .good)
-        #expect(RecoveryLevel(score: 49) == .critical)
-        #expect(RecoveryLevel(score: 34) == .critical)
-        #expect(RecoveryLevel(score: 33) == .poor)
-        #expect(RecoveryLevel(score: 0) == .poor)
+    @Test(
+        "Recovery level thresholds cover all score bands",
+        arguments: [100, 75, 74, 50, 49, 34, 33, 0]
+    )
+    func thresholds(score: Int) {
+        let expected: RecoveryLevel = switch score {
+        case 75...: .excellent
+        case 50...: .good
+        case 34...: .critical
+        default: .poor
+        }
+        #expect(RecoveryLevel(score: score) == expected)
     }
 
     private func makeValues(_ scores: [Double]) -> BodyRadarValues {

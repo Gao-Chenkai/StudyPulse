@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 
 struct CoachHistoryView: View {
-    @ObservedObject var viewModel: CoachViewModel
+    @Bindable var viewModel: CoachViewModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

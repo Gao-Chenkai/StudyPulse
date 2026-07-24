@@ -28,17 +28,17 @@ struct MistakeView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// 主 ViewModel(过滤 / 分组 / SRS / 搜索)
     /// Main view model (filter / grouping / SRS / search).
-    @StateObject private var viewModel: MistakeViewModel
+    @State private var viewModel: MistakeViewModel
     /// Knowledge-gap scan VM. The local scan is immediate; AI enhancement is
     /// started once per mistake-set fingerprint.
-    @StateObject private var knowledgeFaultViewModel: KnowledgeFaultLineViewModel
+    @State private var knowledgeFaultViewModel: KnowledgeFaultLineViewModel
     /// 是否显示 AI Quiz setup sheet
     /// Whether the AI Quiz setup sheet is showing.
     @State private var showingAIQuizSetup = false
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: MistakeViewModel.makeDefault(container: container))
-        _knowledgeFaultViewModel = StateObject(wrappedValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: MistakeViewModel.makeDefault(container: container))
+        _knowledgeFaultViewModel = State(initialValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
     }
 
     // MARK: - AI Quiz Card / AI 自测卡片

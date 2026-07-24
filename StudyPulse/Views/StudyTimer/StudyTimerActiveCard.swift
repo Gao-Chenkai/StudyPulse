@@ -7,13 +7,12 @@
 //
 
 import SwiftUI
-import Combine
 import os
 
 // MARK: - StudyTimerActiveCard
 
 struct StudyTimerActiveCard: View {
-    @ObservedObject var timer: StudyTimerManager
+    @Bindable var timer: StudyTimerManager
 
     /// Whether the immersive landscape (rotated) layout is active. The
     /// card uses this to switch between the standard vertical body and
@@ -444,7 +443,9 @@ struct StudyTimerActiveCard: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 controlButtonScale[index] = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     controlButtonScale[index] = false
                 }

@@ -15,22 +15,22 @@
 //
 
 import Foundation
-import Combine
 import SwiftUI
 
 // MARK: - Calculator Engine
 // MARK: - Calculator engine
 
-/// 计算器引擎（@MainActor ObservableObject）
-/// Calculator engine (@MainActor ObservableObject).
+/// 计算器引擎（@MainActor observable reference type）
+/// Calculator engine (@MainActor observable reference type).
 @MainActor
-final class CalculatorEngine: ObservableObject {
+@Observable
+final class CalculatorEngine {
     /// 主显示区（当前输入或结果）
     /// Main display (current input or result).
-    @Published var display: String = "0"
+    var display: String = "0"
     /// 表达式行（显示 "1 + 2" 这样的当前操作）
     /// Expression line (e.g. "1 + 2" — current pending operation).
-    @Published var expression: String = ""
+    var expression: String = ""
 
     private var accumulator: Double?
     private var pendingOp: String?
@@ -205,7 +205,7 @@ final class CalculatorEngine: ObservableObject {
 /// 浮层简易计算器面板
 /// Floating mini-calculator panel.
 struct FlashcardCalculatorView: View {
-    @StateObject private var engine = CalculatorEngine()
+    @State private var engine = CalculatorEngine()
     /// 关闭回调（由父视图注入）
     /// Close callback (injected by the parent).
     let onClose: () -> Void

@@ -6,11 +6,12 @@
 import SwiftUI
 
 struct HealthSettingsView: View {
-    @EnvironmentObject var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) var hrvManager: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
     @State private var showingHRVOnboarding = false
 
   var body: some View {
+         @Bindable var hrvManager = hrvManager
          List {
              Section {
                  SettingsDetailHeader(category: .health)
@@ -97,7 +98,7 @@ struct HealthSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingHRVOnboarding) {
             HRVOnboardingView()
-                .environmentObject(hrvManager)
+                .environment(hrvManager)
                 .adaptiveSheet()
         }
     }

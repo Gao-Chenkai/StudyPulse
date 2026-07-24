@@ -10,7 +10,6 @@
 //
 
 import SwiftUI
-import Combine
 import UniformTypeIdentifiers
 import os
 
@@ -25,8 +24,6 @@ struct LogViewerView: View {
     // Export state
     @State private var isExportingLog = false
     @State private var exportLogDocument: LogDocument? = nil
-
-    private let refreshTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,10 +53,13 @@ struct LogViewerView: View {
                 }
             }
         }
-        .onReceive(refreshTimer) { _ in
-            let snapshot = LogStore.shared.allEntries
-            if snapshot.count != allEntries.count {
-                allEntries = snapshot
+        .task {
+            while !Task.isCancelled {
+                let snapshot = LogStore.shared.allEntries
+                if snapshot.count != allEntries.count {
+                    allEntries = snapshot
+                }
+                try? await Task.sleep(for: .seconds(1))
             }
         }
         .onAppear {
@@ -83,7 +83,9 @@ struct LogViewerView: View {
             contentType: .log,
             defaultFilename: exportLogDocument?.fileName
         ) { _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
                 exportLogDocument = nil
             }
         }
@@ -223,7 +225,9 @@ struct LogViewerView: View {
         df.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Log_\(df.string(from: Date())).log"
         exportLogDocument = LogDocument(content: logText, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExportingLog = true
         }
     }

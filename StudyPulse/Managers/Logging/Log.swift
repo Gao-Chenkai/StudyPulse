@@ -9,7 +9,6 @@
 
 import Foundation
 import os
-import Combine
 
 /// 日志级别。
 /// Log level for in-app log entries.
@@ -66,6 +65,7 @@ nonisolated final class LogStore: @unchecked Sendable {
     static let shared = LogStore()
 
     private var entries: [LogEntry] = []
+    private var streamContinuations: [UUID: AsyncStream<LogEntry>.Continuation] = [:]
     private let maxEntries = 5_000
     private let lock = NSLock()
 
@@ -73,11 +73,6 @@ nonisolated final class LogStore: @unchecked Sendable {
     /// Minimum level captured into the in-memory buffer.
     /// Set to .debug when Debug → verbose logging is on; defaults to .info.
     private var _minCaptureLevel: LogLevel = .info
-
-    /// 实时日志条目 publisher,供 LogToasterView 订阅实现屏幕实时弹窗。
-    /// Real-time entry publisher, consumed by LogToasterView for on-screen toasts.
-    /// `nonisolated(unsafe)` is safe because `PassthroughSubject` is itself thread-safe.
-    nonisolated(unsafe) let entryPublisher = PassthroughSubject<LogEntry, Never>()
 
     var minCaptureLevel: LogLevel {
         get {
@@ -118,11 +113,29 @@ nonisolated final class LogStore: @unchecked Sendable {
         if entries.count > maxEntries {
             entries.removeFirst(entries.count - maxEntries)
         }
+        let continuations = Array(streamContinuations.values)
         lock.unlock()
 
-        // 发出给实时订阅者
-        // Fire-and-forget publish; Combine buffers if no subscriber.
-        entryPublisher.send(entry)
+        for continuation in continuations {
+            continuation.yield(entry)
+        }
+    }
+
+    /// 为每位订阅者创建独立的实时日志流。
+    /// Creates an independent real-time log stream for each subscriber.
+    func entriesStream() -> AsyncStream<LogEntry> {
+        let id = UUID()
+        return AsyncStream { continuation in
+            lock.lock()
+            streamContinuations[id] = continuation
+            lock.unlock()
+            continuation.onTermination = { [weak self] _ in
+                guard let self else { return }
+                self.lock.lock()
+                self.streamContinuations.removeValue(forKey: id)
+                self.lock.unlock()
+            }
+        }
     }
 
     /// 是否记录该 level

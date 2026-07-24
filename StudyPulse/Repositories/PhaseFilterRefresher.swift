@@ -14,7 +14,6 @@
 
 import Foundation
 import os
-import Combine
 
 extension Notification.Name {
     /// 当前激活的 study phase 切换时 post(`AppEnvironmentManager.setActivePhaseId` 触发)。
@@ -46,8 +45,7 @@ final class PhaseFilterRefresher {
     private let routineInstanceRepo: any RoutineInstanceRepository
     private let envManager: AppEnvironmentManager
 
-    @ObservationIgnored
-    private var observer: AnyCancellable?
+    private var observationTask: Task<Void, Never>?
 
     init(
         gradeRepo: any GradeRepository,
@@ -73,18 +71,19 @@ final class PhaseFilterRefresher {
     /// 通过 NotificationCenter 监听 `activePhaseDidChange` 通知,替代原 0.5s polling。
     /// Phase 切换是用户主动操作(每天 < 5 次),事件驱动完全足够。
     func startObserving() {
-        observer?.cancel()
-        observer = NotificationCenter.default.publisher(for: .activePhaseDidChange)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
+        observationTask?.cancel()
+        observationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .activePhaseDidChange) {
+                guard !Task.isCancelled else { return }
                 self?.recomputeAll()
             }
+        }
     }
 
     /// 停止监听(container 销毁时调用)
     func stopObserving() {
-        observer?.cancel()
-        observer = nil
+        observationTask?.cancel()
+        observationTask = nil
     }
 
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)

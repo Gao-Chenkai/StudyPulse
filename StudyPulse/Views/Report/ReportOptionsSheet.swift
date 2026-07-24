@@ -128,7 +128,9 @@ struct ReportOptionsSheet: View {
                         )
                         dismiss()
                         // 等 sheet 关闭动画开始后再触发回调，避免与 dismiss 冲突。
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(150))
+                            guard !Task.isCancelled else { return }
                             onGenerate(options)
                         }
                     }

@@ -1,18 +1,18 @@
 import Foundation
-import Combine
 
 @MainActor
-final class CoachViewModel: ObservableObject {
-    @Published private(set) var goals: [CoachGoal] = []
-    @Published private(set) var selectedGoal: CoachGoal?
-    @Published private(set) var analysis: CoachAnalysis?
-    @Published private(set) var proposal: CoachProposal?
-    @Published private(set) var proposals: [CoachProposal] = []
-    @Published private(set) var isLoading = false
-    @Published var errorMessage: String?
+@Observable
+final class CoachViewModel {
+    private(set) var goals: [CoachGoal] = []
+    private(set) var selectedGoal: CoachGoal?
+    private(set) var analysis: CoachAnalysis?
+    private(set) var proposal: CoachProposal?
+    private(set) var proposals: [CoachProposal] = []
+    private(set) var isLoading = false
+    var errorMessage: String?
 
     let container: RepositoryContainer
-    private lazy var coordinator = CoachCoordinator(container: container)
+    @ObservationIgnored private lazy var coordinator = CoachCoordinator(container: container)
 
     init(container: RepositoryContainer) {
         self.container = container

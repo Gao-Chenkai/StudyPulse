@@ -23,13 +23,13 @@ struct AddGradeView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.presentationMode) var presentationMode
 
-    @StateObject private var viewModel: AddGradeViewModel
-    @StateObject private var subjectInfo = SubjectInfo()
+    @State private var viewModel: AddGradeViewModel
+    @State private var subjectInfo = SubjectInfo()
 
     /// 默认初始化器
     /// Default initializer.
     init(container: RepositoryContainer) {
-        self._viewModel = StateObject(wrappedValue: AddGradeViewModel(container: container))
+        self._viewModel = State(initialValue: AddGradeViewModel(container: container))
     }
 
     /// 预填表单的便捷初始化器(Siri 入口 / 模板等)
@@ -37,7 +37,7 @@ struct AddGradeView: View {
     init(container: RepositoryContainer, presetSubject: String, presetScore: Double, presetExamName: String? = nil) {
         let vm = AddGradeViewModel(container: container)
         vm.seedPreset(presetSubject: presetSubject, presetScore: presetScore, presetExamName: presetExamName)
-        self._viewModel = StateObject(wrappedValue: vm)
+        self._viewModel = State(initialValue: vm)
     }
 
     var body: some View {

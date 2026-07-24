@@ -10,7 +10,7 @@
 //  - 实体字段对应原 struct 的字段；嵌套类型（ExamTimeSlot / ReviewState / [Data]）
 //    被拍平为基本类型字段（[String] / Date / @Attribute(.externalStorage) Data）
 //  - 实体与 struct 互转用 toSnapshot() / init(from:)
-//  - 视图层继续用原 struct（DataManager @Published 暴露 [struct]），不需要改 view
+//  - 视图层继续用原 struct（DataManager observable 暴露 [struct]），不需要改 view
 //
 //  Design:
 //  - Each domain model has a corresponding @Model entity (SubjectEntity / GradeEntity / ...)
@@ -22,7 +22,7 @@
 //  - Entity fields mirror the struct's; nested types (ExamTimeSlot / ReviewState / [Data])
 //    are flattened to primitive fields ([String] / Date / @Attribute(.externalStorage) Data)
 //  - Use toSnapshot() / init(from:) to convert
-//  - Views keep using the struct types via DataManager's @Published arrays — no view changes
+//  - Views keep using the struct types via DataManager's observable arrays — no view changes
 //
 
 import Foundation

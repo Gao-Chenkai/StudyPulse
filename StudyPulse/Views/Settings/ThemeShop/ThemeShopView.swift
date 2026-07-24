@@ -11,7 +11,7 @@ import SwiftUI
 
 struct ThemeShopView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var achievementManager: AchievementManager
+    @Environment(AchievementManager.self) private var achievementManager: AchievementManager
 
     // 缓存：当前所有已解锁成就 id
     private var achievementSet: Set<String> {
@@ -459,7 +459,7 @@ struct ThemeShopItemCard<Preview: View>: View {
     NavigationStack {
         ThemeShopView()
             .environment(RepositoryContainer())
-            .environmentObject(AchievementManager.shared)
+            .environment(AchievementManager.shared)
     }
 }
 #endif

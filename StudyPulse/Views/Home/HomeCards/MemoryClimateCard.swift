@@ -77,7 +77,9 @@ struct MemoryClimateCard: View {
                         history: history,
                         onStartReview: {
                             showingDetail = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(250))
+                                guard !Task.isCancelled else { return }
                                 onStartReview()
                             }
                         }

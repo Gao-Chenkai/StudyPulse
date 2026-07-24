@@ -480,7 +480,9 @@ struct ExamCalendarView: View {
             outgoingProgress = 0
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(550))
+            guard !Task.isCancelled else { return }
             outgoingMonth = nil
             slideDirection = 0
             incomingProgress = 0

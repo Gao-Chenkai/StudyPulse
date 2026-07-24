@@ -16,7 +16,7 @@ struct VoiceMemoRecordingSheet: View {
     @Environment(\.dismiss) private var dismiss
     /// 录音管理器(负责 AVAudioSession / 文件落盘)
     /// Recording manager (handles AVAudioSession / file write).
-    @StateObject private var manager = VoiceMemoManager()
+    @State private var manager = VoiceMemoManager()
 
     /// 保存回调(传回录音文件相对路径)
     /// Save callback (returns the relative path of the recorded file).

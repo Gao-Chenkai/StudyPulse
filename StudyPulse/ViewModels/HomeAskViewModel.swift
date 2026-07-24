@@ -12,11 +12,11 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import os
 
 @MainActor
-final class HomeAskViewModel: ObservableObject {
+@Observable
+final class HomeAskViewModel {
     /// 单条对话消息(支持流式累积 / 错误 / 路由标签)
     /// Single chat message (streaming accumulation, error, routing tag).
     struct Message: Identifiable, Equatable {
@@ -62,13 +62,13 @@ final class HomeAskViewModel: ObservableObject {
     }
 
     /// 完整对话历史 / Full conversation history.
-    @Published var messages: [Message] = []
+    var messages: [Message] = []
     /// 当前阶段 / Current stage.
-    @Published var phase: Phase = .idle
+    var phase: Phase = .idle
     /// 用户正在输入的文本 / In-progress user text.
-    @Published var inputText: String = ""
+    var inputText: String = ""
     /// 数据抓取器 / Data fetcher.
-    @Published var dataProvider: HomeAskDataProvider
+    var dataProvider: HomeAskDataProvider
     /// LLM 环境配置管理器 / LLM env config manager.
     let envManager: AppEnvironmentManager
     /// 当前正在运行的 LLM 任务 / Currently running LLM task.

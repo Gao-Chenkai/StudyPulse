@@ -6,7 +6,6 @@
 //  Trends-page VM. Group by subject, sort, detect subjects needing attention.
 //
 import Foundation
-import Combine
 
 struct SubjectRadarSnapshot: Identifiable, Sendable, Equatable {
     let id: String
@@ -28,22 +27,23 @@ struct SubjectRadarSnapshot: Identifiable, Sendable, Equatable {
 }
 
 @MainActor
-final class TrendsViewModel: ObservableObject {
+@Observable
+final class TrendsViewModel {
 
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
     // MARK: - 输出状态 / Output state
     /// 按 subject 分组,每组按日期升序 / Grouped by subject, sorted asc.
-    @Published private(set) var gradesBySubject: [String: [Grade]] = [:]
+    private(set) var gradesBySubject: [String: [Grade]] = [:]
     /// 启用的 + 有成绩的科目 / Enabled subjects that actually have grades.
-    @Published private(set) var activeSubjects: [String] = []
+    private(set) var activeSubjects: [String] = []
     /// 需要关注的科目(平均 < 70 或近期下滑 > 15) / Subjects needing attention.
-    @Published private(set) var subjectsNeedingAttention: [String] = []
-    @Published private(set) var radarSnapshots: [SubjectRadarSnapshot] = []
-    @Published private(set) var radarAIAnalysis: String?
-    @Published private(set) var isRadarAILoading = false
-    @Published private(set) var radarAIError: String?
+    private(set) var subjectsNeedingAttention: [String] = []
+    private(set) var radarSnapshots: [SubjectRadarSnapshot] = []
+    private(set) var radarAIAnalysis: String?
+    private(set) var isRadarAILoading = false
+    private(set) var radarAIError: String?
 
     private var radarAITask: Task<Void, Never>?
 

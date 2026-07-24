@@ -20,7 +20,7 @@ struct StudySessionDetailView: View {
     let sessionId: UUID
 
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var hrv: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrv: HealthKitManager
 
     @State private var session: StudySession?
     @State private var annotations: [DifficultyAnnotation] = []

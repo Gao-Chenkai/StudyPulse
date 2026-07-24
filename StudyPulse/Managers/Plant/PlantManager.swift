@@ -13,7 +13,6 @@
 //
 
 import Foundation
-import Combine
 import SwiftData
 import os
 
@@ -44,7 +43,7 @@ final class PlantManager {
     // MARK: - Non-observable internal state
 
     @ObservationIgnored
-    private var cancellables: Set<AnyCancellable> = []  // AchievementManager snapshot 订阅句柄
+    private var achievementObservationTask: Task<Void, Never>?
 
     @ObservationIgnored
     private var modelContext: ModelContext?              // SwiftData 主上下文(由 attach() 注入)
@@ -346,20 +345,18 @@ final class PlantManager {
         // Snapshot only changes on user actions (grade / mistake review / focus session),
         // so event-driven observation is sufficient.
         // `currentSignature()` is still compared to skip derive when streak didn't change.
-        cancellables.removeAll()
+        achievementObservationTask?.cancel()
         var lastSig = currentSignature()
-        cancellables.insert(
-            NotificationCenter.default.publisher(for: .achievementsSnapshotDidChange)
-                .receive(on: RunLoop.main)
-                .sink { [weak self] _ in
-                    guard let self else { return }
-                    let sig = self.currentSignature()
-                    if sig != lastSig {
-                        lastSig = sig
-                        self.recomputeStage()
-                    }
+        achievementObservationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .achievementsSnapshotDidChange) {
+                guard !Task.isCancelled, let self else { return }
+                let sig = self.currentSignature()
+                if sig != lastSig {
+                    lastSig = sig
+                    self.recomputeStage()
                 }
-        )
+            }
+        }
         Log.plant.debug("订阅 AchievementManager 变化 / Subscribed to AchievementManager via NotificationCenter")
     }
 

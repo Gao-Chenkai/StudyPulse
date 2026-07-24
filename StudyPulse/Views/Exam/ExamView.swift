@@ -20,10 +20,10 @@ import SwiftUI
 struct ExamView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @StateObject private var viewModel: ExamViewModel
+    @State private var viewModel: ExamViewModel
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: ExamViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: ExamViewModel.makeDefault(container: container))
     }
 
 
@@ -225,7 +225,7 @@ struct ExamView: View {
 // Extracted to dodge the "type-check timeout" error on `ExamView.body`.
 
 private struct ExamViewSheetsAndDestinations: ViewModifier {
-    @ObservedObject var viewModel: ExamViewModel
+    @Bindable var viewModel: ExamViewModel
     let container: RepositoryContainer
 
     func body(content: Content) -> some View {
@@ -268,13 +268,17 @@ private struct ExamViewSheetsAndDestinations: ViewModifier {
             pastExams: viewModel.pastExams,
             onSelectExam: { exam in
                 viewModel.showingPastExams = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedExamForDetail = exam
                 }
             },
             onSelectComprehensive: { exam in
                 viewModel.showingPastExams = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedComprehensiveExam = exam
                 }
             },

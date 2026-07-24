@@ -30,6 +30,7 @@ import UIKit
 /// )
 /// ```
 struct FlashcardHandwritingCanvasView: View {
+    @Environment(\.displayScale) private var displayScale
     /// 文案配置，默认与闪卡原行为一致；错题登记等场景可传入自定义 Labels。
     /// Label config — defaults match the original flashcard behavior so the
     /// existing call site in `FlashcardStudyView` needs no changes.
@@ -128,7 +129,7 @@ struct FlashcardHandwritingCanvasView: View {
             // 上下左右各内缩一定量，避免笔触被裁剪
             bounds = drawing.bounds.insetBy(dx: -20, dy: -20)
         }
-        let scale: CGFloat = min(2.0, UIScreen.main.scale)
+        let scale: CGFloat = min(2.0, displayScale)
         let image = drawing.image(from: bounds, scale: scale)
         return image.pngData() ?? Data()
     }
@@ -182,7 +183,8 @@ struct DraggableCanvasRepresentable: UIViewRepresentable {
 
         // 安装 PKToolPicker(浮在键盘区域,iPad 上会自动停靠)
         // Setup PKToolPicker (floats over keyboard area, auto-docks on iPad).
-        DispatchQueue.main.async {
+        Task { @MainActor in
+            await Task.yield()
             guard let canvas = context.coordinator.canvas else { return }
             let toolPicker = PKToolPicker()
             toolPicker.setVisible(true, forFirstResponder: canvas)

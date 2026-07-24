@@ -16,12 +16,11 @@
 //
 
 import SwiftUI
-import Combine
 import os
 
 struct DebugBannerView: View {
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var toasterStore = LogToasterStore()
+    @State private var toasterStore = LogToasterStore()
 
     /// 可选点击回调（默认跳转到 Debug Console）
     var onTap: (() -> Void)? = nil
@@ -167,30 +166,33 @@ private struct ToastRow: View {
 
 // MARK: - LogToasterStore
 
-/// 订阅 `LogStore.entryPublisher` 并在内存里维护一个最多 3 条、4 秒自动消失的 toast 队列。
+/// 消费 `LogStore.entriesStream()` 并在内存里维护一个最多 3 条、4 秒自动消失的 toast 队列。
 /// 只接收 WARN / ERROR / FAULT 级别，INFO/DEBUG/NOTICE 静默不入队。
 @MainActor
-final class LogToasterStore: ObservableObject {
+@Observable
+final class LogToasterStore {
     struct ToastItem: Identifiable {
         let id = UUID()
         let entry: LogEntry
     }
 
-    @Published private(set) var toasts: [ToastItem] = []
+    private(set) var toasts: [ToastItem] = []
     private let maxToasts = 3
     private let displayDuration: TimeInterval = 4.0
-    private var subscription: AnyCancellable?
+    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init() {
-        subscription = LogStore.shared.entryPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] entry in
+        observationTask = Task { [weak self] in
+            for await entry in LogStore.shared.entriesStream() {
+                guard !Task.isCancelled else { return }
                 self?.handleNewEntry(entry)
             }
+        }
     }
 
-    /// 生命周期由 @StateObject 持有,subscription 在对象释放时自动随 AnyCancellable 释放。
-    /// Lifetime owned by @StateObject; subscription is auto-released with AnyCancellable.
+    deinit {
+        observationTask?.cancel()
+    }
 
     private func handleNewEntry(_ entry: LogEntry) {
         // 只推送 WARN / ERROR / FAULT
@@ -204,7 +206,9 @@ final class LogToasterStore: ObservableObject {
         }
         // 4 秒后自动消失
         let id = toast.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + displayDuration) { [weak self] in
+        let duration = displayDuration
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(duration))
             withAnimation(.easeOut(duration: 0.3)) {
                 self?.toasts.removeAll { $0.id == id }
             }

@@ -8,7 +8,6 @@
 //
 
 import SwiftUI
-import Combine
 import os
 
 // MARK: - Layout Bounds
@@ -179,7 +178,7 @@ private struct DebugInspectAutoModifier<T>: ViewModifier {
 /// - Parameter caller: 调用方标签,传入后在调试面板里只显示同 caller 的最近一次。
 struct LLMDebugButtonModifier: ViewModifier {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var client: LLMClient
+    @Environment(LLMClient.self) private var client: LLMClient
     @State private var showDebug: Bool = false
     let caller: String?
 
@@ -235,14 +234,11 @@ extension View {
 /// 让用户能立即看出"刚刚的 LLM 调用来自哪个卡片"。
 /// In DEBUG mode, shows a small footer with the most-recent LLM call info for this caller.
 struct LLMCallIndicator: View {
-    @EnvironmentObject private var client: LLMClient
+    @Environment(LLMClient.self) private var client: LLMClient
     @Environment(RepositoryContainer.self) private var container
     @State private var showDebug: Bool = false
+    @State private var refreshDate = Date()
     let caller: String
-
-    /// 自动每 5s 刷新一次(以便 "2m 前" 持续变化)
-    /// Auto-refresh every 5s so the "2m ago" label updates.
-    private let tick = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
 
     private var latestForCaller: LLMCallDebugInfo? {
         client.recentCalls.last(where: { $0.caller == caller })
@@ -293,9 +289,11 @@ struct LLMCallIndicator: View {
                 }
             }
         }
-        .onReceive(tick) { _ in
-            // 触发 SwiftUI 重渲染
-            _ = latestForCaller
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                refreshDate = Date()
+            }
         }
         .sheet(isPresented: $showDebug) {
             LLMDebugSheet(filterCaller: caller)
@@ -304,7 +302,7 @@ struct LLMCallIndicator: View {
     }
 
     private func relativeTime(_ date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
+        let interval = refreshDate.timeIntervalSince(date)
         if interval < 60 { return "\(Int(interval))s 前" }
         if interval < 3600 { return "\(Int(interval / 60))m 前" }
         if interval < 86400 { return "\(Int(interval / 3600))h 前" }

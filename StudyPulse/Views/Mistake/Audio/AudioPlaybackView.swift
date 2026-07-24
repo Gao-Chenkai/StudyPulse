@@ -21,7 +21,7 @@ struct AudioPlaybackView: View {
 
     /// 复用 `VoiceMemoManager` 处理播放状态
     /// Reuses `VoiceMemoManager` to drive the playback state.
-    @StateObject private var manager = VoiceMemoManager()
+    @State private var manager = VoiceMemoManager()
 
     var body: some View {
         HStack(spacing: 12) {

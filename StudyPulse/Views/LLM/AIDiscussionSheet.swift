@@ -20,7 +20,6 @@
 //
 
 import SwiftUI
-import Combine
 import SwiftStreamingMarkdown
 
 /// "深入探讨" sheet:在已有 AI 预测/分析的基础上,让用户跟 LLM 多轮追问。
@@ -42,7 +41,7 @@ struct AIDiscussionSheet: View {
     let onDismiss: () -> Void
 
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var viewModel = AIDiscussionViewModel()
+    @State private var viewModel = AIDiscussionViewModel()
     /// 当前输入框文本
     /// Current input bar text.
     @State private var inputText: String = ""
@@ -200,7 +199,8 @@ struct AIDiscussionSheet: View {
 // MARK: - View Model / 视图模型
 
 @MainActor
-final class AIDiscussionViewModel: ObservableObject {
+@Observable
+final class AIDiscussionViewModel {
     struct Message: Identifiable, Equatable {
         let id: UUID
         let role: LLMRole
@@ -228,8 +228,8 @@ final class AIDiscussionViewModel: ObservableObject {
         }
     }
 
-    @Published var messages: [Message] = []
-    @Published var isStreaming: Bool = false
+    var messages: [Message] = []
+    var isStreaming: Bool = false
     private var context: String = ""
     /// 上一次的 AI 预测原文(只用于拼装 system prompt;不会作为 conversation history 发送,
     /// 因为 `assistant` 角色没有前导 user 消息会让部分 LLM 困惑 / 遗忘)。

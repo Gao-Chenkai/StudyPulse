@@ -8,7 +8,6 @@
 //
 
 import SwiftUI
-import Combine
 import os
 import SwiftStreamingMarkdown
 
@@ -48,10 +47,6 @@ struct AIQuizView: View {
     /// 计时器是否运行中
     /// Whether the countdown timer is running.
     @State private var timerActive = false
-    /// 1s 一次的计时器 publisher
-    /// 1Hz timer publisher for the countdown.
-    let timerPublisher = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     // Submission states
     /// 是否正在提交阅卷
     /// Whether the grading request is in flight.
@@ -106,10 +101,11 @@ struct AIQuizView: View {
             // Start the countdown on appear (no-op in untimed mode).
             initializeTimer()
         }
-        .onReceive(timerPublisher) { _ in
-            // 1Hz tick:到 0 时自动交卷
-            // 1Hz tick; when it hits 0 we auto-submit.
-            handleTimerTick()
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                handleTimerTick()
+            }
         }
         // 主动提交确认
         // Manual submit confirmation.

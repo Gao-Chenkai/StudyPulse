@@ -29,7 +29,7 @@ struct TrendChartCard: View {
     @Environment(\.exportMode) private var exportMode
     /// 注入 HomeViewModel(图表选科逻辑已迁入)
     /// Injected HomeViewModel (chart subject selection has been moved here).
-    @ObservedObject var viewModel: HomeViewModel
+    @Bindable var viewModel: HomeViewModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var animateChart = false
 

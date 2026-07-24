@@ -109,10 +109,10 @@ struct FlashcardStudyView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 
-    @StateObject private var viewModel: FlashcardStudyViewModel
+    @State private var viewModel: FlashcardStudyViewModel
 
     init(container: RepositoryContainer, filter: FlashcardFilter = .dueQueue, handwritingEnabled: Bool = false) {
-        self._viewModel = StateObject(wrappedValue: FlashcardStudyViewModel(container: container, filter: filter, handwritingEnabled: handwritingEnabled))
+        self._viewModel = State(initialValue: FlashcardStudyViewModel(container: container, filter: filter, handwritingEnabled: handwritingEnabled))
     }
 
     var body: some View {

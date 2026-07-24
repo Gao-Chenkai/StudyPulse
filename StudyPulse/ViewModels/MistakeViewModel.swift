@@ -9,35 +9,35 @@
 //
 
 import Foundation
-import Combine
 import SwiftUI
 
 @MainActor
-final class MistakeViewModel: ObservableObject {
+@Observable
+final class MistakeViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
-    private var patternStateObserver: AnyCancellable?
+    @ObservationIgnored private var patternStateObservationTask: Task<Void, Never>?
 
     // MARK: - 输入 & 界面状态 / Input & UI states
     /// 顶部搜索框的当前文本 / Current search field text.
-    @Published var searchText: String = ""
+    var searchText: String = ""
     /// 是否显示"新增错题"弹窗 / Show the "new mistake" sheet?
-    @Published var showingNewMistakeSet = false
+    var showingNewMistakeSet = false
     /// 是否显示闪卡学习页 / Show flashcard study page?
-    @Published var showingFlashcards = false
+    var showingFlashcards = false
     /// 闪卡页的筛选器 / Flashcard filter.
-    @Published var flashcardFilter: FlashcardFilter = .dueQueue
+    var flashcardFilter: FlashcardFilter = .dueQueue
     /// 是否显示标签关系图 sheet / Show tag-graph sheet?
-    @Published var showingTagGraph = false
+    var showingTagGraph = false
     /// 是否显示智能思维导图 sheet / Show Auto Mind Map sheet?
-    @Published var showingAutoMindMap = false
+    var showingAutoMindMap = false
 
     // MARK: - PDF 导出状态 / PDF export state
-    @Published var showingPDFExportSheet = false
-    @Published var pendingPDFSnapshot: MistakePDFSnapshot?
-    @Published var isExportingPDF = false
-    @Published var pdfDocument: MistakePDFDocument?
-    @Published var pdfErrorMessage: String? {
+    var showingPDFExportSheet = false
+    var pendingPDFSnapshot: MistakePDFSnapshot?
+    var isExportingPDF = false
+    var pdfDocument: MistakePDFDocument?
+    var pdfErrorMessage: String? {
         didSet {
             if pdfErrorMessage != nil {
                 // 任意错误都会自动打开错误 alert / Auto-open alert on error.
@@ -45,22 +45,25 @@ final class MistakeViewModel: ObservableObject {
             }
         }
     }
-    @Published var showingExportError = false
+    var showingExportError = false
 
     // MARK: - 输出状态 / Output states
     /// 当前过滤 + 搜索后的分组结果(按科目分桶)
     /// Filtered + searched group result (bucketed by subject).
-    @Published private(set) var groups: MistakeGroups = .empty
+    private(set) var groups: MistakeGroups = .empty
     /// SRS 总览 / SRS overview.
-    @Published private(set) var srsOverview: SRSOverview = .empty
-    @Published private(set) var patternSummaries: [MistakePatternSummary] = []
+    private(set) var srsOverview: SRSOverview = .empty
+    private(set) var patternSummaries: [MistakePatternSummary] = []
 
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer) {
         self.container = container
-        patternStateObserver = NotificationCenter.default.publisher(for: .mistakePatternStateDidChange)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.recompute() }
+        patternStateObservationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .mistakePatternStateDidChange) {
+                guard !Task.isCancelled else { return }
+                self?.recompute()
+            }
+        }
     }
 
     /// 工厂方法 / Factory.
@@ -133,7 +136,9 @@ final class MistakeViewModel: ObservableObject {
         pdfDocument = MistakePDFDocument(data: data, fileName: fileName)
         // 50ms 延迟:等 SwiftUI 绑定到 pdfDocument 完成后再开 sheet
         // 50ms delay: let SwiftUI finish binding before opening the sheet.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             self.isExportingPDF = true
         }
     }
@@ -155,7 +160,9 @@ final class MistakeViewModel: ObservableObject {
         }
         // 100ms 延迟:让分享 sheet 关闭动画结束后再清掉 pdfDocument
         // 100ms delay: wait for share-sheet close animation to finish.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled else { return }
             self.pdfDocument = nil
         }
     }

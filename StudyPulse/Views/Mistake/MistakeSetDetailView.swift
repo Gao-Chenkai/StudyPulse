@@ -156,7 +156,9 @@ struct MistakeSetDetailView: View {
                     showingAIAnalysis = false
                     // 0.3s 延迟,避免 sheet 状态机冲突
                     // 0.3s delay to avoid sheet state-machine conflicts.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard !Task.isCancelled else { return }
                         showingAIDiscussion = true
                     }
                 }

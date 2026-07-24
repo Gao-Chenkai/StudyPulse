@@ -12,7 +12,6 @@
 //
 
 import SwiftUI
-import Combine
 import SwiftStreamingMarkdown
 
 /// 统一的聊天气泡:user 右对齐小框,assistant 左对齐宽框(上限 600pt)。
@@ -238,10 +237,6 @@ struct PulseModifier: ViewModifier {
 /// Three-dot typing animation (each dot fades in in turn).
 struct TypingDots: View {
     @State private var phase: Int = 0
-    // 350ms 切换一次:3 个点 → 周期约 1.05s,符合"打字机"心理预期
-    // 350ms per phase → 1.05s full cycle across 3 dots, matches the
-    // typical "typing indicator" cadence.
-    private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
     var body: some View {
         HStack(spacing: 3) {
             ForEach(0..<3, id: \.self) { i in
@@ -251,8 +246,11 @@ struct TypingDots: View {
                     .opacity(phase == i ? 1.0 : 0.3)
             }
         }
-        .onReceive(timer) { _ in
-            phase = (phase + 1) % 3
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(350))
+                phase = (phase + 1) % 3
+            }
         }
     }
 }

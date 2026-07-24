@@ -13,7 +13,6 @@
 import Foundation
 import SwiftUI
 import os
-import Combine
 
 @MainActor
 @Observable
@@ -27,7 +26,7 @@ final class RoutineSpawner {
     // MARK: - State
     @ObservationIgnored private var lastSpawnedDateKey: String?  // 上次 spawn 的 dateKey,跨日判定
     @ObservationIgnored private var pollTimer: Timer?             // 60s 兜底跨日检测
-    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
+    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -144,12 +143,13 @@ final class RoutineSpawner {
         // 监听 routine 集合变化,触发 reconcile
         // 注意:@Observable 的 mutations 自动触发 View 重渲,我们这里再补一次 spawn
         // (在 RepositoryContainer.recomputeAllFiltered() / 增删 routine 时调用)
-        NotificationCenter.default
-            .publisher(for: .routineDataChanged)
-            .sink { [weak self] _ in
+        observationTask?.cancel()
+        observationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .routineDataChanged) {
+                guard !Task.isCancelled else { return }
                 self?.reconcileToday()
             }
-            .store(in: &cancellables)
+        }
     }
 
     private func startPolling() {

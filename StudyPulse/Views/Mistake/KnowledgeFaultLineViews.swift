@@ -90,12 +90,12 @@ struct KnowledgeFaultLineEmptyCard: View {
 
 struct KnowledgeFaultLineView: View {
     @Environment(RepositoryContainer.self) private var environmentContainer
-    @StateObject private var viewModel: KnowledgeFaultLineViewModel
+    @State private var viewModel: KnowledgeFaultLineViewModel
 
     private var container: RepositoryContainer { environmentContainer }
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
     }
 
     var body: some View {
@@ -198,7 +198,7 @@ struct KnowledgeFaultLineView: View {
 
 struct KnowledgeFaultLineDetailView: View {
     @Environment(RepositoryContainer.self) private var environmentContainer
-    @StateObject private var viewModel: KnowledgeFaultLineViewModel
+    @State private var viewModel: KnowledgeFaultLineViewModel
     let focusFaultLineID: String?
     let focusMistakeID: UUID?
 
@@ -207,7 +207,7 @@ struct KnowledgeFaultLineDetailView: View {
     init(container: RepositoryContainer, focusFaultLineID: String? = nil, focusMistakeID: UUID? = nil) {
         self.focusFaultLineID = focusFaultLineID
         self.focusMistakeID = focusMistakeID
-        _viewModel = StateObject(wrappedValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: KnowledgeFaultLineViewModel.makeDefault(container: container))
     }
 
     private var node: MistakeKnowledgeNode? {

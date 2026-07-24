@@ -36,7 +36,7 @@ struct AutoMindMapView: View {
     
     /// 视图模型，控制异步加载与极坐标系布局计算
     /// View model managing asynchronous loading and polar coordinate layout.
-    @StateObject private var viewModel: AutoMindMapViewModel
+    @State private var viewModel: AutoMindMapViewModel
     
     /// 是否正在显示 AI 问答 (HomeAsk 通道)
     /// Whether the HomeAsk view sheet is currently shown.
@@ -77,8 +77,8 @@ struct AutoMindMapView: View {
         
         // 绑定 ViewModel
         // Bind the state-managed ViewModel.
-        _viewModel = StateObject(
-            wrappedValue: AutoMindMapViewModel(mistakes: mistakes, contextTitle: contextTitle)
+        _viewModel = State(
+            initialValue: AutoMindMapViewModel(mistakes: mistakes, contextTitle: contextTitle)
         )
     }
     
@@ -642,7 +642,9 @@ struct AutoMindMapView: View {
         exportFeedbackTitle = "Export Failed"
         let fileName = "StudyPulse_MindMap_\(DateFormatters.fileTimestamp.string(from: Date())).png"
         imageDocument = ReportImageDocument(data: data, fileName: fileName, contentType: .png)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExportingImage = true
         }
     }
@@ -657,7 +659,7 @@ struct AutoMindMapView: View {
 
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     exportFeedbackTitle = "Save to Photos Failed"
                     exportErrorMessage = "Photo library access is required to save this image.".localized()
                 }
@@ -667,7 +669,7 @@ struct AutoMindMapView: View {
             PHPhotoLibrary.shared().performChanges {
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
             } completionHandler: { success, error in
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     if success {
                         exportFeedbackTitle = "Saved to Photos"
                         exportErrorMessage = "Mind map image saved to Photos.".localized()

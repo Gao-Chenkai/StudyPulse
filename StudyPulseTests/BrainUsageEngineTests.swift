@@ -1,10 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import StudyPulse
 
 @MainActor
-final class BrainUsageEngineTests: XCTestCase {
+struct BrainUsageEngineTests {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 
+    @Test
     func testPointsUseFixedWeights() {
         let events = [
             BrainUsageEvent(date: now, kind: .mistakeReview, units: 2),
@@ -12,10 +14,11 @@ final class BrainUsageEngineTests: XCTestCase {
             BrainUsageEvent(date: now, kind: .focusMinutes, units: 10)
         ]
         let result = BrainUsageEngine.snapshot(events: events, quota: BrainUsageQuota(fiveHour: 100, sevenDay: 100), now: now)
-        XCTAssertEqual(result.fiveHour.points, 21)
-        XCTAssertEqual(result.sevenDay.points, 21)
+        #expect(result.fiveHour.points == 21)
+        #expect(result.sevenDay.points == 21)
     }
 
+    @Test
     func testWindowsExcludeBoundaryAndOldEvents() {
         let events = [
             BrainUsageEvent(date: now.addingTimeInterval(-BrainUsageEngine.fiveHourInterval), kind: .gradeRecorded),
@@ -23,19 +26,21 @@ final class BrainUsageEngineTests: XCTestCase {
             BrainUsageEvent(date: now.addingTimeInterval(-BrainUsageEngine.sevenDayInterval - 1), kind: .focusMinutes, units: 30)
         ]
         let result = BrainUsageEngine.snapshot(events: events, quota: .default, now: now)
-        XCTAssertEqual(result.fiveHour.points, 5)
-        XCTAssertEqual(result.sevenDay.points, 10)
+        #expect(result.fiveHour.points == 5)
+        #expect(result.sevenDay.points == 10)
     }
 
+    @Test
     func testProgressCapsAndCompletion() {
         let events = [BrainUsageEvent(date: now, kind: .focusMinutes, units: 500)]
         let result = BrainUsageEngine.snapshot(events: events, quota: BrainUsageQuota(fiveHour: 100, sevenDay: 200), now: now)
-        XCTAssertEqual(result.fiveHour.progress, 1)
-        XCTAssertTrue(result.fiveHour.isComplete)
-        XCTAssertEqual(result.sevenDay.progress, 1)
-        XCTAssertTrue(result.sevenDay.isComplete)
+        #expect(result.fiveHour.progress == 1)
+        #expect(result.fiveHour.isComplete)
+        #expect(result.sevenDay.progress == 1)
+        #expect(result.sevenDay.isComplete)
     }
 
+    @Test
     func testLocalQuotaReducesForLowReadinessAndPoorSleep() {
         let normalReadiness = HRVReadiness(zScore: 0, todayHRV: 50, baselineMean: 50, baselineSampleCount: 20, category: .normal, suggestion: "")
         let lowReadiness = HRVReadiness(zScore: -2, todayHRV: 30, baselineMean: 50, baselineSampleCount: 20, category: .low, suggestion: "")
@@ -43,7 +48,7 @@ final class BrainUsageEngineTests: XCTestCase {
         let poorBody = BodyStatus(restingHeartRate: 60, latestHeartRate: 70, respiratoryRate: 14, lastNightSleepHours: 5, deepSleepHours: nil, remSleepHours: nil, sleepQuality: .poor, exerciseMinutesToday: 0, isUsable: true)
         let normal = BrainUsageEngine.localQuota(readiness: normalReadiness, bodyStatus: normalBody, age: 16, averageScoreRate: 0.8)
         let low = BrainUsageEngine.localQuota(readiness: lowReadiness, bodyStatus: poorBody, age: 16, averageScoreRate: 0.8)
-        XCTAssertLessThan(low.fiveHour, normal.fiveHour)
-        XCTAssertLessThan(low.sevenDay, normal.sevenDay)
+        #expect(low.fiveHour < normal.fiveHour)
+        #expect(low.sevenDay < normal.sevenDay)
     }
 }

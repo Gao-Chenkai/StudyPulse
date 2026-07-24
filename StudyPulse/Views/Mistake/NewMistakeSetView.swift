@@ -61,13 +61,13 @@ struct NewMistakeSetView: View {
 
     /// 内部 ViewModel(表单字段 + 图片 + 验证)
     /// Internal view model (form fields + images + validation).
-    @StateObject private var viewModel: NewMistakeSetViewModel
+    @State private var viewModel: NewMistakeSetViewModel
 
     /// 默认空态初始化
     /// Default empty-state initializer.
     init(container: RepositoryContainer, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
-        self._viewModel = StateObject(wrappedValue: NewMistakeSetViewModel(container: container))
+        self._viewModel = State(initialValue: NewMistakeSetViewModel(container: container))
     }
 
     /// 让 Siri 提供的值预填表单的便捷初始化
@@ -76,7 +76,7 @@ struct NewMistakeSetView: View {
         self.usesInternalNavigationStack = usesInternalNavigationStack
         let vm = NewMistakeSetViewModel(container: container)
         vm.presetValues(subject: presetSubject, title: presetTitle)
-        self._viewModel = StateObject(wrappedValue: vm)
+        self._viewModel = State(initialValue: vm)
     }
 
     /// 用 sample content 预填字段的初始化
@@ -85,7 +85,7 @@ struct NewMistakeSetView: View {
         self.usesInternalNavigationStack = usesInternalNavigationStack
         let vm = NewMistakeSetViewModel(container: container)
         vm.seedSampleMistake(sampleMistake)
-        self._viewModel = StateObject(wrappedValue: vm)
+        self._viewModel = State(initialValue: vm)
     }
 
     /// 当前设备是否为 iPad

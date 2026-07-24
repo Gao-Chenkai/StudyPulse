@@ -5,7 +5,7 @@
 //  学习连续剧 & 成就系统的中央协调器。
 //  Central coordinator for the streak & achievement system.
 //
-//  - @MainActor ObservableObject 单例
+//  - @MainActor observable reference type 单例
 //  - 三个事件入口：recordGradeRecorded / recordMistakeReviewed / recordFocusMinutes
 //  - updateConfig：用户在 Settings 里改每日目标时调
 //  - handleDayRolloverIfNeeded：scenePhase == .active 时调，跨日滚动
@@ -15,11 +15,11 @@
 //
 
 import Foundation
-import Combine
 import os
 
 @MainActor
-final class AchievementManager: ObservableObject {
+@Observable
+final class AchievementManager {
     static let shared = AchievementManager()
 
     // MARK: - Published state
@@ -31,7 +31,7 @@ final class AchievementManager: ObservableObject {
     /// PlantManager 监听此通知替代原 1.5s polling。
     /// `didSet` posts `achievementsSnapshotDidChange` whenever the snapshot is assigned;
     /// PlantManager listens to this notification instead of the old 1.5s polling.
-    @Published private(set) var snapshot: AchievementsSnapshot {
+    private(set) var snapshot: AchievementsSnapshot {
         didSet {
             NotificationCenter.default.post(name: .achievementsSnapshotDidChange, object: nil)
         }
@@ -39,23 +39,23 @@ final class AchievementManager: ObservableObject {
 
     /// 今日活动日志（date == startOfDay(today) 的副本，便于 view 直接订阅）。
     /// Today's activity log (a copy where date == startOfDay(today) so views can subscribe directly).
-    @Published private(set) var todayLog: DailyActivityLog
+    private(set) var todayLog: DailyActivityLog
 
     /// 当前连续天数（快照副本，避免 view 算）。
     /// Current streak length (snapshot copy, lets views read instead of recomputing).
-    @Published private(set) var currentStreak: Int
+    private(set) var currentStreak: Int
 
     /// 历史最长连续天数。
     /// All-time longest streak in days.
-    @Published private(set) var longestStreak: Int
+    private(set) var longestStreak: Int
 
     /// 累计活跃天数。
     /// Total number of days that hit the daily goal.
-    @Published private(set) var totalActiveDays: Int
+    private(set) var totalActiveDays: Int
 
     /// 最近一次"刚刚解锁"的成就（用于 toast 队列）。
     /// Recently-unlocked achievements, queued for toast notifications.
-    @Published var newlyUnlocked: [AchievementProgress] = []
+    var newlyUnlocked: [AchievementProgress] = []
 
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
@@ -121,13 +121,13 @@ final class AchievementManager: ObservableObject {
     // MARK: - 事件入口 / Event sinks
 
     // MARK: - Plant subscriber
-    // PlantManager 通过订阅本类的 @Published snapshot（约 1.5s polling）实现
+    // PlantManager 通过订阅本类的 observable snapshot（约 1.5s polling）实现
     // 主页植物阶段自动重算。无需在此处添加专门事件。
-    // PlantManager observes this class's @Published snapshot (1.5s polling)
+    // PlantManager observes this class's observable snapshot (1.5s polling)
     // to recompute the home plant stage. No extra event hook needed here.
 
-    /// DataManager.addGrade / addGrades 在写入 @Published grades 后调用。
-    /// Invoked by DataManager.addGrade / addGrades after writing to @Published grades.
+    /// DataManager.addGrade / addGrades 在写入 observable grades 后调用。
+    /// Invoked by DataManager.addGrade / addGrades after writing to observable grades.
     func recordGradeRecorded(count: Int = 1) {
         BrainUsageStore.append(kind: .gradeRecorded, units: count)
         var snap = snapshot

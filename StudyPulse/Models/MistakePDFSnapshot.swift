@@ -4,7 +4,7 @@
 //
 //  不可变快照：把错题模块当前数据按用户选择的模式过滤并拷贝出来，
 //  供 PDF 渲染器使用。沿用 StudyReport 的 Sendable 模式，
-//  让 PDF 渲染阶段不直接持有 @EnvironmentObject。
+//  让 PDF 渲染阶段不直接持有 environment-injected observable。
 //
 //  Immutable snapshot used by the Mistake PDF renderer. It filters
 //  and copies the current mistake data based on the user's selection
@@ -30,7 +30,7 @@ nonisolated enum MistakePDFSelection: Sendable, Equatable {
 
 // MARK: - 错题 PDF 快照
 
-/// 不可变快照：导出时一次性拷贝，避免渲染过程中持有 ObservableObject。
+/// 不可变快照：导出时一次性拷贝，避免渲染过程中持有 observable reference type。
 /// Immutable snapshot, copied once at generation time.
 nonisolated struct MistakePDFSnapshot: Identifiable, Sendable {
     /// 用 generatedAt 作为 id 即可（每次生成都是新值）。

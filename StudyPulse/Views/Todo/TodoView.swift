@@ -54,10 +54,10 @@ enum TodoTypeFilter: Hashable, CaseIterable {
 struct TodoView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @StateObject private var viewModel: TodoViewModel
+    @State private var viewModel: TodoViewModel
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: TodoViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: TodoViewModel.makeDefault(container: container))
     }
 
     // MARK: - Body
@@ -556,7 +556,7 @@ struct PastItemsSheet: View {
 // Extracted to dodge the "type-check timeout" error on `TodoView.body`.
 
 private struct TodoViewSheetsAndDestinations: ViewModifier {
-    @ObservedObject var viewModel: TodoViewModel
+    @Bindable var viewModel: TodoViewModel
     let container: RepositoryContainer
 
     func body(content: Content) -> some View {
@@ -599,25 +599,33 @@ private struct TodoViewSheetsAndDestinations: ViewModifier {
             pastEntries: viewModel.pastEntries,
             onSelectExam: { exam in
                 viewModel.showingPastSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedExam = exam
                 }
             },
             onSelectComprehensive: { exam in
                 viewModel.showingPastSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedComprehensive = exam
                 }
             },
             onSelectTask: { task in
                 viewModel.showingPastSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedTask = task
                 }
             },
             onSelectRoutine: { routine in
                 viewModel.showingPastSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
                     viewModel.selectedRoutine = routine
                 }
             },

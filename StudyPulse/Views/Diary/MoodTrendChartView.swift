@@ -17,7 +17,7 @@ import Charts
 
 struct MoodTrendChartView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var rangeDays: Int = 7
@@ -331,7 +331,7 @@ private struct StatBlock: View {
     let container = RepositoryContainer()
     MoodTrendChartView()
         .environment(container)
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
         .onAppear {
             for i in 0..<7 {
                 let date = Date().addingTimeInterval(TimeInterval(-i * 86400))

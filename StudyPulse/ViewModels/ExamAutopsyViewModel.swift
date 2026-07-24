@@ -1,13 +1,14 @@
 import Foundation
 import SwiftUI
 import PhotosUI
-import Combine
 
-@MainActor final class ExamAutopsyViewModel: ObservableObject {
-    @Published private(set) var record: ExamAutopsy
-    @Published var selectedItems: [PhotosPickerItem] = []
-    @Published var isWorking = false
-    @Published var errorMessage: String?
+@MainActor
+@Observable
+final class ExamAutopsyViewModel {
+    private(set) var record: ExamAutopsy
+    var selectedItems: [PhotosPickerItem] = []
+    var isWorking = false
+    var errorMessage: String?
     private let container: RepositoryContainer
 
     init(exam: Exam, container: RepositoryContainer) {

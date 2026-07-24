@@ -7,7 +7,7 @@
 //  - `stream(...)`   SSE 流式,逐 delta 调 onDelta
 //  - `testConnection(...)` LLMSettingsView 用,极小请求确认可达
 //
-//  单例 `@MainActor class: ObservableObject`,与项目其他 Manager
+//  单例 `@MainActor class: observable reference type`,与项目其他 Manager
 //  (HealthKitManager / PlantManager) 风格保持一致。
 //
 //  Created for LLM BYOK integration (2026-07-11).
@@ -15,7 +15,6 @@
 
 import Foundation
 import os
-import Combine
 
 // MARK: - LLM Client
 
@@ -107,11 +106,12 @@ nonisolated struct LLMCallDebugInfo: Equatable, Sendable {
 /// - `stream(...)` 中 `onDelta` 接收**到目前为止的完整文本**(不是增量),
 ///   方便 UI 端直接存进 `AsyncStream` 给 `StreamedMarkdownView`。
 @MainActor
-final class LLMClient: ObservableObject, @unchecked Sendable {
+@Observable
+final class LLMClient: @unchecked Sendable {
     // `@unchecked Sendable`:nonisolated 方法(buildBody/effectiveSystem/buildURL)不访问可变状态,
-    // 仅 @Published 属性(lastCallInfo/recentCalls)需要 MainActor,它们仍在 MainActor 方法中访问。
+    // 仅 observable 属性(lastCallInfo/recentCalls)需要 MainActor,它们仍在 MainActor 方法中访问。
     // `@unchecked Sendable`: nonisolated methods (buildBody/effectiveSystem/buildURL) access no
-    // mutable state; only the @Published properties (lastCallInfo/recentCalls) require MainActor,
+    // mutable state; only the observable properties (lastCallInfo/recentCalls) require MainActor,
     // and they are still touched only from MainActor methods (recordCall).
     static let shared = LLMClient()
 
@@ -122,10 +122,10 @@ final class LLMClient: ObservableObject, @unchecked Sendable {
 
     /// 最近一次调用的调试信息(给 LLMDebugSheet 显示)。每次 complete / stream 都会更新。
     /// Most-recent call's debug info. Updated on every complete / stream.
-    @Published private(set) var lastCallInfo: LLMCallDebugInfo? = nil
+    private(set) var lastCallInfo: LLMCallDebugInfo? = nil
     /// 最近的若干条调用历史(最多保留 20 条,新调用 push 到末尾)。
     /// Recent call history (newest last, capped at 20).
-    @Published private(set) var recentCalls: [LLMCallDebugInfo] = []
+    private(set) var recentCalls: [LLMCallDebugInfo] = []
     private let recentCallsLimit = 20  // 防止 LLM Debug 面板无限增长
 
     private init(session: URLSession? = nil) {

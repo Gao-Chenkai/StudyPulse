@@ -32,8 +32,8 @@ import SwiftUI
 /// The card observes `HealthKitManager.shared.bodyStatus` and refreshes suggestions
 /// when the body status changes.
 struct StudySuggestionsCard: View {
-    @ObservedObject var viewModel: HomeViewModel
-    @EnvironmentObject private var healthManager: HealthKitManager
+    @Bindable var viewModel: HomeViewModel
+    @Environment(HealthKitManager.self) private var healthManager: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
 
     /// 本地建议(由 `HomeViewModel.generateSuggestions` 产生,作为 fallback)

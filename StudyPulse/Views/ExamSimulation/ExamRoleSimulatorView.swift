@@ -1,20 +1,17 @@
 import SwiftUI
-import Combine
 import SwiftStreamingMarkdown
 
 struct ExamRoleSimulatorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var viewModel: ExamSimulationViewModel
+    @State private var viewModel: ExamSimulationViewModel
     @State private var selectedSubject = ""
     @State private var topic = ""
     @State private var showingExitConfirmation = false
     @State private var showingSubmitConfirmation = false
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: ExamSimulationViewModel(container: container))
+        _viewModel = State(initialValue: ExamSimulationViewModel(container: container))
     }
 
     var body: some View {
@@ -67,9 +64,13 @@ struct ExamRoleSimulatorView: View {
                 selectedSubject = viewModel.subjects.first?.name ?? ""
             }
         }
-        .onReceive(timer) { now in
-            if viewModel.tick(now: now) {
-                Task { await viewModel.submit(timedOut: true, now: now) }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                let now = Date()
+                if viewModel.tick(now: now) {
+                    await viewModel.submit(timedOut: true, now: now)
+                }
             }
         }
         .onChange(of: scenePhase) { _, newValue in

@@ -1,7 +1,8 @@
-import XCTest
+import Testing
 @testable import StudyPulse
 
-final class MistakeImageRecognitionLLMTests: XCTestCase {
+struct MistakeImageRecognitionLLMTests {
+    @Test
     func testParsesJSONWrappedInCodeFence() throws {
         let raw = """
         ```json
@@ -11,17 +12,21 @@ final class MistakeImageRecognitionLLMTests: XCTestCase {
 
         let result = try MistakeImageRecognitionLLM.parseResponse(raw)
 
-        XCTAssertEqual(result.question, "解 $x^2=1$")
-        XCTAssertEqual(result.wrongSolution, "$x=1$")
-        XCTAssertTrue(result.correctSolution.contains("\\pm"))
+        #expect(result.question == "解 $x^2=1$")
+        #expect(result.wrongSolution == "$x=1$")
+        #expect(result.correctSolution.contains("\\pm"))
     }
 
+    @Test
     func testRejectsMissingRequiredContent() {
         let raw = #"{"question":"题目","errorReason":"","wrongSolution":"","correctSolution":""}"#
 
-        XCTAssertThrowsError(try MistakeImageRecognitionLLM.parseResponse(raw))
+        #expect(throws: (any Error).self) {
+            try MistakeImageRecognitionLLM.parseResponse(raw)
+        }
     }
 
+    @Test
     func testRepairsUnescapedLatexBackslashes() throws {
         let raw = #"""
         {"question":"求 $\frac{1}{2}$","errorReason":"计算错误","wrongSolution":"","correctSolution":"第一步
@@ -30,7 +35,7 @@ final class MistakeImageRecognitionLLMTests: XCTestCase {
 
         let result = try MistakeImageRecognitionLLM.parseResponse(raw)
 
-        XCTAssertEqual(result.question, #"求 $\frac{1}{2}$"#)
-        XCTAssertEqual(result.correctSolution, "第一步\n" + #"答案是 $\sqrt{2}$"#)
+        #expect(result.question == #"求 $\frac{1}{2}$"#)
+        #expect(result.correctSolution == "第一步\n" + #"答案是 $\sqrt{2}$"#)
     }
 }

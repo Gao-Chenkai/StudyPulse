@@ -7,9 +7,9 @@ struct ExamAutopsyView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     let exam: Exam
-    @StateObject private var vm: ExamAutopsyViewModel
+    @State private var vm: ExamAutopsyViewModel
 
-    init(exam: Exam, container: RepositoryContainer) { self.exam = exam; _vm = StateObject(wrappedValue: ExamAutopsyViewModel(exam: exam, container: container)) }
+    init(exam: Exam, container: RepositoryContainer) { self.exam = exam; _vm = State(initialValue: ExamAutopsyViewModel(exam: exam, container: container)) }
 
     var body: some View {
         ScrollView {

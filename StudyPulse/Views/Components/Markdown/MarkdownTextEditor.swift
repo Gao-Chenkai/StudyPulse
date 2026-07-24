@@ -52,10 +52,11 @@ struct MarkdownTextEditor: UIViewRepresentable {
         let host = UIHostingController(rootView: toolbar)
         host.view.backgroundColor = .clear
         host.view.translatesAutoresizingMaskIntoConstraints = true
+        host.view.autoresizingMask = [.flexibleWidth]
         host.view.frame = CGRect(
             x: 0,
             y: 0,
-            width: UIScreen.main.bounds.width,
+            width: max(view.bounds.width, 320),
             height: 60
         )
         view.inputAccessoryView = host.view

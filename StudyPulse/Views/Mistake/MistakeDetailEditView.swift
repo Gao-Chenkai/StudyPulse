@@ -27,11 +27,11 @@ struct MistakeDetailEditView: View {
     /// 内部 ViewModel,封装了"view / edit 切换 + draft 状态 + 保存"逻辑
     /// Internal view model encapsulating the view/edit toggle,
     /// draft state and save logic.
-    @StateObject private var viewModel: MistakeDetailEditViewModel
+    @State private var viewModel: MistakeDetailEditViewModel
 
     init(container: RepositoryContainer, mistakeSet: MistakeNote, usesInternalNavigationStack: Bool = true) {
         self.usesInternalNavigationStack = usesInternalNavigationStack
-        self._viewModel = StateObject(wrappedValue: MistakeDetailEditViewModel(container: container, mistakeSet: mistakeSet))
+        self._viewModel = State(initialValue: MistakeDetailEditViewModel(container: container, mistakeSet: mistakeSet))
     }
 
     /// 当前设备是否为 iPad

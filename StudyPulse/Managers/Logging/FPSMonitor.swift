@@ -11,21 +11,21 @@
 
 import Foundation
 import QuartzCore
-import Combine
 
 /// 实时 FPS 监测器。
 ///
 /// 维护最近 60 帧的 timestamp 数组，rolling 计算出最近 1 秒内的实际帧数。
 /// `currentFPS` 为 0 表示尚未开始采样（冷启动期）。
 @MainActor
-final class FPSMonitor: ObservableObject {
+@Observable
+final class FPSMonitor {
     static let shared = FPSMonitor()
 
     /// 最近 1 秒的滚动平均 FPS
-    @Published private(set) var currentFPS: Double = 0
+    private(set) var currentFPS: Double = 0
 
     /// 最近 120 帧的帧间隔（毫秒），供 PerformancePanel 画图
-    @Published private(set) var recentFrameIntervalsMs: [Double] = []
+    private(set) var recentFrameIntervalsMs: [Double] = []
 
     private let maxSamples = 60        // 60 帧 = 1 秒 @ 60Hz;窗口越长越平滑,但冷启动期偏长
     private let maxHistory = 120       // Performance Panel 折线图最近帧间隔缓存长度

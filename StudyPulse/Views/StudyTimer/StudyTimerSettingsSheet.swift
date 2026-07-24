@@ -14,8 +14,8 @@ import os
 /// Idle / setup body shown before a Pomodoro session starts. Owns the
 /// preset selection and custom minute state.
 struct StudyTimerSetupSheet: View {
-    @ObservedObject var timer: StudyTimerManager
-    @ObservedObject var hrv: HealthKitManager
+    @Bindable var timer: StudyTimerManager
+    @Bindable var hrv: HealthKitManager
 
     /// Currently selected animation (drives the start button + presets).
     let animation: TimerAnimation

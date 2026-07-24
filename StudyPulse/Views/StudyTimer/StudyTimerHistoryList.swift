@@ -14,7 +14,7 @@ import os
 
 /// Full history list: today's totals + last N sessions grouped by day.
 struct StudyTimerHistoryList: View {
-    @ObservedObject var timer: StudyTimerManager
+    @Bindable var timer: StudyTimerManager
 
     /// Maximum number of recent sessions to display. Defaults to 20.
     var maxSessions: Int = 20
@@ -203,7 +203,7 @@ struct StudyTimerHistoryList: View {
 /// Compact one-line summary used at the bottom of the setup sheet so the
 /// user can see today's focus and total completed sessions at a glance.
 struct HistorySummaryInline: View {
-    @EnvironmentObject private var timer: StudyTimerManager
+    @Environment(StudyTimerManager.self) private var timer: StudyTimerManager
     @State private var showFullHistory = false
 
     var body: some View {

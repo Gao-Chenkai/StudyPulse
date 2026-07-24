@@ -40,12 +40,12 @@ class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
 struct StudyPulseApp: App {
     @State private var container: RepositoryContainer = RepositoryContainer()
     @State private var storeLaunchController = PersistentStoreLaunchController()
-    @StateObject private var hrvManager = HealthKitManager.shared
-    @StateObject private var timerManager = StudyTimerManager.shared
-    @StateObject private var achievementManager = AchievementManager.shared
-    @StateObject private var llmClient = LLMClient.shared
+    @State private var hrvManager = HealthKitManager.shared
+    @State private var timerManager = StudyTimerManager.shared
+    @State private var achievementManager = AchievementManager.shared
+    @State private var llmClient = LLMClient.shared
     #if DEBUG
-    @StateObject private var fpsMonitor = FPSMonitor.shared
+    @State private var fpsMonitor = FPSMonitor.shared
     #endif
     @Environment(\.scenePhase) private var scenePhase
     @State private var routineSpawner: RoutineSpawner?
@@ -92,12 +92,12 @@ struct StudyPulseApp: App {
         WindowGroup {
             launchContent
                 .environment(container)
-                .environmentObject(hrvManager)
-                .environmentObject(timerManager)
-                .environmentObject(achievementManager)
-                .environmentObject(llmClient)
+                .environment(hrvManager)
+                .environment(timerManager)
+                .environment(achievementManager)
+                .environment(llmClient)
                 #if DEBUG
-                .environmentObject(fpsMonitor)
+                .environment(fpsMonitor)
                 #endif
                 .preferredColorScheme(container.envManager.effectiveColorScheme)
                 .task {

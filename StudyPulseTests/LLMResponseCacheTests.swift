@@ -1,26 +1,28 @@
-import XCTest
+import Testing
 @testable import StudyPulse
 
-final class LLMResponseCacheTests: XCTestCase {
+struct LLMResponseCacheTests {
+    @Test
     func testClearRemovesCachedResponseAndResetsCount() {
         let cache = LLMResponseCache()
         let prompt = LLMPrompt(system: "system", messages: [.user("question")])
 
         cache.set(caller: "test", prompt: prompt, config: .empty, response: "answer")
-        XCTAssertEqual(cache.entryCount, 1)
-        XCTAssertEqual(cache.get(caller: "test", prompt: prompt, config: .empty), "answer")
+        #expect(cache.entryCount == 1)
+        #expect(cache.get(caller: "test", prompt: prompt, config: .empty) == "answer")
 
         cache.clear()
 
-        XCTAssertEqual(cache.entryCount, 0)
-        XCTAssertNil(cache.get(caller: "test", prompt: prompt, config: .empty))
+        #expect(cache.entryCount == 0)
+        #expect(cache.get(caller: "test", prompt: prompt, config: .empty) == nil)
     }
 
+    @Test
     func testExpiredEntriesAreNotCounted() {
         let cache = LLMResponseCache(ttl: -1)
         let prompt = LLMPrompt(system: "system", messages: [.user("question")])
         cache.set(caller: "test", prompt: prompt, config: .empty, response: "answer")
 
-        XCTAssertEqual(cache.entryCount, 0)
+        #expect(cache.entryCount == 0)
     }
 }

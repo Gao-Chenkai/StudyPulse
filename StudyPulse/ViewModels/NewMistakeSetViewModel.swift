@@ -12,52 +12,52 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import UIKit
 import os
 import AVFoundation
 
 @MainActor
-final class NewMistakeSetViewModel: ObservableObject {
+@Observable
+final class NewMistakeSetViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
     // MARK: - 表单状态 / Form state
-    @Published var editedTitle = ""
-    @Published var selectedSubject = ""
-    @Published var editedOriginalQuestion = ""
-    @Published var editedSource = ""
-    @Published var editedErrorReason = ""
-    @Published var editedWrongSolution = ""
-    @Published var editedCorrectSolution = ""
-    @Published var editedDate = Date()
-    @Published var editedDifficulty = 0
-    @Published var editedTags: [String] = []
+    var editedTitle = ""
+    var selectedSubject = ""
+    var editedOriginalQuestion = ""
+    var editedSource = ""
+    var editedErrorReason = ""
+    var editedWrongSolution = ""
+    var editedCorrectSolution = ""
+    var editedDate = Date()
+    var editedDifficulty = 0
+    var editedTags: [String] = []
 
     /// 当前正在编辑的分区 / The section currently being edited.
-    @Published var selectedSection: EditSection = .question
+    var selectedSection: EditSection = .question
 
     // MARK: - 图片状态 / Image state
     // 持有 Data 而非 UIImage,避免主线程同步解码大图。
     // Hold `Data` instead of `UIImage` to avoid synchronous full-image decode on the main thread.
-    @Published var questionImagesData: [Data] = []
-    @Published var reasonImagesData: [Data] = []
-    @Published var wrongSolutionImagesData: [Data] = []
-    @Published var correctSolutionImagesData: [Data] = []
+    var questionImagesData: [Data] = []
+    var reasonImagesData: [Data] = []
+    var wrongSolutionImagesData: [Data] = []
+    var correctSolutionImagesData: [Data] = []
 
     // MARK: - OCR & 弹窗状态 / OCR & sheet state
-    @Published var imagePickerRoute: ImagePickerRoute?
-    @Published var showingHandwritingSheet = false
-    @Published var isProcessingOCR = false
-    @Published var showingOCRAlert = false
-    @Published var ocrErrorMessage = ""
-    @Published private(set) var aiPhotoRecognitionState: AIPhotoRecognitionState = .idle
-    @Published var showingAIPhotoRecognitionError = false
-    @Published var aiPhotoRecognitionErrorMessage = ""
-    @Published var showingCameraAccessError = false
-    @Published var cameraAccessErrorMessage = ""
+    var imagePickerRoute: ImagePickerRoute?
+    var showingHandwritingSheet = false
+    var isProcessingOCR = false
+    var showingOCRAlert = false
+    var ocrErrorMessage = ""
+    private(set) var aiPhotoRecognitionState: AIPhotoRecognitionState = .idle
+    var showingAIPhotoRecognitionError = false
+    var aiPhotoRecognitionErrorMessage = ""
+    var showingCameraAccessError = false
+    var cameraAccessErrorMessage = ""
     /// 新建错题是否直接加入复习队列 / Join the review queue immediately?
-    @Published var reviewEnabled = true
+    var reviewEnabled = true
 
     private var aiRecognitionTask: Task<Void, Never>?
     private var lastAIImageData: Data?

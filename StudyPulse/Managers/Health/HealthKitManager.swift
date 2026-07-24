@@ -8,7 +8,6 @@
 //
 import Foundation
 import HealthKit
-import Combine
 import os
 
 // MARK: - HRV Readiness Result
@@ -121,43 +120,44 @@ struct BodyStatus: Equatable {
 // MARK: - HealthKit Manager
 // MARK: - HealthKit 管理器 / HealthKit manager
 @MainActor
-final class HealthKitManager: ObservableObject {
+@Observable
+final class HealthKitManager {
     static let shared = HealthKitManager()
     private let _healthStore = HKHealthStore()
     /// 对外只读访问,供 StudyTimerManager 挂载 observer/anchored query。
     /// Read-only access for StudyTimerManager to attach observer/anchored queries.
     var healthStore: HKHealthStore { _healthStore }
 
-    @Published var hrvEnabled: Bool {
+    var hrvEnabled: Bool {
         didSet { UserDefaults.standard.set(hrvEnabled, forKey: "hrv_enabled") }
     }
-    @Published var hrvOnboardingCompleted: Bool {
+    var hrvOnboardingCompleted: Bool {
         didSet { UserDefaults.standard.set(hrvOnboardingCompleted, forKey: "hrv_onboarding_completed") }
     }
 
-    @Published var readiness: HRVReadiness = HRVReadiness(
+    var readiness: HRVReadiness = HRVReadiness(
         zScore: nil, todayHRV: nil, baselineMean: nil,
         baselineSampleCount: 0, category: .insufficient, suggestion: ""
     )
 
     /// Number of raw HealthKit samples found in the latest query (for diagnostics).
     /// 最近一次查询中拿到的原始 HealthKit 样本数（供诊断用）。
-    @Published var lastSampleCount: Int = 0
+    var lastSampleCount: Int = 0
 
     /// Daily HRV values for trend chart (most recent first).
     /// 折线图用的每日 HRV 序列（最新在前）。
-    @Published var dailyHRVHistory: [DailyHRV] = []
+    var dailyHRVHistory: [DailyHRV] = []
 
     /// Controls how much detail the HRV card shows.
     /// 控制 HRV 卡片显示的细节级别。
-    @Published var hrvDetailLevel: HRVDetailLevel {
+    var hrvDetailLevel: HRVDetailLevel {
         didSet { UserDefaults.standard.set(hrvDetailLevel.rawValue, forKey: "hrv_detail_level") }
     }
 
     /// Latest snapshot of heart rate, breathing, last-night sleep,
     /// and today's exercise. Used by `StudySuggestionsCard` and the
     /// recovery-radar card to tailor study suggestions.
-    @Published var bodyStatus: BodyStatus = BodyStatus(
+    var bodyStatus: BodyStatus = BodyStatus(
         restingHeartRate: nil,
         latestHeartRate: nil,
         respiratoryRate: nil,
@@ -173,18 +173,18 @@ final class HealthKitManager: ObservableObject {
     /// new daily snapshot is recorded. Used by the readiness
     /// algorithm to calibrate scores against the user's own history
     /// rather than just the population average.
-    @Published var personalBaselines: PersonalBaselines = .empty
+    var personalBaselines: PersonalBaselines = .empty
 
     /// True when HealthKit has granted read access for the body-status
     /// types (heart rate, respiratory rate, sleep).
-    @Published var bodyStatusAuthorized: Bool = false
+    var bodyStatusAuthorized: Bool = false
 
     /// 启动期 bootstrap 阶段标志。true 表示后台仍在跑 14 天 HRV 查询 +
     /// PersonalBaselines 重算，UI 应显示 Loading 占位。
     /// Bootstrap phase flag. While `true`, the background task is still
     /// running the 14-day HRV query and PersonalBaselines recompute,
     /// so the UI should show a Loading placeholder.
-    @Published var isHealthBootstrapping: Bool = false
+    var isHealthBootstrapping: Bool = false
 
     /// HRV 增量查询水位：上一次成功执行的 `refreshReadiness` 截止时间。
     /// 下一次 `refreshReadiness` 只查询 `[lastHRVQueryEndDate, now]`
@@ -193,13 +193,13 @@ final class HealthKitManager: ObservableObject {
     /// successful `refreshReadiness`. Subsequent calls only fetch
     /// samples in `[lastHRVQueryEndDate, now]`, avoiding a full
     /// 14-day pull on every refresh.
-    @Published var lastHRVQueryEndDate: Date? {
+    var lastHRVQueryEndDate: Date? {
         didSet { UserDefaults.standard.set(lastHRVQueryEndDate, forKey: "hrv_last_query_end_date") }
     }
 
 
     var isHealthKitAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
-    @Published var isAuthorized: Bool = false
+    var isAuthorized: Bool = false
 
     /// All HealthKit types we read from. Authorizing once covers HRV
     /// and the body status types together.
@@ -263,8 +263,7 @@ final class HealthKitManager: ObservableObject {
     ///     `.loading` 占位，让 UI 立即显示 Loading 并返回，不阻塞主线程。
     ///  2) **后台补全**：派生一个独立 Task 跑 `runBootstrapBackground()`，
     ///     完成 14 天 HRV 查询 + 30 天基线重算，结束时把
-    ///     `isHealthBootstrapping` 置 false 并显式 `objectWillChange.send()`
-    ///     触发一次刷新。
+    ///     `isHealthBootstrapping` 置 false，由 Observation 自动触发相关刷新。
     /// Called on launch: only after the main data is ready, request HK auth and refresh data.
     /// Two-phase bootstrap:
     ///  1) Cache + placeholder: check auth; if HRV isn't enabled/onboarded
@@ -274,8 +273,7 @@ final class HealthKitManager: ObservableObject {
     ///  2) Background completion: spawn a detached task that runs
     ///     `runBootstrapBackground()` (14-day HRV query + 30-day
     ///     PersonalBaselines recompute), then flips the bootstrap flag
-    ///     off and explicitly calls `objectWillChange.send()` for a
-    ///     single UI refresh.
+    ///     off and lets Observation refresh the dependent UI.
     func bootstrap() async {
         Log.healthKit.info("HealthKit bootstrap 开始 / start (two-phase)")
         // 后台加载 30 天 history + 计算 PersonalBaselines(原 init 同步执行,现已移至此处)。
@@ -317,7 +315,7 @@ final class HealthKitManager: ObservableObject {
         // 内部 `await` 的 HK 查询是异步挂起的，不会阻塞主线程。
         // Spawn a Task for the background work. The HK queries inside
         // are async-suspending and run off the main thread; only the
-        // final @Published assignments briefly hop back to main.
+        // final observable assignments briefly hop back to main.
         Task { [weak self] in
             await self?.runBootstrapBackground()
         }
@@ -325,16 +323,15 @@ final class HealthKitManager: ObservableObject {
 
     /// Bootstrap 第二阶段：跑 HRV 增量查询 + body status 刷新 +
     /// PersonalBaselines 后台重算，结束后翻 `isHealthBootstrapping`
-    /// 标志位并显式 `objectWillChange.send()` 触发单次 UI 刷新。
+    /// 标志位；Observation 会自动刷新读取了相关状态的 UI。
     /// Bootstrap phase 2: incremental HRV query, body status refresh,
     /// PersonalBaselines recompute. Flips the bootstrap flag off and
-    /// sends a single `objectWillChange` for one UI refresh.
+    /// lets Observation refresh the UI state automatically.
     private func runBootstrapBackground() async {
         Log.healthKit.info("HealthKit bootstrap phase2 开始 / phase2 start")
         await refreshReadiness()
         await refreshBodyStatus()
         isHealthBootstrapping = false
-        objectWillChange.send()
         Log.healthKit.info("HealthKit bootstrap phase2 完成 / phase2 done; category=\(self.readiness.category.rawValue, privacy: .public) isUsable=\(self.bodyStatus.isUsable, privacy: .public)")
     }
 
@@ -634,14 +631,14 @@ final class HealthKitManager: ObservableObject {
     ///  3) `recordTodaySnapshotAsync` 把今日 snapshot 写入
     ///     `~/Documents/health_history.json` 并在后台线程上重算
     ///     `PersonalBaselines`（CPU 密集），完事再回主 Actor 写
-    ///     `personalBaselines` @Published 触发单次刷新。
+    ///     `personalBaselines` observable 触发单次刷新。
     ///
     /// Flow:
     ///  1) Fire 5 parallel HK queries (async let — non-blocking).
     ///  2) Publish `bodyStatus` immediately so the UI wakes up.
     ///  3) `recordTodaySnapshotAsync` writes today's snapshot to
     ///     health_history.json and recomputes `PersonalBaselines` on
-    ///     a background queue (CPU-bound), then assigns the @Published
+    ///     a background queue (CPU-bound), then assigns the observable
     ///     on the main actor to trigger a single UI refresh.
     func refreshBodyStatus() async {
         guard hrvEnabled, isAuthorized else {
@@ -693,7 +690,7 @@ final class HealthKitManager: ObservableObject {
     /// Snapshot recording + 30-day baseline recompute, run on a
     /// background queue. Writes the merged history file and assigns
     /// the resulting `personalBaselines` back on the main actor so
-    /// SwiftUI gets a single `objectWillChange` pulse.
+    /// Observation refreshes dependent SwiftUI views.
     private func recordTodaySnapshotAsync(bodyStatus bs: BodyStatus, todayHRV: Double?) {
         guard bs.isUsable || todayHRV != nil else { return }
         let snapshot = DailyHealthSnapshot(

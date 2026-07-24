@@ -6,25 +6,25 @@
 //
 
 import Foundation
-import Combine
 import AVFoundation
 import os
 
 /// Manages recording and playback of voice memos.
 /// 管理语音备忘录的录音与播放。
 @MainActor
-final class VoiceMemoManager: NSObject, ObservableObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
+@Observable
+final class VoiceMemoManager: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
 
     private let logger = Logger(subsystem: "com.chenkai.gao.studypulse", category: "VoiceMemoManager")
 
-    @Published var isRecording = false
-    @Published var isPlaying = false
-    @Published var isPaused = false
+    var isRecording = false
+    var isPlaying = false
+    var isPaused = false
 
-    @Published var currentTime: TimeInterval = 0.0
-    @Published var duration: TimeInterval = 0.0
+    var currentTime: TimeInterval = 0.0
+    var duration: TimeInterval = 0.0
 
-    @Published var hasPermission = false
+    var hasPermission = false
 
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
@@ -48,7 +48,7 @@ final class VoiceMemoManager: NSObject, ObservableObject, AVAudioRecorderDelegat
             self.hasPermission = false
         case .undetermined:
             AVAudioApplication.requestRecordPermission { [weak self] allowed in
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self?.hasPermission = allowed
                 }
             }

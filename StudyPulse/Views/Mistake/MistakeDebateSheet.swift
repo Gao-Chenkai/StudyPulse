@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 /// 错题“辩论”模式：AI 先发起质疑，学生逐轮为解法辩护。
 struct MistakeDebateSheet: View {
@@ -7,7 +6,7 @@ struct MistakeDebateSheet: View {
     let onDismiss: () -> Void
 
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var viewModel = MistakeDebateViewModel()
+    @State private var viewModel = MistakeDebateViewModel()
     @State private var inputText = ""
     @State private var difficulty: MistakeDebateDifficulty = .gentle
 
@@ -146,7 +145,8 @@ struct MistakeDebateSheet: View {
 }
 
 @MainActor
-final class MistakeDebateViewModel: ObservableObject {
+@Observable
+final class MistakeDebateViewModel {
     struct Message: Identifiable {
         let id = UUID()
         let role: LLMRole
@@ -155,9 +155,9 @@ final class MistakeDebateViewModel: ObservableObject {
         var error: String?
     }
 
-    @Published private(set) var messages: [Message] = []
-    @Published private(set) var isStreaming = false
-    @Published private(set) var hasStarted = false
+    private(set) var messages: [Message] = []
+    private(set) var isStreaming = false
+    private(set) var hasStarted = false
     private var history: [LLMMessage] = []
     private var context = ""
     private var task: Task<Void, Never>?

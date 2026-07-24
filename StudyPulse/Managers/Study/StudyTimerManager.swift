@@ -1,6 +1,5 @@
 
 @preconcurrency import ActivityKit
-import Combine
 import Foundation
 import HealthKit
 import os
@@ -49,33 +48,34 @@ enum TimerState: Equatable {
 ///   peak → 50 min, deepFocus → 45 min, steady → 35 min,
 ///   light → 25 min, recovery → 20 min.
 @MainActor
-final class StudyTimerManager: ObservableObject {
+@Observable
+final class StudyTimerManager {
     static let shared = StudyTimerManager()
 
     // MARK: - Published state
 
-    @Published var timerState: TimerState = .idle
-    @Published var remainingSeconds: Int = 0
-    @Published var totalSeconds: Int = 0
-    @Published var currentIntensity: StudySession.SessionIntensity?
-    @Published var sessions: [StudySession] = []
+    var timerState: TimerState = .idle
+    var remainingSeconds: Int = 0
+    var totalSeconds: Int = 0
+    var currentIntensity: StudySession.SessionIntensity?
+    var sessions: [StudySession] = []
 
     /// The current algorithm recommendation — read by the View layer
     /// to show the suggested intensity before the user starts.
-    @Published var recommendedIntensity: StudyIntensity = .steady
+    var recommendedIntensity: StudyIntensity = .steady
 
     // MARK: - Heart-rate streaming state (Apple Watch real-time HR)
 
     /// 最新心率(Apple Watch 通过 HealthKit 写入,UI 实时显示)
     /// Latest heart rate from Apple Watch via HealthKit (for live UI).
-    @Published var currentHeartRate: Double?
+    var currentHeartRate: Double?
     /// 已采集心率样本数(UI 提示稀疏度)
     /// Number of HR samples collected so far (UI density hint).
-    @Published var heartRateSampleCount: Int = 0
+    var heartRateSampleCount: Int = 0
     /// 心率采集是否已启动(observer 已挂载)。UI 据此区分「未授权」vs「等待数据」。
     /// Whether HR streaming is actually active (observer mounted). UI uses this
     /// to distinguish "not authorized / disabled" from "waiting for first sample".
-    @Published var hrStreamingActive: Bool = false
+    var hrStreamingActive: Bool = false
 
     /// 会话期间内存缓存的心率样本,complete() 时写入 StudySession
     /// In-memory HR sample buffer; flushed into StudySession on complete().
@@ -218,8 +218,8 @@ final class StudyTimerManager: ObservableObject {
         resetHeartRateBuffer()
     }
 
-    /// 重新从磁盘加载会话列表(标注更新后同步 @Published)
-    /// Reload sessions from disk (sync @Published after annotation updates).
+    /// 重新从磁盘加载会话列表(标注更新后同步 observable)
+    /// Reload sessions from disk (sync observable after annotation updates).
     func refreshSessions() {
         sessions = StudySessionStore.load()
     }

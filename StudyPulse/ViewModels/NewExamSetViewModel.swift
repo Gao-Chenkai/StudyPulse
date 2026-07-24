@@ -11,7 +11,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 /// 综合考试中某科目的时间段(可被多次编辑)
 /// Per-subject time slot inside a comprehensive exam (editable).
@@ -34,33 +33,34 @@ struct SubjectTimeEntry: Identifiable, Equatable {
 }
 
 @MainActor
-final class NewExamSetViewModel: ObservableObject {
+@Observable
+final class NewExamSetViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
     // MARK: - 表单状态 / Form state
-    @Published var name = ""
-    @Published var selectedSubject = "Mathematics"
-    @Published var isComprehensiveExam = false
+    var name = ""
+    var selectedSubject = "Mathematics"
+    var isComprehensiveExam = false
     /// 考试开始日期(综合考试时作为"考试周"首日)
     /// Exam start date (or first day of an "exam week").
-    @Published var examDate: Date = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    var examDate: Date = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     /// 综合考试结束日期(单科时无意义) / End date (unused for single-subject).
-    @Published var examEndDate: Date = Calendar.current.date(byAdding: .day, value: 3, to: Calendar.current.startOfDay(for: Date())) ?? Date()
-    @Published var importance = 3
-    @Published var masteryDegree = 50
-    @Published var examNote = ""
+    var examEndDate: Date = Calendar.current.date(byAdding: .day, value: 3, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    var importance = 3
+    var masteryDegree = 50
+    var examNote = ""
 
     // MARK: - 日历 & 弹窗 / Calendar & alert state
     /// 是否同时把这次考试加到系统日历 / Also add to system Calendar?
-    @Published var addToCalendarToggle = true
-    @Published var showingCalendarAlert = false
-    @Published var calendarAlertMessage = ""
+    var addToCalendarToggle = true
+    var showingCalendarAlert = false
+    var calendarAlertMessage = ""
 
     // MARK: - 科目选择 / Subject selection
-    @Published var selectedSingleSubject = ""
-    @Published var selectedMultipleSubjects: [String] = []
-    @Published var subjectTimeEntries: [SubjectTimeEntry] = []
+    var selectedSingleSubject = ""
+    var selectedMultipleSubjects: [String] = []
+    var subjectTimeEntries: [SubjectTimeEntry] = []
 
     // MARK: - 初始化 / Initialization
     /// 默认选中第一个可用科目 / Pre-selects the first available subject.
@@ -150,8 +150,8 @@ final class NewExamSetViewModel: ObservableObject {
 
     /// 保存考试:创建 Exam / comprehensiveExam,可选择地写入系统日历
     /// Persist the exam; optionally write to system Calendar.
-    func saveExam(onSuccess: @escaping () -> Void) async {
-        guard !name.isEmpty else { return }
+    func saveExam() async -> Bool {
+        guard !name.isEmpty else { return false }
 
         // 安排备考通知 / Schedule exam-prep notifications.
         ExamPrepareNotifications.shared.scheduleNotifications(for: name, date: examDate)
@@ -192,12 +192,10 @@ final class NewExamSetViewModel: ObservableObject {
                     calendarAlertMessage = error.localizedDescription
                     showingCalendarAlert = true
                 }
-            } else {
-                onSuccess()
             }
 
         } else {
-            guard !selectedSingleSubject.isEmpty else { return }
+            guard !selectedSingleSubject.isEmpty else { return false }
 
             var timeSlot: ExamTimeSlot? = nil
             if addToCalendarToggle, let entry = subjectTimeEntries.first {
@@ -245,9 +243,8 @@ final class NewExamSetViewModel: ObservableObject {
                     calendarAlertMessage = error.localizedDescription
                     showingCalendarAlert = true
                 }
-            } else {
-                onSuccess()
             }
         }
+        return !showingCalendarAlert
     }
 }

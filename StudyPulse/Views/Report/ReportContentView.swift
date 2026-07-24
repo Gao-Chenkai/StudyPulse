@@ -4,7 +4,7 @@
 //
 //  Self-contained SwiftUI view that draws the "Learning Report".
 //  Receives an immutable `StudyReport` snapshot, so it has no
-//  dependencies on `@EnvironmentObject` and renders cleanly through
+//  dependencies on `environment-injected observable` and renders cleanly through
 //  `ImageRenderer`.
 //
 

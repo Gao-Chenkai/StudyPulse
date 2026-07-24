@@ -1,8 +1,8 @@
 import Foundation
-import Combine
 
 @MainActor
-final class BackupRestoreViewModel: ObservableObject {
+@Observable
+final class BackupRestoreViewModel {
     enum Operation: Equatable {
         case idle
         case exporting
@@ -10,19 +10,19 @@ final class BackupRestoreViewModel: ObservableObject {
         case restoring
     }
 
-    @Published var includesMedia = true
-    @Published var includesDerivedHealthData = false
-    @Published var operation: Operation = .idle
-    @Published var progress: Double = 0
-    @Published var exportDocument: BackupDocument?
-    @Published var exportFilename = "StudyPulse.studypulsebackup"
-    @Published var validatedBackup: ValidatedBackup?
-    @Published var restoreMode: BackupRestoreMode = .replace
-    @Published var message: String?
-    @Published var errorMessage: String?
-    @Published var showExporter = false
-    @Published var showImporter = false
-    @Published var showRestoreConfirmation = false
+    var includesMedia = true
+    var includesDerivedHealthData = false
+    var operation: Operation = .idle
+    var progress: Double = 0
+    var exportDocument: BackupDocument?
+    var exportFilename = "StudyPulse.studypulsebackup"
+    var validatedBackup: ValidatedBackup?
+    var restoreMode: BackupRestoreMode = .replace
+    var message: String?
+    var errorMessage: String?
+    var showExporter = false
+    var showImporter = false
+    var showRestoreConfirmation = false
 
     var lastBackupAt: Date? {
         UserDefaults.standard.object(forKey: "studyPulse.lastFullBackupAt") as? Date

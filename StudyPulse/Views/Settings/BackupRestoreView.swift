@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 struct BackupRestoreView: View {
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var viewModel = BackupRestoreViewModel()
+    @State private var viewModel = BackupRestoreViewModel()
     @State private var importPurpose: ImportPurpose = .restore
 
     private enum ImportPurpose { case restore, validate }

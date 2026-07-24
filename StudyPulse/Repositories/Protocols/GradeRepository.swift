@@ -29,7 +29,7 @@ protocol GradeRepository: AnyObject, Sendable {
     // MARK: - Lifecycle
     // MARK: - 生命周期 / Lifecycle
 
-    /// 从 ModelContext 加载所有 GradeRecord 到 @Published 数组
+    /// 从 ModelContext 加载所有 GradeRecord 到 observable 数组
     /// Load all `GradeRecord` from the ModelContext into the published array.
     func loadAll(context: ModelContext) async
     /// 仅重读 grades(用于 imageFileName 更新后刷新)

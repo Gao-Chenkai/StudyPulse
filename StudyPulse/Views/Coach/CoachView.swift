@@ -3,7 +3,7 @@ import SwiftUI
 struct CoachView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var viewModel: CoachViewModel
+    @State private var viewModel: CoachViewModel
     @State private var showingGoalForm = false
     @State private var editingGoal: CoachGoal?
     @State private var openedGoal: CoachGoal?
@@ -14,7 +14,7 @@ struct CoachView: View {
     @State private var showingProposalReview = false
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: CoachViewModel(container: container))
+        _viewModel = State(initialValue: CoachViewModel(container: container))
     }
 
     var body: some View {

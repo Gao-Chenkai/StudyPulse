@@ -27,7 +27,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var flowState: OnboardingFlowState = OnboardingFlowState()
     @State private var showSubjectResetToast = false
-    @State private var toastWorkItem: DispatchWorkItem?
+    @State private var toastTask: Task<Void, Never>?
 
     /// 介绍阶段总页数 = 1（Hero）+ features.count
     private var introPageCount: Int { 1 + config.features.count }
@@ -468,15 +468,15 @@ struct OnboardingView: View {
     // MARK: - Subject reset toast
 
     private func handleSubjectsReset() {
-        toastWorkItem?.cancel()
+        toastTask?.cancel()
         showSubjectResetToast = true
-        let work = DispatchWorkItem {
+        toastTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.25)) {
                 showSubjectResetToast = false
             }
         }
-        toastWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: work)
     }
 
     private var subjectResetToast: some View {

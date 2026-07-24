@@ -24,7 +24,7 @@ import os
 /// 恢复雷达卡:HRV/HR/睡眠/呼吸 4 轴雷达 + 整合学习建议。
 /// Recovery radar card: 4-axis radar (HRV/HR/Sleep/Respiratory) + integrated study suggestion.
 struct HRVStatusCard: View {
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
     @Environment(RepositoryContainer.self) private var container
     @State private var animateIn = false
 

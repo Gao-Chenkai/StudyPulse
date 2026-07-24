@@ -25,7 +25,7 @@ import SwiftUI
 /// DEBUG 模式下面板:展示最近一次 LLM 调用的 URL / Prompt / 思考时间 / 响应。
 /// DEBUG-mode panel showing the most recent LLM call's URL / prompt / thinking time / response.
 struct LLMDebugSheet: View {
-    @EnvironmentObject private var client: LLMClient
+    @Environment(LLMClient.self) private var client: LLMClient
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
 

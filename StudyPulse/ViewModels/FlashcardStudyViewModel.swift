@@ -12,12 +12,12 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import PencilKit
 import os
 
 @MainActor
-final class FlashcardStudyViewModel: ObservableObject {
+@Observable
+final class FlashcardStudyViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
     private let climateHistoryURL: URL?
@@ -26,29 +26,29 @@ final class FlashcardStudyViewModel: ObservableObject {
 
     // MARK: - 输出状态 / Output states
     /// 剩余待复习错题队列 / Remaining mistakes queue.
-    @Published var queue: [FlashcardQueueItem] = []
+    var queue: [FlashcardQueueItem] = []
     /// 当前卡片在 queue 中的索引 / Index of the current card.
-    @Published var currentIndex: Int = 0
+    var currentIndex: Int = 0
     /// 是否翻到答案面 / Flipped to answer side?
-    @Published var isFlipped: Bool = false
+    var isFlipped: Bool = false
     /// 本次会话统计 / Per-session statistics.
-    @Published var stats: FlashcardSessionStats = FlashcardSessionStats()
+    var stats: FlashcardSessionStats = FlashcardSessionStats()
     /// 是否显示总结页 / Show session summary?
-    @Published var showingSummary: Bool = false
+    var showingSummary: Bool = false
     /// "再来一次"重新插入的错题 / Mistakes re-queued for "Again".
-    @Published var reinsertQueue: [FlashcardQueueItem] = []
+    var reinsertQueue: [FlashcardQueueItem] = []
     /// 是否显示计算器 / Show calculator?
-    @Published var showingCalculator: Bool = false
+    var showingCalculator: Bool = false
     /// 是否启用手写板 / Handwriting board enabled?
-    @Published var handwritingEnabled: Bool = false
+    var handwritingEnabled: Bool = false
     /// 当前手写画板 / Current PKDrawing.
-    @Published var currentDrawing: PKDrawing = PKDrawing()
+    var currentDrawing: PKDrawing = PKDrawing()
     /// 本次会话收集的手写 PNG / Handwriting PNGs collected this session.
-    @Published var sessionHandwriting: [UUID: Data] = [:]
+    var sessionHandwriting: [UUID: Data] = [:]
     /// 当前卡片是否已提交手写 / Has the current card's handwriting been submitted?
-    @Published var hasSubmittedCurrent: Bool = false
+    var hasSubmittedCurrent: Bool = false
     /// 是否显示"必须先提交手写"提示 / Show "handwriting required" alert?
-    @Published var showHandwritingRequiredAlert: Bool = false
+    var showHandwritingRequiredAlert: Bool = false
 
     // MARK: - 初始化 / Initialization
     init(
@@ -216,7 +216,9 @@ final class FlashcardStudyViewModel: ObservableObject {
 
         // 50ms 延迟:等翻回正面动画播完再切,避免叠加
         // 50ms delay: finish the "flip back" animation before swapping.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             if self.currentIndex < self.queue.count - 1 {
                 self.currentIndex += 1
             } else {

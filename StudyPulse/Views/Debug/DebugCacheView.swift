@@ -14,7 +14,7 @@ import os
 
 struct DebugCacheView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
 
     // Diagnostics snapshot
     @State private var entityCounts: [(name: String, count: Int)] = []

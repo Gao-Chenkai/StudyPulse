@@ -3,10 +3,10 @@
 //  StudyPulse
 //
 import Foundation
-import Combine
 
 @MainActor
-final class SubjectMistakesViewModel: ObservableObject {
+@Observable
+final class SubjectMistakesViewModel {
     /// 入口传入的错题(View 不持有数据源) / Mistakes injected by parent view.
     let initialMistakes: [MistakeNote]
 

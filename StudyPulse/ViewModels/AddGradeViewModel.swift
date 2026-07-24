@@ -10,32 +10,32 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 @MainActor
-final class AddGradeViewModel: ObservableObject {
+@Observable
+final class AddGradeViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
     // MARK: - 输入/输出状态 / Input & output state
     /// 考试名称 / Exam name
-    @Published var examName: String = ""
+    var examName: String = ""
     /// 考试日期 / Exam date
-    @Published var selectedDate: Date = Date()
+    var selectedDate: Date = Date()
     /// 重要性(影响预测权重) / Importance (affects prediction weight)
-    @Published var importance: Int = 3
+    var importance: Int = 3
     /// 是否综合考试 / Whether this is a comprehensive exam
-    @Published var isComprehensiveExam: Bool = false
+    var isComprehensiveExam: Bool = false
     /// 单科考试时选中的科目 / Selected subject (single-subject exam)
-    @Published var selectedSingleSubject: String = ""
+    var selectedSingleSubject: String = ""
     /// 综合考试时选中的多个科目 / Selected subjects (comprehensive exam)
-    @Published var selectedMultipleSubjects: [String] = []
+    var selectedMultipleSubjects: [String] = []
     /// 各科目的分项成绩 / Per-subject score entries
-    @Published var subjectScores: [SubjectScore] = []
+    var subjectScores: [SubjectScore] = []
     /// 当前关联考试 ID；nil 表示“未归档”（暂不关联考试）
-    @Published var selectedExamID: UUID?
-    @Published var selectedExamIsComprehensive = false
-    @Published var isExamListExpanded = false
+    var selectedExamID: UUID?
+    var selectedExamIsComprehensive = false
+    var isExamListExpanded = false
 
     struct ExamOption: Identifiable, Hashable {
         let id: UUID

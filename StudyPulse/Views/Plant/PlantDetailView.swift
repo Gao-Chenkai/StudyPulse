@@ -11,7 +11,7 @@ struct PlantDetailView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.colorScheme) private var colorScheme
     @State private var plantManager = PlantManager.shared
-    @EnvironmentObject private var achievementManager: AchievementManager
+    @Environment(AchievementManager.self) private var achievementManager: AchievementManager
 
     var body: some View {
         ScrollView {
@@ -204,6 +204,6 @@ struct PlantDetailView: View {
     NavigationStack {
         PlantDetailView()
             .environment(RepositoryContainer())
-            .environmentObject(AchievementManager.shared)
+            .environment(AchievementManager.shared)
     }
 }

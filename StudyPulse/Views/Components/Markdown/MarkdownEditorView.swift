@@ -143,15 +143,21 @@ struct MarkdownEditorView: View {
         // Listen for the `View` menu commands, which post these
         // notifications because there is no binding to pass
         // through `FocusedValue` for view-level state.
-        .onReceive(NotificationCenter.default.publisher(for: .markdownTogglePreview)) { _ in
-            isPreviewVisible.toggle()
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .markdownTogglePreview) {
+                guard !Task.isCancelled else { return }
+                isPreviewVisible.toggle()
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .markdownToggleVerticalLayout)) { _ in
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .markdownToggleVerticalLayout) {
+                guard !Task.isCancelled else { return }
             // 设备已经是 compact 时该切换是空操作(iPhone 上没什么可切)。
             // The toggle is a no-op when the device is already
             // compact — there is nothing to switch to on iPhone.
-            guard hSize == .regular else { return }
-            forceVertical.toggle()
+                guard hSize == .regular else { continue }
+                forceVertical.toggle()
+            }
         }
     }
 

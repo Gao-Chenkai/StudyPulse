@@ -12,11 +12,11 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import UIKit
 
 @MainActor
-final class MistakeDetailEditViewModel: ObservableObject {
+@Observable
+final class MistakeDetailEditViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
     /// 正在编辑的错题(只读引用,改动先存到本地表单)
@@ -24,39 +24,39 @@ final class MistakeDetailEditViewModel: ObservableObject {
     let mistakeSet: MistakeNote
 
     // MARK: - 表单状态 / Form state
-    @Published var editedTitle = ""
-    @Published var selectedSubject = ""
-    @Published var editedOriginalQuestion = ""
-    @Published var editedSource = ""
-    @Published var editedErrorReason = ""
-    @Published var editedWrongSolution = ""
-    @Published var editedCorrectSolution = ""
-    @Published var editedDate = Date()
-    @Published var editedDifficulty = 0
-    @Published var editedTags: [String] = []
-    @Published var audioFileName: String?
+    var editedTitle = ""
+    var selectedSubject = ""
+    var editedOriginalQuestion = ""
+    var editedSource = ""
+    var editedErrorReason = ""
+    var editedWrongSolution = ""
+    var editedCorrectSolution = ""
+    var editedDate = Date()
+    var editedDifficulty = 0
+    var editedTags: [String] = []
+    var audioFileName: String?
 
     /// 当前正在编辑的分区 / The section currently being edited.
-    @Published var selectedSection: EditSection = .question
+    var selectedSection: EditSection = .question
 
     // MARK: - 图片状态 / Image state
     // 持有 Data 而非 UIImage,避免主线程同步解码大图。
     // Hold `Data` instead of `UIImage` to avoid synchronous full-image decode on the main thread.
-    @Published var questionImagesData: [Data] = []
-    @Published var reasonImagesData: [Data] = []
-    @Published var wrongSolutionImagesData: [Data] = []
-    @Published var correctSolutionImagesData: [Data] = []
+    var questionImagesData: [Data] = []
+    var reasonImagesData: [Data] = []
+    var wrongSolutionImagesData: [Data] = []
+    var correctSolutionImagesData: [Data] = []
 
     // MARK: - OCR & 弹窗状态 / OCR & sheet state
-    @Published var showingImagePicker = false
-    @Published var showingPhotoCapture = false
-    @Published var showingHandwritingSheet = false
-    @Published var showingAudioRecordingSheet = false
-    @Published var isProcessingOCR = false
-    @Published var showingOCRAlert = false
-    @Published var ocrErrorMessage = ""
-    @Published var reviewEnabled = false
-    @Published var showingAIAnalysis = false
+    var showingImagePicker = false
+    var showingPhotoCapture = false
+    var showingHandwritingSheet = false
+    var showingAudioRecordingSheet = false
+    var isProcessingOCR = false
+    var showingOCRAlert = false
+    var ocrErrorMessage = ""
+    var reviewEnabled = false
+    var showingAIAnalysis = false
 
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer, mistakeSet: MistakeNote) {

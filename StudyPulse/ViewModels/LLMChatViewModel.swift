@@ -12,10 +12,10 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 @MainActor
-final class LLMChatViewModel: ObservableObject {
+@Observable
+final class LLMChatViewModel {
     /// 单条消息(区分 loading / finished) / Single message.
     struct Message: Identifiable, Equatable {
         let id: UUID
@@ -46,9 +46,9 @@ final class LLMChatViewModel: ObservableObject {
     }
 
     /// 对话历史 / Conversation history.
-    @Published var messages: [Message] = []
+    var messages: [Message] = []
     /// 是否正在等待响应 / Awaiting response?
-    @Published var isStreaming: Bool = false
+    var isStreaming: Bool = false
     /// 当前 LLM 任务(可取消) / Current LLM task (cancellable).
     private var currentTask: Task<Void, Never>? = nil
 

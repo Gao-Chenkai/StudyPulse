@@ -22,7 +22,7 @@ struct SubjectMistakesView: View {
     let mistakes: [MistakeNote]
     /// 本地 ViewModel(搜索/排序)
     /// Local view model (search / sort).
-    @StateObject private var viewModel: SubjectMistakesViewModel
+    @State private var viewModel: SubjectMistakesViewModel
     /// 本地搜索文本
     /// Local search text.
     @State private var searchText = ""
@@ -34,7 +34,7 @@ struct SubjectMistakesView: View {
     init(subject: String, mistakes: [MistakeNote]) {
         self.subject = subject
         self.mistakes = mistakes
-        _viewModel = StateObject(wrappedValue: SubjectMistakesViewModel(initialMistakes: mistakes))
+        _viewModel = State(initialValue: SubjectMistakesViewModel(initialMistakes: mistakes))
     }
 
     /// 搜索过滤后的错题

@@ -18,10 +18,10 @@ struct NewExamSetView: View {
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.dismiss) private var dismiss
     
-    @StateObject private var viewModel: NewExamSetViewModel
+    @State private var viewModel: NewExamSetViewModel
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: NewExamSetViewModel(container: container))
+        _viewModel = State(initialValue: NewExamSetViewModel(container: container))
     }
     
     var body: some View {
@@ -171,7 +171,7 @@ struct NewExamSetView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save".localized()) {
                         Task {
-                            await viewModel.saveExam {
+                            if await viewModel.saveExam() {
                                 dismiss()
                             }
                         }

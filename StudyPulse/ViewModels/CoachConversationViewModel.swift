@@ -1,17 +1,17 @@
 import Foundation
-import Combine
 
 @MainActor
-final class CoachConversationViewModel: ObservableObject {
-    @Published private(set) var messages: [CoachConversationMessage] = []
-    @Published private(set) var isStreaming = false
-    @Published var errorMessage: String?
+@Observable
+final class CoachConversationViewModel {
+    private(set) var messages: [CoachConversationMessage] = []
+    private(set) var isStreaming = false
+    var errorMessage: String?
 
     let goal: CoachGoal?
     let chat: CoachChat
     let container: RepositoryContainer
     private var currentTask: Task<Void, Never>?
-    private lazy var coordinator = CoachCoordinator(container: container)
+    @ObservationIgnored private lazy var coordinator = CoachCoordinator(container: container)
 
     init(goal: CoachGoal?, chat: CoachChat, container: RepositoryContainer) {
         self.goal = goal

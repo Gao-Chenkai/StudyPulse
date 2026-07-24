@@ -21,7 +21,6 @@
 //
 
 import SwiftUI
-import Combine
 import SwiftStreamingMarkdown
 
 /// 主页 AI 提问 sheet:由 home 上的 "Ask AI" 入口打开。
@@ -30,7 +29,7 @@ import SwiftStreamingMarkdown
 /// The LLM first "routes" the question (decides which data to fetch),
 /// then merges the context for the final answer.
 struct HomeAskSheet: View {
-    @StateObject private var viewModel: HomeAskViewModel
+    @State private var viewModel: HomeAskViewModel
     @Environment(\.dismiss) private var dismiss
     /// 输入框焦点状态(用于 example chip 点击后弹出键盘)
     /// Input focus state (used so tapping an example chip pops the keyboard).
@@ -42,8 +41,8 @@ struct HomeAskSheet: View {
 
     init(container: RepositoryContainer, envManager: AppEnvironmentManager, initialQuestion: String? = nil) {
         self.initialQuestion = initialQuestion
-        _viewModel = StateObject(
-            wrappedValue: HomeAskViewModel(container: container, envManager: envManager)
+        _viewModel = State(
+            initialValue: HomeAskViewModel(container: container, envManager: envManager)
         )
     }
 

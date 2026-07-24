@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct AchievementUnlockToast: View, Equatable {
-    @EnvironmentObject private var achievementManager: AchievementManager
+    @Environment(AchievementManager.self) private var achievementManager: AchievementManager
     @State private var currentProgress: AchievementProgress?
     @State private var isVisible = false
 
@@ -48,7 +48,9 @@ struct AchievementUnlockToast: View, Equatable {
         withAnimation { isVisible = true }
 
         // Auto-dismiss after 2.5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(2_500))
+            guard !Task.isCancelled else { return }
             dismissCurrent()
         }
     }
@@ -56,7 +58,9 @@ struct AchievementUnlockToast: View, Equatable {
     private func dismissCurrent() {
         guard let progress = currentProgress else { return }
         withAnimation { isVisible = false }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
             achievementManager.dismissNewlyUnlocked(progress)
             currentProgress = nil
             showNextIfNeeded()

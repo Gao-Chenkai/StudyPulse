@@ -8,7 +8,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import os
 
 /// 思维导图布局节点的数据结构
@@ -76,32 +75,33 @@ struct MindMapLayoutEdge: Identifiable, Equatable {
 /// 思维导图的业务逻辑与坐标布局管理器
 /// Mind map business logic and layout manager.
 @MainActor
-final class AutoMindMapViewModel: ObservableObject {
+@Observable
+final class AutoMindMapViewModel {
     // MARK: - Published States / 发布状态
     
     /// 是否正在加载中（包括大模型网络请求）
     /// True if currently loading (including LLM requests).
-    @Published private(set) var isLoading = false
+    private(set) var isLoading = false
     
     /// 错误信息，为 nil 表示一切正常
     /// Error message; nil means normal.
-    @Published private(set) var errorMessage: String? = nil
+    private(set) var errorMessage: String? = nil
     
     /// 计算完成后的所有可视化节点集合
     /// All layout nodes computed for visualization.
-    @Published private(set) var nodes: [MindMapLayoutNode] = []
+    private(set) var nodes: [MindMapLayoutNode] = []
     
     /// 计算完成后的所有边（连线）集合
     /// All layout edges computed for drawing.
-    @Published private(set) var edges: [MindMapLayoutEdge] = []
+    private(set) var edges: [MindMapLayoutEdge] = []
     
     /// 是否正在使用规则降级（当大模型未配置或出错时启用）
     /// True if degraded to the local rules-based fallback.
-    @Published private(set) var isUsingFallback = false
+    private(set) var isUsingFallback = false
     
     /// 错题 UUID 到知识点名称的逆向映射
     /// Reverse lookup from mistake UUID string to knowledge point name.
-    @Published private(set) var mistakeToKP: [String: String] = [:]
+    private(set) var mistakeToKP: [String: String] = [:]
     
     // MARK: - Dependencies & Cache / 依赖与缓存
     

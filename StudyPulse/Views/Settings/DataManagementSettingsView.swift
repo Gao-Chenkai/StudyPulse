@@ -200,7 +200,9 @@ struct DataManagementSettingsView: View {
             case .failure(let error):
                 Log.record(.error, category: "Export", message: "数据导出失败 / Data export failed: \(error.localizedDescription)")
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
                 exportDocument = nil
             }
         }
@@ -217,7 +219,9 @@ struct DataManagementSettingsView: View {
             case .failure(let error):
                 Log.record(.error, category: "Export", message: "日志导出失败 / Log export failed: \(error.localizedDescription)")
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
                 exportLogDocument = nil
             }
         }
@@ -334,7 +338,9 @@ struct DataManagementSettingsView: View {
         let fileName = "StudyPulse_Grades_\(dateFormatter.string(from: Date())).csv"
         exportSuccessMessage = "\(container.gradeRepo.grades.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExporting = true
         }
     }
@@ -346,7 +352,9 @@ struct DataManagementSettingsView: View {
         let fileName = "StudyPulse_Mistakes_\(dateFormatter.string(from: Date())).csv"
         exportSuccessMessage = "\(container.mistakeRepo.mistakeSets.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExporting = true
         }
     }
@@ -362,7 +370,9 @@ struct DataManagementSettingsView: View {
         let totalCount = container.examRepo.examSets.count + container.examRepo.comprehensiveExamSets.count
         exportSuccessMessage = "\(totalCount) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExporting = true
         }
     }
@@ -374,7 +384,9 @@ struct DataManagementSettingsView: View {
         let fileName = "StudyPulse_Tasks_\(dateFormatter.string(from: Date())).csv"
         exportSuccessMessage = "\(container.taskRepo.taskItems.count) "
         exportDocument = CSVDocument(content: csv, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExporting = true
         }
     }
@@ -387,7 +399,9 @@ struct DataManagementSettingsView: View {
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
         let fileName = "StudyPulse_Log_\(dateFormatter.string(from: Date())).log"
         exportLogDocument = LogDocument(content: logText, fileName: fileName)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             isExportingLog = true
         }
     }
@@ -603,15 +617,15 @@ struct DataManagementSettingsView: View {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         center.removeAllPendingNotificationRequests()
         center.add(request) { error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        Log.record(.error, category: "Notification", message: "测试通知发送失败 / Test notification send failed: \(error.localizedDescription)")
-                    } else {
-                        Log.record(.info, category: "Notification", message: "测试通知发送成功 / Test notification sent: identifier=\(identifier)")
-                    }
+            Task { @MainActor in
+                if let error = error {
+                    Log.record(.error, category: "Notification", message: "测试通知发送失败 / Test notification send failed: \(error.localizedDescription)")
+                } else {
+                    Log.record(.info, category: "Notification", message: "测试通知发送成功 / Test notification sent: identifier=\(identifier)")
                 }
             }
         }
+    }
 }
 
 // MARK: - 一键删除确认弹窗

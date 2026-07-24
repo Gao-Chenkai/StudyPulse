@@ -1,9 +1,8 @@
 import SwiftUI
-import Combine
 
 struct BrainUsageCard: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
     @State private var events: [BrainUsageEvent] = []
     @State private var now = Date()
     @State private var showSettings = false
@@ -58,12 +57,21 @@ struct BrainUsageCard: View {
             await BrainUsageQuotaLLM.refreshIfNeeded(container: container, hrvManager: hrvManager)
             reload()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .brainUsageDidChange)) { _ in reload() }
-        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { value in
-            now = value
-            BrainUsageNotifications.shared.evaluate(snapshot: snapshot, preferences: preferences, now: value)
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .brainUsageDidChange) {
+                guard !Task.isCancelled else { return }
+                reload()
+            }
         }
-        .sheet(isPresented: $showSettings) { BrainUsageSettingsView().environment(container).environmentObject(hrvManager) }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                let value = Date()
+                now = value
+                BrainUsageNotifications.shared.evaluate(snapshot: snapshot, preferences: preferences, now: value)
+            }
+        }
+        .sheet(isPresented: $showSettings) { BrainUsageSettingsView().environment(container).environment(hrvManager) }
     }
 
     private func usageWindow(title: String, window: BrainUsageWindow) -> some View {

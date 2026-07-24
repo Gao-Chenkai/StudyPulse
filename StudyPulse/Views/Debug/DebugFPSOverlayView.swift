@@ -7,18 +7,14 @@
 //
 
 import SwiftUI
-import Combine
 import os
 
 struct DebugFPSOverlayView: View {
-    @EnvironmentObject private var fpsMonitor: FPSMonitor
+    @Environment(FPSMonitor.self) private var fpsMonitor: FPSMonitor
     @Environment(RepositoryContainer.self) private var container
     @State private var memoryMB: Double = 0
     @State private var logCount: Int = 0
     @State private var expanded: Bool = false
-
-    /// 1 秒刷新一次
-    private let refreshTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Group {
@@ -33,9 +29,12 @@ struct DebugFPSOverlayView: View {
             memoryMB = currentMemoryMB()
             logCount = LogStore.shared.allEntries.count
         }
-        .onReceive(refreshTimer) { _ in
-            memoryMB = currentMemoryMB()
-            logCount = LogStore.shared.allEntries.count
+        .task {
+            while !Task.isCancelled {
+                memoryMB = currentMemoryMB()
+                logCount = LogStore.shared.allEntries.count
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
     }
 

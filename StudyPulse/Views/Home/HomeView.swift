@@ -31,8 +31,8 @@ import UIKit
 struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var viewModel: HomeViewModel
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @State private var viewModel: HomeViewModel
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
 
     /// UI 临时状态聚合(分阶段渲染 / 模态 / 报告导出)。详见 `HomeUIState`。
     @State private var uiState = HomeUIState()
@@ -40,7 +40,7 @@ struct HomeView: View {
     // MARK: - Init
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: HomeViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: HomeViewModel.makeDefault(container: container))
     }
 
     // MARK: - Layout
@@ -411,20 +411,20 @@ struct HomeView: View {
         )
         let title = cardShareTitle(for: type)
         // 关键:ImageRenderer 不会自动继承调用方的环境。
-        // 各 Home 卡片普遍依赖 @EnvironmentObject(HealthKitManager / StudyTimerManager /
+        // 各 Home 卡片普遍依赖 environment-injected observable(HealthKitManager / StudyTimerManager /
         // AchievementManager / LLMClient)与 @Environment(RepositoryContainer.self)、
         // @Environment(\.colorScheme) 等,缺一就在 body 评估时崩溃。
         // 这里在渲染前显式注入这些环境对象,确保单卡能成功快照成图片。
         // ImageRenderer doesn't auto-inherit the calling view's environment;
-        // cards rely on @EnvironmentObject / @Environment so we must inject them
+        // cards rely on environment-injected observable / @Environment so we must inject them
         // explicitly before rasterizing — otherwise SwiftUI crashes with
         // "missing as an ancestor of this view" / "No observable object of type X".
         let view = cardShareView(for: type, report: snapshot)
             .environment(container)
-            .environmentObject(hrvManager)
-            .environmentObject(StudyTimerManager.shared)
-            .environmentObject(AchievementManager.shared)
-            .environmentObject(LLMClient.shared)
+            .environment(hrvManager)
+            .environment(StudyTimerManager.shared)
+            .environment(AchievementManager.shared)
+            .environment(LLMClient.shared)
             // 导出模式:卡片内 iOS 26 glassEffect 会变成透明导致发灰、Menu 系统
             // 指示器在 ImageRenderer 里渲染成黄底红禁止占位符,这里注入标记让
             // 卡片走纯色 + 纯文本替身。
@@ -477,7 +477,7 @@ struct HomeView: View {
     @ViewBuilder
     private func cardShareView(for type: HomeCardType, report: StudyReport) -> some View {
         // 报告内容卡片固定 612pt 宽，上下加 padding 让小卡片也居中。
-        // 不同卡片自身可能依赖 @EnvironmentObject / @ObservedObject，
+        // 不同卡片自身可能依赖 environment-injected observable / @Bindable，
         // 这里直接复用 HomeView 的环境上下文。
         VStack {
             Group {
@@ -780,13 +780,13 @@ private struct DerivedRecomputeModifier: ViewModifier {
 #Preview {
     HomeView(container: RepositoryContainer())
         .environment(RepositoryContainer())
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
     HomeView(container: RepositoryContainer())
         .environment(RepositoryContainer())
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
         .preferredColorScheme(.dark)
 }

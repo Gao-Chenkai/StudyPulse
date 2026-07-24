@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Combine
 import SwiftUI
 
 // MARK: - 科目名称显示辅助 / Subject display helper
@@ -25,7 +24,8 @@ nonisolated enum SubjectDisplay {
     }
 }
 
-class SubjectInfo: ObservableObject {
+@Observable
+class SubjectInfo {
     /// 获取科目的满分(兼容旧接口)。
     /// Legacy API: return the full-score for a (level, subject) pair.
     func getMaxScore(level: String, subject: String) -> Double {

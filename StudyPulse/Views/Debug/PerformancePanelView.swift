@@ -8,18 +8,14 @@
 
 import SwiftUI
 import Charts
-import Combine
 import os
 
 struct PerformancePanelView: View {
-    @EnvironmentObject private var fpsMonitor: FPSMonitor
+    @Environment(FPSMonitor.self) private var fpsMonitor: FPSMonitor
     @State private var memoryMB: Double = 0
-    @State private var refreshTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     @State private var lagCount5min: Int = 0
     @State private var lastLagTimestamp: Date? = nil
     @State private var lastLagDurationMs: Double? = nil
-
-    private let memoryTimer = Timer.publish(every: 2.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         List {
@@ -38,11 +34,16 @@ struct PerformancePanelView: View {
         .onDisappear {
             // 不停 FPSMonitor — 它是 singleton,别处可能还在用
         }
-        .onReceive(refreshTimer) { _ in
-            refreshLagStats()
-        }
-        .onReceive(memoryTimer) { _ in
-            memoryMB = currentMemoryMB()
+        .task {
+            var iteration = 0
+            while !Task.isCancelled {
+                refreshLagStats()
+                if iteration.isMultiple(of: 2) {
+                    memoryMB = currentMemoryMB()
+                }
+                iteration += 1
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
     }
 
@@ -218,7 +219,7 @@ struct PerformancePanelView: View {
 #Preview {
     NavigationStack {
         PerformancePanelView()
-            .environmentObject(FPSMonitor.shared)
+            .environment(FPSMonitor.shared)
     }
 }
 #endif

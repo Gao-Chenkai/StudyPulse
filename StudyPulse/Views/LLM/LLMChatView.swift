@@ -22,7 +22,7 @@ import SwiftStreamingMarkdown
 /// LLM assistant chat screen (standalone entry, no external context binding).
 struct LLMChatView: View {
     @Environment(RepositoryContainer.self) private var container
-    @StateObject private var viewModel = LLMChatViewModel()
+    @State private var viewModel = LLMChatViewModel()
     /// 输入框文本
     /// Input bar text.
     @State private var inputText: String = ""

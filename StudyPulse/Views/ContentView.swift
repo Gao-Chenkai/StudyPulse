@@ -135,7 +135,9 @@ struct ContentView: View {
     }
 
     private func triggerHaptic() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
             impactFeedback.prepare()
             impactFeedback.impactOccurred()
         }

@@ -1,8 +1,8 @@
 import Foundation
-import Combine
 
 @MainActor
-final class ExamSimulationViewModel: ObservableObject {
+@Observable
+final class ExamSimulationViewModel {
     enum FlowState: Equatable {
         case landing
         case generating
@@ -11,12 +11,12 @@ final class ExamSimulationViewModel: ObservableObject {
         case result
     }
 
-    @Published private(set) var state: FlowState = .landing
-    @Published private(set) var simulation: ExamSimulation?
-    @Published private(set) var currentIndex = 0
-    @Published private(set) var remainingSeconds = ExamSimulation.defaultDurationSeconds
-    @Published var draftAnswers: [UUID: String] = [:]
-    @Published var errorMessage: String?
+    private(set) var state: FlowState = .landing
+    private(set) var simulation: ExamSimulation?
+    private(set) var currentIndex = 0
+    private(set) var remainingSeconds = ExamSimulation.defaultDurationSeconds
+    var draftAnswers: [UUID: String] = [:]
+    var errorMessage: String?
 
     private let container: RepositoryContainer
     private var recorder: ExamSimulationBehaviorRecorder?

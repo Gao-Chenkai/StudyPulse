@@ -4,14 +4,14 @@
 //
 //  Immutable snapshot used by the report renderer. Holds copies of
 //  the data needed to draw a self-contained "Learning Report" view,
-//  so the SwiftUI renderer can stay free of `@EnvironmentObject`
+//  so the SwiftUI renderer can stay free of `environment-injected observable`
 //  lookups and the page can be rendered off the main actor if needed.
 //
 
 import Foundation
 
 /// 不可变快照：把 DataManager / HealthKitManager 的关键数据在生成报告时
-/// 拷贝一份，供后续 SwiftUI 渲染使用，避免直接持有 ObservableObject。
+/// 拷贝一份，供后续 SwiftUI 渲染使用，避免直接持有 observable reference type。
 /// Immutable snapshot: copies the fields needed by the report renderer.
 nonisolated struct StudyReport: Sendable {
     let generatedAt: Date

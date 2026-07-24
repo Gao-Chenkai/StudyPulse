@@ -11,15 +11,14 @@
 
 import SwiftUI
 import Charts
-import Combine
 
 /// 趋势主页
 /// Trends home view.
 struct TrendsView: View {
     @Environment(RepositoryContainer.self) private var container
-    @EnvironmentObject private var hrvManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var hrvManager: HealthKitManager
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @StateObject private var viewModel: TrendsViewModel
+    @State private var viewModel: TrendsViewModel
     @State private var showingAddGrade = false
 
     // score = ranking =
@@ -29,7 +28,7 @@ struct TrendsView: View {
     @State private var selectedRadarSubject: String?
 
     init(container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: TrendsViewModel.makeDefault(container: container))
+        _viewModel = State(initialValue: TrendsViewModel.makeDefault(container: container))
     }
 
     // 派生数据缓存(已迁移到 TrendsViewModel)
@@ -649,11 +648,11 @@ struct AttentionSubjectCard: View {
 
 #Preview {
     TrendsView(container: RepositoryContainer())
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
 }
 
 #Preview("Dark Mode") {
     TrendsView(container: RepositoryContainer())
-        .environmentObject(HealthKitManager.shared)
+        .environment(HealthKitManager.shared)
         .preferredColorScheme(.dark)
 }

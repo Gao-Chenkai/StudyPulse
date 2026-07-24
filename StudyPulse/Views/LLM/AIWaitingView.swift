@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import Combine
 
 /// 一个用于大模型加载等待的高级、精致的视图。
 /// 包含活泼色彩在页面上流动（浮动模糊圆球）的背景、玻璃拟态卡片以及多状态提示文本的自动轮回切换。
@@ -54,10 +53,6 @@ struct AIWaitingView: View {
     // Center glow scale and rotation angles
     @State private var sparkleScale: CGFloat = 0.95
     @State private var sparkleRotation: Double = 0
-
-    /// 每 2.5 秒触发一次状态文本切换
-    /// Timer firing every 2.5 seconds to cycle the status text.
-    private let timer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 
     // MARK: - Initializer
     
@@ -238,10 +233,13 @@ struct AIWaitingView: View {
             .shadow(color: Color.black.opacity(0.06), radius: 15, x: 0, y: 8)
             .padding(.horizontal, 36)
         }
-        .onReceive(timer) { _ in
-            guard timerActive && !messages.isEmpty else { return }
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.8)) {
-                currentTextIndex = (currentTextIndex + 1) % messages.count
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2.5))
+                guard timerActive && !messages.isEmpty else { continue }
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.8)) {
+                    currentTextIndex = (currentTextIndex + 1) % messages.count
+                }
             }
         }
         .onDisappear {

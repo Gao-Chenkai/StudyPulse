@@ -2,13 +2,13 @@ import SwiftUI
 import SwiftStreamingMarkdown
 
 struct CoachConversationView: View {
-    @StateObject private var viewModel: CoachConversationViewModel
+    @State private var viewModel: CoachConversationViewModel
     @State private var input = ""
     @State private var inputAttachments: [LLMImageAttachment] = []
     @State private var emptyPromptKey = CoachConversationPrompts.all.randomElement() ?? "Coach prompt 01"
 
     init(goal: CoachGoal?, chat: CoachChat, container: RepositoryContainer) {
-        _viewModel = StateObject(wrappedValue: CoachConversationViewModel(goal: goal, chat: chat, container: container))
+        _viewModel = State(initialValue: CoachConversationViewModel(goal: goal, chat: chat, container: container))
     }
 
     var body: some View {

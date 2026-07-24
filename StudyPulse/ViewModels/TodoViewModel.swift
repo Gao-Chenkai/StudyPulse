@@ -11,39 +11,39 @@
 //
 
 import Foundation
-import Combine
 import SwiftUI
 
 @MainActor
-final class TodoViewModel: ObservableObject {
+@Observable
+final class TodoViewModel {
     // MARK: - 依赖项 / Dependencies
     private let container: RepositoryContainer
 
     // MARK: - 输入 & 界面状态 / Input & UI states
     /// 类型筛选(全部 / 考试 / 作业 / 阅读) / Type filter.
-    @Published var typeFilter: TodoTypeFilter = .all
+    var typeFilter: TodoTypeFilter = .all
     /// 是否显示已完成项 / Show completed items?
-    @Published var showCompleted: Bool = false
-    @Published var showingNewExam: Bool = false
-    @Published var showingNewTask: TaskType? = nil
-    @Published var showingNewRoutine: Bool = false
-    @Published var selectedExam: Exam? = nil
-    @Published var selectedComprehensive: comprehensiveExam? = nil
-    @Published var selectedTask: TaskItem? = nil
-    @Published var selectedRoutine: Routine? = nil
-    @Published var showingPastSheet: Bool = false
+    var showCompleted: Bool = false
+    var showingNewExam: Bool = false
+    var showingNewTask: TaskType? = nil
+    var showingNewRoutine: Bool = false
+    var selectedExam: Exam? = nil
+    var selectedComprehensive: comprehensiveExam? = nil
+    var selectedTask: TaskItem? = nil
+    var selectedRoutine: Routine? = nil
+    var showingPastSheet: Bool = false
     /// 列表 / 日历视图模式(持久化) / List/calendar view mode (persisted).
-    @Published var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
+    var viewMode: ExamViewMode = ExamViewMode.loadFromDefaults()
 
     // MARK: - 输出状态 / Output states
     /// 全部可见的 todo / All visible todos.
-    @Published private(set) var allEntries: [TodoEntry] = []
+    private(set) var allEntries: [TodoEntry] = []
     /// 未来(≥ 今天 0 点)的 todo / Future todos (≥ today's start-of-day).
-    @Published private(set) var upcomingEntries: [TodoEntry] = []
+    private(set) var upcomingEntries: [TodoEntry] = []
     /// 已过去的 todo / Past todos.
-    @Published private(set) var pastEntries: [TodoEntry] = []
+    private(set) var pastEntries: [TodoEntry] = []
     /// 即将到来的 todo,按时间分桶 / Upcoming todos bucketed by time.
-    @Published private(set) var groupedUpcoming: [(sectionTitle: String, entries: [TodoEntry])] = []
+    private(set) var groupedUpcoming: [(sectionTitle: String, entries: [TodoEntry])] = []
 
     // MARK: - 初始化 / Initialization
     init(container: RepositoryContainer) {
