@@ -896,12 +896,10 @@ final class HealthKitManager: ObservableObject {
             lastUpdated: Date()
         )
 
-        guard let data = try? JSONEncoder().encode(cache) else { return }
-        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            Log.healthKit.error("写入 readiness_cache 失败:无法解析 Documents 目录 / Failed to resolve Documents directory")
-            return
+        do {
+            try IntentHealthCacheStore.write(cache)
+        } catch {
+            Log.healthKit.error("写入 readiness_cache 失败 / Failed to write readiness cache")
         }
-        let url = docs.appendingPathComponent("readiness_cache.json")
-        try? data.write(to: url)
     }
 }

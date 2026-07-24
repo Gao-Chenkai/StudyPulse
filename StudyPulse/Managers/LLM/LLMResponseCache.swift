@@ -36,17 +36,28 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
 
     /// 容量上限(条)。
     /// Capacity (number of entries).
-    private let capacity = 10
+    private let capacity: Int
     /// TTL(秒):超过此时间的条目视为过期。
     /// TTL (seconds): entries older than this are treated as expired.
-    private let ttl: TimeInterval = 600
+    private let ttl: TimeInterval
     private var store: [String: Entry] = [:]
     /// LRU 顺序:最早访问的 key 在前。
     /// LRU order: least-recently accessed keys first.
     private var lruOrder: [String] = []
     private let lock = NSLock()
 
-    private init() {}
+    init(capacity: Int = 10, ttl: TimeInterval = 600) {
+        self.capacity = capacity
+        self.ttl = ttl
+    }
+
+    /// Number of fresh entries currently held in memory.
+    var entryCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        removeExpiredEntries(referenceDate: Date())
+        return store.count
+    }
 
     /// 查询缓存。命中且未过期返回响应,否则返回 nil(并顺手清理过期项)。
     /// Look up the cache. Returns the response on a fresh hit,nil otherwise
@@ -92,10 +103,20 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
     /// Clear all cached entries (Debug panel "Clear cache" button).
     func clear() {
         lock.lock()
-        defer { lock.unlock() }
         store.removeAll()
         lruOrder.removeAll()
+        lock.unlock()
         Log.llm.info("LLMResponseCache cleared")
+    }
+
+    private func removeExpiredEntries(referenceDate: Date) {
+        let expiredKeys = store.compactMap { key, entry in
+            referenceDate.timeIntervalSince(entry.timestamp) > ttl ? key : nil
+        }
+        guard !expiredKeys.isEmpty else { return }
+        let expired = Set(expiredKeys)
+        for key in expired { store.removeValue(forKey: key) }
+        lruOrder.removeAll { expired.contains($0) }
     }
 
     /// 计算 key:caller + sha256(effectiveSystem + messages + images + model + temperature)。

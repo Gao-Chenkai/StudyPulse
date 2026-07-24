@@ -94,6 +94,16 @@ struct DataManagementSettingsView: View {
                     Text("Backup".localized())
                 }
 
+                Section {
+                    NavigationLink(destination: CacheManagementView()) {
+                        Label("Cache Management".localized(), systemImage: "internaldrive")
+                    }
+                } header: {
+                    Text("Storage & Cache".localized())
+                } footer: {
+                    Text("View and clear only cache data that StudyPulse can regenerate.".localized())
+                }
+
                 // Export
                 Section {
                     Menu {

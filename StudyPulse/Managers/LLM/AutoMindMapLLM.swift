@@ -11,7 +11,7 @@ import os
 
 /// 错题思维导图主题节点数据结构
 /// Mistake mind map theme node structure.
-struct MindMapTheme: Codable, Hashable, Sendable, Identifiable {
+nonisolated struct MindMapTheme: Codable, Hashable, Sendable, Identifiable {
     /// 遵循 Identifiable 协议，使用主题名作为唯一标识
     /// Conforms to Identifiable using theme name as the unique ID.
     var id: String { theme }
@@ -32,7 +32,7 @@ struct MindMapTheme: Codable, Hashable, Sendable, Identifiable {
 
 /// 错题思维导图知识点节点数据结构
 /// Mistake mind map knowledge point node structure.
-struct MindMapKnowledgePoint: Codable, Hashable, Sendable, Identifiable {
+nonisolated struct MindMapKnowledgePoint: Codable, Hashable, Sendable, Identifiable {
     /// 遵循 Identifiable 协议，使用知识点名称作为唯一标识
     /// Conforms to Identifiable using knowledge point name as the unique ID.
     var id: String { name }
@@ -53,7 +53,7 @@ struct MindMapKnowledgePoint: Codable, Hashable, Sendable, Identifiable {
 
 /// 错题思维导图缓存条目
 /// Mind map cache entry.
-struct MindMapCacheEntry: Codable, Sendable {
+nonisolated struct MindMapCacheEntry: Codable, Sendable {
     /// 导图关联的上下文标题 (如 "My Mistakes" 或 学科名称)
     /// Context title associated with the map (e.g. "My Mistakes" or subject name).
     let contextTitle: String
@@ -73,23 +73,37 @@ struct MindMapCacheEntry: Codable, Sendable {
 
 /// 错题思维导图的本地缓存存储器
 /// Local cache store for mistake mind maps.
-enum AutoMindMapCacheStore {
+nonisolated enum AutoMindMapCacheStore {
     static let fileName = "auto_mind_map_cache.json"
-    
-    static func fileURL() throws -> URL {
-        let dir = try FileManager.default.url(
-            for: .documentDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        return dir.appendingPathComponent(fileName)
+    private static let lock = NSLock()
+
+    static func location() throws -> RegenerableCacheFileLocation {
+        try RegenerableCacheFile.productionLocation(fileName: fileName)
     }
-    
+
+    static func fileURL() throws -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+        return try RegenerableCacheFile.resolvedURL(for: location())
+    }
+
     /// 加载所有缓存条目，返回以 contextTitle 为 Key 的字典
     /// Load all cache entries as a dictionary keyed by contextTitle.
     static func loadAll() -> [String: MindMapCacheEntry] {
-        guard let url = try? fileURL(),
+        guard let location = try? location() else { return [:] }
+        return loadAll(at: location)
+    }
+
+    static func loadAll(at location: RegenerableCacheFileLocation) -> [String: MindMapCacheEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadAllUnlocked(at: location)
+    }
+
+    private static func loadAllUnlocked(
+        at location: RegenerableCacheFileLocation
+    ) -> [String: MindMapCacheEntry] {
+        guard let url = try? RegenerableCacheFile.resolvedURL(for: location),
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
             return [:]
@@ -106,7 +120,22 @@ enum AutoMindMapCacheStore {
     /// 保存/更新某个 context 的缓存
     /// Save or update cache for a specific context.
     static func save(contextTitle: String, mistakeIds: [String], themes: [MindMapTheme]) {
-        var all = loadAll()
+        guard let location = try? location() else {
+            Log.llm.error("思维导图缓存文件路径不可用 / Mind map cache path unavailable")
+            return
+        }
+        save(contextTitle: contextTitle, mistakeIds: mistakeIds, themes: themes, at: location)
+    }
+
+    static func save(
+        contextTitle: String,
+        mistakeIds: [String],
+        themes: [MindMapTheme],
+        at location: RegenerableCacheFileLocation
+    ) {
+        lock.lock()
+        defer { lock.unlock() }
+        var all = loadAllUnlocked(at: location)
         let newEntry = MindMapCacheEntry(
             contextTitle: contextTitle,
             mistakeIds: mistakeIds,
@@ -114,8 +143,8 @@ enum AutoMindMapCacheStore {
             timestamp: Date()
         )
         all[contextTitle] = newEntry
-        
-        guard let url = try? fileURL() else {
+
+        guard let url = try? RegenerableCacheFile.resolvedURL(for: location) else {
             Log.llm.error("思维导图缓存文件路径不可用 / Mind map cache path unavailable")
             return
         }
@@ -128,6 +157,41 @@ enum AutoMindMapCacheStore {
         } catch {
             Log.llm.error("思维导图缓存写入失败 / Failed to write mind map cache: \(error.localizedDescription)")
         }
+    }
+
+    static func cacheSize() -> Int64 {
+        guard let location = try? location() else { return 0 }
+        return cacheSize(at: location)
+    }
+
+    static func cacheSize(at location: RegenerableCacheFileLocation) -> Int64 {
+        lock.lock()
+        defer { lock.unlock() }
+        return (try? RegenerableCacheFile.size(at: location)) ?? 0
+    }
+
+    static func entryCount() -> Int {
+        guard let location = try? location() else { return 0 }
+        return entryCount(at: location)
+    }
+
+    static func entryCount(at location: RegenerableCacheFileLocation) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadAllUnlocked(at: location).count
+    }
+
+    /// Removes only `auto_mind_map_cache.json` from the preferred and legacy
+    /// locations. A missing file is already a successful clear.
+    static func clear() throws {
+        try clear(at: location())
+    }
+
+    static func clear(at location: RegenerableCacheFileLocation) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try RegenerableCacheFile.clear(location)
+        Log.llm.info("Auto mind map cache cleared")
     }
 }
 

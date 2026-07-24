@@ -12,18 +12,21 @@ import UIKit
 /// 轻量级内存图片缓存
 /// 使用 NSCache 避免重复解码 Data → UIImage，提升列表滚动性能
 /// 最大缓存 50 张图片，支持缩略图生成
-nonisolated final class ImageCache {
+nonisolated final class ImageCache: @unchecked Sendable {
     @MainActor static let shared = ImageCache()
     
     /// NSCache 内存缓存（自动 LRU 淘汰）
     private let cache = NSCache<NSString, UIImage>()
+    /// Keys are tracked separately because NSCache does not expose its count.
+    /// The set is reconciled with NSCache whenever `entryCount` is read.
+    private var keys: Set<String> = []
     /// 线程安全锁
     private let lock = NSLock()
     
-    private init() {
+    init(countLimit: Int = 50) {
         // countLimit 是 NSCache 的近似 LRU 上限;50 张 ≈ 50MB 内存预算
         // countLimit is the approximate LRU cap of NSCache; 50 images ≈ 50MB budget.
-        cache.countLimit = 50  // 最多缓存 50 张
+        cache.countLimit = countLimit
     }
     
     /// 根据图片 Data 生成缓存 Key（使用哈希值）
@@ -40,36 +43,56 @@ nonisolated final class ImageCache {
     func getImage(_ data: Data) -> UIImage? {
         lock.lock()
         defer { lock.unlock() }
-        return cache.object(forKey: makeKey(data))
+        let key = makeKey(data)
+        let image = cache.object(forKey: key)
+        if image == nil { keys.remove(key as String) }
+        return image
     }
 
     /// 存入 Data 缓存
     func putImage(_ image: UIImage, _ data: Data) {
         lock.lock()
         defer { lock.unlock() }
-        cache.setObject(image, forKey: makeKey(data))
+        let key = makeKey(data)
+        cache.setObject(image, forKey: key)
+        keys.insert(key as String)
     }
 
     /// 按文件名获取
     func getImageByFilename(_ filename: String) -> UIImage? {
         lock.lock()
         defer { lock.unlock() }
-        return cache.object(forKey: makeFilenameKey(filename))
+        let key = makeFilenameKey(filename)
+        let image = cache.object(forKey: key)
+        if image == nil { keys.remove(key as String) }
+        return image
     }
 
     /// 按文件名存入
     func putImageByFilename(_ image: UIImage, _ filename: String) {
         lock.lock()
         defer { lock.unlock() }
-        cache.setObject(image, forKey: makeFilenameKey(filename))
+        let key = makeFilenameKey(filename)
+        cache.setObject(image, forKey: key)
+        keys.insert(key as String)
     }
 
-    /// 清空内存缓存（Debug 模式手动触发）
-    /// Drops all cached images from the in-memory NSCache. Used by Debug → State & Cache.
+    /// Number of live cached entries. This intentionally does not estimate
+    /// decoded UIImage memory usage.
+    var entryCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        keys = keys.filter { cache.object(forKey: $0 as NSString) != nil }
+        return keys.count
+    }
+
+    /// 清空内存缓存。
+    /// Drops all cached images from the in-memory NSCache.
     func clear() {
         lock.lock()
         defer { lock.unlock() }
         cache.removeAllObjects()
+        keys.removeAll()
     }
     
     /// 生成缩略图(固定最大尺寸,减少内存占用)。

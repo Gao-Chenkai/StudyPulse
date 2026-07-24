@@ -53,9 +53,7 @@ nonisolated enum IntentDataLoader {
 
     /// 加载 HealthKit 派生的就绪度 / 身体状态缓存 / Load the HealthKit-derived readiness / body-status cache.
     static func loadHealthCache() -> IntentHealthCache? {
-        guard let docs = getDocsDir() else { return nil }
-        let url = docs.appendingPathComponent("readiness_cache.json")
-        return DataFileIO.load(url: url)
+        IntentHealthCacheStore.load()
     }
 }
 
