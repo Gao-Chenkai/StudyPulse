@@ -100,6 +100,15 @@ extension LLMConfig {
         keychain: KeychainStore = .shared
     ) -> LLMConfig {
         let provider = prefs.llmProviders.first { $0.id == prefs.activeLLMProviderId }
+
+        // 始终读取 Session Token（邮箱登录凭据），不依赖 provider 查找
+        let sessionToken = (try? keychain.read(account: LLMAPIKeyAccount.cloudSession)) ?? nil
+        let hasCloudSession = sessionToken != nil && prefs.cloudSessionEmail != nil
+
+        // Cloud AI 判定：provider 明确是 Cloud，或存在有效的邮箱登录 Session
+        let isCloud = (provider?.isCloudProvider ?? false) || hasCloudSession
+        let cloudProvider = isCloud ? prefs.llmProviders.first(where: { $0.isCloudProvider }) : nil
+
         let account: String
         if let provider, provider.isCloudProvider {
             account = LLMAPIKeyAccount.cloud
@@ -109,16 +118,12 @@ extension LLMConfig {
             account = LLMAPIKeyAccount.legacy
         }
         let apiKey = try? keychain.read(account: account)
-        let isCloud = provider?.isCloudProvider ?? false
-        let sessionToken = isCloud ? (try? keychain.read(account: LLMAPIKeyAccount.cloudSession)) ?? nil : nil
-        if isCloud {
-            Log.llm.info("LLMConfig Cloud mode: sessionToken=\(sessionToken != nil ? "yes" : "no", privacy: .public) apiKey=\(apiKey != nil ? "yes" : "no", privacy: .public)")
-        }
-        return LLMConfig(
+
+        let config = LLMConfig(
             enabled: prefs.llmEnabled,
-            baseURL: isCloud ? prefs.cloudAIWorkerURL : provider?.baseURL ?? prefs.llmBaseURL,
+            baseURL: isCloud ? (prefs.cloudAIWorkerURL ?? "spapi.chenkai.space") : (provider?.baseURL ?? prefs.llmBaseURL),
             apiKey: apiKey ?? nil,
-            model: provider?.model ?? prefs.llmModel,
+            model: isCloud ? (cloudProvider?.model ?? "MiniMax-M3") : (provider?.model ?? prefs.llmModel),
             providerName: provider?.name,
             multimodalEnabled: provider?.multimodalEnabled ?? false,
             thinkingEnabled: provider?.thinkingEnabled ?? false,
@@ -128,5 +133,7 @@ extension LLMConfig {
             temperature: prefs.llmTemperature,
             overrideSystemPrompt: prefs.debugOverrideSystemPrompt
         )
+        Log.llm.info("LLMConfig: enabled=\(config.enabled, privacy: .public) isCloud=\(config.isCloudProvider, privacy: .public) baseURL=\(config.baseURL ?? "nil", privacy: .public) hasSessionToken=\(config.sessionToken != nil, privacy: .public) hasAPIKey=\(config.apiKey != nil, privacy: .public) isConfigured=\(config.isConfigured, privacy: .public) model=\(config.model ?? "nil", privacy: .public)")
+        return config
     }
 }

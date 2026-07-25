@@ -150,7 +150,7 @@ final class AppEnvironmentManager {
     /// 切换主色预设
     /// Switch the accent palette.
     func setAccentPalette(_ accent: ThemeAccent) {
-        Log.preferences.info("切换主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
+        Log.preferences.info("切换 主色 / Accent change: -> \(accent.rawValue, privacy: .public)")
         preferences.accentPaletteId = accent.rawValue
     }
 
@@ -387,11 +387,18 @@ final class AppEnvironmentManager {
         preferences.cloudSessionEmail = email
         preferences.cloudMembershipType = membershipType
         preferences.cloudMembershipExpiresAt = membershipExpiresAt
-        // 确保 Cloud AI provider 是活跃的
+        // 登录即启用 LLM 总开关（用户显然想用 AI 功能）
+        preferences.llmEnabled = true
+        // 确保 Cloud AI provider 存在并设为活跃（邮箱登录时自动创建，无需 API Key）
         if let cloud = preferences.llmProviders.first(where: { $0.isCloudProvider }) {
             preferences.activeLLMProviderId = cloud.id
+        } else {
+            let workerURL = preferences.cloudAIWorkerURL ?? "spapi.chenkai.space"
+            let provider = LLMProvider.cloudBeta(workerURL: workerURL)
+            preferences.llmProviders.append(provider)
+            preferences.activeLLMProviderId = provider.id
         }
-        Log.preferences.info("Cloud session login: email=\(email, privacy: .private(mask: .hash)) membership=\(membershipType ?? "free", privacy: .public) tokenSaved=\(cloudSessionToken != nil)")
+        Log.preferences.info("Cloud session login: email=\(email, privacy: .private(mask: .hash)) membership=\(membershipType ?? "free", privacy: .public) tokenSaved=\(self.cloudSessionToken != nil)")
     }
 
     /// 清除 Session Token 和登录邮箱及会员信息。

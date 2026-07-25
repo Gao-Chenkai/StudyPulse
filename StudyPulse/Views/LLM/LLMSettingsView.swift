@@ -52,19 +52,23 @@ struct LLMSettingsView: View {
                     // ── Account mode ──
                     cloudAccountRow
 
-                    if let models = container.envManager.preferences.cloudAvailableModels,
-                       !models.isEmpty {
-                        HStack {
-                            Text("Model".localized()).foregroundColor(.secondary)
-                            Spacer()
+                    // 始终显示模型选择器（服务端模型列表未加载时用 provider 自带模型兜底）
+                    HStack {
+                        Text("Model".localized()).foregroundColor(.secondary)
+                        Spacer()
+                        if let models = container.envManager.preferences.cloudAvailableModels,
+                           !models.isEmpty {
                             Picker("", selection: $cloudSelectedModel) {
                                 ForEach(models, id: \.self) { Text($0).tag($0) }
                             }
                             .onChange(of: cloudSelectedModel) { _, m in updateCloudProviderModel(m) }
+                        } else {
+                            Text(cloudSelectedModel)
+                                .foregroundColor(.secondary)
                         }
                     }
 
-                    DisclosureGroup("Advanced".localized()) {
+                    DisclosureGroup("Account".localized()) {
                         Button {
                             Task { await refreshProfile() }
                         } label: {
@@ -79,26 +83,31 @@ struct LLMSettingsView: View {
                             else { Label("Logout".localized(), systemImage: "rectangle.portrait.and.arrow.right") }
                         }
                         .disabled(isLoggingOut)
+                    }
 
-                        Divider()
+                    DisclosureGroup("Beta API Key (Optional)".localized()) {
                         TextField("Worker URL", text: $cloudWorkerURL)
                             .textInputAutocapitalization(.never).autocorrectionDisabled(true)
                             .keyboardType(.URL).font(.subheadline)
                         SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
                             .textInputAutocapitalization(.never).autocorrectionDisabled(true)
                             .font(.subheadline)
+                        if !cloudAPIKeyInput.trimmingCharacters(in: .whitespaces).isEmpty {
+                            Button { activateCloudProvider() } label: {
+                                HStack {
+                                    if isActivatingCloud { ProgressView().scaleEffect(0.8) }
+                                    Text("Save Key".localized())
+                                }.frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isActivatingCloud)
+                        }
                         if container.envManager.hasCloudProvider {
                             Button(role: .destructive) {
                                 container.envManager.disconnectCloudKey()
+                                cloudAPIKeyInput = ""
                             } label: {
                                 Label("Disconnect Key".localized(), systemImage: "xmark.circle")
-                            }
-                            Button(role: .destructive) {
-                                container.envManager.deleteCloudProvider()
-                                cloudAPIKeyInput = ""
-                                cloudWorkerURL = container.envManager.preferences.cloudAIWorkerURL ?? "spapi.chenkai.space"
-                            } label: {
-                                Label("Remove Cloud AI".localized(), systemImage: "trash")
                             }
                         }
                     }
@@ -216,6 +225,17 @@ struct LLMSettingsView: View {
 
             // ── 6. Actions ──
             Section {
+                // DEBUG: 显示 LLMConfig 诊断信息
+                let cfg = container.envManager.llmConfig
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("enabled=\(cfg.enabled ? "YES" : "NO") | isCloud=\(cfg.isCloudProvider ? "YES" : "NO") | baseURL=\(cfg.baseURL ?? "nil")")
+                        .font(.caption2.monospaced()).foregroundColor(.orange)
+                    Text("hasSession=\(cfg.sessionToken != nil ? "YES" : "NO") | hasAPIKey=\(cfg.apiKey != nil ? "YES" : "NO") | model=\(cfg.model ?? "nil")")
+                        .font(.caption2.monospaced()).foregroundColor(.orange)
+                    Text("→ isConfigured = \(cfg.isConfigured ? "TRUE" : "FALSE")")
+                        .font(.caption2.monospaced().bold()).foregroundColor(cfg.isConfigured ? .green : .red)
+                }
+
                 Button {
                     Task { await runTestConnection() }
                 } label: {
@@ -277,21 +297,6 @@ struct LLMSettingsView: View {
                 }
             }
             Spacer()
-            Button {
-                Task { await refreshProfile() }
-            } label: {
-                if isRefreshingProfile { ProgressView().scaleEffect(0.8) }
-                else { Image(systemName: "arrow.triangle.2.circlepath").font(.caption) }
-            }
-            .buttonStyle(.plain).disabled(isRefreshingProfile)
-
-            Button(role: .destructive) {
-                Task { await performLogout() }
-            } label: {
-                if isLoggingOut { ProgressView().scaleEffect(0.8) }
-                else { Image(systemName: "rectangle.portrait.and.arrow.right").font(.caption) }
-            }
-            .buttonStyle(.plain).disabled(isLoggingOut)
         }
     }
 
