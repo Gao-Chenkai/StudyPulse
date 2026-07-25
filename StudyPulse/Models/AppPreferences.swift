@@ -18,8 +18,12 @@ nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
     var model: String
     var multimodalEnabled: Bool
     var thinkingEnabled: Bool
+    /// `true` 表示该 provider 走 StudyPulse Cloud AI 网关（/v1/chat），而非 OpenAI 兼容端点。
+    /// When `true`, the provider uses the StudyPulse Cloud AI gateway (/v1/chat)
+    /// instead of an OpenAI-compatible endpoint.
+    var isCloudProvider: Bool
 
-    init(id: UUID = UUID(), name: String, baseURL: String = "", legacyAPIKey: String? = nil, model: String = "", multimodalEnabled: Bool = false, thinkingEnabled: Bool = false) {
+    init(id: UUID = UUID(), name: String, baseURL: String = "", legacyAPIKey: String? = nil, model: String = "", multimodalEnabled: Bool = false, thinkingEnabled: Bool = false, isCloudProvider: Bool = false) {
         self.id = id
         self.name = name
         self.baseURL = baseURL
@@ -27,10 +31,24 @@ nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
         self.model = model
         self.multimodalEnabled = multimodalEnabled
         self.thinkingEnabled = thinkingEnabled
+        self.isCloudProvider = isCloudProvider
+    }
+
+    /// StudyPulse Cloud AI 内测 provider 预设。
+    /// Pre-configured Cloud AI beta provider.
+    static func cloudBeta(workerURL: String) -> LLMProvider {
+        LLMProvider(
+            name: "StudyPulse Cloud (Beta)",
+            baseURL: workerURL,
+            model: "MiniMax-M3",
+            multimodalEnabled: true,
+            thinkingEnabled: false,
+            isCloudProvider: true
+        )
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, baseURL, model, multimodalEnabled, thinkingEnabled
+        case id, name, baseURL, model, multimodalEnabled, thinkingEnabled, isCloudProvider
         case legacyAPIKey = "apiKey"
     }
 
@@ -43,6 +61,7 @@ nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
         model = try c.decodeIfPresent(String.self, forKey: .model) ?? ""
         multimodalEnabled = try c.decodeIfPresent(Bool.self, forKey: .multimodalEnabled) ?? false
         thinkingEnabled = try c.decodeIfPresent(Bool.self, forKey: .thinkingEnabled) ?? false
+        isCloudProvider = try c.decodeIfPresent(Bool.self, forKey: .isCloudProvider) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -53,6 +72,7 @@ nonisolated struct LLMProvider: Codable, Identifiable, Equatable, Sendable {
         try c.encode(model, forKey: .model)
         try c.encode(multimodalEnabled, forKey: .multimodalEnabled)
         try c.encode(thinkingEnabled, forKey: .thinkingEnabled)
+        try c.encode(isCloudProvider, forKey: .isCloudProvider)
     }
 }
 
@@ -176,6 +196,12 @@ nonisolated struct AppPreferences: Codable {
     /// Used to enforce the configured rate limit; the `Analyze now` button bypasses it.
     var lastRadarAIRequestTime: Date? = nil
 
+    /// StudyPulse Cloud AI Worker 域名。内测 API Key 模式下，客户端不直接持有第三方 AI Key，
+    /// 通过此网关统一发起 AI 请求。
+    /// StudyPulse Cloud AI Worker base URL. When using a Cloud AI provider,
+    /// all requests are routed through this gateway instead of directly to third-party APIs.
+    var cloudAIWorkerURL: String? = nil
+
     /// Debug 专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
     /// 非空时 LLMClient.buildBody 会**完全替换**默认 system + appendix,用于排查 prompt 行为。
     /// 空 / nil 时回退到默认 + appendix 的常规逻辑。
@@ -243,7 +269,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, llmProviders, activeLLMProviderId, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, llmProviders, activeLLMProviderId, cloudAIWorkerURL, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
@@ -290,6 +316,7 @@ nonisolated struct AppPreferences: Codable {
         self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
         self.llmProviders = try c.decodeIfPresent([LLMProvider].self, forKey: .llmProviders) ?? []
         self.activeLLMProviderId = try c.decodeIfPresent(UUID.self, forKey: .activeLLMProviderId)
+        self.cloudAIWorkerURL = try c.decodeIfPresent(String.self, forKey: .cloudAIWorkerURL)
         // 从旧版单一配置无损迁移，既有用户升级后可立刻继续使用。
         if self.llmProviders.isEmpty,
            let baseURL = self.llmBaseURL,

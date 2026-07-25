@@ -31,6 +31,10 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     var providerName: String? = nil
     var multimodalEnabled: Bool
     var thinkingEnabled: Bool
+    /// `true` 表示使用 StudyPulse Cloud AI 网关（/v1/chat），而非 OpenAI 兼容端点。
+    /// When `true`, routes through the StudyPulse Cloud AI gateway (/v1/chat)
+    /// instead of an OpenAI-compatible endpoint.
+    var isCloudProvider: Bool = false
     /// 自定义系统 prompt 追加(在默认 prompt 之后)
     var systemPromptAppendix: String?
     /// 采样温度 (0.0-2.0)
@@ -39,17 +43,17 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     /// DEBUG-only override: when set, replaces the default system prompt + appendix entirely.
     var overrideSystemPrompt: String?
 
-    /// 是否已配置完整(baseURL / apiKey / model 都非空)。
-    /// `LLMClient.complete/stream` 入口处统一检查;
+    /// 是否已配置完整。
+    /// Cloud provider: 只需要 baseURL + apiKey（model/multimodal/thinking 由服务端固定）。
+    /// BYOK provider: baseURL / apiKey / model 都非空。
     /// `false` 时抛 `LLMError.notConfigured`,调用方按需回退。
-    /// True only when baseURL / apiKey / model are all non-empty.
-    /// `LLMClient.complete/stream` checks this and throws `LLMError.notConfigured`
-    /// when false so the caller can fall back to the local implementation.
     var isConfigured: Bool {
-        enabled
-            && !(baseURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-            && !(apiKey?.isEmpty ?? true)
-            && !(model?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        guard enabled else { return false }
+        guard let baseURL, !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        guard let apiKey, !apiKey.isEmpty else { return false }
+        if isCloudProvider { return true }
+        guard let model, !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        return true
     }
 }
 
@@ -64,6 +68,7 @@ extension LLMConfig {
         providerName: nil,
         multimodalEnabled: false,
         thinkingEnabled: false,
+        isCloudProvider: false,
         systemPromptAppendix: nil,
         temperature: 0.7
     )
@@ -85,16 +90,25 @@ extension LLMConfig {
         keychain: KeychainStore = .shared
     ) -> LLMConfig {
         let provider = prefs.llmProviders.first { $0.id == prefs.activeLLMProviderId }
-        let account = provider.map { LLMAPIKeyAccount.provider($0.id) } ?? LLMAPIKeyAccount.legacy
+        let account: String
+        if let provider, provider.isCloudProvider {
+            account = LLMAPIKeyAccount.cloud
+        } else if let provider {
+            account = LLMAPIKeyAccount.provider(provider.id)
+        } else {
+            account = LLMAPIKeyAccount.legacy
+        }
         let apiKey = try? keychain.read(account: account)
+        let isCloud = provider?.isCloudProvider ?? false
         return LLMConfig(
             enabled: prefs.llmEnabled,
-            baseURL: provider?.baseURL ?? prefs.llmBaseURL,
+            baseURL: isCloud ? prefs.cloudAIWorkerURL : provider?.baseURL ?? prefs.llmBaseURL,
             apiKey: apiKey ?? nil,
             model: provider?.model ?? prefs.llmModel,
             providerName: provider?.name,
             multimodalEnabled: provider?.multimodalEnabled ?? false,
             thinkingEnabled: provider?.thinkingEnabled ?? false,
+            isCloudProvider: isCloud,
             systemPromptAppendix: prefs.llmSystemPromptAppendix,
             temperature: prefs.llmTemperature,
             overrideSystemPrompt: prefs.debugOverrideSystemPrompt

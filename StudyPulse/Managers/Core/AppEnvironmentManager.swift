@@ -219,7 +219,7 @@ final class AppEnvironmentManager {
 
     func updateLLMProvider(_ provider: LLMProvider, apiKey: String) throws {
         guard let index = preferences.llmProviders.firstIndex(where: { $0.id == provider.id }) else { return }
-        let account = LLMAPIKeyAccount.provider(provider.id)
+        let account = provider.isCloudProvider ? LLMAPIKeyAccount.cloud : LLMAPIKeyAccount.provider(provider.id)
         if apiKey.isEmpty {
             try keychain.delete(account: account)
         } else {
@@ -236,8 +236,10 @@ final class AppEnvironmentManager {
     }
 
     func deleteLLMProvider(_ id: UUID) {
+        let provider = preferences.llmProviders.first { $0.id == id }
+        let account = provider?.isCloudProvider == true ? LLMAPIKeyAccount.cloud : LLMAPIKeyAccount.provider(id)
         do {
-            try keychain.delete(account: LLMAPIKeyAccount.provider(id))
+            try keychain.delete(account: account)
         } catch {
             Log.preferences.error("删除 LLM Keychain 项失败 / Failed to delete LLM Keychain item")
             return
@@ -280,12 +282,18 @@ final class AppEnvironmentManager {
     }
 
     func llmAPIKey(for providerID: UUID) -> String {
-        (try? keychain.read(account: LLMAPIKeyAccount.provider(providerID))) ?? ""
+        let provider = preferences.llmProviders.first { $0.id == providerID }
+        let account = provider?.isCloudProvider == true ? LLMAPIKeyAccount.cloud : LLMAPIKeyAccount.provider(providerID)
+        return (try? keychain.read(account: account)) ?? ""
     }
 
     func isLLMProviderConfigured(_ provider: LLMProvider) -> Bool {
-        !provider.baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !llmAPIKey(for: provider.id).isEmpty
+        let baseURLOk = !provider.baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let apiKeyOk = !llmAPIKey(for: provider.id).isEmpty
+        if provider.isCloudProvider {
+            return baseURLOk && apiKeyOk
+        }
+        return baseURLOk && apiKeyOk
             && !provider.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -306,6 +314,65 @@ final class AppEnvironmentManager {
         guard let id = preferences.activeLLMProviderId,
               let index = preferences.llmProviders.firstIndex(where: { $0.id == id }) else { return }
         mutate(&preferences.llmProviders[index])
+    }
+
+    // MARK: - Cloud AI Provider
+
+    /// 激活 StudyPulse Cloud AI 内测 provider。
+    /// 如果已存在 cloud provider 则直接选中,否则创建新的并写入 API Key。
+    func activateCloudProvider(workerURL: String, apiKey: String) throws {
+        let trimmedURL = workerURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        preferences.cloudAIWorkerURL = trimmedURL
+
+        // 先查找已有的 cloud provider
+        if let existing = preferences.llmProviders.first(where: { $0.isCloudProvider }) {
+            // 更新 workerURL
+            if let idx = preferences.llmProviders.firstIndex(where: { $0.id == existing.id }) {
+                preferences.llmProviders[idx].baseURL = trimmedURL
+            }
+            preferences.activeLLMProviderId = existing.id
+            try keychain.write(apiKey, account: LLMAPIKeyAccount.cloud)
+        } else {
+            let provider = LLMProvider.cloudBeta(workerURL: trimmedURL)
+            preferences.llmProviders.append(provider)
+            preferences.activeLLMProviderId = provider.id
+            try keychain.write(apiKey, account: LLMAPIKeyAccount.cloud)
+        }
+    }
+
+    /// 停用 Cloud AI provider:取消选中(如果当前激活的是 cloud provider)。
+    func deactivateCloudProvider() {
+        if let active = activeLLMProvider, active.isCloudProvider {
+            // 取消选中 cloud provider,切换到第一个非 cloud provider(如果有)
+            let next = preferences.llmProviders.first { !$0.isCloudProvider }
+            preferences.activeLLMProviderId = next?.id
+        }
+    }
+
+    /// 删除 Cloud AI provider 及对应 Keychain 条目。
+    func deleteCloudProvider() {
+        if let cloud = preferences.llmProviders.first(where: { $0.isCloudProvider }) {
+            try? keychain.delete(account: LLMAPIKeyAccount.cloud)
+            preferences.llmProviders.removeAll { $0.id == cloud.id }
+            if preferences.activeLLMProviderId == cloud.id {
+                preferences.activeLLMProviderId = preferences.llmProviders.first?.id
+            }
+        }
+    }
+
+    /// Cloud AI API Key(从 Keychain 读取)。
+    var cloudAPIKey: String {
+        (try? keychain.read(account: LLMAPIKeyAccount.cloud)) ?? ""
+    }
+
+    /// 当前是否有 Cloud AI provider。
+    var hasCloudProvider: Bool {
+        preferences.llmProviders.contains { $0.isCloudProvider }
+    }
+
+    /// 当前是否激活 Cloud AI provider。
+    var isCloudProviderActive: Bool {
+        activeLLMProvider?.isCloudProvider ?? false
     }
 
     /// 设置 LLM 自定义系统 prompt 追加

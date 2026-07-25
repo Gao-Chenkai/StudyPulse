@@ -151,6 +151,13 @@ final class LLMClient: @unchecked Sendable {
         caller: String = "complete"
     ) async throws -> String {
         try validateConfig(config)
+
+        // Cloud AI 网关:使用简化协议,响应格式不同。
+        if config.isCloudProvider {
+            return try await cloudComplete(prompt: prompt, config: config, caller: caller)
+        }
+
+        // BYOK: OpenAI 兼容协议。
         // 缓存命中:直接返回(避免重复走网络)。
         // Cache hit: return immediately (avoids the network round-trip).
         if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
@@ -234,6 +241,119 @@ final class LLMClient: @unchecked Sendable {
         return result
     }
 
+    /// Cloud AI 网关专用非流式调用。
+    /// Sends a Cloud AI-compatible request and parses the simplified response.
+    @MainActor
+    private func cloudComplete(
+        prompt: LLMPrompt,
+        config: LLMConfig,
+        caller: String
+    ) async throws -> String {
+        // 缓存命中
+        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+            return cached
+        }
+        printPromptToConsole(prompt: prompt, config: config, caller: caller)
+        let url = try buildCloudURL(baseURL: config.baseURL)
+        let body = try await Task.detached(priority: .userInitiated) {
+            try self.buildCloudBody(prompt: prompt, config: config)
+        }.value
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        Log.llm.info("LLM cloud complete → \(url.absoluteString, privacy: .public)")
+
+        let startTime = Date()
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: nil, error: LLMError.timeout.errorDescription,
+                caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw LLMError.timeout
+        } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: nil, error: error.localizedDescription,
+                caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw LLMError.network(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.network("Non-HTTP response")
+        }
+        // Cloud AI 网关上 HTTP 200 但 body 可能包含 {"error":"..."}
+        if !(200..<300).contains(httpResponse.statusCode) {
+            let body = String(data: data, encoding: .utf8)
+            let errorMsg: String
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let err = json["error"] as? String {
+                errorMsg = err
+            } else {
+                errorMsg = body ?? "HTTP \(httpResponse.statusCode)"
+            }
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: body, error: errorMsg, caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw LLMError.serverError(statusCode: httpResponse.statusCode, body: errorMsg)
+        }
+
+        let result: String
+        do {
+            result = try await Task.detached(priority: .userInitiated) {
+                try self.parseCloudResponse(data, httpResponse: httpResponse)
+            }.value
+        } catch {
+            let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: false,
+                response: String(data: data, encoding: .utf8),
+                error: desc, caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw error
+        }
+
+        let info = LLMCallDebugInfo(
+            startTime: startTime, endTime: Date(),
+            url: url.absoluteString, model: "MiniMax-M3",
+            temperature: config.temperature,
+            systemPrompt: effectiveSystem(prompt: prompt, config: config),
+            messages: prompt.messages, streaming: false,
+            response: result, error: nil, caller: caller
+        )
+        recordCall(info, apiKey: config.apiKey)
+        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
+        return result
+    }
+
     /// SSE 流式调用,逐 delta 调 `onDelta`。
     /// 返回**完整文本**;`onDelta` 每次接收到目前为止的全部内容。
     /// 失败抛 `LLMError`。
@@ -245,6 +365,17 @@ final class LLMClient: @unchecked Sendable {
         onDelta: @MainActor (String) -> Void
     ) async throws -> String {
         try validateConfig(config)
+
+        // Cloud AI 网关暂不支持 SSE 流式;回退到 complete()，结果一次性推给 onDelta。
+        // Cloud AI gateway does not yet support SSE streaming; fall back to complete(),
+        // then emit the full result through onDelta once.
+        if config.isCloudProvider {
+            let result = try await complete(prompt: prompt, config: config, caller: caller)
+            onDelta(result)
+            return result
+        }
+
+        // BYOK: SSE 流式。
         // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
         // Cache hit: emit the cached response as a single onDelta,avoiding the network round-trip.
         if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
@@ -369,14 +500,66 @@ final class LLMClient: @unchecked Sendable {
         return accumulated
     }
 
-    /// 测试连接。发一条极小请求确认 baseURL/apiKey/model 可用。
+    /// 测试连接。发一条极小请求确认端点可用。
     /// 成功返回;失败抛 `LLMError`。
+    /// Cloud 模式下先 GET / 探活,再 POST /v1/chat 验证 sp_ key。
     func testConnection(config: LLMConfig) async throws {
+        if config.isCloudProvider {
+            try await testCloudConnection(config: config)
+            return
+        }
         let prompt = LLMPrompt(
             system: "You are a connectivity check endpoint.",
             messages: [.user("ping")]
         )
         _ = try await complete(prompt: prompt, config: config)
+    }
+
+    /// Cloud AI 网关连接测试:先 GET / 健康检查,再 POST /v1/chat 验证 API Key。
+    @MainActor
+    private func testCloudConnection(config: LLMConfig) async throws {
+        // 1. 健康检查:直接 GET 根路径,不通过 buildCloudURL(避免 deletingLastPathComponent 只删一层)
+        guard let raw = config.baseURL else { throw LLMError.invalidURL }
+        let normalized = normalizeURL(raw)
+        guard let healthURL = URL(string: normalized) else { throw LLMError.invalidURL }
+        var healthReq = URLRequest(url: healthURL)
+        healthReq.httpMethod = "GET"
+        let (healthData, healthResponse) = try await session.data(for: healthReq)
+        guard let http = healthResponse as? HTTPURLResponse,
+              http.statusCode == 200 else {
+            throw LLMError.network("Health check failed")
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: healthData) as? [String: Any],
+              json["status"] as? String == "online" else {
+            throw LLMError.network("Cloud AI service unavailable")
+        }
+
+        // 2. API Key 验证(发一条极小对话)
+        let url = try buildCloudURL(baseURL: config.baseURL)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["message": "ping"])
+        let (data, response) = try await session.data(for: request)
+        guard let httpResp = response as? HTTPURLResponse else {
+            throw LLMError.network("Non-HTTP response")
+        }
+        guard httpResp.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8)
+            let errorMsg: String
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let err = json["error"] as? String {
+                errorMsg = err
+            } else {
+                errorMsg = body ?? "HTTP \(httpResp.statusCode)"
+            }
+            throw LLMError.serverError(statusCode: httpResp.statusCode, body: errorMsg)
+        }
+        let reply = try parseCloudResponse(data, httpResponse: httpResp)
+        guard !reply.isEmpty else {
+            throw LLMError.emptyResponse
+        }
     }
 
     // MARK: - Helpers
@@ -387,11 +570,14 @@ final class LLMClient: @unchecked Sendable {
         guard let baseURL = config.baseURL, !baseURL.trimmingCharacters(in: .whitespaces).isEmpty else {
             throw LLMError.notConfigured
         }
-        guard let model = config.model, !model.trimmingCharacters(in: .whitespaces).isEmpty else {
-            throw LLMError.notConfigured
+        // Cloud provider: model is fixed server-side, skip the model check.
+        if !config.isCloudProvider {
+            guard let model = config.model, !model.trimmingCharacters(in: .whitespaces).isEmpty else {
+                throw LLMError.notConfigured
+            }
+            // 静默引用 model 避免 unused-warning(Linter 友好)
+            _ = model
         }
-        // 静默引用 model 避免 unused-warning(Linter 友好)
-        _ = model
     }
 
     private func printPromptToConsole(
@@ -422,16 +608,32 @@ final class LLMClient: @unchecked Sendable {
         Log.llm.debug("\(sanitized, privacy: .public)")
     }
 
+    /// 标准化 URL 字符串:自动补全 `https://` 如果缺少 scheme。
+    /// Normalize a URL string: auto-prepend `https://` when the scheme is missing.
+    nonisolated private func normalizeURL(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleaned = trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
+        let lowered = cleaned.lowercased()
+        if lowered.hasPrefix("http://") || lowered.hasPrefix("https://") {
+            return cleaned
+        }
+        return "https://\(cleaned)"
+    }
+
     nonisolated private func buildURL(baseURL: String?) throws -> URL {
         guard let raw = baseURL else { throw LLMError.invalidURL }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 去除末尾的 "/",避免 appedingPathComponent 把请求变成 "//v1"
-        // Strip a trailing slash so appendingPathComponent doesn't produce "//v1".
-        let cleaned = trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
-        guard let base = URL(string: cleaned) else { throw LLMError.invalidURL }
-        // 强制走 OpenAI 兼容的 chat completions 路径
-        // Always use the OpenAI-compatible /v1/chat/completions path.
+        let normalized = normalizeURL(raw)
+        guard let base = URL(string: normalized) else { throw LLMError.invalidURL }
         return base.appendingPathComponent("/v1/chat/completions")
+    }
+
+    /// Cloud AI 网关端点: `{workerURL}/v1/chat`
+    /// Cloud AI gateway endpoint.
+    nonisolated private func buildCloudURL(baseURL: String?) throws -> URL {
+        guard let raw = baseURL else { throw LLMError.invalidURL }
+        let normalized = normalizeURL(raw)
+        guard let base = URL(string: normalized) else { throw LLMError.invalidURL }
+        return base.appendingPathComponent("/v1/chat")
     }
 
     nonisolated private func buildBody(prompt: LLMPrompt, config: LLMConfig, stream: Bool) throws -> Data {
@@ -467,6 +669,41 @@ final class LLMClient: @unchecked Sendable {
             payload["thinking"] = ["type": "enabled"]
         }
         return try JSONSerialization.data(withJSONObject: payload, options: [])
+    }
+
+    /// 构建 Cloud AI 网关请求体。
+    /// Cloud AI uses simplified format: `{"message": "..."}` for text-only,
+    /// or `{"content": [...]}` for multimodal.
+    /// System prompt is prepended to the message since the Cloud AI Worker
+    /// does not have a separate `system` field.
+    nonisolated private func buildCloudBody(prompt: LLMPrompt, config: LLMConfig) throws -> Data {
+        let system = effectiveSystem(prompt: prompt, config: config)
+        let userMessages = prompt.messages
+            .filter { $0.role == .user }
+            .map(\.content)
+            .joined(separator: "\n")
+
+        // 把 system prompt 拼到消息前面,用分隔符标注
+        let fullMessage: String
+        if system.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            fullMessage = userMessages
+        } else {
+            fullMessage = "\(system)\n\n---\n\n\(userMessages)"
+        }
+
+        if config.multimodalEnabled {
+            var parts: [[String: Any]] = [["type": "text", "text": fullMessage]]
+            for msg in prompt.messages where msg.role == .user {
+                parts.append(contentsOf: msg.imageDataURLs.map {
+                    ["type": "image_url", "image_url": ["url": $0, "detail": "default"]]
+                })
+            }
+            let payload: [String: Any] = ["content": parts]
+            return try JSONSerialization.data(withJSONObject: payload, options: [])
+        } else {
+            let payload: [String: Any] = ["message": fullMessage]
+            return try JSONSerialization.data(withJSONObject: payload, options: [])
+        }
     }
 
     nonisolated private func isMiniMax(config: LLMConfig) -> Bool {
@@ -524,6 +761,24 @@ final class LLMClient: @unchecked Sendable {
     nonisolated private func redact(_ text: String, secret: String?) -> String {
         guard let secret, !secret.isEmpty else { return text }
         return text.replacingOccurrences(of: secret, with: "<redacted>")
+    }
+
+    // MARK: - Cloud AI Helpers
+
+    /// 解析 Cloud AI 网关响应: `{"success": true, "data": {"reply": "..."}}`
+    /// 或错误: `{"error": "..."}`。
+    nonisolated private func parseCloudResponse(_ data: Data, httpResponse: HTTPURLResponse) throws -> String {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw LLMError.malformedResponse
+        }
+        if let error = json["error"] as? String {
+            throw LLMError.serverError(statusCode: httpResponse.statusCode, body: error)
+        }
+        guard let dataObj = json["data"] as? [String: Any],
+              let reply = dataObj["reply"] as? String else {
+            throw LLMError.malformedResponse
+        }
+        return reply
     }
 }
 

@@ -49,6 +49,11 @@ struct LLMSettingsView: View {
     /// Whether a user-triggered Coach refresh is currently calling the configured LLM.
     @State private var isForceRefreshingCoach = false
 
+    // MARK: - Cloud AI State
+    @State private var cloudWorkerURL: String = ""
+    @State private var cloudAPIKeyInput: String = ""
+    @State private var isActivatingCloud: Bool = false
+
     var body: some View {
         List {
             Section {
@@ -106,12 +111,114 @@ struct LLMSettingsView: View {
                 Text("AI Coach is a separate opt-in. Major health changes are judged on-device; only then is a proposed plan generated through your configured LLM. Force refresh replaces any pending proposal, but it never changes Todo without your confirmation.".localized())
             }
 
-            // 2) 供应商配置
+            // 2) StudyPulse Cloud AI (内测)
             Section {
-                if container.envManager.preferences.llmProviders.isEmpty {
+                if !container.envManager.hasCloudProvider {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: "cloud.fill")
+                                .foregroundColor(.accentColor)
+                            Text("StudyPulse Cloud AI (Beta)".localized())
+                                .font(.headline)
+                        }
+                        TextField("Worker URL (e.g. spapi.chenkai.space)", text: $cloudWorkerURL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .keyboardType(.URL)
+                            .font(.subheadline)
+                        SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .font(.subheadline)
+                        Button {
+                            activateCloudProvider()
+                        } label: {
+                            HStack {
+                                if isActivatingCloud {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                                Text("Activate Cloud AI".localized())
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isActivatingCloud || cloudWorkerURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cloudAPIKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                } else {
+                    // 已激活状态
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("StudyPulse Cloud AI (Beta)".localized())
+                                .font(.headline)
+                            Text("MiniMax-M3 · 多模态 · Thinking 关闭".localized())
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if container.envManager.isCloudProviderActive {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        }
+                    }
+                    // Worker URL + API Key 编辑(已激活时也可修改)
+                    TextField("Worker URL", text: $cloudWorkerURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.URL)
+                        .font(.subheadline)
+                    SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .font(.subheadline)
+
+                    if container.envManager.isCloudProviderActive {
+                        Button(role: .destructive) {
+                            container.envManager.deactivateCloudProvider()
+                        } label: {
+                            Label("Deactivate Cloud AI".localized(), systemImage: "xmark.circle")
+                        }
+                    } else {
+                        Button {
+                            activateCloudProvider()
+                        } label: {
+                            HStack {
+                                if isActivatingCloud {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                                Label("Activate Cloud AI".localized(), systemImage: "checkmark.circle")
+                            }
+                        }
+                        .disabled(isActivatingCloud)
+                    }
+
+                    Button(role: .destructive) {
+                        container.envManager.deleteCloudProvider()
+                        cloudAPIKeyInput = ""
+                        cloudWorkerURL = container.envManager.preferences.cloudAIWorkerURL ?? ""
+                    } label: {
+                        Label("Remove Cloud Provider".localized(), systemImage: "trash")
+                    }
+                }
+            } header: {
+                Text("StudyPulse Cloud AI (Beta)".localized())
+            } footer: {
+                if !container.envManager.hasCloudProvider {
+                    Text("Use a StudyPulse-distributed API Key (sp_xxx) to access the Cloud AI gateway. Model: MiniMax-M3, multimodal enabled, thinking disabled. Your requests are proxied through the StudyPulse Cloud AI Worker.".localized())
+                } else {
+                    Text("Cloud AI routes requests through the StudyPulse gateway. Tap the provider below to use Cloud AI, or activate a BYOK provider instead.".localized())
+                }
+            }
+
+            // 3) 供应商配置 (BYOK, 过滤掉 cloud provider)
+            Section {
+                let byokProviders = container.envManager.preferences.llmProviders.filter { !$0.isCloudProvider }
+                if byokProviders.isEmpty {
                     ContentUnavailableView("No provider configured".localized(), systemImage: "server.rack")
                 }
-                ForEach(container.envManager.preferences.llmProviders) { provider in
+                ForEach(byokProviders) { provider in
                     providerRow(provider)
                     .swipeActions {
                         Button(role: .destructive) { container.envManager.deleteLLMProvider(provider.id) } label: {
@@ -345,6 +452,25 @@ struct LLMSettingsView: View {
         appendixInput = prefs.llmSystemPromptAppendix ?? ""
         temperature = prefs.llmTemperature
         radarCooldownMinutes = prefs.radarAICooldownMinutes
+        cloudWorkerURL = prefs.cloudAIWorkerURL ?? ""
+        if container.envManager.hasCloudProvider {
+            cloudAPIKeyInput = container.envManager.cloudAPIKey
+        }
+    }
+
+    @MainActor
+    private func activateCloudProvider() {
+        let url = cloudWorkerURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = cloudAPIKeyInput.trimmingCharacters(in: .whitespaces)
+        guard !url.isEmpty, !key.isEmpty else { return }
+        isActivatingCloud = true
+        defer { isActivatingCloud = false }
+        do {
+            try container.envManager.activateCloudProvider(workerURL: url, apiKey: key)
+        } catch {
+            testAlertSucceeded = false
+            testAlertMessage = "Failed to save API Key: \(error.localizedDescription)"
+        }
     }
 
     /// 真正发一次 minimal 请求来验证端点 / Key / 模型
@@ -409,28 +535,47 @@ private struct LLMProviderEditor: View {
 
     var body: some View {
         Form {
-            Section {
-                TextField("Provider Name".localized(), text: $name)
-                TextField("https://api.openai.com", text: $baseURL, axis: .vertical)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-                    .keyboardType(.URL)
-                SecureField("API Key".localized(), text: $apiKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-                TextField("gpt-4o-mini", text: $model)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-                Toggle("Enable Multimodal".localized(), isOn: $multimodalEnabled)
-                Toggle("Enable Thinking".localized(), isOn: $thinkingEnabled)
-            } header: {
-                Text("Connection".localized())
-            }
+            if provider.isCloudProvider {
+                Section {
+                    HStack {
+                        Image(systemName: "cloud.fill")
+                            .foregroundColor(.accentColor)
+                        Text("StudyPulse Cloud AI (Beta)")
+                            .font(.headline)
+                    }
+                    Text("Model: MiniMax-M3 · Multimodal: On · Thinking: Off")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    SecureField("API Key (sp_xxx)".localized(), text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                } header: {
+                    Text("Connection".localized())
+                }
+            } else {
+                Section {
+                    TextField("Provider Name".localized(), text: $name)
+                    TextField("https://api.openai.com", text: $baseURL, axis: .vertical)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.URL)
+                    SecureField("API Key".localized(), text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                    TextField("gpt-4o-mini", text: $model)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                    Toggle("Enable Multimodal".localized(), isOn: $multimodalEnabled)
+                    Toggle("Enable Thinking".localized(), isOn: $thinkingEnabled)
+                } header: {
+                    Text("Connection".localized())
+                }
 
-            Section {
-                Text("Multimodal uses the content-array format for vision-capable models. Thinking uses the provider's thinking parameter when enabled.".localized())
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Section {
+                    Text("Multimodal uses the content-array format for vision-capable models. Thinking uses the provider's thinking parameter when enabled.".localized())
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section {
@@ -462,7 +607,11 @@ private struct LLMProviderEditor: View {
             }
         }
         .task {
-            apiKey = container.envManager.llmAPIKey(for: provider.id)
+            if provider.isCloudProvider {
+                apiKey = container.envManager.cloudAPIKey
+            } else {
+                apiKey = container.envManager.llmAPIKey(for: provider.id)
+            }
         }
         .alert("Unable to Save API Key".localized(), isPresented: Binding(
             get: { saveError != nil },
@@ -476,17 +625,29 @@ private struct LLMProviderEditor: View {
 
     private func save() -> Bool {
         do {
-            try container.envManager.updateLLMProvider(
-                LLMProvider(
+            let updatedProvider: LLMProvider
+            if provider.isCloudProvider {
+                // Cloud provider: preserve preset values, only update API key
+                updatedProvider = LLMProvider(
+                    id: provider.id,
+                    name: provider.name,
+                    baseURL: provider.baseURL,
+                    model: provider.model,
+                    multimodalEnabled: provider.multimodalEnabled,
+                    thinkingEnabled: provider.thinkingEnabled,
+                    isCloudProvider: true
+                )
+            } else {
+                updatedProvider = LLMProvider(
                     id: provider.id,
                     name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                     baseURL: baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
                     model: model.trimmingCharacters(in: .whitespacesAndNewlines),
                     multimodalEnabled: multimodalEnabled,
                     thinkingEnabled: thinkingEnabled
-                ),
-                apiKey: apiKey
-            )
+                )
+            }
+            try container.envManager.updateLLMProvider(updatedProvider, apiKey: apiKey)
             return true
         } catch {
             saveError = "The API key could not be stored securely. Your previous key was kept.".localized()

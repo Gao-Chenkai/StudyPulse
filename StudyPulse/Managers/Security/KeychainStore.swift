@@ -94,6 +94,8 @@ nonisolated struct KeychainStore: Sendable {
 
 nonisolated enum LLMAPIKeyAccount {
     static let legacy = "legacy"
+    /// StudyPulse Cloud AI 内测 API Key account。
+    static let cloud = "cloud"
 
     static func provider(_ id: UUID) -> String {
         "provider.\(id.uuidString.lowercased())"
