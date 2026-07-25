@@ -1,23 +1,6 @@
 import Foundation
 import os
 
-nonisolated struct CoachLLMPlanItem: Codable, Sendable {
-    let title: String
-    let subject: String
-    let startDate: Date
-    let objective: String
-    let stopCondition: CoachStopCondition
-    let importance: Int
-}
-
-nonisolated struct CoachLLMResponse: Codable, Sendable {
-    let conclusion: String
-    let rationale: String
-    let shouldContinue: Bool
-    let items: [CoachLLMPlanItem]
-    let alternative: String?
-}
-
 /// The explicit, structured recovery context included in every Coach planning request.
 /// It is only sent after the user has enabled AI Coach and configured their BYOK LLM.
 nonisolated struct CoachLLMHealthContext: Codable, Sendable, Equatable {
@@ -281,18 +264,41 @@ enum CoachLLM {
     }
 
     nonisolated static func parse(output: String, goal: CoachGoal, analysis: CoachAnalysis) throws -> CoachProposal {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        guard let data = output.data(using: .utf8), let response = try? decoder.decode(CoachLLMResponse.self, from: data) else {
+        let normalized = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let jsonText = extractJSONObject(from: normalized) ?? normalized
+        guard let data = jsonText.data(using: .utf8),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let conclusion = root["conclusion"] as? String else {
+            #if DEBUG
+            let preview = String(output.prefix(4000))
+            Log.llm.error("Coach plan parse failed: missing conclusion. raw=\(preview, privacy: .private(mask: .hash))")
+            #endif
             throw LLMError.malformedResponse
         }
-        let items = response.items.map { item in
-            CoachPlanItem(title: item.title, subject: item.subject, startDate: item.startDate,
-                          objective: item.objective, stopCondition: item.stopCondition,
-                          importance: item.importance)
-        }
+        let rationale = root["rationale"] as? String ?? ""
+        let shouldContinue = root["shouldContinue"] as? Bool ?? false
+        let alternative = root["alternative"] as? String
+        let rawItems = root["items"] as? [[String: Any]] ?? []
+        let items = rawItems.compactMap { parsePlanItem($0) }
         return CoachProposal(goalID: goal.id, goalVersion: goal.version, analysisID: analysis.id,
-                             conclusion: response.conclusion, rationale: response.rationale, items: items,
-                             alternative: response.alternative)
+                             conclusion: conclusion, rationale: rationale, items: items,
+                             alternative: alternative)
+    }
+
+    private nonisolated static func parsePlanItem(_ json: [String: Any]) -> CoachPlanItem? {
+        guard let title = (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else { return nil }
+        let subject = json["subject"] as? String ?? ""
+        let startDate = date(from: json["startDate"]) ?? Date()
+        let objective = json["objective"] as? String ?? ""
+        let importance = (json["importance"] as? NSNumber)?.intValue ?? 3
+        let stopJSON = json["stopCondition"] as? [String: Any]
+        let stopKind = CoachStopConditionKind(rawValue: stopJSON?["kind"] as? String ?? "") ?? .knowledgePoint
+        let stopValue = (stopJSON?["value"] as? NSNumber)?.doubleValue ?? 1
+        let stopLabel = stopJSON?["label"] as? String ?? objective
+        let stopTargetIDs = (stopJSON?["targetIDs"] as? [String])?.compactMap(UUID.init(uuidString:)) ?? []
+        let stopCondition = CoachStopCondition(kind: stopKind, value: stopValue, label: stopLabel, targetIDs: stopTargetIDs)
+        return CoachPlanItem(title: title, subject: subject, startDate: startDate,
+                             objective: objective, stopCondition: stopCondition,
+                             importance: min(5, max(1, importance)))
     }
 }

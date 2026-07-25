@@ -354,6 +354,140 @@ final class LLMClient: @unchecked Sendable {
         return result
     }
 
+    /// Cloud AI 网关专用 SSE 流式调用。
+    /// Cloud AI v0.5-beta+ supports SSE streaming, proxying MiniMax raw OpenAI-compatible chunks.
+    /// Uses the Cloud AI endpoint `{workerURL}/v1/chat` with `"stream": true`.
+    @MainActor
+    private func cloudStream(
+        prompt: LLMPrompt,
+        config: LLMConfig,
+        caller: String,
+        onDelta: @MainActor (String) -> Void
+    ) async throws -> String {
+        // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
+        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+            onDelta(cached)
+            return cached
+        }
+        printPromptToConsole(prompt: prompt, config: config, caller: caller)
+        let url = try buildCloudURL(baseURL: config.baseURL)
+        let body = try await Task.detached(priority: .userInitiated) {
+            try self.buildCloudBody(prompt: prompt, config: config, stream: true)
+        }.value
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        request.timeoutInterval = timeoutSeconds
+        Log.llm.info("LLM cloud stream → \(url.absoluteString, privacy: .public)")
+
+        let startTime = Date()
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(for: request)
+        } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: nil, error: error.localizedDescription,
+                caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            if let urlErr = error as? URLError, urlErr.code == .timedOut {
+                throw LLMError.timeout
+            }
+            throw LLMError.network(error.localizedDescription)
+        }
+
+        // 如果状态非 2xx,先收集 body 再抛(Cloud AI 错误格式: {"error": "..."})。
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            var buffer = Data()
+            for try await byte in bytes {
+                buffer.append(byte)
+            }
+            let bodyStr = String(data: buffer, encoding: .utf8)
+            let errorMsg: String
+            if let json = try? JSONSerialization.jsonObject(with: buffer) as? [String: Any],
+               let err = json["error"] as? String {
+                errorMsg = err
+            } else {
+                errorMsg = bodyStr ?? "HTTP \(http.statusCode)"
+            }
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: bodyStr, error: errorMsg, caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw LLMError.serverError(statusCode: http.statusCode, body: errorMsg)
+        }
+
+        // SSE 解析: Cloud AI 透传 MiniMax 的 OpenAI 兼容 chunk 格式，
+        // LLMStreamingParser 可直接复用。
+        // 注意：不用 break 提前退出，而是 read 到底。
+        // AsyncLineSequence 内部有预读缓冲，break 可能导致尚未 yield 的行被丢弃。
+        var accumulated = ""
+        var pending = ""
+        do {
+            for try await line in bytes.lines {
+                if Task.isCancelled { throw LLMError.network("Cancelled") }
+                if LLMStreamingParser.isDoneLine(line) { continue }
+                pending = line
+                if let piece = LLMStreamingParser.parseLine(pending) {
+                    accumulated += piece
+                    let snapshot = accumulated
+                    onDelta(snapshot)
+                }
+            }
+        } catch {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: accumulated.isEmpty ? nil : accumulated,
+                error: error.localizedDescription, caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw error
+        }
+
+        if accumulated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let info = LLMCallDebugInfo(
+                startTime: startTime, endTime: Date(),
+                url: url.absoluteString, model: "MiniMax-M3",
+                temperature: config.temperature,
+                systemPrompt: effectiveSystem(prompt: prompt, config: config),
+                messages: prompt.messages, streaming: true,
+                response: nil, error: LLMError.emptyResponse.errorDescription,
+                caller: caller
+            )
+            recordCall(info, apiKey: config.apiKey)
+            throw LLMError.emptyResponse
+        }
+
+        let info = LLMCallDebugInfo(
+            startTime: startTime, endTime: Date(),
+            url: url.absoluteString, model: "MiniMax-M3",
+            temperature: config.temperature,
+            systemPrompt: effectiveSystem(prompt: prompt, config: config),
+            messages: prompt.messages, streaming: true,
+            response: accumulated, error: nil, caller: caller
+        )
+        recordCall(info, apiKey: config.apiKey)
+        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
+        return accumulated
+    }
+
     /// SSE 流式调用,逐 delta 调 `onDelta`。
     /// 返回**完整文本**;`onDelta` 每次接收到目前为止的全部内容。
     /// 失败抛 `LLMError`。
@@ -366,13 +500,10 @@ final class LLMClient: @unchecked Sendable {
     ) async throws -> String {
         try validateConfig(config)
 
-        // Cloud AI 网关暂不支持 SSE 流式;回退到 complete()，结果一次性推给 onDelta。
-        // Cloud AI gateway does not yet support SSE streaming; fall back to complete(),
-        // then emit the full result through onDelta once.
+        // Cloud AI 网关 v0.5-beta 起支持 SSE 流式传输(透传 MiniMax 原始格式)。
+        // Cloud AI gateway supports SSE streaming since v0.5-beta (proxies MiniMax raw format).
         if config.isCloudProvider {
-            let result = try await complete(prompt: prompt, config: config, caller: caller)
-            onDelta(result)
-            return result
+            return try await cloudStream(prompt: prompt, config: config, caller: caller, onDelta: onDelta)
         }
 
         // BYOK: SSE 流式。
@@ -450,7 +581,7 @@ final class LLMClient: @unchecked Sendable {
         do {
             for try await line in bytes.lines {
                 if Task.isCancelled { throw LLMError.network("Cancelled") }
-                if LLMStreamingParser.isDoneLine(line) { break }
+                if LLMStreamingParser.isDoneLine(line) { continue }
                 // SSE 事件由空行分隔;单行处理
                 pending = line
                 if let piece = LLMStreamingParser.parseLine(pending) {
@@ -676,7 +807,7 @@ final class LLMClient: @unchecked Sendable {
     /// or `{"content": [...]}` for multimodal.
     /// System prompt is prepended to the message since the Cloud AI Worker
     /// does not have a separate `system` field.
-    nonisolated private func buildCloudBody(prompt: LLMPrompt, config: LLMConfig) throws -> Data {
+    nonisolated private func buildCloudBody(prompt: LLMPrompt, config: LLMConfig, stream: Bool = false) throws -> Data {
         let system = effectiveSystem(prompt: prompt, config: config)
         let userMessages = prompt.messages
             .filter { $0.role == .user }
@@ -698,10 +829,10 @@ final class LLMClient: @unchecked Sendable {
                     ["type": "image_url", "image_url": ["url": $0, "detail": "default"]]
                 })
             }
-            let payload: [String: Any] = ["content": parts]
+            let payload: [String: Any] = ["content": parts, "stream": stream]
             return try JSONSerialization.data(withJSONObject: payload, options: [])
         } else {
-            let payload: [String: Any] = ["message": fullMessage]
+            let payload: [String: Any] = ["message": fullMessage, "stream": stream]
             return try JSONSerialization.data(withJSONObject: payload, options: [])
         }
     }
