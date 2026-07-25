@@ -1,3 +1,5 @@
+<img width="1920" height="1080" alt="StudyPulse-7ad0187版本海报 001" src="https://github.com/user-attachments/assets/55f089f6-9801-48bc-90b7-f0d8716ab14e" />
+
 # StudyPulse
 
 > 一个支持全球教育体系的 iOS 学业管理应用，使用 SwiftUI + MVVM 构建。
