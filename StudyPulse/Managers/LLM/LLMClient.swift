@@ -116,7 +116,8 @@ final class LLMClient: @unchecked Sendable {
     static let shared = LLMClient()
 
     /// 整体请求超时(秒);`stream` 与 `complete` 通用。
-    private let timeoutSeconds: TimeInterval = 60
+    /// 多模态请求处理时间较长（图片 base64 编码 + MiniMax 视觉推理），需要更大超时。
+    private let timeoutSeconds: TimeInterval = 120
 
     private let session: URLSession   // 网络会话(可注入以做单测)
 
@@ -134,8 +135,8 @@ final class LLMClient: @unchecked Sendable {
         } else {
             // 显式声明超时;默认 60s 已经够用,且能被 `stream` 的 task 取消覆盖
             let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 60
-            config.timeoutIntervalForResource = 120
+            config.timeoutIntervalForRequest = 120
+            config.timeoutIntervalForResource = 300
             self.session = URLSession(configuration: config)
         }
     }

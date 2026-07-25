@@ -203,7 +203,7 @@ struct ChatInputBar: View {
 
     private func append(image: UIImage) {
         guard attachments.count < 4,
-              let data = image.resizedForLLM().jpegData(compressionQuality: 0.82) else { return }
+              let data = image.resizedForLLM().jpegData(compressionQuality: 0.7) else { return }
         attachments.append(LLMImageAttachment(data: data))
     }
 
@@ -220,7 +220,7 @@ struct ChatInputBar: View {
 }
 
 private extension UIImage {
-    func resizedForLLM(maxDimension: CGFloat = 2048) -> UIImage {
+    func resizedForLLM(maxDimension: CGFloat = 1024) -> UIImage {
         let scale = min(1, maxDimension / max(size.width, size.height))
         guard scale < 1 else { return self }
         let target = CGSize(width: size.width * scale, height: size.height * scale)
