@@ -200,7 +200,23 @@ nonisolated struct AppPreferences: Codable {
     /// 通过此网关统一发起 AI 请求。
     /// StudyPulse Cloud AI Worker base URL. When using a Cloud AI provider,
     /// all requests are routed through this gateway instead of directly to third-party APIs.
-    var cloudAIWorkerURL: String? = nil
+    var cloudAIWorkerURL: String? = "spapi.chenkai.space"
+
+    /// Cloud AI 邮箱登录的邮箱地址。非空表示已登录。
+    /// The email address used for Cloud AI Session Token login. Non-nil means logged in.
+    var cloudSessionEmail: String? = nil
+
+    /// Cloud AI 登录用户的会员类型（free/plus/pro）。登录时从服务端获取。
+    /// Cloud AI logged-in user's membership type. Retrieved from server on login.
+    var cloudMembershipType: String? = nil
+
+    /// Cloud AI 会员到期时间（ISO 8601）。
+    /// Cloud AI membership expiration (ISO 8601).
+    var cloudMembershipExpiresAt: String? = nil
+
+    /// Cloud AI 可用模型列表（从 /user/profile 获取）。
+    /// Available models for Cloud AI (retrieved from /user/profile).
+    var cloudAvailableModels: [String]? = nil
 
     /// Debug 专用:全局覆盖 LLM 系统 prompt(仅 DEBUG 模式可见)。
     /// 非空时 LLMClient.buildBody 会**完全替换**默认 system + appendix,用于排查 prompt 行为。
@@ -269,7 +285,7 @@ nonisolated struct AppPreferences: Codable {
         case cardSkinId, timerAnimationId
         case plantCardEnabled, plantPetalColorId
         case debugModeEnabled, debugVerboseLogging, debugFPSOverlay, debugLayoutBounds, debugLongPressInspect
-        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, llmProviders, activeLLMProviderId, cloudAIWorkerURL, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
+        case llmEnabled, coachEnabled, coachNotificationEnabled, coachNotificationHour, coachAdaptivePlanEnabled, coachHealthBaselineCategory, coachHealthBaselineZScore, coachHealthBaselineSleepHours, coachHealthBaselineRestingHeartRate, coachHealthBaselineRestorativeSleepHours, lastCoachAdaptivePlanRequestTime, llmBaseURL, llmAPIKey, llmModel, llmSystemPromptAppendix, llmTemperature, llmProviders, activeLLMProviderId, cloudAIWorkerURL, cloudSessionEmail, cloudMembershipType, cloudMembershipExpiresAt, cloudAvailableModels, radarAICooldownMinutes, lastRadarAIRequestTime, debugOverrideSystemPrompt, lastStudySuggestionsAIRequestTime
         case habitInsightEnabled, habitInsightNotificationEnabled, habitInsightNotificationHour, habitInsightCooldownMinutes, lastHabitInsightAIRequestTime, lastHabitInsightNotificationBody, lastHabitInsightNotificationDate
         case heartRateStreamingEnabled
         case diaryEnabled, diaryDailyReminderEnabled, diaryDailyReminderHour, diarySyncToHealthEnabled, diaryLLMReflectionEnabled
@@ -316,7 +332,11 @@ nonisolated struct AppPreferences: Codable {
         self.llmTemperature = try c.decodeIfPresent(Double.self, forKey: .llmTemperature) ?? 0.7
         self.llmProviders = try c.decodeIfPresent([LLMProvider].self, forKey: .llmProviders) ?? []
         self.activeLLMProviderId = try c.decodeIfPresent(UUID.self, forKey: .activeLLMProviderId)
-        self.cloudAIWorkerURL = try c.decodeIfPresent(String.self, forKey: .cloudAIWorkerURL)
+        self.cloudAIWorkerURL = try c.decodeIfPresent(String.self, forKey: .cloudAIWorkerURL) ?? "spapi.chenkai.space"
+        self.cloudSessionEmail = try c.decodeIfPresent(String.self, forKey: .cloudSessionEmail)
+        self.cloudMembershipType = try c.decodeIfPresent(String.self, forKey: .cloudMembershipType)
+        self.cloudMembershipExpiresAt = try c.decodeIfPresent(String.self, forKey: .cloudMembershipExpiresAt)
+        self.cloudAvailableModels = try c.decodeIfPresent([String].self, forKey: .cloudAvailableModels)
         // 从旧版单一配置无损迁移，既有用户升级后可立刻继续使用。
         if self.llmProviders.isEmpty,
            let baseURL = self.llmBaseURL,

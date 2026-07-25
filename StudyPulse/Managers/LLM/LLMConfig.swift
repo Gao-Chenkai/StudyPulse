@@ -35,6 +35,10 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     /// When `true`, routes through the StudyPulse Cloud AI gateway (/v1/chat)
     /// instead of an OpenAI-compatible endpoint.
     var isCloudProvider: Bool = false
+    /// Cloud AI Session Token（邮箱登录获取）。非空时优先于 apiKey 用于鉴权。
+    /// Cloud AI Session Token (from email login). When non-nil, takes precedence
+    /// over apiKey for Cloud AI authentication.
+    var sessionToken: String? = nil
     /// 自定义系统 prompt 追加(在默认 prompt 之后)
     var systemPromptAppendix: String?
     /// 采样温度 (0.0-2.0)
@@ -44,14 +48,19 @@ nonisolated struct LLMConfig: Sendable, Equatable {
     var overrideSystemPrompt: String?
 
     /// 是否已配置完整。
-    /// Cloud provider: 只需要 baseURL + apiKey（model/multimodal/thinking 由服务端固定）。
+    /// Cloud provider: 只需要 baseURL + (apiKey 或 sessionToken)。
     /// BYOK provider: baseURL / apiKey / model 都非空。
     /// `false` 时抛 `LLMError.notConfigured`,调用方按需回退。
     var isConfigured: Bool {
         guard enabled else { return false }
         guard let baseURL, !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if isCloudProvider {
+            let hasAPIKey = !(apiKey?.isEmpty ?? true)
+            let hasSessionToken = !(sessionToken?.isEmpty ?? true)
+            guard hasAPIKey || hasSessionToken else { return false }
+            return true
+        }
         guard let apiKey, !apiKey.isEmpty else { return false }
-        if isCloudProvider { return true }
         guard let model, !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         return true
     }
@@ -69,6 +78,7 @@ extension LLMConfig {
         multimodalEnabled: false,
         thinkingEnabled: false,
         isCloudProvider: false,
+        sessionToken: nil,
         systemPromptAppendix: nil,
         temperature: 0.7
     )
@@ -100,6 +110,10 @@ extension LLMConfig {
         }
         let apiKey = try? keychain.read(account: account)
         let isCloud = provider?.isCloudProvider ?? false
+        let sessionToken = isCloud ? (try? keychain.read(account: LLMAPIKeyAccount.cloudSession)) ?? nil : nil
+        if isCloud {
+            Log.llm.info("LLMConfig Cloud mode: sessionToken=\(sessionToken != nil ? "yes" : "no", privacy: .public) apiKey=\(apiKey != nil ? "yes" : "no", privacy: .public)")
+        }
         return LLMConfig(
             enabled: prefs.llmEnabled,
             baseURL: isCloud ? prefs.cloudAIWorkerURL : provider?.baseURL ?? prefs.llmBaseURL,
@@ -109,6 +123,7 @@ extension LLMConfig {
             multimodalEnabled: provider?.multimodalEnabled ?? false,
             thinkingEnabled: provider?.thinkingEnabled ?? false,
             isCloudProvider: isCloud,
+            sessionToken: sessionToken,
             systemPromptAppendix: prefs.llmSystemPromptAppendix,
             temperature: prefs.llmTemperature,
             overrideSystemPrompt: prefs.debugOverrideSystemPrompt

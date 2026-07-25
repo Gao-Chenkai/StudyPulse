@@ -262,7 +262,7 @@ final class LLMClient: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue(cloudAuthHeader(config: config), forHTTPHeaderField: "Authorization")
         request.httpBody = body
         Log.llm.info("LLM cloud complete → \(url.absoluteString, privacy: .public)")
 
@@ -274,7 +274,7 @@ final class LLMClient: @unchecked Sendable {
         } catch let error as URLError where error.code == .timedOut {
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
@@ -286,7 +286,7 @@ final class LLMClient: @unchecked Sendable {
         } catch {
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
@@ -312,7 +312,7 @@ final class LLMClient: @unchecked Sendable {
             }
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
@@ -331,7 +331,7 @@ final class LLMClient: @unchecked Sendable {
             let desc = (error as? LLMError)?.errorDescription ?? error.localizedDescription
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
@@ -344,7 +344,7 @@ final class LLMClient: @unchecked Sendable {
 
         let info = LLMCallDebugInfo(
             startTime: startTime, endTime: Date(),
-            url: url.absoluteString, model: "MiniMax-M3",
+            url: url.absoluteString, model: config.model ?? "MiniMax-M3",
             temperature: config.temperature,
             systemPrompt: effectiveSystem(prompt: prompt, config: config),
             messages: prompt.messages, streaming: false,
@@ -378,7 +378,7 @@ final class LLMClient: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue(cloudAuthHeader(config: config), forHTTPHeaderField: "Authorization")
         request.httpBody = body
         request.timeoutInterval = timeoutSeconds
         Log.llm.info("LLM cloud stream → \(url.absoluteString, privacy: .public)")
@@ -391,7 +391,7 @@ final class LLMClient: @unchecked Sendable {
         } catch {
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: true,
@@ -421,7 +421,7 @@ final class LLMClient: @unchecked Sendable {
             }
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: true,
@@ -451,7 +451,7 @@ final class LLMClient: @unchecked Sendable {
         } catch {
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: true,
@@ -465,7 +465,7 @@ final class LLMClient: @unchecked Sendable {
         if accumulated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
-                url: url.absoluteString, model: "MiniMax-M3",
+                url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: true,
@@ -478,7 +478,7 @@ final class LLMClient: @unchecked Sendable {
 
         let info = LLMCallDebugInfo(
             startTime: startTime, endTime: Date(),
-            url: url.absoluteString, model: "MiniMax-M3",
+            url: url.absoluteString, model: config.model ?? "MiniMax-M3",
             temperature: config.temperature,
             systemPrompt: effectiveSystem(prompt: prompt, config: config),
             messages: prompt.messages, streaming: true,
@@ -671,7 +671,7 @@ final class LLMClient: @unchecked Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(config.apiKey ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue(cloudAuthHeader(config: config), forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["message": "ping"])
         let (data, response) = try await session.data(for: request)
         guard let httpResp = response as? HTTPURLResponse else {
@@ -696,9 +696,25 @@ final class LLMClient: @unchecked Sendable {
 
     // MARK: - Helpers
 
+    /// 返回 Cloud AI 鉴权 Header 值。Session Token 优先于 API Key。
+    private func cloudAuthHeader(config: LLMConfig) -> String {
+        if let sessionToken = config.sessionToken, !sessionToken.isEmpty {
+            Log.llm.info("Cloud AI auth: using Session Token")
+            return "Bearer \(sessionToken)"
+        }
+        Log.llm.info("Cloud AI auth: using API Key")
+        return "Bearer \(config.apiKey ?? "")"
+    }
+
     private func validateConfig(_ config: LLMConfig) throws {
         guard config.enabled else { throw LLMError.notConfigured }
-        guard !(config.apiKey?.isEmpty ?? true) else { throw LLMError.notConfigured }
+        let hasAPIKey = !(config.apiKey?.isEmpty ?? true)
+        let hasSessionToken = !(config.sessionToken?.isEmpty ?? true)
+        if config.isCloudProvider {
+            guard hasAPIKey || hasSessionToken else { throw LLMError.notConfigured }
+        } else {
+            guard hasAPIKey else { throw LLMError.notConfigured }
+        }
         guard let baseURL = config.baseURL, !baseURL.trimmingCharacters(in: .whitespaces).isEmpty else {
             throw LLMError.notConfigured
         }
@@ -830,10 +846,12 @@ final class LLMClient: @unchecked Sendable {
                     ["type": "image_url", "image_url": ["url": $0, "detail": "default"]]
                 })
             }
-            let payload: [String: Any] = ["content": parts, "stream": stream]
+            var payload: [String: Any] = ["content": parts, "stream": stream]
+            if let model = config.model, !model.isEmpty { payload["model"] = model }
             return try JSONSerialization.data(withJSONObject: payload, options: [])
         } else {
-            let payload: [String: Any] = ["message": fullMessage, "stream": stream]
+            var payload: [String: Any] = ["message": fullMessage, "stream": stream]
+            if let model = config.model, !model.isEmpty { payload["model"] = model }
             return try JSONSerialization.data(withJSONObject: payload, options: [])
         }
     }

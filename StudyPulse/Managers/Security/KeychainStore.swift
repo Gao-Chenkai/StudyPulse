@@ -96,6 +96,8 @@ nonisolated enum LLMAPIKeyAccount {
     static let legacy = "legacy"
     /// StudyPulse Cloud AI 内测 API Key account。
     static let cloud = "cloud"
+    /// StudyPulse Cloud AI Session Token（邮箱登录后获取）。
+    static let cloudSession = "cloud-session"
 
     static func provider(_ id: UUID) -> String {
         "provider.\(id.uuidString.lowercased())"

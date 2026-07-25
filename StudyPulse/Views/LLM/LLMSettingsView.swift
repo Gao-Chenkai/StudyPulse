@@ -2,57 +2,31 @@
 //  LLMSettingsView.swift
 //  StudyPulse
 //
-//  Settings → LLM 配置页:
-//  - 启用开关
-//  - Base URL / API Key / Model 输入
-//  - Temperature 滑杆
-//  - 自定义 System Prompt 追加
-//  - "Test Connection" 按钮
-//
-//  Settings → LLM configuration page:
-//  - Enable toggle
-//  - Base URL / API Key / Model inputs
-//  - Temperature slider
-//  - Custom System Prompt appendix
-//  - "Test Connection" button
+//  Settings → LLM 配置页。
+//  主页面：开关、Cloud AI、Provider 列表、子页面入口
+//  子页面：AI Coach、Rate Limits、Advanced
 //
 
 import SwiftUI
 
-/// Settings → LLM 配置页:Byok(自带 Key) 模式下的端点 / 鉴权 / 模型 / Prompt 设置。
-/// Settings → LLM configuration page: endpoint / auth / model / prompt
-/// settings for the BYOK (bring-your-own-key) mode.
 struct LLMSettingsView: View {
     @Environment(RepositoryContainer.self) private var container
 
-    /// System Prompt 追加段
-    /// System prompt appendix.
-    @State private var appendixInput: String = ""
-    /// Temperature(0...2,默认 0.7)
-    /// Temperature (0...2, default 0.7).
     @State private var temperature: Double = 0.7
-    /// Recovery Radar cooldown in minutes (default 40).
-    @State private var radarCooldownMinutes: Int = 40
-    /// DEBUG 专用:全局覆盖系统 prompt(仅当 debugModeEnabled 时显示)
-    /// DEBUG-only: global system-prompt override (only shown in DEBUG mode).
-    @State private var overrideInput: String = ""
-
-    /// 是否正在测试连接
-    /// Whether a test-connection request is in flight.
     @State private var isTesting = false
-    /// 测试结果 alert 文本
-    /// Test-result alert text.
     @State private var testAlertMessage: String? = nil
-    /// 最近一次测试是否成功(决定 alert 标题)
-    /// Whether the most recent test succeeded (drives the alert title).
     @State private var testAlertSucceeded: Bool = false
-    /// Whether a user-triggered Coach refresh is currently calling the configured LLM.
-    @State private var isForceRefreshingCoach = false
 
-    // MARK: - Cloud AI State
+    // Cloud AI
     @State private var cloudWorkerURL: String = ""
     @State private var cloudAPIKeyInput: String = ""
     @State private var isActivatingCloud: Bool = false
+    @State private var cloudSelectedModel: String = "MiniMax-M3"
+    @State private var isRefreshingProfile = false
+
+    // Account
+    @State private var showLoginSheet = false
+    @State private var isLoggingOut = false
 
     var body: some View {
         List {
@@ -62,7 +36,7 @@ struct LLMSettingsView: View {
                     .listRowBackground(Color.clear)
             }
 
-            // 1) 总开关
+            // ── 1. General ──
             Section {
                 Toggle(isOn: Binding(
                     get: { container.envManager.llmEnabled },
@@ -70,330 +44,192 @@ struct LLMSettingsView: View {
                 )) {
                     Label("Enable LLM Features".localized(), systemImage: "brain")
                 }
-                Toggle(isOn: Binding(
-                    get: { container.envManager.preferences.coachEnabled },
-                    set: { container.envManager.preferences.coachEnabled = $0 }
-                )) {
-                    Label("Enable AI Coach".localized(), systemImage: "brain.head.profile")
-                }
-                Toggle(isOn: Binding(
-                    get: { container.envManager.preferences.coachAdaptivePlanEnabled },
-                    set: { container.envManager.preferences.coachAdaptivePlanEnabled = $0 }
-                )) {
-                    Label("Adapt Coach plan for major health changes".localized(), systemImage: "heart.text.square")
-                }
-                Toggle(isOn: Binding(
-                    get: { container.envManager.preferences.coachNotificationEnabled },
-                    set: { container.envManager.preferences.coachNotificationEnabled = $0; CoachNotifications.shared.reschedule(enabled: $0, hour: container.envManager.preferences.coachNotificationHour) }
-                )) {
-                    Label("Daily Coach Notification".localized(), systemImage: "bell.badge")
-                }
-                Stepper(value: Binding(
-                    get: { container.envManager.preferences.coachNotificationHour },
-                    set: { container.envManager.preferences.coachNotificationHour = max(0, min(23, $0)); CoachNotifications.shared.reschedule(enabled: container.envManager.preferences.coachNotificationEnabled, hour: $0) }
-                ), in: 0...23) {
-                    Text(String(format: "Coach notification hour: %02d:00".localized(), container.envManager.preferences.coachNotificationHour))
-                }
-                Button {
-                    Task { await forceRefreshCoach() }
-                } label: {
-                    HStack {
-                        if isForceRefreshingCoach {
-                            ProgressView().scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "arrow.clockwise.circle.fill")
-                        }
-                        Text("Force AI Coach Refresh".localized())
-                    }
-                }
-                .disabled(isForceRefreshingCoach || !container.envManager.preferences.coachEnabled || !container.envManager.llmConfig.isConfigured)
-            } footer: {
-                Text("AI Coach is a separate opt-in. Major health changes are judged on-device; only then is a proposed plan generated through your configured LLM. Force refresh replaces any pending proposal, but it never changes Todo without your confirmation.".localized())
             }
 
-            // 2) StudyPulse Cloud AI (内测)
+            // ── 2. Cloud AI ──
             Section {
-                if !container.envManager.hasCloudProvider {
-                    VStack(alignment: .leading, spacing: 10) {
+                if container.envManager.isCloudSessionLoggedIn {
+                    // ── Account mode ──
+                    cloudAccountRow
+
+                    if let models = container.envManager.preferences.cloudAvailableModels,
+                       !models.isEmpty {
                         HStack {
-                            Image(systemName: "cloud.fill")
-                                .foregroundColor(.accentColor)
-                            Text("StudyPulse Cloud AI (Beta)".localized())
-                                .font(.headline)
-                        }
-                        TextField("Worker URL (e.g. spapi.chenkai.space)", text: $cloudWorkerURL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .keyboardType(.URL)
-                            .font(.subheadline)
-                        SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .font(.subheadline)
-                        Button {
-                            activateCloudProvider()
-                        } label: {
-                            HStack {
-                                if isActivatingCloud {
-                                    ProgressView().scaleEffect(0.8)
-                                }
-                                Text("Activate Cloud AI".localized())
+                            Text("Model".localized()).foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $cloudSelectedModel) {
+                                ForEach(models, id: \.self) { Text($0).tag($0) }
                             }
-                            .frame(maxWidth: .infinity)
+                            .onChange(of: cloudSelectedModel) { _, m in updateCloudProviderModel(m) }
+                        }
+                    }
+
+                    DisclosureGroup("Advanced".localized()) {
+                        Button {
+                            Task { await refreshProfile() }
+                        } label: {
+                            Label("Refresh Profile".localized(), systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .disabled(isRefreshingProfile)
+
+                        Button(role: .destructive) {
+                            Task { await performLogout() }
+                        } label: {
+                            if isLoggingOut { ProgressView().scaleEffect(0.8) }
+                            else { Label("Logout".localized(), systemImage: "rectangle.portrait.and.arrow.right") }
+                        }
+                        .disabled(isLoggingOut)
+
+                        Divider()
+                        TextField("Worker URL", text: $cloudWorkerURL)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled(true)
+                            .keyboardType(.URL).font(.subheadline)
+                        SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled(true)
+                            .font(.subheadline)
+                        if container.envManager.hasCloudProvider {
+                            Button(role: .destructive) {
+                                container.envManager.disconnectCloudKey()
+                            } label: {
+                                Label("Disconnect Key".localized(), systemImage: "xmark.circle")
+                            }
+                            Button(role: .destructive) {
+                                container.envManager.deleteCloudProvider()
+                                cloudAPIKeyInput = ""
+                                cloudWorkerURL = container.envManager.preferences.cloudAIWorkerURL ?? "spapi.chenkai.space"
+                            } label: {
+                                Label("Remove Cloud AI".localized(), systemImage: "trash")
+                            }
+                        }
+                    }
+                } else {
+                    // ── Welcome: email login is the primary entry point ──
+                    VStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.teal.opacity(0.12))
+                            Image(systemName: "cloud.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(.teal)
+                        }
+                        .frame(width: 64, height: 64)
+
+                        Text("StudyPulse Cloud AI".localized())
+                            .font(.headline)
+
+                        Text("Log in with your email to get started. New accounts receive a free plan with 50 daily requests.".localized())
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button { showLoginSheet = true } label: {
+                            Label("Login with Email".localized(), systemImage: "envelope.fill")
+                                .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(isActivatingCloud || cloudWorkerURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cloudAPIKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .tint(.teal)
                     }
-                } else {
-                    // 已激活状态
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("StudyPulse Cloud AI (Beta)".localized())
-                                .font(.headline)
-                            Text("MiniMax-M3 · 多模态 · Thinking 关闭".localized())
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        if container.envManager.isCloudProviderActive {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                                .foregroundColor(.green)
-                                .font(.caption)
-                        }
-                    }
-                    // Worker URL + API Key 编辑(已激活时也可修改)
-                    TextField("Worker URL", text: $cloudWorkerURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.URL)
-                        .font(.subheadline)
-                    SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
 
-                    if container.envManager.isCloudProviderActive {
-                        Button(role: .destructive) {
-                            container.envManager.deactivateCloudProvider()
-                        } label: {
-                            Label("Deactivate Cloud AI".localized(), systemImage: "xmark.circle")
-                        }
-                    } else {
-                        Button {
-                            activateCloudProvider()
-                        } label: {
-                            HStack {
-                                if isActivatingCloud {
-                                    ProgressView().scaleEffect(0.8)
+                    DisclosureGroup("Manual API Key Setup (Advanced)".localized()) {
+                        TextField("Worker URL", text: $cloudWorkerURL)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled(true)
+                            .keyboardType(.URL).font(.subheadline)
+                        SecureField("API Key (sp_xxx)".localized(), text: $cloudAPIKeyInput)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled(true)
+                            .font(.subheadline)
+
+                        if container.envManager.hasCloudProvider {
+                            if container.envManager.isCloudProviderActive {
+                                Button(role: .destructive) {
+                                    container.envManager.deactivateCloudProvider()
+                                } label: {
+                                    Label("Deactivate".localized(), systemImage: "xmark.circle")
                                 }
-                                Label("Activate Cloud AI".localized(), systemImage: "checkmark.circle")
+                            } else {
+                                Button { activateCloudProvider() } label: {
+                                    HStack {
+                                        if isActivatingCloud { ProgressView().scaleEffect(0.8) }
+                                        Text("Activate".localized())
+                                    }.frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(isActivatingCloud)
                             }
-                        }
-                        .disabled(isActivatingCloud)
-                    }
 
-                    Button(role: .destructive) {
-                        container.envManager.deleteCloudProvider()
-                        cloudAPIKeyInput = ""
-                        cloudWorkerURL = container.envManager.preferences.cloudAIWorkerURL ?? ""
-                    } label: {
-                        Label("Remove Cloud Provider".localized(), systemImage: "trash")
-                    }
-                }
-            } header: {
-                Text("StudyPulse Cloud AI (Beta)".localized())
-            } footer: {
-                if !container.envManager.hasCloudProvider {
-                    Text("Use a StudyPulse-distributed API Key (sp_xxx) to access the Cloud AI gateway. Model: MiniMax-M3, multimodal enabled, thinking disabled. Your requests are proxied through the StudyPulse Cloud AI Worker.".localized())
-                } else {
-                    Text("Cloud AI routes requests through the StudyPulse gateway. Tap the provider below to use Cloud AI, or activate a BYOK provider instead.".localized())
-                }
-            }
-
-            // 3) 供应商配置 (BYOK, 过滤掉 cloud provider)
-            Section {
-                let byokProviders = container.envManager.preferences.llmProviders.filter { !$0.isCloudProvider }
-                if byokProviders.isEmpty {
-                    ContentUnavailableView("No provider configured".localized(), systemImage: "server.rack")
-                }
-                ForEach(byokProviders) { provider in
-                    providerRow(provider)
-                    .swipeActions {
-                        Button(role: .destructive) { container.envManager.deleteLLMProvider(provider.id) } label: {
-                            Label("Delete".localized(), systemImage: "trash")
-                        }
-                    }
-                }
-                Button { container.envManager.addLLMProvider() } label: {
-                    Label("Add Provider".localized(), systemImage: "plus.circle.fill")
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Temperature".localized())
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(String(format: "%.1f", temperature))
-                            .font(.caption.monospacedDigit())
-                            .foregroundColor(.secondary)
-                    }
-                    Slider(value: $temperature, in: 0...2, step: 0.1) {
-                        Text("Temperature")
-                    }
-                    .onChange(of: temperature) { _, newValue in
-                        container.envManager.setLLMTemperature(newValue)
-                    }
-                }
-            } header: {
-                Text("Providers".localized())
-            } footer: {
-                Text("Add multiple OpenAI-compatible providers, then tap one to make it active. StudyPulse never proxies your requests; the active provider receives your API key directly.".localized())
-            }
-
-            // 3) System Prompt 追加
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("System Prompt Appendix".localized())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextEditor(text: $appendixInput)
-                        .frame(minHeight: 100)
-                        .onChange(of: appendixInput) { _, newValue in
-                            container.envManager.setLLMSystemPromptAppendix(newValue.isEmpty ? nil : newValue)
-                        }
-                }
-            } header: {
-                Text("Advanced".localized())
-            } footer: {
-                Text("Optional. Appended to the default system prompt for every AI feature.".localized())
-            }
-
-            // 3.5) 恢复雷达 LLM 冷却时间
-            Section {
-                Stepper(value: $radarCooldownMinutes, in: 5...180, step: 5) {
-                    HStack {
-                        Label("Recovery Radar AI Cooldown".localized(), systemImage: "heart.text.square")
-                        Spacer()
-                        Text(String(format: "%d min".localized(), radarCooldownMinutes))
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .onChange(of: radarCooldownMinutes) { _, newValue in
-                    container.envManager.setRadarAICooldownMinutes(newValue)
-                }
-            } header: {
-                Text("AI Rate Limits".localized())
-            } footer: {
-                Text("Controls how often the Recovery Radar automatically asks the LLM. Analyze now can bypass this cooldown.".localized())
-            }
-
-            Section {
-                Toggle("Enable Habit Insight".localized(), isOn: Binding(
-                    get: { container.envManager.preferences.habitInsightEnabled },
-                    set: { container.envManager.setHabitInsightEnabled($0) }
-                ))
-                Stepper(value: Binding(
-                    get: { container.envManager.preferences.habitInsightCooldownMinutes },
-                    set: { container.envManager.setHabitInsightCooldownMinutes($0) }
-                ), in: 5...180, step: 5) {
-                    Text("Habit Insight Cooldown".localized())
-                }
-            } header: {
-                Text("Habit Insight".localized())
-            } footer: {
-                Text("habitInsight.section.footer".localized())
-            }
-
-            Section {
-                Toggle("Daily Best-Window Notification".localized(), isOn: Binding(
-                    get: { container.envManager.preferences.habitInsightNotificationEnabled },
-                    set: { enabled in
-                        container.envManager.setHabitInsightNotificationEnabled(enabled)
-                        let p = container.envManager.preferences
-                        HabitInsightNotifications.shared.reschedule(enabled: enabled, hour: p.habitInsightNotificationHour, body: p.lastHabitInsightNotificationBody)
-                    }
-                ))
-                Stepper(value: Binding(
-                    get: { container.envManager.preferences.habitInsightNotificationHour },
-                    set: { hour in
-                        container.envManager.setHabitInsightNotificationHour(hour)
-                        let p = container.envManager.preferences
-                        HabitInsightNotifications.shared.reschedule(enabled: p.habitInsightNotificationEnabled, hour: hour, body: p.lastHabitInsightNotificationBody)
-                    }
-                ), in: 0...23) {
-                    Text("Notification Hour".localized())
-                }
-            } header: {
-                Text("Daily Notification".localized())
-            }
-
-            // 3.6) DEBUG 模式专用:全局覆盖系统 prompt
-            if container.envManager.debugModeEnabled {
-                Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "ladybug.fill").foregroundColor(.yellow)
-                            Text("DEBUG: Override System Prompt".localized())
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(.primary)
-                        }
-                        TextEditor(text: $overrideInput)
-                            .frame(minHeight: 140)
-                            .font(.system(.footnote, design: .monospaced))
-                            .onChange(of: overrideInput) { _, newValue in
-                                container.envManager.setLLMDebugOverrideSystemPrompt(newValue.isEmpty ? nil : newValue)
-                            }
-                        if !overrideInput.isEmpty {
                             Button(role: .destructive) {
-                                overrideInput = ""
-                                container.envManager.setLLMDebugOverrideSystemPrompt(nil)
+                                container.envManager.deleteCloudProvider()
+                                cloudAPIKeyInput = ""
+                                cloudWorkerURL = container.envManager.preferences.cloudAIWorkerURL ?? "spapi.chenkai.space"
                             } label: {
-                                Label("Clear Override".localized(), systemImage: "trash")
+                                Label("Remove".localized(), systemImage: "trash")
                             }
-                            .font(.caption)
+                        } else {
+                            Button { activateCloudProvider() } label: {
+                                HStack {
+                                    if isActivatingCloud { ProgressView().scaleEffect(0.8) }
+                                    Text("Activate".localized())
+                                }.frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isActivatingCloud || cloudAPIKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
                     }
-                } header: {
-                    HStack {
-                        Image(systemName: "ladybug.fill").foregroundColor(.yellow)
-                        Text("DEBUG Override".localized())
-                    }
-                } footer: {
-                    Text("当此处有内容时,所有 AI 功能都会**完全使用此 prompt**,跳过默认 + Appendix。\n仅 DEBUG 模式可见,便于排查 prompt 行为。".localized())
-                        .font(.caption2)
+                }
+            } header: {
+                Text("Cloud AI".localized())
+            }
+
+            // ── 3. Provider List (unified: Cloud AI + BYOK) ──
+            Section {
+                let allProviders = container.envManager.preferences.llmProviders
+                if allProviders.isEmpty {
+                    Text("No providers configured".localized()).foregroundColor(.secondary)
+                }
+                ForEach(allProviders) { provider in
+                    unifiedProviderRow(provider)
+                }
+            } header: {
+                Text("Active Model".localized())
+            } footer: {
+                Text("Tap a provider to make it active. Add your own OpenAI-compatible endpoints below.".localized())
+            }
+
+            // ── 4. Add BYOK Provider ──
+            Section {
+                Button { container.envManager.addLLMProvider() } label: {
+                    Label("Add Custom Provider".localized(), systemImage: "plus.circle.fill")
                 }
             }
 
-            // 4) 测试连接
+            // ── 5. Sub-pages ──
+            Section {
+                NavigationLink(destination: LLMAICoachSettingsView()) {
+                    Label("AI Coach".localized(), systemImage: "brain.head.profile")
+                }
+                NavigationLink(destination: LLMAdvancedSettingsView()) {
+                    Label("Advanced".localized(), systemImage: "gearshape.2")
+                }
+            }
+
+            // ── 6. Actions ──
             Section {
                 Button {
                     Task { await runTestConnection() }
                 } label: {
                     HStack {
-                        if isTesting {
-                            ProgressView().scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                        }
+                        if isTesting { ProgressView().scaleEffect(0.8) }
+                        else { Image(systemName: "antenna.radiowaves.left.and.right") }
                         Text("Test Connection".localized())
                     }
                 }
                 .disabled(isTesting || !container.envManager.llmConfig.isConfigured)
-            } footer: {
-                Text("Sends a minimal request to verify the endpoint, API key and model.".localized())
-            }
 
-            // 5) AI Assistant 入口
-            Section {
                 NavigationLink(destination: LLMChatView()) {
                     Label("AI Assistant".localized(), systemImage: "bubble.left.and.bubble.right.fill")
                 }
-            } footer: {
-                Text("Ask questions about your grades, mistakes, or exams.".localized())
             }
         }
         .listStyle(.insetGrouped)
@@ -403,112 +239,365 @@ struct LLMSettingsView: View {
         .debugLayoutBoundsAuto()
         .navigationTitle("LLM".localized())
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { syncFromPreferences() }
+        .onAppear {
+            syncFromPreferences()
+            if container.envManager.isCloudSessionLoggedIn {
+                Task { await refreshProfile() }
+            }
+        }
+        .sheet(isPresented: $showLoginSheet) { LoginView() }
         .alert(
             testAlertSucceeded ? "Connection successful".localized() : "Connection failed".localized(),
-            isPresented: Binding(
-                get: { testAlertMessage != nil },
-                set: { if !$0 { testAlertMessage = nil } }
-            )
+            isPresented: Binding(get: { testAlertMessage != nil }, set: { if !$0 { testAlertMessage = nil } })
         ) {
-            Button("OK".localized(), role: .cancel) { }
+            Button("OK".localized(), role: .cancel) {}
         } message: {
             Text(testAlertMessage ?? "")
         }
     }
 
-    private func providerRow(_ provider: LLMProvider) -> some View {
+    // MARK: - Sub-views
+
+    private var cloudAccountRow: some View {
+        HStack {
+            Image(systemName: "person.circle.fill").foregroundColor(.teal).font(.title2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(container.envManager.preferences.cloudSessionEmail ?? "")
+                    .font(.subheadline.weight(.medium))
+                HStack(spacing: 4) {
+                    Text("Logged in".localized()).font(.caption).foregroundColor(.secondary)
+                    if let type = container.envManager.preferences.cloudMembershipType {
+                        Text(type.capitalized)
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(membershipColor(type))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(membershipColor(type).opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            Spacer()
+            Button {
+                Task { await refreshProfile() }
+            } label: {
+                if isRefreshingProfile { ProgressView().scaleEffect(0.8) }
+                else { Image(systemName: "arrow.triangle.2.circlepath").font(.caption) }
+            }
+            .buttonStyle(.plain).disabled(isRefreshingProfile)
+
+            Button(role: .destructive) {
+                Task { await performLogout() }
+            } label: {
+                if isLoggingOut { ProgressView().scaleEffect(0.8) }
+                else { Image(systemName: "rectangle.portrait.and.arrow.right").font(.caption) }
+            }
+            .buttonStyle(.plain).disabled(isLoggingOut)
+        }
+    }
+
+    /// Unified provider row: Cloud AI and BYOK share the same selectable list.
+    private func unifiedProviderRow(_ provider: LLMProvider) -> some View {
         let isActive = provider.id == container.envManager.preferences.activeLLMProviderId
+        let isCloud = provider.isCloudProvider
         let isConfigured = container.envManager.isLLMProviderConfigured(provider)
-        let providerName = provider.name.isEmpty ? "Unnamed Provider".localized() : provider.name
-        let detail = isConfigured ? provider.model : "Incomplete configuration".localized()
+
+        let icon: String = isCloud ? "cloud.fill" : "server.rack"
+        let iconColor: Color = isCloud ? .accentColor : .secondary
+        let title = isCloud ? "StudyPulse Cloud AI".localized() : (provider.name.isEmpty ? "Unnamed".localized() : provider.name)
+        let subtitle: String = {
+            if isCloud {
+                return container.envManager.isCloudSessionLoggedIn
+                    ? "\(provider.model)  ·  Account".localized()
+                    : "\(provider.model)  ·  Key".localized()
+            }
+            return isConfigured ? provider.model : "Incomplete configuration".localized()
+        }()
 
         return HStack(spacing: 12) {
-            Button {
-                container.envManager.selectLLMProvider(provider.id)
-            } label: {
-                Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isActive ? .accentColor : .secondary)
+            Button { container.envManager.selectLLMProvider(provider.id) } label: {
+                Image(systemName: isActive ? "largecircle.fill.circle" : "circle")
+                    .foregroundColor(isActive ? .green : .secondary.opacity(0.5))
+                    .font(.title3)
+            }.buttonStyle(.plain)
+
+            Image(systemName: icon)
+                .foregroundColor(iconColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.medium))
+                Text(subtitle).font(.caption).foregroundColor(.secondary)
             }
-            .buttonStyle(.plain)
-            NavigationLink(destination: LLMProviderEditor(provider: provider)) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(providerName)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+
+            Spacer()
+
+            if !isCloud {
+                NavigationLink(destination: LLMProviderEditor(provider: provider)) {
+                    EmptyView()
+                }.frame(width: 0).opacity(0) // invisible chevron for tap area
+            }
+
+            if isActive {
+                Image(systemName: "checkmark").foregroundColor(.green).font(.caption.weight(.bold))
+            }
+        }
+        .swipeActions {
+            if !isCloud {
+                Button(role: .destructive) { container.envManager.deleteLLMProvider(provider.id) } label: {
+                    Label("Delete".localized(), systemImage: "trash")
                 }
             }
         }
     }
 
-    // MARK: - Helpers / 辅助方法
+    // MARK: - Helpers
 
-    /// 从 `container.envManager.preferences` 拉一份初始值填到本地 @State(只跑一次)
-    /// Pull initial values from `container.envManager.preferences` into local @State
-    /// (runs once on appear).
+    private func membershipColor(_ type: String) -> Color {
+        switch type { case "pro": return .purple; case "plus": return .blue; default: return .secondary }
+    }
+
+    private func updateCloudProviderModel(_ model: String) {
+        guard let cloud = container.envManager.preferences.llmProviders.first(where: { $0.isCloudProvider }),
+              let idx = container.envManager.preferences.llmProviders.firstIndex(where: { $0.id == cloud.id }) else { return }
+        var updated = cloud
+        updated.model = model
+        container.envManager.preferences.llmProviders[idx] = updated
+    }
+
     private func syncFromPreferences() {
         let prefs = container.envManager.preferences
-        appendixInput = prefs.llmSystemPromptAppendix ?? ""
-        temperature = prefs.llmTemperature
-        radarCooldownMinutes = prefs.radarAICooldownMinutes
         cloudWorkerURL = prefs.cloudAIWorkerURL ?? ""
         if container.envManager.hasCloudProvider {
             cloudAPIKeyInput = container.envManager.cloudAPIKey
+            if let cloud = prefs.llmProviders.first(where: { $0.isCloudProvider }) {
+                cloudSelectedModel = cloud.model
+            }
         }
     }
 
-    @MainActor
-    private func activateCloudProvider() {
+    @MainActor private func activateCloudProvider() {
         let url = cloudWorkerURL.trimmingCharacters(in: .whitespacesAndNewlines)
         let key = cloudAPIKeyInput.trimmingCharacters(in: .whitespaces)
         guard !url.isEmpty, !key.isEmpty else { return }
         isActivatingCloud = true
         defer { isActivatingCloud = false }
-        do {
-            try container.envManager.activateCloudProvider(workerURL: url, apiKey: key)
-        } catch {
-            testAlertSucceeded = false
-            testAlertMessage = "Failed to save API Key: \(error.localizedDescription)"
-        }
+        do { try container.envManager.activateCloudProvider(workerURL: url, apiKey: key) }
+        catch { testAlertSucceeded = false; testAlertMessage = "Failed to save API Key: \(error.localizedDescription)" }
     }
 
-    /// 真正发一次 minimal 请求来验证端点 / Key / 模型
-    /// Send a minimal request to verify endpoint / key / model.
-    @MainActor
-    private func runTestConnection() async {
-        isTesting = true
-        defer { isTesting = false }
+    @MainActor private func performLogout() async {
+        isLoggingOut = true; defer { isLoggingOut = false }
+        let token = container.envManager.cloudSessionToken ?? ""
+        let url = container.envManager.preferences.cloudAIWorkerURL ?? ""
+        if !token.isEmpty, !url.isEmpty {
+            try? await AuthClient.shared.logout(sessionToken: token, workerURL: url)
+        }
+        container.envManager.cloudSessionLogout()
+    }
+
+    @MainActor private func runTestConnection() async {
+        isTesting = true; defer { isTesting = false }
         do {
             try await LLMClient.shared.testConnection(config: container.envManager.llmConfig)
-            testAlertSucceeded = true
-            testAlertMessage = "Endpoint reachable, model responded.".localized()
+            testAlertSucceeded = true; testAlertMessage = "Endpoint reachable, model responded.".localized()
         } catch let error as LLMError {
-            testAlertSucceeded = false
-            testAlertMessage = error.errorDescription
+            testAlertSucceeded = false; testAlertMessage = error.errorDescription
         } catch {
-            testAlertSucceeded = false
-            testAlertMessage = error.localizedDescription
+            testAlertSucceeded = false; testAlertMessage = error.localizedDescription
         }
     }
 
-    @MainActor
-    private func forceRefreshCoach() async {
-        isForceRefreshingCoach = true
-        defer { isForceRefreshingCoach = false }
-        do {
-            _ = try await CoachCoordinator(container: container).forceRefreshProposal()
-            testAlertSucceeded = true
-            testAlertMessage = "A fresh AI Coach proposal is ready to review.".localized()
-        } catch let error as LocalizedError {
-            testAlertSucceeded = false
-            testAlertMessage = error.errorDescription ?? error.localizedDescription
-        } catch {
-            testAlertSucceeded = false
-            testAlertMessage = error.localizedDescription
+    @MainActor private func refreshProfile() async {
+        isRefreshingProfile = true; defer { isRefreshingProfile = false }
+        await container.envManager.refreshCloudProfile()
+        // 确保 Cloud AI 是活跃 provider
+        if let cloud = container.envManager.preferences.llmProviders.first(where: { $0.isCloudProvider }) {
+            container.envManager.preferences.activeLLMProviderId = cloud.id
+        }
+        if let models = container.envManager.preferences.cloudAvailableModels, let first = models.first {
+            cloudSelectedModel = container.envManager.preferences.llmProviders.first(where: { $0.isCloudProvider })?.model ?? first
         }
     }
 }
+
+// MARK: - AI Coach Settings
+
+private struct LLMAICoachSettingsView: View {
+    @Environment(RepositoryContainer.self) private var container
+    @State private var isForceRefreshingCoach = false
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { container.envManager.preferences.coachEnabled },
+                    set: { container.envManager.preferences.coachEnabled = $0 }
+                )) {
+                    Label("Enable AI Coach".localized(), systemImage: "brain.head.profile")
+                }
+            } footer: {
+                Text("AI Coach is a separate opt-in. Major health changes are judged on-device; only then is a proposed plan generated through your configured LLM.".localized())
+            }
+
+            if container.envManager.preferences.coachEnabled {
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { container.envManager.preferences.coachAdaptivePlanEnabled },
+                        set: { container.envManager.preferences.coachAdaptivePlanEnabled = $0 }
+                    )) {
+                        Label("Adapt plan for health changes".localized(), systemImage: "heart.text.square")
+                    }
+                }
+
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { container.envManager.preferences.coachNotificationEnabled },
+                        set: { container.envManager.preferences.coachNotificationEnabled = $0; CoachNotifications.shared.reschedule(enabled: $0, hour: container.envManager.preferences.coachNotificationHour) }
+                    )) {
+                        Label("Daily Coach Notification".localized(), systemImage: "bell.badge")
+                    }
+                    Stepper(value: Binding(
+                        get: { container.envManager.preferences.coachNotificationHour },
+                        set: { container.envManager.preferences.coachNotificationHour = max(0, min(23, $0)); CoachNotifications.shared.reschedule(enabled: container.envManager.preferences.coachNotificationEnabled, hour: $0) }
+                    ), in: 0...23) {
+                        Text(String(format: "%02d:00".localized(), container.envManager.preferences.coachNotificationHour))
+                    }
+                }
+
+                Section {
+                    Button { Task { await forceRefreshCoach() } } label: {
+                        HStack {
+                            if isForceRefreshingCoach { ProgressView().scaleEffect(0.8) }
+                            else { Image(systemName: "arrow.clockwise.circle.fill") }
+                            Text("Force Refresh".localized())
+                        }
+                    }
+                    .disabled(isForceRefreshingCoach || !container.envManager.llmConfig.isConfigured)
+                }
+            }
+        }
+        .navigationTitle("AI Coach".localized())
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @MainActor private func forceRefreshCoach() async {
+        isForceRefreshingCoach = true; defer { isForceRefreshingCoach = false }
+        try? await CoachCoordinator(container: container).forceRefreshProposal()
+    }
+}
+
+// MARK: - Advanced Settings
+
+private struct LLMAdvancedSettingsView: View {
+    @Environment(RepositoryContainer.self) private var container
+    @State private var appendixInput: String = ""
+    @State private var temperature: Double = 0.7
+    @State private var radarCooldownMinutes: Int = 40
+    @State private var overrideInput: String = ""
+
+    var body: some View {
+        List {
+            // Temperature
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Temperature".localized()).font(.caption).foregroundColor(.secondary)
+                        Spacer()
+                        Text(String(format: "%.1f", temperature)).font(.caption.monospacedDigit()).foregroundColor(.secondary)
+                    }
+                    Slider(value: $temperature, in: 0...2, step: 0.1)
+                        .onChange(of: temperature) { _, v in container.envManager.setLLMTemperature(v) }
+                }
+            }
+
+            // System Prompt
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("System Prompt Appendix".localized()).font(.caption).foregroundColor(.secondary)
+                    TextEditor(text: $appendixInput)
+                        .frame(minHeight: 100)
+                        .onChange(of: appendixInput) { _, v in container.envManager.setLLMSystemPromptAppendix(v.isEmpty ? nil : v) }
+                }
+            } footer: {
+                Text("Optional. Appended to the default system prompt for every AI feature.".localized())
+            }
+
+            // Rate Limits
+            Section {
+                Stepper(value: $radarCooldownMinutes, in: 5...180, step: 5) {
+                    HStack {
+                        Label("Recovery Radar Cooldown".localized(), systemImage: "heart.text.square")
+                        Spacer()
+                        Text(String(format: "%d min".localized(), radarCooldownMinutes)).foregroundColor(.secondary).monospacedDigit()
+                    }
+                }
+                .onChange(of: radarCooldownMinutes) { _, v in container.envManager.setRadarAICooldownMinutes(v) }
+
+                Toggle("Enable Habit Insight".localized(), isOn: Binding(
+                    get: { container.envManager.preferences.habitInsightEnabled },
+                    set: { container.envManager.setHabitInsightEnabled($0) }
+                ))
+                if container.envManager.preferences.habitInsightEnabled {
+                    Stepper(value: Binding(
+                        get: { container.envManager.preferences.habitInsightCooldownMinutes },
+                        set: { container.envManager.setHabitInsightCooldownMinutes($0) }
+                    ), in: 5...180, step: 5) {
+                        Text("Habit Insight Cooldown".localized())
+                    }
+                    Toggle("Daily Notification".localized(), isOn: Binding(
+                        get: { container.envManager.preferences.habitInsightNotificationEnabled },
+                        set: { e in container.envManager.setHabitInsightNotificationEnabled(e)
+                            let p = container.envManager.preferences
+                            HabitInsightNotifications.shared.reschedule(enabled: e, hour: p.habitInsightNotificationHour, body: p.lastHabitInsightNotificationBody) }
+                    ))
+                    Stepper(value: Binding(
+                        get: { container.envManager.preferences.habitInsightNotificationHour },
+                        set: { h in container.envManager.setHabitInsightNotificationHour(h)
+                            let p = container.envManager.preferences
+                            HabitInsightNotifications.shared.reschedule(enabled: p.habitInsightNotificationEnabled, hour: h, body: p.lastHabitInsightNotificationBody) }
+                    ), in: 0...23) {
+                        Text("Notification Hour".localized())
+                    }
+                }
+            } header: {
+                Text("Rate Limits".localized())
+            }
+
+            // DEBUG override
+            if container.envManager.debugModeEnabled {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ladybug.fill").foregroundColor(.yellow)
+                            Text("DEBUG: Override System Prompt".localized()).font(.caption.weight(.semibold))
+                        }
+                        TextEditor(text: $overrideInput)
+                            .frame(minHeight: 140).font(.system(.footnote, design: .monospaced))
+                            .onChange(of: overrideInput) { _, v in container.envManager.setLLMDebugOverrideSystemPrompt(v.isEmpty ? nil : v) }
+                        if !overrideInput.isEmpty {
+                            Button(role: .destructive) {
+                                overrideInput = ""; container.envManager.setLLMDebugOverrideSystemPrompt(nil)
+                            } label: { Label("Clear".localized(), systemImage: "trash").font(.caption) }
+                        }
+                    }
+                } header: {
+                    HStack { Image(systemName: "ladybug.fill").foregroundColor(.yellow); Text("DEBUG Override".localized()) }
+                }
+            }
+        }
+        .navigationTitle("Advanced".localized())
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            let prefs = container.envManager.preferences
+            appendixInput = prefs.llmSystemPromptAppendix ?? ""
+            temperature = prefs.llmTemperature
+            radarCooldownMinutes = prefs.radarAICooldownMinutes
+            overrideInput = prefs.debugOverrideSystemPrompt ?? ""
+        }
+    }
+}
+
+// MARK: - Provider Editor
 
 private struct LLMProviderEditor: View {
     @Environment(RepositoryContainer.self) private var container
@@ -538,119 +627,73 @@ private struct LLMProviderEditor: View {
             if provider.isCloudProvider {
                 Section {
                     HStack {
-                        Image(systemName: "cloud.fill")
-                            .foregroundColor(.accentColor)
-                        Text("StudyPulse Cloud AI (Beta)")
-                            .font(.headline)
+                        Image(systemName: "cloud.fill").foregroundColor(.accentColor)
+                        Text("StudyPulse Cloud AI (Beta)").font(.headline)
                     }
-                    Text("Model: MiniMax-M3 · Multimodal: On · Thinking: Off")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("Model: \(provider.model) · Multimodal: On · Thinking: Off")
+                        .font(.caption).foregroundColor(.secondary)
                     SecureField("API Key (sp_xxx)".localized(), text: $apiKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                } header: {
-                    Text("Connection".localized())
-                }
+                        .textInputAutocapitalization(.never).autocorrectionDisabled(true)
+                } header: { Text("Connection".localized()) }
             } else {
                 Section {
                     TextField("Provider Name".localized(), text: $name)
                     TextField("https://api.openai.com", text: $baseURL, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled(true).keyboardType(.URL)
                     SecureField("API Key".localized(), text: $apiKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled(true)
                     TextField("gpt-4o-mini", text: $model)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled(true)
                     Toggle("Enable Multimodal".localized(), isOn: $multimodalEnabled)
                     Toggle("Enable Thinking".localized(), isOn: $thinkingEnabled)
-                } header: {
-                    Text("Connection".localized())
-                }
-
-                Section {
-                    Text("Multimodal uses the content-array format for vision-capable models. Thinking uses the provider's thinking parameter when enabled.".localized())
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                } header: { Text("Connection".localized()) }
             }
 
             Section {
-                Button {
-                    container.envManager.selectLLMProvider(provider.id)
-                } label: {
-                    Label(
-                        provider.id == container.envManager.preferences.activeLLMProviderId
-                            ? "Active Provider".localized()
-                            : "Use This Provider".localized(),
+                Button { container.envManager.selectLLMProvider(provider.id) } label: {
+                    Label(provider.id == container.envManager.preferences.activeLLMProviderId
+                        ? "Active Provider".localized() : "Use This Provider".localized(),
                         systemImage: provider.id == container.envManager.preferences.activeLLMProviderId
-                            ? "checkmark.circle.fill" : "checkmark.circle"
-                    )
+                        ? "checkmark.circle.fill" : "checkmark.circle")
                 }
                 .disabled(provider.id == container.envManager.preferences.activeLLMProviderId)
-            } footer: {
-                Text("All AI features use the active provider.".localized())
             }
         }
         .navigationTitle("Provider".localized())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done".localized()) {
-                    if save() {
-                        dismiss()
-                    }
-                }
+                Button("Done".localized()) { if save() { dismiss() } }
             }
         }
         .task {
-            if provider.isCloudProvider {
-                apiKey = container.envManager.cloudAPIKey
-            } else {
-                apiKey = container.envManager.llmAPIKey(for: provider.id)
-            }
+            apiKey = provider.isCloudProvider
+                ? container.envManager.cloudAPIKey
+                : container.envManager.llmAPIKey(for: provider.id)
         }
-        .alert("Unable to Save API Key".localized(), isPresented: Binding(
-            get: { saveError != nil },
-            set: { if !$0 { saveError = nil } }
-        )) {
+        .alert("Unable to Save API Key".localized(), isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
             Button("OK".localized(), role: .cancel) {}
-        } message: {
-            Text(saveError ?? "")
-        }
+        } message: { Text(saveError ?? "") }
     }
 
     private func save() -> Bool {
         do {
             let updatedProvider: LLMProvider
             if provider.isCloudProvider {
-                // Cloud provider: preserve preset values, only update API key
-                updatedProvider = LLMProvider(
-                    id: provider.id,
-                    name: provider.name,
-                    baseURL: provider.baseURL,
-                    model: provider.model,
-                    multimodalEnabled: provider.multimodalEnabled,
-                    thinkingEnabled: provider.thinkingEnabled,
-                    isCloudProvider: true
-                )
+                updatedProvider = LLMProvider(id: provider.id, name: provider.name, baseURL: provider.baseURL,
+                    model: provider.model, multimodalEnabled: provider.multimodalEnabled,
+                    thinkingEnabled: provider.thinkingEnabled, isCloudProvider: true)
             } else {
-                updatedProvider = LLMProvider(
-                    id: provider.id,
+                updatedProvider = LLMProvider(id: provider.id,
                     name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                     baseURL: baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
                     model: model.trimmingCharacters(in: .whitespacesAndNewlines),
-                    multimodalEnabled: multimodalEnabled,
-                    thinkingEnabled: thinkingEnabled
-                )
+                    multimodalEnabled: multimodalEnabled, thinkingEnabled: thinkingEnabled)
             }
             try container.envManager.updateLLMProvider(updatedProvider, apiKey: apiKey)
             return true
         } catch {
-            saveError = "The API key could not be stored securely. Your previous key was kept.".localized()
+            saveError = "The API key could not be stored securely.".localized()
             return false
         }
     }

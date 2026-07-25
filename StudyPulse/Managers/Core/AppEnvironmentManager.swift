@@ -341,12 +341,18 @@ final class AppEnvironmentManager {
     }
 
     /// 停用 Cloud AI provider:取消选中(如果当前激活的是 cloud provider)。
+    /// 仅 Key 模式下有意义；账号模式下应使用 disconnectKey()。
     func deactivateCloudProvider() {
         if let active = activeLLMProvider, active.isCloudProvider {
             // 取消选中 cloud provider,切换到第一个非 cloud provider(如果有)
             let next = preferences.llmProviders.first { !$0.isCloudProvider }
             preferences.activeLLMProviderId = next?.id
         }
+    }
+
+    /// 仅清除 Cloud AI Key（保留 provider 和活跃状态）。账号模式下使用。
+    func disconnectCloudKey() {
+        try? keychain.delete(account: LLMAPIKeyAccount.cloud)
     }
 
     /// 删除 Cloud AI provider 及对应 Keychain 条目。
@@ -365,9 +371,56 @@ final class AppEnvironmentManager {
         (try? keychain.read(account: LLMAPIKeyAccount.cloud)) ?? ""
     }
 
+    /// Cloud AI Session Token(从 Keychain 读取)。邮箱登录后非空。
+    var cloudSessionToken: String? {
+        try? keychain.read(account: LLMAPIKeyAccount.cloudSession)
+    }
+
+    /// 是否已通过邮箱登录 Cloud AI。
+    var isCloudSessionLoggedIn: Bool {
+        preferences.cloudSessionEmail != nil && cloudSessionToken != nil
+    }
+
+    /// 保存 Session Token 并记录登录邮箱和会员信息。
+    func cloudSessionLogin(email: String, token: String, membershipType: String? = nil, membershipExpiresAt: String? = nil) throws {
+        try keychain.write(token, account: LLMAPIKeyAccount.cloudSession)
+        preferences.cloudSessionEmail = email
+        preferences.cloudMembershipType = membershipType
+        preferences.cloudMembershipExpiresAt = membershipExpiresAt
+        // 确保 Cloud AI provider 是活跃的
+        if let cloud = preferences.llmProviders.first(where: { $0.isCloudProvider }) {
+            preferences.activeLLMProviderId = cloud.id
+        }
+        Log.preferences.info("Cloud session login: email=\(email, privacy: .private(mask: .hash)) membership=\(membershipType ?? "free", privacy: .public) tokenSaved=\(cloudSessionToken != nil)")
+    }
+
+    /// 清除 Session Token 和登录邮箱及会员信息。
+    func cloudSessionLogout() {
+        try? keychain.delete(account: LLMAPIKeyAccount.cloudSession)
+        preferences.cloudSessionEmail = nil
+        preferences.cloudMembershipType = nil
+        preferences.cloudMembershipExpiresAt = nil
+        preferences.cloudAvailableModels = nil
+    }
+
     /// 当前是否有 Cloud AI provider。
     var hasCloudProvider: Bool {
         preferences.llmProviders.contains { $0.isCloudProvider }
+    }
+
+    /// 刷新 Cloud AI 用户信息和可用模型列表。
+    func refreshCloudProfile() async {
+        guard let token = cloudSessionToken,
+              let workerURL = preferences.cloudAIWorkerURL,
+              !token.isEmpty, !workerURL.isEmpty else { return }
+        do {
+            let profile = try await AuthClient.shared.getProfile(sessionToken: token, workerURL: workerURL)
+            preferences.cloudMembershipType = profile.membership?.effective_type ?? profile.membership?.type
+            preferences.cloudMembershipExpiresAt = profile.membership?.expires_at
+            preferences.cloudAvailableModels = profile.plan?.available_models
+        } catch {
+            Log.preferences.error("刷新 Cloud AI profile 失败: \(error.localizedDescription)")
+        }
     }
 
     /// 当前是否激活 Cloud AI provider。
