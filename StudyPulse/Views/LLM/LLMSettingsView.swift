@@ -487,7 +487,9 @@ private struct LLMAICoachSettingsView: View {
 
     @MainActor private func forceRefreshCoach() async {
         isForceRefreshingCoach = true; defer { isForceRefreshingCoach = false }
-        try? await CoachCoordinator(container: container).forceRefreshProposal()
+        do {
+            _ = try await CoachCoordinator(container: container).forceRefreshProposal()
+        } catch { }
     }
 }
 

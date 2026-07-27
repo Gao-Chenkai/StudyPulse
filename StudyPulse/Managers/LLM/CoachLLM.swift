@@ -276,7 +276,6 @@ enum CoachLLM {
             throw LLMError.malformedResponse
         }
         let rationale = root["rationale"] as? String ?? ""
-        let shouldContinue = root["shouldContinue"] as? Bool ?? false
         let alternative = root["alternative"] as? String
         let rawItems = root["items"] as? [[String: Any]] ?? []
         let items = rawItems.compactMap { parsePlanItem($0) }
