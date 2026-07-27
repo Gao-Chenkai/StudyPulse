@@ -131,6 +131,13 @@ struct HomeView: View {
                 ExamRoleSimulatorView(container: container)
                     .environment(container)
             }
+            .fullScreenCover(isPresented: Binding(
+                get: { uiState.showingExamReversePlanner },
+                set: { uiState.showingExamReversePlanner = $0 }
+            )) {
+                ExamReversePlannerView(container: container)
+                    .environment(container)
+            }
             .sheet(isPresented: Binding(
                 get: { uiState.showingReportOptions },
                 set: { uiState.showingReportOptions = $0 }
@@ -353,6 +360,10 @@ struct HomeView: View {
             ExamRoleSimulatorHomeCard {
                 uiState.showingExamRoleSimulator = true
             }
+        case .examReversePlanner:
+            ExamReversePlannerHomeCard {
+                uiState.showingExamReversePlanner = true
+            }
         }
     }
 
@@ -469,6 +480,7 @@ struct HomeView: View {
         case .habitInsight: return "Habit Insight".localized()
         case .brainUsage: return "Brain Usage".localized()
         case .examRoleSimulator: return "考场人格模拟器".localized()
+        case .examReversePlanner: return "exam.reverse.planner.title".localized()
         }
     }
 
@@ -546,6 +558,8 @@ struct HomeView: View {
                     BrainUsageCard()
                 case .examRoleSimulator:
                     ExamRoleSimulatorHomeCard(onOpen: {})
+                case .examReversePlanner:
+                    ExamReversePlannerHomeCard(onOpen: {})
                 }
             }
             .frame(maxWidth: .infinity)

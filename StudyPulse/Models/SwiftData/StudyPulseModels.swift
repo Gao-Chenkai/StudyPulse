@@ -947,6 +947,44 @@ final class ExamSimulationRecord {
     }
 }
 
+@Model
+final class ExamGoalRecord {
+    #Index<ExamGoalRecord>([\.createdAt])
+    @Attribute(.unique) var id: UUID
+    var createdAt: Date
+    var payload: Data
+
+    init(from goal: ExamGoal) {
+        id = goal.id
+        createdAt = goal.createdAt
+        payload = (try? JSONEncoder().encode(goal)) ?? Data()
+    }
+
+    func toSnapshot() -> ExamGoal? {
+        try? JSONDecoder().decode(ExamGoal.self, from: payload)
+    }
+}
+
+@Model
+final class ExamPlanRecord {
+    #Index<ExamPlanRecord>([\.examGoalID], [\.createdAt])
+    @Attribute(.unique) var id: UUID
+    var examGoalID: UUID
+    var createdAt: Date
+    var payload: Data
+
+    init(from plan: ExamPlan) {
+        id = plan.id
+        examGoalID = plan.examGoalID
+        createdAt = plan.createdAt
+        payload = (try? JSONEncoder().encode(plan)) ?? Data()
+    }
+
+    func toSnapshot() -> ExamPlan? {
+        try? JSONDecoder().decode(ExamPlan.self, from: payload)
+    }
+}
+
 // MARK: - UserProfile (单例)
 // MARK: - 用户资料(单例) / User Profile (singleton)
 

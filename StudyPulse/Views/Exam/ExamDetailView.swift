@@ -46,6 +46,7 @@ struct ExamDetailView: View {
     @State private var showLinkedMistakesView = false
     @State private var showingChecklistEditor = false
     @State private var showingAutopsy = false
+    @State private var showingReversePlanner = false
 
     /// 实时从 repo 拿最新版本的考试
     /// Live copy of the exam from the repo.
@@ -243,6 +244,9 @@ struct ExamDetailView: View {
                     Button { showingAutopsy = true } label: {
                         Label("考试复盘", systemImage: "stethoscope")
                     }
+                    Button { showingReversePlanner = true } label: {
+                        Label("生成倒推计划", systemImage: "calendar.badge.clock")
+                    }
                     if let review = exam.examReview {
                         Button {
                             copyMessage = review.summary
@@ -278,6 +282,10 @@ struct ExamDetailView: View {
                 ExamAutopsyView(exam: exam, container: container)
                     .environment(container)
             }
+        }
+        .fullScreenCover(isPresented: $showingReversePlanner) {
+            ExamReversePlannerView(container: container, examId: examId)
+                .environment(container)
         }
         .alert("Delete Exam".localized(), isPresented: $showingDeleteConfirm) {
             Button("Cancel".localized(), role: .cancel) { }
