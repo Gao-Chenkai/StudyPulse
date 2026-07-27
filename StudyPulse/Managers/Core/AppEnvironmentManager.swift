@@ -373,12 +373,30 @@ final class AppEnvironmentManager {
 
     /// Cloud AI Session Token(从 Keychain 读取)。邮箱登录后非空。
     var cloudSessionToken: String? {
-        try? keychain.read(account: LLMAPIKeyAccount.cloudSession)
+        AuthTokenStore.shared.accessToken
+            ?? (try? keychain.read(account: LLMAPIKeyAccount.cloudSession))
     }
+
+    var cloudRefreshToken: String? { AuthTokenStore.shared.refreshToken }
 
     /// 是否已通过邮箱登录 Cloud AI。
     var isCloudSessionLoggedIn: Bool {
-        preferences.cloudSessionEmail != nil && cloudSessionToken != nil
+        AuthTokenStore.shared.pair != nil || (preferences.cloudSessionEmail != nil && cloudSessionToken != nil)
+    }
+
+    func cloudSessionLogin(accessToken: String, refreshToken: String, email: String? = nil) throws {
+        try AuthTokenStore.shared.save(AuthTokenPair(accessToken: accessToken, refreshToken: refreshToken))
+        preferences.cloudSessionEmail = email
+        preferences.cloudMembershipType = nil
+        preferences.cloudMembershipExpiresAt = nil
+        preferences.llmEnabled = true
+        if let cloud = preferences.llmProviders.first(where: { $0.isCloudProvider }) {
+            preferences.activeLLMProviderId = cloud.id
+        } else {
+            let provider = LLMProvider.cloudBeta(workerURL: preferences.cloudAIWorkerURL ?? "spapi.chenkai.space")
+            preferences.llmProviders.append(provider)
+            preferences.activeLLMProviderId = provider.id
+        }
     }
 
     /// 保存 Session Token 并记录登录邮箱和会员信息。
@@ -403,6 +421,7 @@ final class AppEnvironmentManager {
 
     /// 清除 Session Token 和登录邮箱及会员信息。
     func cloudSessionLogout() {
+        try? AuthTokenStore.shared.clear()
         try? keychain.delete(account: LLMAPIKeyAccount.cloudSession)
         preferences.cloudSessionEmail = nil
         preferences.cloudMembershipType = nil
@@ -422,6 +441,9 @@ final class AppEnvironmentManager {
               !token.isEmpty, !workerURL.isEmpty else { return }
         do {
             let profile = try await AuthClient.shared.getProfile(sessionToken: token, workerURL: workerURL)
+            if let email = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty {
+                preferences.cloudSessionEmail = email
+            }
             preferences.cloudMembershipType = profile.membership?.effective_type ?? profile.membership?.type
             preferences.cloudMembershipExpiresAt = profile.membership?.expires_at
             preferences.cloudAvailableModels = profile.plan?.available_models

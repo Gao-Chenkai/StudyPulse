@@ -102,7 +102,8 @@ extension LLMConfig {
         let provider = prefs.llmProviders.first { $0.id == prefs.activeLLMProviderId }
 
         // 始终读取 Session Token（邮箱登录凭据），不依赖 provider 查找
-        let sessionToken = (try? keychain.read(account: LLMAPIKeyAccount.cloudSession)) ?? nil
+        let sessionToken = AuthTokenStore.shared.accessToken
+            ?? (try? keychain.read(account: LLMAPIKeyAccount.cloudSession))
         let hasCloudSession = sessionToken != nil && prefs.cloudSessionEmail != nil
 
         // Cloud AI 判定：provider 明确是 Cloud，或存在有效的邮箱登录 Session
