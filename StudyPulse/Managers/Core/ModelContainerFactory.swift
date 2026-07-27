@@ -21,11 +21,11 @@ enum ModelContainerFactory {
 
     /// Models in the current production schema. Kept for debug/test helpers.
     static var modelTypes: [any PersistentModel.Type] {
-        StudyPulseSchemaV2.models
+        StudyPulseSchemaV3.models
     }
 
     static var currentSchema: Schema {
-        Schema(versionedSchema: StudyPulseSchemaV2.self)
+        Schema(versionedSchema: StudyPulseSchemaV3.self)
     }
 
     enum StoreError: LocalizedError {
@@ -326,6 +326,10 @@ enum ModelContainerFactory {
             return try context.fetchCount(FetchDescriptor<ExamAutopsyRecord>())
         case is ExamSimulationRecord.Type:
             return try context.fetchCount(FetchDescriptor<ExamSimulationRecord>())
+        case is ExamGoalRecord.Type:
+            return try context.fetchCount(FetchDescriptor<ExamGoalRecord>())
+        case is ExamPlanRecord.Type:
+            return try context.fetchCount(FetchDescriptor<ExamPlanRecord>())
         case is StudyPulseSchemaMetadataRecord.Type:
             return try context.fetchCount(FetchDescriptor<StudyPulseSchemaMetadataRecord>())
         default:

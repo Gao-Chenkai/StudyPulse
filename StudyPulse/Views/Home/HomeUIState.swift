@@ -51,6 +51,9 @@ struct HomeUIState {
     /// 一并重建正在答题的 fullScreenCover。
     var showingExamRoleSimulator: Bool = false
 
+    /// 是否显示考试倒推模拟器。
+    var showingExamReversePlanner: Bool = false
+
     // MARK: - 学习报告导出
     // MARK: - Study Report Export
 
