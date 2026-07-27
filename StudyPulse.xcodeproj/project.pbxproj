@@ -323,7 +323,7 @@
 			mainGroup = 2743C8352F6EAEA000CC1EED;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */,
+				27AB0001FE0000000000A001 /* XCRemoteSwiftPackageReference "SwiftStreamingMarkdown" */,
 				27BACC01FE0000000000B001 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -490,7 +490,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -549,7 +549,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -795,14 +795,15 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/SwiftStreamingMarkdown-0.2.0";
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
+		27AB0001FE0000000000A001 /* XCRemoteSwiftPackageReference "SwiftStreamingMarkdown" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/microsoft/SwiftStreamingMarkdown.git";
+			requirement = {
+				kind = revision;
+				revision = 81d9343cc5f3efdf86e29b6c052bfbd7986e526c;
+			};
+		};
 		27BACC01FE0000000000B001 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
@@ -816,7 +817,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		27AB0002FE0000000000A002 /* SwiftStreamingMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 27AB0001FE0000000000A001 /* XCLocalSwiftPackageReference "Packages/SwiftStreamingMarkdown-0.2.0" */;
+			package = 27AB0001FE0000000000A001 /* XCRemoteSwiftPackageReference "SwiftStreamingMarkdown" */;
 			productName = SwiftStreamingMarkdown;
 		};
 		27BACC02FE0000000000B002 /* ZIPFoundation */ = {
