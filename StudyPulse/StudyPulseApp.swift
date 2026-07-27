@@ -100,6 +100,14 @@ struct StudyPulseApp: App {
                 .environment(fpsMonitor)
                 #endif
                 .preferredColorScheme(container.envManager.effectiveColorScheme)
+                .onOpenURL { url in
+                    guard url.scheme == "studypulse",
+                          url.host == "auth",
+                          url.path == "/callback" else { return }
+                    Task { @MainActor in
+                        await AuthCallbackHandler.handle(url, container: container)
+                    }
+                }
                 .task {
                     guard let modelContainer = storeLaunchController.modelContainer,
                           !container.isReady

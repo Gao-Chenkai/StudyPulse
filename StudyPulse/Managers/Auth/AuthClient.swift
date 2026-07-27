@@ -12,21 +12,12 @@ import os
 // MARK: - Auth Error
 
 enum AuthError: Error, LocalizedError {
-    case invalidEmail
-    case sendCodeFailed(String)
-    case verifyFailed(String)
     case logoutFailed(String)
     case network(String)
     case missingWorkerURL
 
     var errorDescription: String? {
         switch self {
-        case .invalidEmail:
-            return "Please enter a valid email address.".localized()
-        case .sendCodeFailed(let msg):
-            return String(format: "Failed to send verification code: %@".localized(), msg)
-        case .verifyFailed(let msg):
-            return String(format: "Verification failed: %@".localized(), msg)
         case .logoutFailed(let msg):
             return String(format: "Logout failed: %@".localized(), msg)
         case .network(let msg):
@@ -39,26 +30,22 @@ enum AuthError: Error, LocalizedError {
 
 // MARK: - Auth Response Types
 
-struct AuthSendResponse: Decodable {
-    let success: Bool
-    let error: String?
-}
-
-struct AuthVerifyResponse: Decodable {
-    let success: Bool
-    let error: String?
-    let data: AuthTokenData?
-}
-
-struct AuthTokenData: Decodable {
-    let token: String
-    let membership_type: String?
-    let membership_expires_at: String?
-}
-
 struct AuthLogoutResponse: Decodable {
     let success: Bool
     let error: String?
+}
+
+struct AuthRefreshResponse: Decodable {
+    let access_token: String?
+    let refresh_token: String?
+    let data: AuthRefreshData?
+    let error: String?
+    let message: String?
+}
+
+struct AuthRefreshData: Decodable {
+    let access_token: String?
+    let refresh_token: String?
 }
 
 // MARK: - Profile Response Types
@@ -98,75 +85,40 @@ final class AuthClient: @unchecked Sendable {
     private let session: URLSession
     private let timeoutSeconds: TimeInterval = 30
 
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        self.session = URLSession(configuration: config)
+    init(session: URLSession? = nil) {
+        if let session {
+            self.session = session
+        } else {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            self.session = URLSession(configuration: config)
+        }
     }
 
     // MARK: - Public API
 
-    /// 发送验证码到指定邮箱。
-    func sendCode(email: String, workerURL: String) async throws {
-        guard isValidEmail(email) else { throw AuthError.invalidEmail }
-        let url = try buildURL(base: workerURL, path: "/auth/email/send")
-        let body = try JSONSerialization.data(withJSONObject: ["email": email])
+    /// Exchanges a refresh token at the identity center and returns the new pair.
+    func refreshAccessToken(refreshToken: String, tokenStore: AuthTokenStore = .shared) async throws -> AuthTokenPair {
+        guard let url = URL(string: "https://auth.chenkai.space/auth/refresh") else {
+            throw AuthError.network("Invalid authentication server URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
         request.timeoutInterval = timeoutSeconds
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw AuthError.network(error.localizedDescription)
+        let result = try await data(for: request)
+        let decoded = try decode(AuthRefreshResponse.self, from: result.0)
+        guard (200..<300).contains(result.1.statusCode),
+              let access = decoded.access_token ?? decoded.data?.access_token, !access.isEmpty,
+              let refresh = decoded.refresh_token ?? decoded.data?.refresh_token, !refresh.isEmpty else {
+            throw AuthError.network(decoded.error ?? decoded.message ?? "Token refresh failed (HTTP \(result.1.statusCode))")
         }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw AuthError.network("Non-HTTP response")
-        }
-
-        let decoded = try JSONDecoder().decode(AuthSendResponse.self, from: data)
-        if http.statusCode == 200, decoded.success {
-            return
-        }
-        let msg = decoded.error ?? "HTTP \(http.statusCode)"
-        throw AuthError.sendCodeFailed(msg)
-    }
-
-    /// 验证验证码并登录，返回 Session Token 和会员信息。
-    func verifyCode(email: String, code: String, workerURL: String) async throws -> (token: String, membershipType: String?, membershipExpiresAt: String?) {
-        guard isValidEmail(email) else { throw AuthError.invalidEmail }
-        let url = try buildURL(base: workerURL, path: "/auth/email/verify")
-        let body = try JSONSerialization.data(withJSONObject: ["email": email, "code": code])
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body
-        request.timeoutInterval = timeoutSeconds
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw AuthError.network(error.localizedDescription)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw AuthError.network("Non-HTTP response")
-        }
-
-        let decoded = try JSONDecoder().decode(AuthVerifyResponse.self, from: data)
-        if http.statusCode == 200, decoded.success, let token = decoded.data?.token {
-            return (token, decoded.data?.membership_type, decoded.data?.membership_expires_at)
-        }
-        let msg = decoded.error ?? "HTTP \(http.statusCode)"
-        throw AuthError.verifyFailed(msg)
+        let pair = AuthTokenPair(accessToken: access, refreshToken: refresh)
+        try tokenStore.save(pair)
+        return pair
     }
 
     /// 退出登录。
@@ -226,14 +178,29 @@ final class AuthClient: @unchecked Sendable {
         throw AuthError.network(msg)
     }
 
-    // MARK: - Helpers
-
-    private func isValidEmail(_ email: String) -> Bool {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        let regex = /^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-        return trimmed.wholeMatch(of: regex) != nil
+    private func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw AuthError.network(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AuthError.network("Non-HTTP response")
+        }
+        return (data, http)
     }
+
+    private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            throw AuthError.network("Invalid server response")
+        }
+    }
+
+    // MARK: - Helpers
 
     private func buildURL(base: String, path: String) throws -> URL {
         let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
