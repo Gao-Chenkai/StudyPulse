@@ -548,7 +548,7 @@ final class AppEnvironmentManager {
     /// Push the current Debug sub-toggles into LogStore.
     private func applyDebugStateToLogStore() {
         let minLevel: LogLevel = preferences.debugVerboseLogging ? .debug : .info
-        LogStore.shared.minCaptureLevel = minLevel
+        Task { await LogStore.shared.setMinCaptureLevel(minLevel) }
         Log.preferences.info("LogStore minCaptureLevel = \(minLevel.rawValue, privacy: .public)")
     }
 

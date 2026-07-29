@@ -358,7 +358,7 @@ struct DebugCacheView: View {
     private func perform(_ action: PendingAction) {
         switch action {
         case .clearLogs:
-            LogStore.shared.clear()
+            Task { await LogStore.shared.clear() }
             statusMessage = "In-memory logs cleared.".localized()
             statusIsError = false
         case .clearImageCache:

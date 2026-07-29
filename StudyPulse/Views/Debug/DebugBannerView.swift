@@ -183,7 +183,7 @@ final class LogToasterStore {
 
     init() {
         observationTask = Task { [weak self] in
-            for await entry in LogStore.shared.entriesStream() {
+            for await entry in await LogStore.shared.entriesStream() {
                 guard !Task.isCancelled else { return }
                 self?.handleNewEntry(entry)
             }

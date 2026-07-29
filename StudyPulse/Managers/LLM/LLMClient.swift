@@ -161,7 +161,7 @@ final class LLMClient: @unchecked Sendable {
         // BYOK: OpenAI 兼容协议。
         // 缓存命中:直接返回(避免重复走网络)。
         // Cache hit: return immediately (avoids the network round-trip).
-        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+        if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
             return cached
         }
         printPromptToConsole(prompt: prompt, config: config, caller: caller)
@@ -238,7 +238,7 @@ final class LLMClient: @unchecked Sendable {
         recordCall(info, apiKey: config.apiKey)
         // 写入缓存:相同 prompt 在 TTL 内不重复请求网络。
         // Cache the response so the same prompt doesn't hit the network within TTL.
-        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
+        await LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
         return result
     }
 
@@ -252,7 +252,7 @@ final class LLMClient: @unchecked Sendable {
         retryingAfterRefresh: Bool = false
     ) async throws -> String {
         // 缓存命中
-        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+        if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
             return cached
         }
         printPromptToConsole(prompt: prompt, config: config, caller: caller)
@@ -362,7 +362,7 @@ final class LLMClient: @unchecked Sendable {
             response: result, error: nil, caller: caller
         )
         recordCall(info, apiKey: config.apiKey)
-        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
+        await LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: result)
         return result
     }
 
@@ -378,7 +378,7 @@ final class LLMClient: @unchecked Sendable {
         retryingAfterRefresh: Bool = false
     ) async throws -> String {
         // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
-        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+        if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
             onDelta(cached)
             return cached
         }
@@ -508,7 +508,7 @@ final class LLMClient: @unchecked Sendable {
             response: accumulated, error: nil, caller: caller
         )
         recordCall(info, apiKey: config.apiKey)
-        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
+        await LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
         return accumulated
     }
 
@@ -533,7 +533,7 @@ final class LLMClient: @unchecked Sendable {
         // BYOK: SSE 流式。
         // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
         // Cache hit: emit the cached response as a single onDelta,avoiding the network round-trip.
-        if let cached = LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
+        if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
             onDelta(cached)
             return cached
         }
@@ -651,7 +651,7 @@ final class LLMClient: @unchecked Sendable {
         recordCall(info, apiKey: config.apiKey)
         // 写入缓存:与 complete() 一致,使流式调用的结果也可被后续命中。
         // Cache the response so the same prompt doesn't hit the network within TTL.
-        LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
+        await LLMResponseCache.shared.set(caller: caller, prompt: prompt, config: config, response: accumulated)
         return accumulated
     }
 

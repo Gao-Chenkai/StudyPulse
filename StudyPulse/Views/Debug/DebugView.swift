@@ -16,6 +16,7 @@ import os
 
 struct DebugView: View {
     @Environment(RepositoryContainer.self) private var container
+    @State private var logCount = 0
 
     var body: some View {
         List {
@@ -117,11 +118,14 @@ struct DebugView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("debug.title".localized())
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            let entries = await LogStore.shared.allEntries
+            logCount = entries.count
+        }
     }
 
     private var logViewerSubtitle: String {
-        let count = LogStore.shared.allEntries.count
-        return "\(count) / 5000 " + "entries".localized()
+        return "\(logCount) / 5000 " + "entries".localized()
     }
 }
 

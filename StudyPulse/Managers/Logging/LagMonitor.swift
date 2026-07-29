@@ -94,7 +94,7 @@ final class LagMonitor: NSObject {
             let stackSymbols = Thread.callStackSymbols
             let limitedStack = stackSymbols.prefix(20)
             for frame in limitedStack {
-                LogStore.shared.record(category: "Performance", level: .debug, message: frame)
+                Log.record(.debug, category: "Performance", message: frame)
             }
         }
 
