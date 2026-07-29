@@ -248,7 +248,8 @@ final class LLMClient: @unchecked Sendable {
     private func cloudComplete(
         prompt: LLMPrompt,
         config: LLMConfig,
-        caller: String
+        caller: String,
+        retryingAfterRefresh: Bool = false
     ) async throws -> String {
         // 缓存命中
         if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
@@ -300,26 +301,36 @@ final class LLMClient: @unchecked Sendable {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.network("Non-HTTP response")
         }
+        if httpResponse.statusCode == 401, !retryingAfterRefresh,
+           let refreshToken = AuthTokenStore.shared.refreshToken {
+            do {
+                let pair = try await AuthClient.shared.refreshAccessToken(refreshToken: refreshToken)
+                var refreshedConfig = config
+                refreshedConfig.sessionToken = pair.accessToken
+                return try await cloudComplete(
+                    prompt: prompt,
+                    config: refreshedConfig,
+                    caller: caller,
+                    retryingAfterRefresh: true
+                )
+            } catch {
+                AuthTokenStore.shared.clearIgnoringErrors()
+                throw LLMError.unauthorized
+            }
+        }
         // Cloud AI 网关上 HTTP 200 但 body 可能包含 {"error":"..."}
         if !(200..<300).contains(httpResponse.statusCode) {
-            let body = String(data: data, encoding: .utf8)
-            let errorMsg: String
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let err = json["error"] as? String {
-                errorMsg = err
-            } else {
-                errorMsg = body ?? "HTTP \(httpResponse.statusCode)"
-            }
+            let cloudError = LLMError.cloudError(statusCode: httpResponse.statusCode, data: data)
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
                 url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
-                response: body, error: errorMsg, caller: caller
+                response: nil, error: cloudError.errorDescription, caller: caller
             )
             recordCall(info, apiKey: config.apiKey)
-            throw LLMError.serverError(statusCode: httpResponse.statusCode, body: errorMsg)
+            throw cloudError
         }
 
         let result: String
@@ -335,7 +346,7 @@ final class LLMClient: @unchecked Sendable {
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: false,
-                response: String(data: data, encoding: .utf8),
+                response: nil,
                 error: desc, caller: caller
             )
             recordCall(info, apiKey: config.apiKey)
@@ -363,7 +374,8 @@ final class LLMClient: @unchecked Sendable {
         prompt: LLMPrompt,
         config: LLMConfig,
         caller: String,
-        onDelta: @MainActor (String) -> Void
+        onDelta: @MainActor (String) -> Void,
+        retryingAfterRefresh: Bool = false
     ) async throws -> String {
         // 缓存命中:把缓存作为单次 onDelta emit,避免重复走网络。
         if let cached = await LLMResponseCache.shared.get(caller: caller, prompt: prompt, config: config) {
@@ -411,24 +423,35 @@ final class LLMClient: @unchecked Sendable {
             for try await byte in bytes {
                 buffer.append(byte)
             }
-            let bodyStr = String(data: buffer, encoding: .utf8)
-            let errorMsg: String
-            if let json = try? JSONSerialization.jsonObject(with: buffer) as? [String: Any],
-               let err = json["error"] as? String {
-                errorMsg = err
-            } else {
-                errorMsg = bodyStr ?? "HTTP \(http.statusCode)"
+            if http.statusCode == 401, !retryingAfterRefresh,
+               let refreshToken = AuthTokenStore.shared.refreshToken {
+                do {
+                    let pair = try await AuthClient.shared.refreshAccessToken(refreshToken: refreshToken)
+                    var refreshedConfig = config
+                    refreshedConfig.sessionToken = pair.accessToken
+                    return try await cloudStream(
+                        prompt: prompt,
+                        config: refreshedConfig,
+                        caller: caller,
+                        onDelta: onDelta,
+                        retryingAfterRefresh: true
+                    )
+                } catch {
+                    AuthTokenStore.shared.clearIgnoringErrors()
+                    throw LLMError.unauthorized
+                }
             }
+            let cloudError = LLMError.cloudError(statusCode: http.statusCode, data: buffer)
             let info = LLMCallDebugInfo(
                 startTime: startTime, endTime: Date(),
                 url: url.absoluteString, model: config.model ?? "MiniMax-M3",
                 temperature: config.temperature,
                 systemPrompt: effectiveSystem(prompt: prompt, config: config),
                 messages: prompt.messages, streaming: true,
-                response: bodyStr, error: errorMsg, caller: caller
+                response: nil, error: cloudError.errorDescription, caller: caller
             )
             recordCall(info, apiKey: config.apiKey)
-            throw LLMError.serverError(statusCode: http.statusCode, body: errorMsg)
+            throw cloudError
         }
 
         // SSE 解析: Cloud AI 透传 MiniMax 的 OpenAI 兼容 chunk 格式，
@@ -678,15 +701,7 @@ final class LLMClient: @unchecked Sendable {
             throw LLMError.network("Non-HTTP response")
         }
         guard httpResp.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8)
-            let errorMsg: String
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let err = json["error"] as? String {
-                errorMsg = err
-            } else {
-                errorMsg = body ?? "HTTP \(httpResp.statusCode)"
-            }
-            throw LLMError.serverError(statusCode: httpResp.statusCode, body: errorMsg)
+            throw LLMError.cloudError(statusCode: httpResp.statusCode, data: data)
         }
         let reply = try parseCloudResponse(data, httpResponse: httpResp)
         guard !reply.isEmpty else {
@@ -922,7 +937,12 @@ final class LLMClient: @unchecked Sendable {
             throw LLMError.malformedResponse
         }
         if let error = json["error"] as? String {
-            throw LLMError.serverError(statusCode: httpResponse.statusCode, body: error)
+            let data = (try? JSONSerialization.data(withJSONObject: ["error": error])) ?? Data()
+            throw LLMError.cloudError(statusCode: httpResponse.statusCode, data: data)
+        }
+        if let errorObject = json["error"] as? [String: Any] {
+            let data = (try? JSONSerialization.data(withJSONObject: ["error": errorObject])) ?? Data()
+            throw LLMError.cloudError(statusCode: httpResponse.statusCode, data: data)
         }
         guard let dataObj = json["data"] as? [String: Any],
               let reply = dataObj["reply"] as? String else {

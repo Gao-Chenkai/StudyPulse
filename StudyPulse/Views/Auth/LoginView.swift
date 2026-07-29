@@ -1,156 +1,38 @@
-//
-//  LoginView.swift
-//  StudyPulse
-//
-//  Cloud AI 邮箱登录页面。
-//  Cloud AI email login page.
-//
-
 import SwiftUI
 
 struct LoginView: View {
     @Environment(RepositoryContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
-
-    @State private var email: String = ""
-    @State private var code: String = ""
-    @State private var isSendingCode = false
-    @State private var isVerifying = false
-    @State private var codeSent = false
+    @State private var webAuth = WebAuthSession()
+    @State private var isWorking = false
     @State private var errorMessage: String?
-    @State private var cooldownSeconds = 0
-
-    private let cooldownDuration = 60
-
-    private var workerURL: String {
-        container.envManager.preferences.cloudAIWorkerURL ?? "spapi.chenkai.space"
-    }
-
-    private var canSendCode: Bool {
-        !isSendingCode && cooldownSeconds == 0 && isValidEmail(email) && !workerURL.isEmpty
-    }
-
-    private var canVerify: Bool {
-        !isVerifying && code.count == 6 && !workerURL.isEmpty
-    }
 
     var body: some View {
         NavigationStack {
-            List {
-                // Header
-                Section {
-                    VStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .fill(Color.teal.opacity(0.18))
-                            Image(systemName: "envelope.circle.fill")
-                                .font(.system(size: 56, weight: .regular))
-                                .foregroundColor(.teal)
-                        }
-                        .frame(width: 110, height: 110)
-
-                        Text("Cloud AI Login".localized())
-                            .font(.system(size: 22, weight: .semibold))
-
-                        Text("Log in to use StudyPulse Cloud AI with your personal account. New users are automatically registered.".localized())
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
+            VStack(spacing: 22) {
+                Image(systemName: "person.badge.key.fill")
+                    .font(.system(size: 58))
+                    .foregroundStyle(.teal)
+                Text("StudyPulse Cloud AI")
+                    .font(.title2.weight(.semibold))
+                Text("Sign in securely with the StudyPulse identity center. Email/password, email code, and GitHub are supported on the web page.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                Button {
+                    Task { await signIn() }
+                } label: {
+                    HStack {
+                        if isWorking { ProgressView().tint(.white) }
+                        else { Image(systemName: "safari.fill") }
+                        Text("Continue to secure login")
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .listRowBackground(Color.clear)
                 }
-
-                // Email input
-                Section {
-                    HStack(spacing: 12) {
-                        Image(systemName: "envelope.fill")
-                            .foregroundColor(.secondary)
-                            .frame(width: 20)
-                        TextField("Email address".localized(), text: $email)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .keyboardType(.emailAddress)
-                            .textContentType(.emailAddress)
-                            .disabled(codeSent)
-                    }
-                } header: {
-                    Text("Email".localized())
-                }
-
-                // Send code button
-                Section {
-                    Button {
-                        Task { await sendCode() }
-                    } label: {
-                        HStack {
-                            if isSendingCode {
-                                ProgressView().scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "paperplane.fill")
-                            }
-                            Text(codeSent
-                                ? (cooldownSeconds > 0
-                                    ? String(format: "Resend in %ds".localized(), cooldownSeconds)
-                                    : "Resend Code".localized())
-                                : "Send Verification Code".localized())
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canSendCode)
-                    .tint(.teal)
-                }
-
-                // Verification code input
-                if codeSent {
-                    Section {
-                        HStack(spacing: 12) {
-                            Image(systemName: "lock.fill")
-                                .foregroundColor(.secondary)
-                                .frame(width: 20)
-                            TextField("Verification code".localized(), text: $code)
-                                .keyboardType(.numberPad)
-                                .textContentType(.oneTimeCode)
-                                .onChange(of: code) { _, newValue in
-                                    // Limit to 6 digits
-                                    let filtered = newValue.filter { $0.isNumber }
-                                    if filtered.count > 6 {
-                                        code = String(filtered.prefix(6))
-                                    } else if filtered != newValue {
-                                        code = filtered
-                                    }
-                                }
-                        }
-                    } header: {
-                        Text("Verification Code".localized())
-                    } footer: {
-                        Text("A 6-digit code has been sent to your email. It expires in 10 minutes.".localized())
-                    }
-
-                    Section {
-                        Button {
-                            Task { await verifyCode() }
-                        } label: {
-                            HStack {
-                                if isVerifying {
-                                    ProgressView().scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "checkmark.circle.fill")
-                                }
-                                Text("Verify & Login".localized())
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!canVerify)
-                    }
-                }
+                .buttonStyle(.borderedProminent)
+                .tint(.teal)
+                .disabled(isWorking)
             }
-            .listStyle(.insetGrouped)
-            .background(Color(.systemGroupedBackground))
-            .containerBackground(.clear, for: .navigation)
+            .padding(28)
             .navigationTitle("Login".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -158,79 +40,41 @@ struct LoginView: View {
                     Button("Cancel".localized()) { dismiss() }
                 }
             }
-            .alert("Error".localized(), isPresented: Binding(
+            .alert("Login failed", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
             )) {
-                Button("OK".localized(), role: .cancel) {}
+                Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage ?? "")
             }
-        }
-    }
-
-    // MARK: - Actions
-
-    @MainActor
-    private func sendCode() async {
-        errorMessage = nil
-        isSendingCode = true
-        defer { isSendingCode = false }
-
-        do {
-            try await AuthClient.shared.sendCode(email: email, workerURL: workerURL)
-            codeSent = true
-            code = ""
-            startCooldown()
-        } catch let error as AuthError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    @MainActor
-    private func verifyCode() async {
-        errorMessage = nil
-        isVerifying = true
-        defer { isVerifying = false }
-
-        do {
-            let result = try await AuthClient.shared.verifyCode(
-                email: email,
-                code: code,
-                workerURL: workerURL
-            )
-            try container.envManager.cloudSessionLogin(
-                email: email,
-                token: result.token,
-                membershipType: result.membershipType,
-                membershipExpiresAt: result.membershipExpiresAt
-            )
-            // 自动刷新 profile 以获取可用模型列表
-            await container.envManager.refreshCloudProfile()
-            dismiss()
-        } catch let error as AuthError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func startCooldown() {
-        cooldownSeconds = cooldownDuration
-        Task {
-            while cooldownSeconds > 0 {
-                try? await Task.sleep(for: .seconds(1))
-                cooldownSeconds -= 1
+            .onReceive(NotificationCenter.default.publisher(for: .studyPulseAuthCallbackHandled)) { notification in
+                guard notification.object is AuthTokenPair else { return }
+                isWorking = false
+                dismiss()
             }
         }
     }
 
-    private func isValidEmail(_ email: String) -> Bool {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        let regex = /^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-        return trimmed.wholeMatch(of: regex) != nil
+    @MainActor
+    private func signIn() async {
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let pair = try await webAuth.authenticate()
+            try container.envManager.cloudSessionLogin(
+                accessToken: pair.accessToken,
+                refreshToken: pair.refreshToken
+            )
+            // The OAuth callback intentionally contains tokens only. Fetch the
+            // signed-in profile so GitHub accounts (including private emails)
+            // can be displayed in the account row.
+            await container.envManager.refreshCloudProfile()
+            dismiss()
+        } catch WebAuthError.cancelled {
+            // User cancellation is expected and does not need an error alert.
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

@@ -98,9 +98,54 @@ nonisolated enum LLMAPIKeyAccount {
     static let cloud = "cloud"
     /// StudyPulse Cloud AI Session Token（邮箱登录后获取）。
     static let cloudSession = "cloud-session"
+    static let authAccessToken = "auth-access-token"
+    static let authRefreshToken = "auth-refresh-token"
 
     static func provider(_ id: UUID) -> String {
         "provider.\(id.uuidString.lowercased())"
+    }
+}
+
+struct AuthTokenPair: Equatable, Sendable {
+    let accessToken: String
+    let refreshToken: String
+}
+
+nonisolated struct AuthTokenStore: Sendable {
+    static let shared = AuthTokenStore(keychain: .shared)
+
+    let keychain: KeychainStore
+
+    init(keychain: KeychainStore) {
+        self.keychain = keychain
+    }
+
+    var accessToken: String? { try? keychain.read(account: LLMAPIKeyAccount.authAccessToken) }
+    var refreshToken: String? { try? keychain.read(account: LLMAPIKeyAccount.authRefreshToken) }
+
+    var pair: AuthTokenPair? {
+        guard let accessToken, !accessToken.isEmpty,
+              let refreshToken, !refreshToken.isEmpty else { return nil }
+        return AuthTokenPair(accessToken: accessToken, refreshToken: refreshToken)
+    }
+
+    func save(_ pair: AuthTokenPair) throws {
+        try keychain.write(pair.accessToken, account: LLMAPIKeyAccount.authAccessToken)
+        do {
+            try keychain.write(pair.refreshToken, account: LLMAPIKeyAccount.authRefreshToken)
+        } catch {
+            try? keychain.delete(account: LLMAPIKeyAccount.authAccessToken)
+            throw error
+        }
+    }
+
+    func clear() throws {
+        try keychain.delete(account: LLMAPIKeyAccount.authAccessToken)
+        try keychain.delete(account: LLMAPIKeyAccount.authRefreshToken)
+    }
+
+    func clearIgnoringErrors() {
+        try? clear()
     }
 }
 
