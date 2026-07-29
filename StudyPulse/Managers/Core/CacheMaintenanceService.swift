@@ -79,11 +79,11 @@ final class CacheMaintenanceService {
         self.disk = disk
     }
 
-    /// Disk inspection runs away from the main actor; only the two small
-    /// in-memory cache counts are read synchronously.
+    /// Disk inspection runs away from the main actor; actor-backed cache counts
+    /// are read with an explicit suspension point.
     func usage() async -> CacheUsage {
         let imageCount = imageCache.entryCount
-        let llmCount = llmResponseCache.entryCount
+        let llmCount = await llmResponseCache.entryCount
         let diskUsage = await Task.detached(priority: .utility) { [disk] in
             (
                 mindMapBytes: disk.mindMapSize(),
@@ -148,7 +148,7 @@ final class CacheMaintenanceService {
             cleared.insert(.images)
         }
         if categories.contains(.llmResponses) {
-            llmResponseCache.clear()
+            await llmResponseCache.clear()
             cleared.insert(.llmResponses)
         }
 

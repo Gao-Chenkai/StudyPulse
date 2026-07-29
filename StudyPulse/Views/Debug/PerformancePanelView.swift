@@ -28,7 +28,6 @@ struct PerformancePanelView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             fpsMonitor.start()
-            refreshLagStats()
             memoryMB = currentMemoryMB()
         }
         .onDisappear {
@@ -37,7 +36,7 @@ struct PerformancePanelView: View {
         .task {
             var iteration = 0
             while !Task.isCancelled {
-                refreshLagStats()
+                await refreshLagStats()
                 if iteration.isMultiple(of: 2) {
                     memoryMB = currentMemoryMB()
                 }
@@ -177,9 +176,11 @@ struct PerformancePanelView: View {
         return .red
     }
 
-    private func refreshLagStats() {
-        lagCount5min = LogStore.shared.recentLagCount(within: 300)
-        if let event = LogStore.shared.lastLagEvent {
+    private func refreshLagStats() async {
+        let lagCount = await LogStore.shared.recentLagCount(within: 300)
+        let lastEvent = await LogStore.shared.lastLagEvent
+        lagCount5min = lagCount
+        if let event = lastEvent {
             lastLagTimestamp = event.timestamp
             // 尝试从 message 提取毫秒数: "主线程卡顿 / Main thread lag: 45 ms (3 帧)"
             lastLagDurationMs = parseMs(from: event.message)

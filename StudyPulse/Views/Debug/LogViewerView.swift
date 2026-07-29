@@ -5,8 +5,8 @@
 //  In-app 日志查看器（Debug 模式 → 日志查看器）。
 //  Renders the in-memory LogStore buffer with level / category filters and search.
 //
-//  数据源：LogStore.shared.allEntries（线程安全，最多 5000 条）
-//  Source: LogStore.shared.allEntries (thread-safe, max 5000 entries)
+//  数据源：LogStore actor 的快照（最多 5000 条）
+//  Source: a snapshot from the LogStore actor (max 5000 entries)
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
 import os
 
 struct LogViewerView: View {
-    @State private var allEntries: [LogEntry] = LogStore.shared.allEntries
+    @State private var allEntries: [LogEntry] = []
     @State private var levelFilter: LogLevel? = nil
     @State private var categoryFilter: String? = nil
     @State private var searchText: String = ""
@@ -55,15 +55,9 @@ struct LogViewerView: View {
         }
         .task {
             while !Task.isCancelled {
-                let snapshot = LogStore.shared.allEntries
-                if snapshot.count != allEntries.count {
-                    allEntries = snapshot
-                }
+                allEntries = await LogStore.shared.allEntries
                 try? await Task.sleep(for: .seconds(1))
             }
-        }
-        .onAppear {
-            allEntries = LogStore.shared.allEntries
         }
         .sheet(item: $selectedEntry) { entry in
             LogEntryDetailSheet(entry: entry)
@@ -71,8 +65,10 @@ struct LogViewerView: View {
         .alert("debug.clearLogs".localized(), isPresented: $showingClearConfirm) {
             Button("Cancel".localized(), role: .cancel) {}
             Button("Clear".localized(), role: .destructive) {
-                LogStore.shared.clear()
-                allEntries = []
+                Task {
+                    await LogStore.shared.clear()
+                    allEntries = []
+                }
             }
         } message: {
             Text("debug.clearLogsConfirm".localized())
@@ -131,7 +127,7 @@ struct LogViewerView: View {
                     Label("All".localized(), systemImage: categoryFilter == nil ? "checkmark" : "")
                 }
                 Divider()
-                ForEach(LogStore.shared.knownCategories, id: \.self) { cat in
+                ForEach(knownCategories, id: \.self) { cat in
                     Button {
                         categoryFilter = cat
                     } label: {
@@ -188,7 +184,7 @@ struct LogViewerView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        let total = LogStore.shared.allEntries.count
+        let total = allEntries.count
         let shown = filteredEntries.count
         return HStack {
             Text("\(shown) / \(total) " + "entries".localized())
@@ -219,13 +215,20 @@ struct LogViewerView: View {
         }
     }
 
+    private var knownCategories: [String] {
+        var seen: Set<String> = []
+        return allEntries.compactMap { entry in
+            seen.insert(entry.category).inserted ? entry.category : nil
+        }
+    }
+
     private func exportLog() {
-        let logText = LogStore.shared.exportAsText()
-        let df = DateFormatter()
-        df.dateFormat = "yyyyMMdd_HHmmss"
-        let fileName = "StudyPulse_Log_\(df.string(from: Date())).log"
-        exportLogDocument = LogDocument(content: logText, fileName: fileName)
         Task { @MainActor in
+            let logText = await LogStore.shared.exportAsText()
+            let df = DateFormatter()
+            df.dateFormat = "yyyyMMdd_HHmmss"
+            let fileName = "StudyPulse_Log_\(df.string(from: Date())).log"
+            exportLogDocument = LogDocument(content: logText, fileName: fileName)
             try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
             isExportingLog = true

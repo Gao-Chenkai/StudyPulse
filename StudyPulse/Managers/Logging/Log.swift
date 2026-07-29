@@ -59,32 +59,26 @@ struct LogEntry: Sendable, Identifiable {
 /// 内存日志存储器，收集当前会话的所有日志条目。
 /// In-memory log store that accumulates entries for the current session.
 ///
-/// 线程安全（NSLock），上限 5000 条，超出后丢弃最早条目。
-nonisolated final class LogStore: @unchecked Sendable {
+/// 由 Swift 原生 actor 保证并发安全，上限 5000 条，超出后丢弃最早条目。
+actor LogStore {
     /// 全局共享实例。
     static let shared = LogStore()
 
     private var entries: [LogEntry] = []
     private var streamContinuations: [UUID: AsyncStream<LogEntry>.Continuation] = [:]
     private let maxEntries = 5_000
-    private let lock = NSLock()
-
     /// 内存中最低记录级别。Debug 模式 verbose 开启时会被设为 .debug,默认 .info。
     /// Minimum level captured into the in-memory buffer.
     /// Set to .debug when Debug → verbose logging is on; defaults to .info.
     private var _minCaptureLevel: LogLevel = .info
 
     var minCaptureLevel: LogLevel {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return _minCaptureLevel
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            _minCaptureLevel = newValue
-        }
+        get { _minCaptureLevel }
+        set { _minCaptureLevel = newValue }
+    }
+
+    func setMinCaptureLevel(_ level: LogLevel) {
+        _minCaptureLevel = level
     }
 
     private init() {}
@@ -92,11 +86,7 @@ nonisolated final class LogStore: @unchecked Sendable {
     /// 记录一条日志到内存存储。
     func record(category: String, level: LogLevel, message: String) {
         // 低于 minCaptureLevel 的条目不入内存(但 os.Logger 仍会写)
-        let minLevel: LogLevel
-        lock.lock()
-        minLevel = _minCaptureLevel
-        lock.unlock()
-        if !shouldCapture(level: level, minLevel: minLevel) {
+        guard shouldCapture(level: level, minLevel: _minCaptureLevel) else {
             return
         }
 
@@ -108,13 +98,11 @@ nonisolated final class LogStore: @unchecked Sendable {
             level: level,
             message: message
         )
-        lock.lock()
         entries.append(entry)
         if entries.count > maxEntries {
             entries.removeFirst(entries.count - maxEntries)
         }
         let continuations = Array(streamContinuations.values)
-        lock.unlock()
 
         for continuation in continuations {
             continuation.yield(entry)
@@ -125,17 +113,16 @@ nonisolated final class LogStore: @unchecked Sendable {
     /// Creates an independent real-time log stream for each subscriber.
     func entriesStream() -> AsyncStream<LogEntry> {
         let id = UUID()
-        return AsyncStream { continuation in
-            lock.lock()
-            streamContinuations[id] = continuation
-            lock.unlock()
-            continuation.onTermination = { [weak self] _ in
-                guard let self else { return }
-                self.lock.lock()
-                self.streamContinuations.removeValue(forKey: id)
-                self.lock.unlock()
-            }
+        let (stream, continuation) = AsyncStream<LogEntry>.makeStream()
+        streamContinuations[id] = continuation
+        continuation.onTermination = { [weak self] _ in
+            Task { await self?.removeStreamContinuation(id: id) }
         }
+        return stream
+    }
+
+    private func removeStreamContinuation(id: UUID) {
+        streamContinuations.removeValue(forKey: id)
     }
 
     /// 是否记录该 level
@@ -146,16 +133,12 @@ nonisolated final class LogStore: @unchecked Sendable {
 
     /// 当前所有日志条目。
     var allEntries: [LogEntry] {
-        lock.lock()
-        defer { lock.unlock() }
         return entries
     }
 
     /// 清空日志存储。
     func clear() {
-        lock.lock()
         entries.removeAll()
-        lock.unlock()
     }
 
     /// 将全部日志导出为纯文本格式，包含头部元信息。
@@ -172,7 +155,7 @@ nonisolated final class LogStore: @unchecked Sendable {
         output += "Entry Count: \(allEntries.count)\n"
         output += String(repeating: "=", count: 80) + "\n\n"
 
-        for entry in allEntries {
+        for entry in entries {
             let ts = formatter.string(from: entry.timestamp)
             output += "[\(ts)] [\(entry.category)] [\(entry.level.rawValue.uppercased())] \(entry.message)\n"
         }
@@ -293,6 +276,6 @@ nonisolated enum Log {
         case .error:   logger.error("\(message, privacy: .public)")
         case .fault:   logger.fault("\(message, privacy: .public)")
         }
-        LogStore.shared.record(category: category, level: level, message: message)
+        Task { await LogStore.shared.record(category: category, level: level, message: message) }
     }
 }

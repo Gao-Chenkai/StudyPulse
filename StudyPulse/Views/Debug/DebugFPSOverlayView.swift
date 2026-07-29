@@ -27,12 +27,12 @@ struct DebugFPSOverlayView: View {
         .onAppear {
             fpsMonitor.start()
             memoryMB = currentMemoryMB()
-            logCount = LogStore.shared.allEntries.count
         }
         .task {
             while !Task.isCancelled {
                 memoryMB = currentMemoryMB()
-                logCount = LogStore.shared.allEntries.count
+                let entries = await LogStore.shared.allEntries
+                logCount = entries.count
                 try? await Task.sleep(for: .seconds(1))
             }
         }

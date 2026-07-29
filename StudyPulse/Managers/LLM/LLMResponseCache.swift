@@ -5,7 +5,7 @@
 //  LLM 响应缓存(LRU + TTL)。
 //  - key = caller + sha256(effectiveSystem + messages + model + temperature)
 //  - 容量 10 条;TTL 10 分钟
-//  - 线程安全:NSLock
+//  - 线程安全:Swift actor
 //
 //  目的:用户切换页面重新进入时(如退出 BodyRadar 卡片再返回),
 //  相同 prompt 在 10 分钟窗口内不重复走网络。
@@ -26,7 +26,7 @@ import os
 /// on a fresh hit, the cached response is returned directly.
 /// The key includes `caller` and the full `messages` (including system prompt),
 /// preventing cross-caller collisions.
-nonisolated final class LLMResponseCache: @unchecked Sendable {
+actor LLMResponseCache {
     static let shared = LLMResponseCache()
 
     private struct Entry {
@@ -44,8 +44,6 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
     /// LRU 顺序:最早访问的 key 在前。
     /// LRU order: least-recently accessed keys first.
     private var lruOrder: [String] = []
-    private let lock = NSLock()
-
     init(capacity: Int = 10, ttl: TimeInterval = 600) {
         self.capacity = capacity
         self.ttl = ttl
@@ -53,8 +51,6 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
 
     /// Number of fresh entries currently held in memory.
     var entryCount: Int {
-        lock.lock()
-        defer { lock.unlock() }
         removeExpiredEntries(referenceDate: Date())
         return store.count
     }
@@ -64,8 +60,6 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
     /// (expired entries are evicted opportunistically).
     func get(caller: String, prompt: LLMPrompt, config: LLMConfig) -> String? {
         let key = makeKey(caller: caller, prompt: prompt, config: config)
-        lock.lock()
-        defer { lock.unlock() }
         guard let entry = store[key] else {
             Log.llm.debug("LLMResponseCache miss / caller=\(caller, privacy: .public)")
             return nil
@@ -88,8 +82,6 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
     /// Insert into the cache. Evicts the least-recently-used entry when over capacity.
     func set(caller: String, prompt: LLMPrompt, config: LLMConfig, response: String) {
         let key = makeKey(caller: caller, prompt: prompt, config: config)
-        lock.lock()
-        defer { lock.unlock() }
         store[key] = Entry(response: response, timestamp: Date())
         lruOrder.removeAll { $0 == key }
         lruOrder.append(key)
@@ -102,10 +94,8 @@ nonisolated final class LLMResponseCache: @unchecked Sendable {
     /// 清空所有缓存(Debug 面板「清除缓存」按钮用)。
     /// Clear all cached entries (Debug panel "Clear cache" button).
     func clear() {
-        lock.lock()
         store.removeAll()
         lruOrder.removeAll()
-        lock.unlock()
         Log.llm.info("LLMResponseCache cleared")
     }
 

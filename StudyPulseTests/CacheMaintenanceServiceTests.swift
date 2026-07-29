@@ -52,7 +52,7 @@ final class CacheMaintenanceServiceTests: XCTestCase {
         imageCache.putImage(UIImage(), Data("image-key".utf8))
         let llmCache = LLMResponseCache()
         let prompt = LLMPrompt(system: "system", messages: [.user("question")])
-        llmCache.set(caller: "test", prompt: prompt, config: .empty, response: "answer")
+        await llmCache.set(caller: "test", prompt: prompt, config: .empty, response: "answer")
         let service = makeService(
             mindMap: mindMap.location,
             health: health.location,
@@ -64,7 +64,8 @@ final class CacheMaintenanceServiceTests: XCTestCase {
 
         XCTAssertEqual(result.clearedCategories, Set(CacheCategory.allCases))
         XCTAssertEqual(imageCache.entryCount, 0)
-        XCTAssertEqual(llmCache.entryCount, 0)
+        let llmEntryCount = await llmCache.entryCount
+        XCTAssertEqual(llmEntryCount, 0)
         XCTAssertTrue(FileManager.default.fileExists(atPath: healthHistory.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: originalImage.path))
     }

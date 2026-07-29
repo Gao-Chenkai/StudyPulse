@@ -394,12 +394,12 @@ struct DataManagementSettingsView: View {
     // MARK: - Log Export
 
     private func exportLog() {
-        let logText = LogStore.shared.exportAsText()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-        let fileName = "StudyPulse_Log_\(dateFormatter.string(from: Date())).log"
-        exportLogDocument = LogDocument(content: logText, fileName: fileName)
         Task { @MainActor in
+            let logText = await LogStore.shared.exportAsText()
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+            let fileName = "StudyPulse_Log_\(dateFormatter.string(from: Date())).log"
+            exportLogDocument = LogDocument(content: logText, fileName: fileName)
             try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
             isExportingLog = true
