@@ -183,9 +183,15 @@ struct StudyPulseApp: App {
                         let prefs = container.envManager.preferences
                         let today = Calendar.current.startOfDay(for: Date())
                         if prefs.lastHabitInsightNotificationDate == nil || !Calendar.current.isDateInToday(prefs.lastHabitInsightNotificationDate!) {
-                            let sessions = StudySessionStore.load()
-                            if let best = HabitInsightEngine.bestSlotForToday(sessions: sessions) {
-                                let body = HabitInsightEngine.notificationBody(for: best)
+                            Task { @MainActor in
+                                let body = await Task.detached(priority: .utility) { () -> String? in
+                                    let sessions = StudySessionStore.load()
+                                    guard let best = HabitInsightEngine.bestSlotForToday(sessions: sessions) else {
+                                        return nil
+                                    }
+                                    return HabitInsightEngine.notificationBody(for: best)
+                                }.value
+                                guard let body else { return }
                                 container.envManager.setLastHabitInsightNotificationBody(body)
                                 container.envManager.setLastHabitInsightNotificationDate(today)
                                 HabitInsightNotifications.shared.reschedule(enabled: prefs.habitInsightNotificationEnabled, hour: prefs.habitInsightNotificationHour, body: body)
