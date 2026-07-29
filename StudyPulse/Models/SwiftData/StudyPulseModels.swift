@@ -1207,7 +1207,7 @@ final class StudyPhaseRecord {
 /// Routine template persistence entity. Mirrors `Routine` value type.
 @Model
 final class RoutineRecord {
-    #Index<RoutineRecord>([\.enabled], [\.createdAt])
+    #Index<RoutineRecord>([\.enabled], [\.createdAt], [\.phaseId])
 
     @Attribute(.unique) var id: UUID
     /// 例程标题

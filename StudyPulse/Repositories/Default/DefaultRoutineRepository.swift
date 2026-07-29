@@ -13,7 +13,7 @@ import os
 /// 例程 (Routine) Repository 默认实现。SwiftData 持久化。
 /// Default RoutineRepository implementation backed by SwiftData.
 @Observable @MainActor
-final class DefaultRoutineRepository: RoutineRepository {
+final class DefaultRoutineRepository: RoutineRepository, PersistenceExecutorBacked {
     /// 全部例程模板
     /// All routine templates.
     var routines: [Routine] = []
@@ -34,6 +34,9 @@ final class DefaultRoutineRepository: RoutineRepository {
     @ObservationIgnored
     private var modelContainer: ModelContainer?
 
+    @ObservationIgnored
+    private var executor: PersistenceExecutor?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId)
     /// AppEnvironmentManager (injected by the container; used to read `activePhaseId`).
     @ObservationIgnored
@@ -41,6 +44,10 @@ final class DefaultRoutineRepository: RoutineRepository {
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
+    }
+
+    func attachPersistenceExecutor(_ executor: PersistenceExecutor) {
+        self.executor = executor
     }
 
     // MARK: - Lifecycle
@@ -52,6 +59,18 @@ final class DefaultRoutineRepository: RoutineRepository {
         self.modelContext = context
         self.modelContainer = context.container
         guard let container = modelContainer else { return }
+        if executor == nil {
+            executor = PersistenceExecutor(modelContainer: container)
+        }
+        guard let executor else { return }
+        do {
+            routines = try await executor.fetchRoutines(activePhaseID: nil)
+            filteredRoutines = try await executor.fetchRoutines(activePhaseID: envManager.activePhaseId)
+        } catch {
+            Log.data.error("RoutineRepository load failed: \(error.localizedDescription, privacy: .public)")
+        }
+        return
+        /*
         // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
         // Use an independent background ModelContext inside a detached task.
         let snapshots: [Routine] = await Task.detached(priority: .utility) {
@@ -63,7 +82,8 @@ final class DefaultRoutineRepository: RoutineRepository {
         }.value
         // 回到 MainActor 赋值
         self.routines = snapshots
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
+        */
     }
 
     // MARK: - CRUD
@@ -84,7 +104,7 @@ final class DefaultRoutineRepository: RoutineRepository {
         routines.sort { $0.createdAt < $1.createdAt }
         Log.data.info("RoutineRepository added: title=\(stored.title, privacy: .public) type=\(stored.type.rawValue, privacy: .public)")
         Log.record(.info, category: "Data", message: "RoutineRepository added: title=\(stored.title) type=\(stored.type.rawValue)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
     }
 
     func add(_ newRoutines: [Routine]) {
@@ -105,7 +125,7 @@ final class DefaultRoutineRepository: RoutineRepository {
         routines.sort { $0.createdAt < $1.createdAt }
         Log.data.info("RoutineRepository batch added: count=\(stored.count, privacy: .public)")
         Log.record(.info, category: "Data", message: "RoutineRepository batch added: count=\(stored.count)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
     }
 
     func update(_ routine: Routine) {
@@ -114,6 +134,7 @@ final class DefaultRoutineRepository: RoutineRepository {
             routines.sort { $0.createdAt < $1.createdAt }
         }
         updateRecord(routine)
+        refreshFilteredFromPersistence()
         Log.data.info("RoutineRepository updated: title=\(routine.title, privacy: .public) id=\(routine.id.uuidString, privacy: .public)")
         Log.record(.info, category: "Data", message: "RoutineRepository updated: title=\(routine.title) id=\(routine.id.uuidString)")
     }
@@ -123,7 +144,7 @@ final class DefaultRoutineRepository: RoutineRepository {
         routines.removeAll { $0.id == id }
         Log.data.info("RoutineRepository deleted: id=\(id.uuidString, privacy: .public)")
         Log.record(.info, category: "Data", message: "RoutineRepository deleted: id=\(id.uuidString)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
     }
 
     func setEnabled(_ id: UUID, enabled: Bool) {
@@ -148,21 +169,37 @@ final class DefaultRoutineRepository: RoutineRepository {
         routines.removeAll()
         Log.data.warning("RoutineRepository clearAll: count=\(count, privacy: .public)")
         Log.record(.warning, category: "Data", message: "RoutineRepository clearAll: count=\(count)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
         return count
     }
 
     // MARK: - Internals
     // MARK: - 内部工具 / Internals
 
-    /// 重新计算 filteredRoutines
-    /// Recompute filteredRoutines from the active phase.
-    func recomputeFiltered() {
-        let activeId = envManager.activePhaseId
-        if let id = activeId {
-            filteredRoutines = routines.filter { $0.phaseId == id }
-        } else {
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            filteredRoutines = try await executor.fetchRoutines(
+                activePhaseID: envManager.activePhaseId
+            )
+        } catch is CancellationError {
+            Log.data.debug("RoutineRepository filtered load cancelled")
+        } catch {
+            Log.data.error("RoutineRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func flushPendingPersistence() async {}
+
+    func cancelPendingPersistence() {}
+
+    private func refreshFilteredFromPersistence() {
+        guard executor != nil else {
             filteredRoutines = routines
+            return
+        }
+        Task { [weak self] in
+            await self?.reloadFilteredFromSwiftData()
         }
     }
 

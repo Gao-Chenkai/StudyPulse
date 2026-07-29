@@ -163,6 +163,7 @@ final class RepositoryContainer {
             examRepo: self.examRepo,
             taskRepo: self.taskRepo,
             routineRepo: self.routineRepo,
+            diaryRepo: self.diaryRepo,
             routineInstanceRepo: self.routineInstanceRepo,
             envManager: envManager
         )
@@ -250,7 +251,7 @@ final class RepositoryContainer {
         await studySessionRepo.loadAll(context: context)
         await examAutopsyRepo.loadAll(context: context)
         await examSimulationRepo.loadAll(context: context)
-        phaseRefresher.recomputeAll()
+        await phaseRefresher.recomputeAll()
         PlantManager.shared.attach(container: self)
         AchievementManager.shared.bootstrap(container: self)
         SRSReviewNotifications.shared.rescheduleAll(mistakes: mistakeRepo.mistakeSets)
@@ -286,7 +287,7 @@ final class RepositoryContainer {
             subjectRepo.initializeDefaultSubjects()
         }
 
-        phaseRefresher.recomputeAll()
+        await phaseRefresher.recomputeAll()
         isReady = true
     }
 #endif
@@ -297,7 +298,7 @@ final class RepositoryContainer {
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)。转发到 `phaseRefresher`。
     /// Recompute the 5 filtered caches (called on phase switch). Forwards to `phaseRefresher`.
     func recomputeAllFiltered() {
-        phaseRefresher.recomputeAll()
+        Task { await phaseRefresher.recomputeAll() }
     }
 
     /// 合并考试 + 待办为统一 TodoEntry(供 TodoView 用)。转发到 `todoAggregator`。
@@ -515,6 +516,8 @@ final class RepositoryContainer {
         (mistakeRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
         (examRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
         (taskRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+        (routineRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
+        (diaryRepo as? any PersistenceExecutorBacked)?.attachPersistenceExecutor(executor)
     }
 
     private func loadHighFrequencyRepositories(context: ModelContext) async {
@@ -531,15 +534,28 @@ final class RepositoryContainer {
         }
 
         do {
-            let snapshots = try await executor.loadHighFrequencySnapshots()
+            let snapshots = try await executor.loadHighFrequencySnapshots(
+                activePhaseID: envManager.activePhaseId
+            )
             try Task.checkCancellation()
-            grades.publishStartupSnapshots(snapshots.grades)
-            mistakes.publishStartupSnapshots(snapshots.mistakes)
+            grades.publishStartupSnapshots(
+                snapshots.grades,
+                filtered: snapshots.filteredGrades
+            )
+            mistakes.publishStartupSnapshots(
+                snapshots.mistakes,
+                filtered: snapshots.filteredMistakes
+            )
             exams.publishStartupSnapshots(
                 single: snapshots.exams,
-                comprehensive: snapshots.comprehensiveExams
+                filteredSingle: snapshots.filteredExams,
+                comprehensive: snapshots.comprehensiveExams,
+                filteredComprehensive: snapshots.filteredComprehensiveExams
             )
-            tasks.publishStartupSnapshots(snapshots.tasks)
+            tasks.publishStartupSnapshots(
+                snapshots.tasks,
+                filtered: snapshots.filteredTasks
+            )
         } catch is CancellationError {
             Log.data.debug("High-frequency repository startup load cancelled")
         } catch {
