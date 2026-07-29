@@ -16,7 +16,6 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
     @ObservationIgnored private let envManager: AppEnvironmentManager
     @ObservationIgnored private var executor: PersistenceExecutor?
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
-    @ObservationIgnored private var phaseIndex: [UUID: [MistakeNote]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
@@ -34,8 +33,9 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
         await persistenceTail?.value
         do {
             let snapshots = try await executor.fetchMistakes()
+            let filtered = try await executor.fetchMistakes(activePhaseID: envManager.activePhaseId)
             try Task.checkCancellation()
-            publish(snapshots)
+            publish(snapshots, filtered: filtered)
         } catch is CancellationError {
             Log.data.debug("MistakeRepository load cancelled")
         } catch {
@@ -44,7 +44,11 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
     }
 
     func publishStartupSnapshots(_ snapshots: [MistakeNote]) {
-        publish(snapshots)
+        publish(snapshots, filtered: snapshots)
+    }
+
+    func publishStartupSnapshots(_ snapshots: [MistakeNote], filtered: [MistakeNote]) {
+        publish(snapshots, filtered: filtered)
     }
 
     func add(_ mistake: MistakeNote) {
@@ -61,7 +65,10 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
         }
         enqueue { executor in
             try await executor.insertMistakes(stored)
-            self.publish((self.mistakeSets + stored).sorted { $0.date > $1.date })
+            await self.publishFromPersistence(
+                (self.mistakeSets + stored).sorted { $0.date > $1.date },
+                executor: executor
+            )
             Log.data.info("MistakeRepository batch persisted: count=\(stored.count, privacy: .public)")
         }
     }
@@ -89,7 +96,7 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
             for id in ids {
                 SRSReviewNotifications.shared.cancel(for: id)
             }
-            self.publish([])
+            self.publish([], filtered: [])
         }
         return expectedCount
     }
@@ -148,11 +155,14 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
         persistAndPublish(note)
     }
 
-    func recomputeFiltered() {
-        if let activeID = envManager.activePhaseId {
-            filteredMistakeSets = phaseIndex[activeID] ?? []
-        } else {
-            filteredMistakeSets = mistakeSets
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            filteredMistakeSets = try await executor.fetchMistakes(activePhaseID: envManager.activePhaseId)
+        } catch is CancellationError {
+            Log.data.debug("MistakeRepository filtered load cancelled")
+        } catch {
+            Log.data.error("MistakeRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -174,7 +184,7 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
             } else {
                 next.append(note)
             }
-            self.publish(next.sorted { $0.date > $1.date })
+            await self.publishFromPersistence(next.sorted { $0.date > $1.date }, executor: executor)
         }
     }
 
@@ -185,17 +195,29 @@ final class DefaultMistakeRepository: MistakeRepository, PersistenceExecutorBack
             for id in ids {
                 SRSReviewNotifications.shared.cancel(for: id)
             }
-            self.publish(self.mistakeSets.filter { !ids.contains($0.id) })
+            let next = self.mistakeSets.filter { !ids.contains($0.id) }
+            await self.publishFromPersistence(next, executor: executor)
             Log.data.info("MistakeRepository deleted: \(titles.joined(separator: ", "), privacy: .public)")
         }
     }
 
-    private func publish(_ snapshots: [MistakeNote]) {
+    private func publish(_ snapshots: [MistakeNote], filtered: [MistakeNote]) {
         mistakeSets = snapshots
-        phaseIndex = Dictionary(grouping: snapshots.compactMap { note in
-            note.phaseId.map { ($0, note) }
-        }, by: \.0).mapValues { $0.map(\.1) }
-        recomputeFiltered()
+        filteredMistakeSets = filtered
+    }
+
+    private func publishFromPersistence(
+        _ snapshots: [MistakeNote],
+        executor: PersistenceExecutor
+    ) async {
+        do {
+            let filtered = try await executor.fetchMistakes(activePhaseID: envManager.activePhaseId)
+            publish(snapshots, filtered: filtered)
+        } catch is CancellationError {
+            Log.data.debug("MistakeRepository filtered refresh cancelled")
+        } catch {
+            Log.data.error("MistakeRepository filtered refresh failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func enqueue(

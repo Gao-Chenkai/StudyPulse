@@ -17,8 +17,6 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
     @ObservationIgnored private let envManager: AppEnvironmentManager
     @ObservationIgnored private var executor: PersistenceExecutor?
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
-    @ObservationIgnored private var examPhaseIndex: [UUID: [Exam]] = [:]
-    @ObservationIgnored private var comprehensivePhaseIndex: [UUID: [comprehensiveExam]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
@@ -37,7 +35,14 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
         do {
             async let single = executor.fetchExams()
             async let comprehensive = executor.fetchComprehensiveExams()
-            publish(single: try await single, comprehensive: try await comprehensive)
+            async let filteredSingle = executor.fetchExams(activePhaseID: envManager.activePhaseId)
+            async let filteredComprehensive = executor.fetchComprehensiveExams(activePhaseID: envManager.activePhaseId)
+            publish(
+                single: try await single,
+                filteredSingle: try await filteredSingle,
+                comprehensive: try await comprehensive,
+                filteredComprehensive: try await filteredComprehensive
+            )
         } catch is CancellationError {
             Log.data.debug("ExamRepository load cancelled")
         } catch {
@@ -49,7 +54,26 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
         single: [Exam],
         comprehensive: [comprehensiveExam]
     ) {
-        publish(single: single, comprehensive: comprehensive)
+        publish(
+            single: single,
+            filteredSingle: single,
+            comprehensive: comprehensive,
+            filteredComprehensive: comprehensive
+        )
+    }
+
+    func publishStartupSnapshots(
+        single: [Exam],
+        filteredSingle: [Exam],
+        comprehensive: [comprehensiveExam],
+        filteredComprehensive: [comprehensiveExam]
+    ) {
+        publish(
+            single: single,
+            filteredSingle: filteredSingle,
+            comprehensive: comprehensive,
+            filteredComprehensive: filteredComprehensive
+        )
     }
 
     func add(single: [Exam], comprehensive: [comprehensiveExam]) {
@@ -70,10 +94,11 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
                 single: storedSingle,
                 comprehensive: storedComprehensive
             )
-            self.publish(
+            await self.publishFromPersistence(
                 single: (self.examSets + storedSingle).sorted { $0.examDate > $1.examDate },
                 comprehensive: (self.comprehensiveExamSets + storedComprehensive)
-                    .sorted { $0.examDate > $1.examDate }
+                    .sorted { $0.examDate > $1.examDate },
+                executor: executor
             )
             for exam in storedSingle {
                 ExamReviewNotifications.shared.schedule(for: exam)
@@ -90,9 +115,10 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
             } else {
                 next.append(exam)
             }
-            self.publish(
+            await self.publishFromPersistence(
                 single: next.sorted { $0.examDate > $1.examDate },
-                comprehensive: self.comprehensiveExamSets
+                comprehensive: self.comprehensiveExamSets,
+                executor: executor
             )
             ExamReviewNotifications.shared.schedule(for: exam)
         }
@@ -107,9 +133,10 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
             } else {
                 next.append(exam)
             }
-            self.publish(
+            await self.publishFromPersistence(
                 single: self.examSets,
-                comprehensive: next.sorted { $0.examDate > $1.examDate }
+                comprehensive: next.sorted { $0.examDate > $1.examDate },
+                executor: executor
             )
         }
     }
@@ -118,9 +145,10 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
         enqueue { executor in
             try await executor.deleteExam(id: exam.id)
             ExamReviewNotifications.shared.cancel(for: exam.id)
-            self.publish(
+            await self.publishFromPersistence(
                 single: self.examSets.filter { $0.id != exam.id },
-                comprehensive: self.comprehensiveExamSets
+                comprehensive: self.comprehensiveExamSets,
+                executor: executor
             )
         }
     }
@@ -128,9 +156,10 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
     func deleteComprehensiveExam(_ exam: comprehensiveExam) {
         enqueue { executor in
             try await executor.deleteComprehensiveExam(id: exam.id)
-            self.publish(
+            await self.publishFromPersistence(
                 single: self.examSets,
-                comprehensive: self.comprehensiveExamSets.filter { $0.id != exam.id }
+                comprehensive: self.comprehensiveExamSets.filter { $0.id != exam.id },
+                executor: executor
             )
         }
     }
@@ -144,7 +173,12 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
             for id in ids {
                 ExamReviewNotifications.shared.cancel(for: id)
             }
-            self.publish(single: [], comprehensive: [])
+        self.publish(
+            single: [],
+            filteredSingle: [],
+            comprehensive: [],
+            filteredComprehensive: []
+        )
         }
         return expectedCount
     }
@@ -171,13 +205,17 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
         updateExam(exam)
     }
 
-    func recomputeFiltered() {
-        if let activeID = envManager.activePhaseId {
-            filteredExamSets = examPhaseIndex[activeID] ?? []
-            filteredComprehensiveExamSets = comprehensivePhaseIndex[activeID] ?? []
-        } else {
-            filteredExamSets = examSets
-            filteredComprehensiveExamSets = comprehensiveExamSets
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            async let single = executor.fetchExams(activePhaseID: envManager.activePhaseId)
+            async let comprehensive = executor.fetchComprehensiveExams(activePhaseID: envManager.activePhaseId)
+            filteredExamSets = try await single
+            filteredComprehensiveExamSets = try await comprehensive
+        } catch is CancellationError {
+            Log.data.debug("ExamRepository filtered load cancelled")
+        } catch {
+            Log.data.error("ExamRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -190,16 +228,37 @@ final class DefaultExamRepository: ExamRepository, PersistenceExecutorBacked {
         persistenceTail = nil
     }
 
-    private func publish(single: [Exam], comprehensive: [comprehensiveExam]) {
+    private func publish(
+        single: [Exam],
+        filteredSingle: [Exam],
+        comprehensive: [comprehensiveExam],
+        filteredComprehensive: [comprehensiveExam]
+    ) {
         examSets = single
         comprehensiveExamSets = comprehensive
-        examPhaseIndex = Dictionary(grouping: single.compactMap { exam in
-            exam.phaseId.map { ($0, exam) }
-        }, by: \.0).mapValues { $0.map(\.1) }
-        comprehensivePhaseIndex = Dictionary(grouping: comprehensive.compactMap { exam in
-            exam.phaseId.map { ($0, exam) }
-        }, by: \.0).mapValues { $0.map(\.1) }
-        recomputeFiltered()
+        filteredExamSets = filteredSingle
+        filteredComprehensiveExamSets = filteredComprehensive
+    }
+
+    private func publishFromPersistence(
+        single: [Exam],
+        comprehensive: [comprehensiveExam],
+        executor: PersistenceExecutor
+    ) async {
+        do {
+            async let filteredSingle = executor.fetchExams(activePhaseID: envManager.activePhaseId)
+            async let filteredComprehensive = executor.fetchComprehensiveExams(activePhaseID: envManager.activePhaseId)
+            publish(
+                single: single,
+                filteredSingle: try await filteredSingle,
+                comprehensive: comprehensive,
+                filteredComprehensive: try await filteredComprehensive
+            )
+        } catch is CancellationError {
+            Log.data.debug("ExamRepository filtered refresh cancelled")
+        } catch {
+            Log.data.error("ExamRepository filtered refresh failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func enqueue(

@@ -14,7 +14,7 @@ import os
 /// 学习日记 Repository 默认实现。
 /// Default DiaryRepository implementation backed by SwiftData.
 @Observable @MainActor
-final class DefaultDiaryRepository: DiaryRepository {
+final class DefaultDiaryRepository: DiaryRepository, PersistenceExecutorBacked {
     /// 全部日记(按 date desc 排序)
     /// All diary entries, sorted by date desc.
     var diaryEntries: [DiaryEntry] = []
@@ -30,6 +30,9 @@ final class DefaultDiaryRepository: DiaryRepository {
     @ObservationIgnored
     private var modelContainer: ModelContainer?
 
+    @ObservationIgnored
+    private var executor: PersistenceExecutor?
+
     /// AppEnvironmentManager(由容器注入,用于读 activePhaseId + diarySyncToHealthEnabled)
     /// AppEnvironmentManager (injected by the container; used to read
     /// `activePhaseId` + `diarySyncToHealthEnabled`).
@@ -38,6 +41,10 @@ final class DefaultDiaryRepository: DiaryRepository {
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
+    }
+
+    func attachPersistenceExecutor(_ executor: PersistenceExecutor) {
+        self.executor = executor
     }
 
     // MARK: - Lifecycle
@@ -49,6 +56,20 @@ final class DefaultDiaryRepository: DiaryRepository {
         self.modelContext = context
         self.modelContainer = context.container
         guard let container = modelContainer else { return }
+        if executor == nil {
+            executor = PersistenceExecutor(modelContainer: container)
+        }
+        guard let executor else { return }
+        do {
+            diaryEntries = try await executor.fetchDiaryEntries(activePhaseID: nil)
+            filteredDiaryEntries = try await executor.fetchDiaryEntries(
+                activePhaseID: envManager.activePhaseId
+            )
+        } catch {
+            Log.data.error("DiaryRepository load failed: \(error.localizedDescription, privacy: .public)")
+        }
+        return
+        /*
         // detached Task 内创建独立 background ModelContext,fetch + toSnapshot
         // Use an independent background ModelContext inside a detached task.
         let snapshots: [DiaryEntry] = await Task.detached(priority: .utility) {
@@ -64,7 +85,8 @@ final class DefaultDiaryRepository: DiaryRepository {
         }.value
         // 回到 MainActor 赋值
         self.diaryEntries = snapshots
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
+        */
     }
 
     // MARK: - CRUD
@@ -87,7 +109,7 @@ final class DefaultDiaryRepository: DiaryRepository {
         diaryEntries.sort { $0.date > $1.date }
         Log.data.info("DiaryRepository added: date=\(stored.date, privacy: .public) mood=\(stored.moodScore, privacy: .public) energy=\(stored.energyScore, privacy: .public)")
         Log.record(.info, category: "Data", message: "DiaryRepository added: mood=\(stored.moodScore) energy=\(stored.energyScore)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
 
         // Apple Health Mindful Session 同步(失败仅记日志,不弹窗 — 项目硬约束)
         // Apple Health Mindful Session sync (errors are logged only, never alerted).
@@ -106,7 +128,7 @@ final class DefaultDiaryRepository: DiaryRepository {
         }
         updateRecord(stored)
         diaryEntries.sort { $0.date > $1.date }
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
     }
 
     func delete(_ entry: DiaryEntry) {
@@ -115,7 +137,7 @@ final class DefaultDiaryRepository: DiaryRepository {
             diaryEntries.remove(at: index)
         }
         Log.data.info("DiaryRepository deleted: id=\(entry.id.uuidString, privacy: .public)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
     }
 
     @discardableResult
@@ -133,7 +155,7 @@ final class DefaultDiaryRepository: DiaryRepository {
         diaryEntries.removeAll()
         Log.data.warning("DiaryRepository clearAll: count=\(count, privacy: .public)")
         Log.record(.warning, category: "Data", message: "DiaryRepository clearAll: count=\(count)")
-        recomputeFiltered()
+        refreshFilteredFromPersistence()
         return count
     }
 
@@ -158,14 +180,30 @@ final class DefaultDiaryRepository: DiaryRepository {
     // MARK: - Phase Filtering
     // MARK: - 阶段过滤 / Phase Filtering
 
-    /// 重算 filteredDiaryEntries(按 envManager.activePhaseId 过滤;nil = 全部)
-    /// Recompute `filteredDiaryEntries` by `envManager.activePhaseId` (nil = all).
-    private func recomputeFiltered() {
-        let pid = envManager.activePhaseId
-        if let pid {
-            filteredDiaryEntries = diaryEntries.filter { $0.phaseId == pid || $0.phaseId == nil }
-        } else {
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            filteredDiaryEntries = try await executor.fetchDiaryEntries(
+                activePhaseID: envManager.activePhaseId
+            )
+        } catch is CancellationError {
+            Log.data.debug("DiaryRepository filtered load cancelled")
+        } catch {
+            Log.data.error("DiaryRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func flushPendingPersistence() async {}
+
+    func cancelPendingPersistence() {}
+
+    private func refreshFilteredFromPersistence() {
+        guard executor != nil else {
             filteredDiaryEntries = diaryEntries
+            return
+        }
+        Task { [weak self] in
+            await self?.reloadFilteredFromSwiftData()
         }
     }
 

@@ -15,7 +15,6 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
     @ObservationIgnored private let envManager: AppEnvironmentManager
     @ObservationIgnored private var executor: PersistenceExecutor?
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
-    @ObservationIgnored private var phaseIndex: [UUID: [Grade]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
@@ -37,8 +36,9 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
         await persistenceTail?.value
         do {
             let snapshots = try await executor.fetchGrades()
+            let filtered = try await executor.fetchGrades(activePhaseID: envManager.activePhaseId)
             try Task.checkCancellation()
-            publish(snapshots)
+            publish(snapshots, filtered: filtered)
         } catch is CancellationError {
             Log.data.debug("GradeRepository load cancelled")
         } catch {
@@ -47,7 +47,11 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
     }
 
     func publishStartupSnapshots(_ snapshots: [Grade]) {
-        publish(snapshots)
+        publish(snapshots, filtered: snapshots)
+    }
+
+    func publishStartupSnapshots(_ snapshots: [Grade], filtered: [Grade]) {
+        publish(snapshots, filtered: filtered)
     }
 
     /// Inline-image migration is now folded into normal updates instead of
@@ -74,7 +78,7 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
             for index in next.indices {
                 if let value = updates[next[index].id] { next[index] = value }
             }
-            self.publish(next)
+            await self.publishFromPersistence(next, executor: executor)
         }
         return migrated.count
     }
@@ -93,7 +97,10 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
         }
         enqueue { executor in
             try await executor.insertGrades(stored)
-            self.publish((self.grades + stored).sorted { $0.date > $1.date })
+            await self.publishFromPersistence(
+                (self.grades + stored).sorted { $0.date > $1.date },
+                executor: executor
+            )
             Log.data.info("GradeRepository batch persisted: count=\(stored.count, privacy: .public)")
         }
     }
@@ -107,7 +114,7 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
             } else {
                 next.append(grade)
             }
-            self.publish(next.sorted { $0.date > $1.date })
+            await self.publishFromPersistence(next.sorted { $0.date > $1.date }, executor: executor)
         }
     }
 
@@ -117,7 +124,8 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
             if let filename = grade.imageFileName {
                 ImageStorage.delete(filename: filename)
             }
-            self.publish(self.grades.filter { $0.id != grade.id })
+            let next = self.grades.filter { $0.id != grade.id }
+            await self.publishFromPersistence(next, executor: executor)
         }
     }
 
@@ -130,16 +138,19 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
             for filename in imageNames {
                 ImageStorage.delete(filename: filename)
             }
-            self.publish([])
+            self.publish([], filtered: [])
         }
         return expectedCount
     }
 
-    func recomputeFiltered() {
-        if let activeID = envManager.activePhaseId {
-            filteredGrades = phaseIndex[activeID] ?? []
-        } else {
-            filteredGrades = grades
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            filteredGrades = try await executor.fetchGrades(activePhaseID: envManager.activePhaseId)
+        } catch is CancellationError {
+            Log.data.debug("GradeRepository filtered load cancelled")
+        } catch {
+            Log.data.error("GradeRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -152,12 +163,23 @@ final class DefaultGradeRepository: GradeRepository, PersistenceExecutorBacked {
         persistenceTail = nil
     }
 
-    private func publish(_ snapshots: [Grade]) {
+    private func publish(_ snapshots: [Grade], filtered: [Grade]) {
         grades = snapshots
-        phaseIndex = Dictionary(grouping: snapshots.compactMap { grade in
-            grade.phaseId.map { ($0, grade) }
-        }, by: \.0).mapValues { $0.map(\.1) }
-        recomputeFiltered()
+        filteredGrades = filtered
+    }
+
+    private func publishFromPersistence(
+        _ snapshots: [Grade],
+        executor: PersistenceExecutor
+    ) async {
+        do {
+            let filtered = try await executor.fetchGrades(activePhaseID: envManager.activePhaseId)
+            publish(snapshots, filtered: filtered)
+        } catch is CancellationError {
+            Log.data.debug("GradeRepository filtered refresh cancelled")
+        } catch {
+            Log.data.error("GradeRepository filtered refresh failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func enqueue(

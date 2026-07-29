@@ -16,7 +16,6 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
     @ObservationIgnored private var executor: PersistenceExecutor?
     @ObservationIgnored private var persistenceTail: Task<Void, Never>?
     @ObservationIgnored private var reminderRefreshTask: Task<Void, Never>?
-    @ObservationIgnored private var phaseIndex: [UUID: [TaskItem]] = [:]
 
     init(envManager: AppEnvironmentManager) {
         self.envManager = envManager
@@ -33,7 +32,9 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
         guard let executor else { return }
         await persistenceTail?.value
         do {
-            publish(try await executor.fetchTasks())
+            let snapshots = try await executor.fetchTasks()
+            let filtered = try await executor.fetchTasks(activePhaseID: envManager.activePhaseId)
+            publish(snapshots, filtered: filtered)
         } catch is CancellationError {
             Log.data.debug("TaskRepository load cancelled")
         } catch {
@@ -42,7 +43,11 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
     }
 
     func publishStartupSnapshots(_ snapshots: [TaskItem]) {
-        publish(snapshots)
+        publish(snapshots, filtered: snapshots)
+    }
+
+    func publishStartupSnapshots(_ snapshots: [TaskItem], filtered: [TaskItem]) {
+        publish(snapshots, filtered: filtered)
     }
 
     func add(
@@ -74,7 +79,10 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
         }
         enqueue { executor in
             try await executor.insertTasks(stored)
-            self.publish((self.taskItems + stored).sorted { $0.dueDate < $1.dueDate })
+            await self.publishFromPersistence(
+                (self.taskItems + stored).sorted { $0.dueDate < $1.dueDate },
+                executor: executor
+            )
         }
     }
 
@@ -93,7 +101,10 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
     func delete(_ task: TaskItem) {
         enqueue { executor in
             try await executor.deleteTask(id: task.id)
-            self.publish(self.taskItems.filter { $0.id != task.id })
+            await self.publishFromPersistence(
+                self.taskItems.filter { $0.id != task.id },
+                executor: executor
+            )
             if let reminderID = task.reminderEventId {
                 do {
                     _ = try await CalendarManager.shared.removeTaskFromReminders(
@@ -130,7 +141,7 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
         let reminderIDs = taskItems.compactMap(\.reminderEventId)
         enqueue { executor in
             _ = try await executor.deleteAllTasks()
-            self.publish([])
+            self.publish([], filtered: [])
             for reminderID in reminderIDs {
                 try Task.checkCancellation()
                 do {
@@ -176,11 +187,14 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
         }
     }
 
-    func recomputeFiltered() {
-        if let activeID = envManager.activePhaseId {
-            filteredTaskItems = phaseIndex[activeID] ?? []
-        } else {
-            filteredTaskItems = taskItems
+    func reloadFilteredFromSwiftData() async {
+        guard let executor else { return }
+        do {
+            filteredTaskItems = try await executor.fetchTasks(activePhaseID: envManager.activePhaseId)
+        } catch is CancellationError {
+            Log.data.debug("TaskRepository filtered load cancelled")
+        } catch {
+            Log.data.error("TaskRepository filtered load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -204,16 +218,27 @@ final class DefaultTaskRepository: TaskRepository, PersistenceExecutorBacked {
             } else {
                 next.append(task)
             }
-            self.publish(next.sorted { $0.dueDate < $1.dueDate })
+            await self.publishFromPersistence(next.sorted { $0.dueDate < $1.dueDate }, executor: executor)
         }
     }
 
-    private func publish(_ snapshots: [TaskItem]) {
+    private func publish(_ snapshots: [TaskItem], filtered: [TaskItem]) {
         taskItems = snapshots
-        phaseIndex = Dictionary(grouping: snapshots.compactMap { task in
-            task.phaseId.map { ($0, task) }
-        }, by: \.0).mapValues { $0.map(\.1) }
-        recomputeFiltered()
+        filteredTaskItems = filtered
+    }
+
+    private func publishFromPersistence(
+        _ snapshots: [TaskItem],
+        executor: PersistenceExecutor
+    ) async {
+        do {
+            let filtered = try await executor.fetchTasks(activePhaseID: envManager.activePhaseId)
+            publish(snapshots, filtered: filtered)
+        } catch is CancellationError {
+            Log.data.debug("TaskRepository filtered refresh cancelled")
+        } catch {
+            Log.data.error("TaskRepository filtered refresh failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func enqueue(

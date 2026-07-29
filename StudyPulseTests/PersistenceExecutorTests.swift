@@ -131,6 +131,13 @@ final class PersistenceExecutorTests: XCTestCase {
         try await executor.insertGrades(grades)
         try await executor.insertMistakes(mistakes)
 
+        let predicateGrades = try await executor.fetchGrades(activePhaseID: phaseA)
+        let predicateMistakes = try await executor.fetchMistakes(activePhaseID: phaseB)
+        XCTAssertEqual(predicateGrades.count, 2_500)
+        XCTAssertEqual(predicateMistakes.count, 2_500)
+        XCTAssertTrue(predicateGrades.allSatisfy { $0.phaseId == phaseA })
+        XCTAssertTrue(predicateMistakes.allSatisfy { $0.phaseId == phaseB })
+
         let clock = ContinuousClock()
         let legacyMemoryBefore = residentMemoryBytes()
         let legacyStart = clock.now
@@ -192,6 +199,32 @@ final class PersistenceExecutorTests: XCTestCase {
             "indexed_phase_switch_200=\(filterDuration) " +
             "actor_resident_delta=\(Int64(memoryAfter) - Int64(memoryBefore))"
         )
+    }
+
+    func testRepositoryReloadsFilteredSnapshotsFromSwiftDataForActivePhase() async throws {
+        let container = try TestModelContainerFactory.makeInMemoryContainer()
+        let environment = AppEnvironmentManager.shared
+        let previousPhase = environment.activePhaseId
+        let phaseA = UUID()
+        let phaseB = UUID()
+        defer { environment.setActivePhaseId(previousPhase) }
+
+        let executor = PersistenceExecutor(modelContainer: container)
+        try await executor.insertGrades([
+            Grade(subject: "A", score: 90, examName: "A", phaseId: phaseA),
+            Grade(subject: "B", score: 80, examName: "B", phaseId: phaseB)
+        ])
+
+        environment.setActivePhaseId(phaseA)
+        let repository = DefaultGradeRepository(envManager: environment)
+        repository.attachPersistenceExecutor(executor)
+        await repository.loadAll(context: container.mainContext)
+        XCTAssertEqual(repository.grades.count, 2)
+        XCTAssertEqual(repository.filteredGrades.map(\.phaseId), [phaseA])
+
+        environment.setActivePhaseId(phaseB)
+        await repository.reloadFilteredFromSwiftData()
+        XCTAssertEqual(repository.filteredGrades.map(\.phaseId), [phaseB])
     }
 
     private func residentMemoryBytes() -> UInt64 {

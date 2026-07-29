@@ -42,6 +42,7 @@ final class PhaseFilterRefresher {
     private let examRepo: any ExamRepository
     private let taskRepo: any TaskRepository
     private let routineRepo: any RoutineRepository
+    private let diaryRepo: any DiaryRepository
     private let routineInstanceRepo: any RoutineInstanceRepository
     private let envManager: AppEnvironmentManager
 
@@ -53,6 +54,7 @@ final class PhaseFilterRefresher {
         examRepo: any ExamRepository,
         taskRepo: any TaskRepository,
         routineRepo: any RoutineRepository,
+        diaryRepo: any DiaryRepository,
         routineInstanceRepo: any RoutineInstanceRepository,
         envManager: AppEnvironmentManager
     ) {
@@ -61,6 +63,7 @@ final class PhaseFilterRefresher {
         self.examRepo = examRepo
         self.taskRepo = taskRepo
         self.routineRepo = routineRepo
+        self.diaryRepo = diaryRepo
         self.routineInstanceRepo = routineInstanceRepo
         self.envManager = envManager
     }
@@ -75,7 +78,7 @@ final class PhaseFilterRefresher {
         observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .activePhaseDidChange) {
                 guard !Task.isCancelled else { return }
-                self?.recomputeAll()
+                await self?.recomputeAll()
             }
         }
     }
@@ -88,14 +91,15 @@ final class PhaseFilterRefresher {
 
     /// 5 个数据域的 filtered 缓存重算(phase 切换时用)
     /// Recompute the 5 filtered caches (called on phase switch).
-    func recomputeAll() {
+    func recomputeAll() async {
         let interval = Self.signposter.beginInterval("recomputeAll")
         defer { Self.signposter.endInterval("recomputeAll", interval) }
-        if let g = gradeRepo as? DefaultGradeRepository { g.recomputeFiltered() }
-        if let m = mistakeRepo as? DefaultMistakeRepository { m.recomputeFiltered() }
-        if let e = examRepo as? DefaultExamRepository { e.recomputeFiltered() }
-        if let t = taskRepo as? DefaultTaskRepository { t.recomputeFiltered() }
-        if let r = routineRepo as? DefaultRoutineRepository { r.recomputeFiltered() }
+        await (gradeRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
+        await (mistakeRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
+        await (examRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
+        await (taskRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
+        await (routineRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
+        await (diaryRepo as? any PersistenceExecutorBacked)?.reloadFilteredFromSwiftData()
         if let ri = routineInstanceRepo as? DefaultRoutineInstanceRepository { ri.recomputeDerived() }
         Log.data.debug("PhaseFilterRefresher recomputeAll")
     }
