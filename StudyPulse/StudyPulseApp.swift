@@ -114,6 +114,10 @@ struct StudyPulseApp: App {
                     else { return }
                     // 初始化 RepositoryContainer:JSON 迁移 + 7 个 repo 并行 loadAll
                     await container.asyncInit(using: modelContainer)
+                    timerManager.attach(
+                        sessionRepository: container.studySessionRepo,
+                        timeInvestmentRepository: container.timeInvestmentRepo
+                    )
                     refreshMemoryClimate()
                     CoachBackgroundRefresh.schedule()
                     BrainUsageStore.migrateLegacyIfNeeded()
@@ -183,10 +187,10 @@ struct StudyPulseApp: App {
                         let prefs = container.envManager.preferences
                         let today = Calendar.current.startOfDay(for: Date())
                         if prefs.lastHabitInsightNotificationDate == nil || !Calendar.current.isDateInToday(prefs.lastHabitInsightNotificationDate!) {
+                            let sessionsSnapshot = container.studySessionRepo.sessions
                             Task { @MainActor in
                                 let body = await Task.detached(priority: .utility) { () -> String? in
-                                    let sessions = StudySessionStore.load()
-                                    guard let best = HabitInsightEngine.bestSlotForToday(sessions: sessions) else {
+                                    guard let best = HabitInsightEngine.bestSlotForToday(sessions: sessionsSnapshot) else {
                                         return nil
                                     }
                                     return HabitInsightEngine.notificationBody(for: best)

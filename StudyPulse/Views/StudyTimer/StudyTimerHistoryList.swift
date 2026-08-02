@@ -20,7 +20,10 @@ struct StudyTimerHistoryList: View {
     var maxSessions: Int = 20
 
     private var todayMinutes: Int {
-        StudySessionStore.todayTotalMinutes()
+        let calendar = Calendar.current
+        return timer.sessions
+            .filter { $0.completed && calendar.isDateInToday($0.startDate) }
+            .reduce(0) { $0 + $1.durationSeconds / 60 }
     }
 
     private var completedCount: Int {
@@ -214,7 +217,7 @@ struct HistorySummaryInline: View {
                 Divider()
                 HStack {
                     Label(
-                        "\(StudySessionStore.todayTotalMinutes()) min focused today".localized(),
+                        "\(todayMinutes) min focused today".localized(),
                         systemImage: "clock.badge.checkmark"
                     )
                     .font(.system(size: 13))
@@ -252,5 +255,12 @@ struct HistorySummaryInline: View {
                     }
             }
         }
+    }
+
+    private var todayMinutes: Int {
+        let calendar = Calendar.current
+        return timer.sessions
+            .filter { $0.completed && calendar.isDateInToday($0.startDate) }
+            .reduce(0) { $0 + $1.durationSeconds / 60 }
     }
 }

@@ -103,8 +103,7 @@ struct HomeAskDataProvider {
     func fetchTrends() -> String {
         var out = "## 趋势\n"
         let now = Date()
-        // StudySession 没有自己的 Repository,通过 `StudySessionStore.load()` 直接拉取 JSON 持久化数据
-        let sessions = StudySessionStore.load()
+        let sessions = container.studySessionRepo.sessions
         let grades = container.gradeRepo.grades
         let mistakes = container.mistakeRepo.mistakeSets
         let exams = container.examRepo.filteredExamSets

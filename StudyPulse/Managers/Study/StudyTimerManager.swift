@@ -59,6 +59,9 @@ final class StudyTimerManager {
     var totalSeconds: Int = 0
     var currentIntensity: StudySession.SessionIntensity?
     var sessions: [StudySession] = []
+    var selectedInvestmentTarget: InvestmentTarget?
+    private(set) var activeInvestmentTarget: InvestmentTarget?
+    private(set) var lastUnlockedRewards: [GoalReward] = []
 
     /// The current algorithm recommendation — read by the View layer
     /// to show the suggested intensity before the user starts.
@@ -91,9 +94,34 @@ final class StudyTimerManager {
 
     private var internalTimer: Timer?        // 1Hz 倒计时心跳
     private var targetEndDate: Date?         // 倒计时目标结束时间(暂停时为 nil,resume 时重算)
+    private var sessionRepository: (any StudySessionRepository)?
+    private var timeInvestmentRepository: (any TimeInvestmentRepository)?
 
     private init() {
-        sessions = StudySessionStore.load()
+        sessions = []
+    }
+
+    func attach(
+        sessionRepository: any StudySessionRepository,
+        timeInvestmentRepository: any TimeInvestmentRepository
+    ) {
+        self.sessionRepository = sessionRepository
+        self.timeInvestmentRepository = timeInvestmentRepository
+        sessions = sessionRepository.sessions
+        restoreLastInvestmentTarget()
+    }
+
+    func selectInvestmentTarget(_ target: InvestmentTarget?) {
+        guard timerState == .idle || timerState == .completed else { return }
+        guard target == nil || isSelectable(target!) else { return }
+        selectedInvestmentTarget = target
+        guard let target else {
+            UserDefaults.standard.removeObject(forKey: "studyPulse.lastInvestmentTargetKind")
+            UserDefaults.standard.removeObject(forKey: "studyPulse.lastInvestmentTargetID")
+            return
+        }
+        UserDefaults.standard.set(target.kindRawValue, forKey: "studyPulse.lastInvestmentTargetKind")
+        UserDefaults.standard.set(target.rawID.uuidString, forKey: "studyPulse.lastInvestmentTargetID")
     }
 
     // MARK: - Duration calculation
@@ -116,10 +144,16 @@ final class StudyTimerManager {
     /// If `seconds` is nil, the recommended duration is used.
     func start(seconds: Int? = nil) {
         let duration = seconds ?? recommendedDurationSeconds
-        guard duration > 0 else { return }
+        guard duration > 0,
+              let selectedInvestmentTarget,
+              isSelectable(selectedInvestmentTarget) else {
+            self.selectedInvestmentTarget = nil
+            return
+        }
 
         let intensity = StudySession.fromAlgorithmIntensity(recommendedIntensity)
         currentIntensity = intensity
+        activeInvestmentTarget = selectedInvestmentTarget
         totalSeconds = duration
         remainingSeconds = duration
         targetEndDate = Date().addingTimeInterval(TimeInterval(duration))
@@ -170,13 +204,15 @@ final class StudyTimerManager {
                 startDate: Date(),
                 durationSeconds: 0,
                 intensity: intensity,
-                completed: false
+                completed: false,
+                investmentTarget: activeInvestmentTarget
             )
-            sessions = StudySessionStore.append(session)
+            persist(session)
             Log.app.info("StudyTimer cancelled (recorded as incomplete)")
         }
         endLiveActivity()
         currentIntensity = nil
+        activeInvestmentTarget = nil
         resetHeartRateBuffer()
     }
 
@@ -197,9 +233,14 @@ final class StudyTimerManager {
                 intensity: intensity,
                 completed: true,
                 heartRateSamples: heartRateSamples.isEmpty ? nil : heartRateSamples,
-                difficultyAnnotations: nil
+                difficultyAnnotations: nil,
+                investmentTarget: activeInvestmentTarget
             )
-            sessions = StudySessionStore.append(session)
+            persist(session)
+            lastUnlockedRewards = timeInvestmentRepository?.evaluateRewards(
+                sessions: sessions,
+                now: .now
+            ) ?? []
             AchievementManager.shared.recordFocusMinutes(totalSeconds / 60)
             Log.app.info("StudyTimer completed: intensity=\(intensity.rawValue) duration=\(self.totalSeconds)s hrSamples=\(self.heartRateSamples.count)")
         }
@@ -215,13 +256,51 @@ final class StudyTimerManager {
         totalSeconds = 0
         targetEndDate = nil
         currentIntensity = nil
+        activeInvestmentTarget = nil
         resetHeartRateBuffer()
+    }
+
+    func clearUnlockedRewards() {
+        lastUnlockedRewards = []
     }
 
     /// 重新从磁盘加载会话列表(标注更新后同步 observable)
     /// Reload sessions from disk (sync observable after annotation updates).
     func refreshSessions() {
-        sessions = StudySessionStore.load()
+        if let sessionRepository {
+            sessions = sessionRepository.sessions
+        }
+    }
+
+    private func persist(_ session: StudySession) {
+        if let sessionRepository {
+            sessionRepository.upsert(session)
+            sessions = sessionRepository.sessions
+        } else {
+            Log.data.error("StudyTimer session ignored because repository is not attached")
+        }
+    }
+
+    private func restoreLastInvestmentTarget() {
+        guard let kind = UserDefaults.standard.string(forKey: "studyPulse.lastInvestmentTargetKind"),
+              let idString = UserDefaults.standard.string(forKey: "studyPulse.lastInvestmentTargetID"),
+              let id = UUID(uuidString: idString),
+              let target = InvestmentTarget(kindRawValue: kind, id: id),
+              isSelectable(target) else {
+            selectedInvestmentTarget = nil
+            return
+        }
+        selectedInvestmentTarget = target
+    }
+
+    private func isSelectable(_ target: InvestmentTarget) -> Bool {
+        guard let repository = timeInvestmentRepository else { return false }
+        switch target {
+        case .subject(let id):
+            return repository.subjects.contains { $0.id == id && !$0.isArchived }
+        case .subTask(let id):
+            return repository.subTasks.contains { $0.id == id && !$0.isArchived }
+        }
     }
 
     // MARK: - Heart-rate streaming (Apple Watch via HealthKit)

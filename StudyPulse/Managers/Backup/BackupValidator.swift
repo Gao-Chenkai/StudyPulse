@@ -12,6 +12,9 @@ nonisolated struct BackupDecodedContent: @unchecked Sendable {
     var routineInstances: [RoutineInstance]
     var diaryEntries: [DiaryEntry]
     var studySessions: [StudySession]
+    var timeInvestmentSubjects: [TimeInvestmentSubject]
+    var subTasks: [SubTask]
+    var goalRewards: [GoalReward]
     var profile: UserProfile
     var plantState: PlantState
     var achievements: AchievementsSnapshot
@@ -98,6 +101,15 @@ nonisolated enum BackupValidator {
             let instances: [RoutineInstance] = try decodeJSONL("data/routine_instances.jsonl", root: workspace)
             let diary: [DiaryEntry] = try decodeJSONL("data/diary_entries.jsonl", root: workspace)
             let sessions: [StudySession] = try decodeJSONL("data/study_sessions.jsonl", root: workspace)
+            let investmentSubjects: [TimeInvestmentSubject] = try decodeOptionalJSONL(
+                "data/time_investment_subjects.jsonl", root: workspace
+            )
+            let subTasks: [SubTask] = try decodeOptionalJSONL(
+                "data/time_investment_subtasks.jsonl", root: workspace
+            )
+            let rewards: [GoalReward] = try decodeOptionalJSONL(
+                "data/goal_rewards.jsonl", root: workspace
+            )
             let profile = try decode(UserProfile.self, at: "data/profile.json", root: workspace, decoder: decoder)
             let plant = try decode(PlantState.self, at: "data/plant_state.json", root: workspace, decoder: decoder)
             let achievements = try decode(AchievementsSnapshot.self, at: "data/achievements.json", root: workspace, decoder: decoder)
@@ -127,6 +139,7 @@ nonisolated enum BackupValidator {
                 subjects: subjects, grades: grades, mistakes: mistakes, exams: exams,
                 comprehensiveExams: comps, tasks: tasks, phases: phases, routines: routines,
                 routineInstances: instances, diaryEntries: diary, studySessions: sessions,
+                timeInvestmentSubjects: investmentSubjects, subTasks: subTasks, goalRewards: rewards,
                 profile: profile, plantState: plant, achievements: achievements,
                 coachGoals: coach.goals, coachAnalyses: coach.analyses,
                 coachProposals: coach.proposals, coachChats: coach.chats,
@@ -175,6 +188,15 @@ nonisolated enum BackupValidator {
             throw BackupError.invalidRelationship("duplicate UUID in \(path)")
         }
         return rows.map(\.value)
+    }
+
+    private static func decodeOptionalJSONL<T: Codable & Identifiable>(
+        _ path: String, root: URL
+    ) throws -> [T] where T.ID == UUID {
+        guard FileManager.default.fileExists(atPath: root.appendingPathComponent(path).path) else {
+            return []
+        }
+        return try decodeJSONL(path, root: root)
     }
 
     private static func decodeCoach(at url: URL) throws -> (
@@ -235,6 +257,40 @@ nonisolated enum BackupValidator {
               c.coachMessages.compactMap(\.goalID).allSatisfy(goalIDs.contains) else {
             throw BackupError.invalidRelationship("Coach goal or chat UUID")
         }
+
+        let investmentSubjectIDs = Set(c.timeInvestmentSubjects.map(\.id))
+        let subTaskIDs = Set(c.subTasks.map(\.id))
+        guard c.subTasks.allSatisfy({ investmentSubjectIDs.contains($0.subjectID) }) else {
+            throw BackupError.invalidRelationship("unknown time investment subject UUID")
+        }
+        let subTaskMap = Dictionary(uniqueKeysWithValues: c.subTasks.map { ($0.id, $0) })
+        for task in c.subTasks {
+            var seen: Set<UUID> = [task.id]
+            var parentID = task.parentSubTaskID
+            var depth = 1
+            while let id = parentID {
+                guard let parent = subTaskMap[id],
+                      parent.subjectID == task.subjectID,
+                      seen.insert(id).inserted else {
+                    throw BackupError.invalidRelationship("invalid subtask hierarchy")
+                }
+                depth += 1
+                guard depth <= 2 else {
+                    throw BackupError.invalidRelationship("subtask hierarchy exceeds maximum depth")
+                }
+                parentID = parent.parentSubTaskID
+            }
+        }
+        func validTarget(_ target: InvestmentTarget) -> Bool {
+            switch target {
+            case .subject(let id): return investmentSubjectIDs.contains(id)
+            case .subTask(let id): return subTaskIDs.contains(id)
+            }
+        }
+        guard c.goalRewards.allSatisfy({ validTarget($0.target) }),
+              c.studySessions.compactMap(\.investmentTarget).allSatisfy(validTarget) else {
+            throw BackupError.invalidRelationship("unknown time investment target UUID")
+        }
     }
 
     static func validateCounts(_ expected: [String: Int], _ c: BackupDecodedContent) throws {
@@ -244,12 +300,16 @@ nonisolated enum BackupValidator {
             "tasks": c.tasks.count, "phases": c.phases.count, "routines": c.routines.count,
             "routineInstances": c.routineInstances.count, "diaryEntries": c.diaryEntries.count,
             "studySessions": c.studySessions.count, "profile": 1, "plantState": 1,
+            "timeInvestmentSubjects": c.timeInvestmentSubjects.count,
+            "subTasks": c.subTasks.count, "goalRewards": c.goalRewards.count,
             "achievements": 1, "coachGoals": c.coachGoals.count,
             "coachAnalyses": c.coachAnalyses.count, "coachProposals": c.coachProposals.count,
             "coachChats": c.coachChats.count, "coachMessages": c.coachMessages.count,
         ]
-        for (key, count) in actual where expected[key] != count {
-            throw BackupError.countMismatch(key)
+        for (key, count) in actual {
+            if let expectedCount = expected[key], expectedCount != count {
+                throw BackupError.countMismatch(key)
+            }
         }
     }
 }

@@ -929,6 +929,147 @@ final class StudySessionRecord {
     func toSnapshot() -> StudySession? { try? JSONDecoder().decode(StudySession.self, from: payload) }
 }
 
+// MARK: - Time Investment
+
+@Model
+final class TimeInvestmentSubjectRecord {
+    #Index<TimeInvestmentSubjectRecord>([\.sortOrder], [\.isArchived])
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var symbolName: String
+    var themeRaw: String
+    var startDate: Date
+    var sortOrder: Int
+    var createdAt: Date
+    var isArchived: Bool
+
+    init(from subject: TimeInvestmentSubject) {
+        id = subject.id
+        name = subject.name
+        symbolName = subject.symbolName
+        themeRaw = subject.theme.rawValue
+        startDate = subject.startDate
+        sortOrder = subject.sortOrder
+        createdAt = subject.createdAt
+        isArchived = subject.isArchived
+    }
+
+    func apply(_ subject: TimeInvestmentSubject) {
+        name = subject.name
+        symbolName = subject.symbolName
+        themeRaw = subject.theme.rawValue
+        startDate = subject.startDate
+        sortOrder = subject.sortOrder
+        createdAt = subject.createdAt
+        isArchived = subject.isArchived
+    }
+
+    func toSnapshot() -> TimeInvestmentSubject {
+        TimeInvestmentSubject(
+            id: id,
+            name: name,
+            symbolName: symbolName,
+            theme: TimeInvestmentTheme(rawValue: themeRaw) ?? .ocean,
+            startDate: startDate,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            isArchived: isArchived
+        )
+    }
+}
+
+@Model
+final class SubTaskRecord {
+    #Index<SubTaskRecord>([\.subjectID], [\.parentSubTaskID], [\.sortOrder], [\.isArchived])
+    @Attribute(.unique) var id: UUID
+    var subjectID: UUID
+    var parentSubTaskID: UUID?
+    var name: String
+    var sortOrder: Int
+    var createdAt: Date
+    var isArchived: Bool
+
+    init(from subTask: SubTask) {
+        id = subTask.id
+        subjectID = subTask.subjectID
+        parentSubTaskID = subTask.parentSubTaskID
+        name = subTask.name
+        sortOrder = subTask.sortOrder
+        createdAt = subTask.createdAt
+        isArchived = subTask.isArchived
+    }
+
+    func apply(_ subTask: SubTask) {
+        subjectID = subTask.subjectID
+        parentSubTaskID = subTask.parentSubTaskID
+        name = subTask.name
+        sortOrder = subTask.sortOrder
+        createdAt = subTask.createdAt
+        isArchived = subTask.isArchived
+    }
+
+    func toSnapshot() -> SubTask {
+        SubTask(
+            id: id,
+            subjectID: subjectID,
+            parentSubTaskID: parentSubTaskID,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            isArchived: isArchived
+        )
+    }
+}
+
+@Model
+final class GoalRewardRecord {
+    #Index<GoalRewardRecord>([\.targetID], [\.createdAt], [\.unlockedAt])
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var symbolName: String
+    var targetKindRaw: String
+    var targetID: UUID
+    var thresholdSeconds: Int
+    var createdAt: Date
+    var unlockedAt: Date?
+
+    init(from reward: GoalReward) {
+        id = reward.id
+        title = reward.title
+        symbolName = reward.symbolName
+        targetKindRaw = reward.target.kindRawValue
+        targetID = reward.target.rawID
+        thresholdSeconds = reward.thresholdSeconds
+        createdAt = reward.createdAt
+        unlockedAt = reward.unlockedAt
+    }
+
+    func apply(_ reward: GoalReward) {
+        title = reward.title
+        symbolName = reward.symbolName
+        targetKindRaw = reward.target.kindRawValue
+        targetID = reward.target.rawID
+        thresholdSeconds = reward.thresholdSeconds
+        createdAt = reward.createdAt
+        unlockedAt = unlockedAt ?? reward.unlockedAt
+    }
+
+    func toSnapshot() -> GoalReward? {
+        guard let target = InvestmentTarget(kindRawValue: targetKindRaw, id: targetID) else {
+            return nil
+        }
+        return GoalReward(
+            id: id,
+            title: title,
+            symbolName: symbolName,
+            target: target,
+            thresholdSeconds: thresholdSeconds,
+            createdAt: createdAt,
+            unlockedAt: unlockedAt
+        )
+    }
+}
+
 @Model
 final class ExamSimulationRecord {
     #Index<ExamSimulationRecord>([\.createdAt])

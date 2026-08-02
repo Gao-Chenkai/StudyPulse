@@ -5,6 +5,56 @@ import XCTest
 
 @MainActor
 final class SwiftDataMigrationTests: XCTestCase {
+    func testV3StoreMigratesToV4AndAcceptsTimeInvestmentRecords() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("studypulse.store")
+
+        do {
+            let schema = Schema(versionedSchema: StudyPulseSchemaV3.self)
+            let configuration = ModelConfiguration(
+                "StudyPulse",
+                schema: schema,
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(for: schema, configurations: [configuration])
+            container.mainContext.insert(SubjectRecord(from: Subject(name: "Existing")))
+            try container.mainContext.save()
+        }
+
+        let schema = Schema(versionedSchema: StudyPulseSchemaV4.self)
+        let configuration = ModelConfiguration(
+            "StudyPulse",
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        let migrated = try ModelContainer(
+            for: schema,
+            migrationPlan: StudyPulseMigrationPlan.self,
+            configurations: [configuration]
+        )
+        XCTAssertEqual(
+            try migrated.mainContext.fetchCount(FetchDescriptor<SubjectRecord>()),
+            1
+        )
+        migrated.mainContext.insert(
+            TimeInvestmentSubjectRecord(
+                from: TimeInvestmentSubject(name: "Long-term Chemistry")
+            )
+        )
+        try migrated.mainContext.save()
+        XCTAssertEqual(
+            try migrated.mainContext.fetchCount(
+                FetchDescriptor<TimeInvestmentSubjectRecord>()
+            ),
+            1
+        )
+    }
+
     func testV1StoreMigratesToV2WithoutChangingUserEntityCountsOrKeyFields() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

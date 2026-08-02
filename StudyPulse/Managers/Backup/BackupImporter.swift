@@ -79,6 +79,9 @@ enum BackupImporter {
         try deleteAll(CoachConversationMessageRecord.self, context)
         try deleteAll(CoachChatRecord.self, context)
         try deleteAll(StudySessionRecord.self, context)
+        try deleteAll(TimeInvestmentSubjectRecord.self, context)
+        try deleteAll(SubTaskRecord.self, context)
+        try deleteAll(GoalRewardRecord.self, context)
         // These are deliberately excluded derived AI artifacts. Clearing them
         // prevents stale references after a replace restore.
         try deleteAll(ExamAutopsyRecord.self, context)
@@ -102,6 +105,9 @@ enum BackupImporter {
         c.coachMessages.forEach { context.insert(CoachConversationMessageRecord(from: $0)) }
         c.coachChats.forEach { context.insert(CoachChatRecord(from: $0)) }
         c.studySessions.forEach { context.insert(StudySessionRecord(from: $0)) }
+        c.timeInvestmentSubjects.forEach { context.insert(TimeInvestmentSubjectRecord(from: $0)) }
+        c.subTasks.forEach { context.insert(SubTaskRecord(from: $0)) }
+        c.goalRewards.forEach { context.insert(GoalRewardRecord(from: $0)) }
         do {
             try context.save()
         } catch {
@@ -131,6 +137,9 @@ enum BackupImporter {
             routineInstances: container.routineInstanceRepo.allInstances,
             diaryEntries: container.diaryRepo.diaryEntries,
             studySessions: container.studySessionRepo.sessions,
+            timeInvestmentSubjects: container.timeInvestmentRepo.subjects,
+            subTasks: container.timeInvestmentRepo.subTasks,
+            goalRewards: container.timeInvestmentRepo.rewards,
             profile: container.profileRepo.profile,
             plantState: plant,
             achievements: AchievementManager.shared.snapshot,
@@ -168,6 +177,19 @@ enum BackupImporter {
         }
         result.studySessions = mergeByID(current.studySessions, incoming.studySessions) { old, new in
             new.startDate >= old.startDate ? new : old
+        }
+        result.timeInvestmentSubjects = mergeByID(
+            current.timeInvestmentSubjects, incoming.timeInvestmentSubjects
+        ) { old, new in
+            new.createdAt >= old.createdAt ? new : old
+        }
+        result.subTasks = mergeByID(current.subTasks, incoming.subTasks) { old, new in
+            new.createdAt >= old.createdAt ? new : old
+        }
+        result.goalRewards = mergeByID(current.goalRewards, incoming.goalRewards) { old, new in
+            var selected = new.createdAt >= old.createdAt ? new : old
+            selected.unlockedAt = old.unlockedAt ?? new.unlockedAt
+            return selected
         }
         result.coachGoals = mergeByID(current.coachGoals, incoming.coachGoals) { old, new in
             new.updatedAt >= old.updatedAt ? new : old
@@ -295,6 +317,9 @@ enum BackupImporter {
             ("routines", expected.routines.count, actual.routines.count),
             ("diaryEntries", expected.diaryEntries.count, actual.diaryEntries.count),
             ("studySessions", expected.studySessions.count, actual.studySessions.count),
+            ("timeInvestmentSubjects", expected.timeInvestmentSubjects.count, actual.timeInvestmentSubjects.count),
+            ("subTasks", expected.subTasks.count, actual.subTasks.count),
+            ("goalRewards", expected.goalRewards.count, actual.goalRewards.count),
         ]
         if let mismatch = pairs.first(where: { $0.1 != $0.2 }) {
             throw BackupError.countMismatch(mismatch.0)

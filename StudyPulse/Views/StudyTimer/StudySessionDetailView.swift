@@ -106,7 +106,7 @@ struct StudySessionDetailView: View {
     // MARK: - Load
 
     private func loadSession() {
-        session = StudySessionStore.load().first(where: { $0.id == sessionId })
+        session = container.studySessionRepo.session(id: sessionId)
         if annotations.isEmpty {
             annotations = session?.difficultyAnnotations ?? []
         }
@@ -310,9 +310,21 @@ struct StudySessionDetailView: View {
     }
 
     private func persistAnnotations() {
-        StudySessionStore.updateAnnotations(sessionId: sessionId, annotations: annotations)
-        // 刷新本地 session 副本(标注字段已变)
-        session = StudySessionStore.load().first(where: { $0.id == sessionId })
+        guard let current = session else { return }
+        let updated = StudySession(
+            id: current.id,
+            startDate: current.startDate,
+            durationSeconds: current.durationSeconds,
+            intensity: current.intensity,
+            completed: current.completed,
+            heartRateSamples: current.heartRateSamples,
+            difficultyAnnotations: annotations,
+            investmentTarget: current.investmentTarget,
+            source: current.source,
+            timeZoneIdentifier: current.timeZoneIdentifier
+        )
+        container.studySessionRepo.upsert(updated)
+        session = container.studySessionRepo.session(id: sessionId)
     }
 
     // MARK: - AI
@@ -365,13 +377,9 @@ struct StudySessionDetailView: View {
             DifficultyAnnotation(id: UUID(), timestamp: samples[4].timestamp, heartRate: 115, note: "物理电磁感应卡住", subjectId: nil)
         ]
     )
-    // 注入 preview session 到磁盘(预览只读,不影响真实数据)
     return NavigationStack {
         StudySessionDetailView(sessionId: session.id)
             .environment(RepositoryContainer())
-    }
-    .onAppear {
-        StudySessionStore.updateSession(session)
     }
 }
 
@@ -386,8 +394,5 @@ struct StudySessionDetailView: View {
     return NavigationStack {
         StudySessionDetailView(sessionId: session.id)
             .environment(RepositoryContainer())
-    }
-    .onAppear {
-        StudySessionStore.updateSession(session)
     }
 }

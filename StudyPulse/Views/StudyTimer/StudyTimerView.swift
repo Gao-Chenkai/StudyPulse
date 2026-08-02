@@ -122,11 +122,35 @@ struct StudyTimerView: View {
                     session: s,
                     subjects: container.subjectRepo.subjects,
                     onAnnotationsChange: { updated in
-                        StudySessionStore.updateAnnotations(sessionId: id, annotations: updated)
+                        container.studySessionRepo.upsert(
+                            StudySession(
+                                id: s.id,
+                                startDate: s.startDate,
+                                durationSeconds: s.durationSeconds,
+                                intensity: s.intensity,
+                                completed: s.completed,
+                                heartRateSamples: s.heartRateSamples,
+                                difficultyAnnotations: updated,
+                                investmentTarget: s.investmentTarget,
+                                source: s.source,
+                                timeZoneIdentifier: s.timeZoneIdentifier
+                            )
+                        )
                         timer.refreshSessions()
                     }
                 )
             }
+        }
+        .alert(
+            "time.investment.reward.unlocked".localized(),
+            isPresented: Binding(
+                get: { !timer.lastUnlockedRewards.isEmpty },
+                set: { if !$0 { timer.clearUnlockedRewards() } }
+            )
+        ) {
+            Button("OK".localized()) { timer.clearUnlockedRewards() }
+        } message: {
+            Text(timer.lastUnlockedRewards.map(\.title).joined(separator: "\n"))
         }
     }
 
