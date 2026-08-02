@@ -22,7 +22,6 @@
 		27BF50612FE6D2070038966E /* docs/CODE_WIKI.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */; };
 		27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50622FE6D2160038966E /* docs/DESIGN.md */; };
 		27BF50652FE6D2200038966E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 27BF50642FE6D2200038966E /* README.md */; };
-		27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,11 +80,6 @@
 		27BF50602FE6D2070038966E /* docs/CODE_WIKI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/CODE_WIKI.md; sourceTree = "<group>"; };
 		27BF50622FE6D2160038966E /* docs/DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = docs/DESIGN.md; sourceTree = "<group>"; };
 		27BF50642FE6D2200038966E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		27E4AFAC2F824DA300D2D7C9 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		27E4AFAF2F824DB400D2D7C9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
-		27E4AFB02F824DC000D2D7C9 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		27E4AFB12F824DC000D2D7C9 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
-		27E4AFB22F824DC000D2D7C9 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		C0FFEE000000000000000002 /* StudyPulseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudyPulseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -171,7 +165,6 @@
 			isa = PBXGroup;
 			children = (
 				278CBE332FE778EE0035AA84 /* StudyPulseWidget/StudyPulseWidgetExtension.entitlements */,
-				27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */,
 				2743C8402F6EAEA000CC1EED /* StudyPulse */,
 				278CBE172FE778660035AA84 /* StudyPulseWidget */,
 				C0FFEE000000000000000003 /* StudyPulseTests */,
@@ -351,7 +344,6 @@
 				27A00001FEFB900000FAB5C0 /* docs/CONTRIBUTING.json in Resources */,
 				278D45F82FE7BA5C0073EB87 /* docs/AlgorithmIntroduction.md in Resources */,
 				27BF50632FE6D2160038966E /* docs/DESIGN.md in Resources */,
-				27E4AFAE2F824DA300D2D7C9 /* Localizable.strings in Resources */,
 				27BF505D2FE6D1F10038966E /* AGENTS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -409,21 +401,6 @@
 			targetProxy = C0FFEE000000000000000007 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-		27E4AFAD2F824DA300D2D7C9 /* Localizable.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				27E4AFAC2F824DA300D2D7C9 /* zh-Hans */,
-				27E4AFAF2F824DB400D2D7C9 /* en */,
-				27E4AFB02F824DC000D2D7C9 /* zh-Hant */,
-				27E4AFB12F824DC000D2D7C9 /* ja */,
-				27E4AFB22F824DC000D2D7C9 /* ko */,
-			);
-			name = Localizable.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		2743C8472F6EAEA100CC1EED /* Debug */ = {
@@ -486,7 +463,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -547,7 +524,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 6.0;
 				VALIDATE_PRODUCT = YES;
@@ -590,7 +567,7 @@
 				MARKETING_VERSION = 1.142.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -639,7 +616,7 @@
 				MARKETING_VERSION = 1.142.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -674,7 +651,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse.StudyPulseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -705,7 +682,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = Gao.Chenkai.StudyPulse.StudyPulseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
