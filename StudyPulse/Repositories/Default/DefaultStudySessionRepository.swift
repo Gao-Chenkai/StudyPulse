@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import os
 
 @Observable @MainActor
 final class DefaultStudySessionRepository: StudySessionRepository {
@@ -8,14 +9,8 @@ final class DefaultStudySessionRepository: StudySessionRepository {
 
     func loadAll(context: ModelContext) async {
         self.context = context
-        let records = (try? context.fetch(FetchDescriptor<StudySessionRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)]))) ?? []
-        sessions = records.compactMap { $0.toSnapshot() }
-        if sessions.isEmpty {
-            let legacy = StudySessionStore.load()
-            for session in legacy { context.insert(StudySessionRecord(from: session)) }
-            try? context.save()
-            sessions = legacy.sorted { $0.startDate > $1.startDate }
-        }
+        mergeLegacyJSONIfNeeded(context: context)
+        reload(context: context)
     }
 
     func upsert(_ session: StudySession) {
@@ -30,8 +25,66 @@ final class DefaultStudySessionRepository: StudySessionRepository {
         sessions.sort { $0.startDate > $1.startDate }
     }
 
+    func delete(_ id: UUID) {
+        guard let context else { return }
+        if let record = (try? context.fetch(FetchDescriptor<StudySessionRecord>()))?
+            .first(where: { $0.id == id }) {
+            context.delete(record)
+            try? context.save()
+        }
+        sessions.removeAll { $0.id == id }
+    }
+
+    func assign(_ ids: Set<UUID>, to target: InvestmentTarget?) {
+        guard !ids.isEmpty else { return }
+        for session in sessions where ids.contains(session.id) {
+            upsert(
+                StudySession(
+                    id: session.id,
+                    startDate: session.startDate,
+                    durationSeconds: session.durationSeconds,
+                    intensity: session.intensity,
+                    completed: session.completed,
+                    heartRateSamples: session.heartRateSamples,
+                    difficultyAnnotations: session.difficultyAnnotations,
+                    investmentTarget: target,
+                    source: session.source,
+                    timeZoneIdentifier: session.timeZoneIdentifier
+                )
+            )
+        }
+    }
+
+    func session(id: UUID) -> StudySession? {
+        sessions.first { $0.id == id }
+    }
+
     func refreshFromLegacyJSON() {
-        let legacy = StudySessionStore.load()
-        for session in legacy { upsert(session) }
+        guard let context else { return }
+        mergeLegacyJSONIfNeeded(context: context, force: true)
+        reload(context: context)
+    }
+
+    private func reload(context: ModelContext) {
+        let descriptor = FetchDescriptor<StudySessionRecord>(
+            sortBy: [SortDescriptor(\.startDate, order: .reverse)]
+        )
+        sessions = ((try? context.fetch(descriptor)) ?? []).compactMap { $0.toSnapshot() }
+    }
+
+    private func mergeLegacyJSONIfNeeded(context: ModelContext, force: Bool = false) {
+        let key = "studyPulse.studySessionsLegacyMigrationV2"
+        guard force || !UserDefaults.standard.bool(forKey: key) else { return }
+        let existing = (try? context.fetch(FetchDescriptor<StudySessionRecord>())) ?? []
+        let existingIDs = Set(existing.map(\.id))
+        for session in StudySessionStore.load() where !existingIDs.contains(session.id) {
+            context.insert(StudySessionRecord(from: session))
+        }
+        do {
+            try context.save()
+            UserDefaults.standard.set(true, forKey: key)
+        } catch {
+            Log.data.error("Legacy study-session merge failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }

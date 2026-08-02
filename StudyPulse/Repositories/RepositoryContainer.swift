@@ -44,6 +44,7 @@ final class RepositoryContainer {
     let diaryRepo: any DiaryRepository
     let coachRepo: any CoachRepository
     let studySessionRepo: any StudySessionRepository
+    let timeInvestmentRepo: any TimeInvestmentRepository
     let examAutopsyRepo: any ExamAutopsyRepository
     let examSimulationRepo: any ExamSimulationRepository
     let examPlanRepo: any ExamPlanRepository
@@ -101,6 +102,7 @@ final class RepositoryContainer {
         diaryRepo: (any DiaryRepository)? = nil,
         coachRepo: (any CoachRepository)? = nil,
         studySessionRepo: (any StudySessionRepository)? = nil,
+        timeInvestmentRepo: (any TimeInvestmentRepository)? = nil,
         examAutopsyRepo: (any ExamAutopsyRepository)? = nil,
         examSimulationRepo: (any ExamSimulationRepository)? = nil,
         examPlanRepo: (any ExamPlanRepository)? = nil
@@ -123,9 +125,14 @@ final class RepositoryContainer {
         self.diaryRepo = diaryRepo ?? DefaultDiaryRepository(envManager: envManager)
         self.coachRepo = coachRepo ?? DefaultCoachRepository()
         self.studySessionRepo = studySessionRepo ?? DefaultStudySessionRepository()
+        self.timeInvestmentRepo = timeInvestmentRepo ?? DefaultTimeInvestmentRepository()
         self.examAutopsyRepo = examAutopsyRepo ?? DefaultExamAutopsyRepository()
         self.examSimulationRepo = examSimulationRepo ?? DefaultExamSimulationRepository()
         self.examPlanRepo = examPlanRepo ?? DefaultExamPlanRepository()
+
+        if let investmentImpl = self.timeInvestmentRepo as? DefaultTimeInvestmentRepository {
+            investmentImpl.setSessionRepository(self.studySessionRepo)
+        }
 
         // 注入跨域 weak 引用
         if let phaseImpl = self.phaseRepo as? DefaultPhaseRepository {
@@ -202,6 +209,7 @@ final class RepositoryContainer {
         await diaryRepo.loadAll(context: context)
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
+        await self.timeInvestmentRepo.loadAll(context: context)
         await self.examAutopsyRepo.loadAll(context: context)
         await self.examSimulationRepo.loadAll(context: context)
         await self.examPlanRepo.loadAll(context: context)
@@ -253,6 +261,7 @@ final class RepositoryContainer {
         await diaryRepo.loadAll(context: context)
         await coachRepo.loadAll(context: context)
         await studySessionRepo.loadAll(context: context)
+        await timeInvestmentRepo.loadAll(context: context)
         await examAutopsyRepo.loadAll(context: context)
         await examSimulationRepo.loadAll(context: context)
         await phaseRefresher.recomputeAll()
@@ -285,6 +294,7 @@ final class RepositoryContainer {
         await diaryRepo.loadAll(context: context)
         await self.coachRepo.loadAll(context: context)
         await self.studySessionRepo.loadAll(context: context)
+        await self.timeInvestmentRepo.loadAll(context: context)
         await self.examAutopsyRepo.loadAll(context: context)
         await self.examSimulationRepo.loadAll(context: context)
         await self.examPlanRepo.loadAll(context: context)

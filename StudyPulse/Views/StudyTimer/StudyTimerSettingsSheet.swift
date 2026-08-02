@@ -14,6 +14,7 @@ import os
 /// Idle / setup body shown before a Pomodoro session starts. Owns the
 /// preset selection and custom minute state.
 struct StudyTimerSetupSheet: View {
+    @Environment(RepositoryContainer.self) private var container
     @Bindable var timer: StudyTimerManager
     @Bindable var hrv: HealthKitManager
 
@@ -41,6 +42,7 @@ struct StudyTimerSetupSheet: View {
                 }
 
                 recommendationHeader
+                investmentTargetSection
                 presetsGrid
                 customDurationSection
                 startButton
@@ -123,6 +125,67 @@ struct StudyTimerSetupSheet: View {
         }
     }
 
+    private var investmentTargetSection: some View {
+        VStack(alignment: .leading, spacing: DesignToken.Spacing.small) {
+            Text("time.investment.project".localized())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if selectableTargets.isEmpty {
+                NavigationLink {
+                    TimeInvestmentView(container: container)
+                } label: {
+                    Label(
+                        "time.investment.createBeforeTimer".localized(),
+                        systemImage: "folder.badge.plus"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignToken.Spacing.medium)
+                    .background(
+                        Color.orange.opacity(0.1),
+                        in: RoundedRectangle(cornerRadius: DesignToken.CornerRadius.medium)
+                    )
+                }
+                .buttonStyle(.plain)
+            } else {
+                Menu {
+                    ForEach(selectableTargets, id: \.target.id) { item in
+                        Button {
+                            timer.selectInvestmentTarget(item.target)
+                        } label: {
+                            Label(
+                                item.name,
+                                systemImage: timer.selectedInvestmentTarget == item.target
+                                    ? "checkmark.circle.fill"
+                                    : item.symbol
+                            )
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: selectedTargetItem?.symbol ?? "folder")
+                            .foregroundStyle(themeColor)
+                        Text(
+                            selectedTargetItem?.name
+                                ?? "time.investment.chooseProject".localized()
+                        )
+                        .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(DesignToken.Spacing.medium)
+                    .background(
+                        Color(.tertiarySystemFill),
+                        in: RoundedRectangle(cornerRadius: DesignToken.CornerRadius.medium)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     private var customDurationSection: some View {
         VStack(spacing: 8) {
             Text("Custom Duration".localized())
@@ -179,6 +242,8 @@ struct StudyTimerSetupSheet: View {
         }
         .buttonStyle(.plain)
         .padding(.top, 8)
+        .disabled(timer.selectedInvestmentTarget == nil)
+        .opacity(timer.selectedInvestmentTarget == nil ? 0.55 : 1)
     }
 
     // MARK: - Helpers
@@ -188,6 +253,44 @@ struct StudyTimerSetupSheet: View {
         let all = [20, 25, 35, 45, 50]
         return all.sorted { abs($0 - recommended) < abs($1 - recommended) }
                   .map { ($0, $0 == recommended) }
+    }
+
+    private struct TargetItem {
+        let target: InvestmentTarget
+        let name: String
+        let symbol: String
+    }
+
+    private var selectableTargets: [TargetItem] {
+        let subjects = container.timeInvestmentRepo.subjects.filter { !$0.isArchived }
+        var result: [TargetItem] = []
+        for subject in subjects {
+            result.append(
+                TargetItem(
+                    target: .subject(subject.id),
+                    name: subject.name,
+                    symbol: subject.symbolName
+                )
+            )
+            let tasks = container.timeInvestmentRepo.subTasks
+                .filter { $0.subjectID == subject.id && !$0.isArchived }
+                .sorted { $0.sortOrder < $1.sortOrder }
+            for task in tasks {
+                let prefix = task.parentSubTaskID == nil ? "↳ " : "  ↳ "
+                result.append(
+                    TargetItem(
+                        target: .subTask(task.id),
+                        name: prefix + task.name,
+                        symbol: "folder"
+                    )
+                )
+            }
+        }
+        return result
+    }
+
+    private var selectedTargetItem: TargetItem? {
+        selectableTargets.first { $0.target == timer.selectedInvestmentTarget }
     }
 }
 

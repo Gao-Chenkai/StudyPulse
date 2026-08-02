@@ -68,6 +68,22 @@ struct StudyTimerCard: View {
 
     private var recommendationView: some View {
         VStack(spacing: 12) {
+            Button {
+                showingTimer = true
+            } label: {
+                HStack {
+                    Image(systemName: "folder.fill")
+                    Text(selectedTargetName ?? "time.investment.chooseProject".localized())
+                        .lineLimit(1)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(selectedTargetName == nil ? .orange : .secondary)
+            }
+            .buttonStyle(.plain)
+
             HStack(spacing: 8) {
                 Image(systemName: intensityIcon)
                     .font(.system(size: 20))
@@ -90,7 +106,11 @@ struct StudyTimerCard: View {
             HStack(spacing: 10) {
                 ForEach(presetDurations, id: \.seconds) { preset in
                     Button {
-                        timer.start(seconds: preset.seconds)
+                        if timer.selectedInvestmentTarget == nil {
+                            showingTimer = true
+                        } else {
+                            timer.start(seconds: preset.seconds)
+                        }
                     } label: {
                         VStack(spacing: 4) {
                             Text("\(preset.seconds / 60)")
@@ -130,6 +150,16 @@ struct StudyTimerCard: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private var selectedTargetName: String? {
+        guard let target = timer.selectedInvestmentTarget else { return nil }
+        switch target {
+        case .subject(let id):
+            return container.timeInvestmentRepo.subjects.first { $0.id == id }?.name
+        case .subTask(let id):
+            return container.timeInvestmentRepo.subTasks.first { $0.id == id }?.name
         }
     }
 

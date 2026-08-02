@@ -468,7 +468,7 @@ final class AchievementManager {
 
         // 聚合 study sessions（专注分钟）
         // Aggregate study sessions (focus minutes).
-        let sessions = StudySessionStore.load().filter {
+        let sessions = container.studySessionRepo.sessions.filter {
             $0.completed && cal.startOfDay(for: $0.startDate) >= cutoff
         }
         // 聚合 grades

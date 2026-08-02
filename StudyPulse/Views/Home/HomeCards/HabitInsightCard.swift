@@ -80,7 +80,7 @@ struct HabitInsightCard: View {
     }
 
     @MainActor private func reload() {
-        let sessions = StudySessionStore.load()
+        let sessions = container.studySessionRepo.sessions
         localInsights = HabitInsightEngine.computeInsights(sessions: sessions)
         todayBestSlot = HabitInsightEngine.bestSlotForToday(sessions: sessions)
         guard container.envManager.llmConfig.isConfigured, container.envManager.preferences.habitInsightEnabled, !localInsights.isEmpty else { return }
@@ -91,9 +91,16 @@ struct HabitInsightCard: View {
         guard !aiLoading, !localInsights.isEmpty else { return }
         if !force, cooldownRemaining > 0 { return }
         aiTask?.cancel(); aiLoading = true; aiErrorMessage = nil
-        let sessions = StudySessionStore.load()
+        let sessions = container.studySessionRepo.sessions
         let fallback = localInsights[0]
-        let context = HabitInsightContext(insights: localInsights, allBuckets: StudySessionStore.aggregateByWeekdayHourSlot(), todayWeekday: Calendar.current.component(.weekday, from: Date()), todayBestSlot: todayBestSlot, sessionTotal: sessions.count, languageCode: container.envManager.preferences.appLanguage ?? "en")
+        let context = HabitInsightContext(
+            insights: localInsights,
+            allBuckets: StudySessionStore.aggregateByWeekdayHourSlot(sessions: sessions),
+            todayWeekday: Calendar.current.component(.weekday, from: Date()),
+            todayBestSlot: todayBestSlot,
+            sessionTotal: sessions.count,
+            languageCode: container.envManager.preferences.appLanguage ?? "en"
+        )
         aiTask = Task { @MainActor in
             var output = ""
             do {

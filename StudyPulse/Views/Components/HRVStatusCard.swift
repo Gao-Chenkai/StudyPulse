@@ -121,12 +121,12 @@ struct HRVStatusCard: View {
             .opacity(animateIn ? 1 : 0)
             .offset(y: animateIn ? 0 : 10)
             .task {
-                // 后台读取 7 天 difficulty annotations(磁盘 I/O),再刷新雷达数值缓存。
-                // Background-read 7-day difficulty annotations (disk I/O),then refresh radar cache.
-                let annotations = await Task.detached(priority: .utility) {
-                    StudySessionStore.recentAnnotations(days: 7)
-                }.value
-                recentAnnotations = annotations
+                let cutoff = Calendar.current.date(
+                    byAdding: .day, value: -7, to: .now
+                ) ?? .now
+                recentAnnotations = container.studySessionRepo.sessions
+                    .filter { $0.startDate >= cutoff }
+                    .flatMap { $0.difficultyAnnotations ?? [] }
                 refreshRadar()
                 refreshAI()
             }

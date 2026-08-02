@@ -44,6 +44,8 @@ struct TrendsView: View {
                         LearningHeatmapView()
                     }
 
+                    TimeInvestmentSummaryCard()
+
                     if viewModel.activeSubjects.isEmpty {
                         // 空状态
                         // Empty state — no grades yet.

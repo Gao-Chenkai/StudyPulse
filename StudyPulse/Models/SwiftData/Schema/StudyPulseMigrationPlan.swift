@@ -11,6 +11,7 @@ enum StudyPulseMigrationPlan: SchemaMigrationPlan {
             StudyPulseSchemaV1.self,
             StudyPulseSchemaV2.self,
             StudyPulseSchemaV3.self,
+            StudyPulseSchemaV4.self,
         ]
     }
 
@@ -23,6 +24,10 @@ enum StudyPulseMigrationPlan: SchemaMigrationPlan {
             .lightweight(
                 fromVersion: StudyPulseSchemaV2.self,
                 toVersion: StudyPulseSchemaV3.self
+            ),
+            .lightweight(
+                fromVersion: StudyPulseSchemaV3.self,
+                toVersion: StudyPulseSchemaV4.self
             ),
         ]
     }

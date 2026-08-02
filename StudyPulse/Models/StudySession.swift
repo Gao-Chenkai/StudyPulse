@@ -54,6 +54,12 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
     /// 用户在心率峰值处登记的难题标注
     /// Difficulty annotations logged by the user at high-HR points.
     let difficultyAnnotations: [DifficultyAnnotation]?
+    /// Optional time-investment project. Legacy sessions decode as unassigned.
+    let investmentTarget: InvestmentTarget?
+    /// How this record was created.
+    let source: StudySessionSource
+    /// Time zone used for natural-day streak boundaries.
+    let timeZoneIdentifier: String?
 
     /// 成员初始化器
     /// Memberwise initializer.
@@ -64,7 +70,10 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
         intensity: SessionIntensity,
         completed: Bool,
         heartRateSamples: [HeartRateSample]? = nil,
-        difficultyAnnotations: [DifficultyAnnotation]? = nil
+        difficultyAnnotations: [DifficultyAnnotation]? = nil,
+        investmentTarget: InvestmentTarget? = nil,
+        source: StudySessionSource = .timer,
+        timeZoneIdentifier: String? = TimeZone.autoupdatingCurrent.identifier
     ) {
         self.id = id
         self.startDate = startDate
@@ -73,6 +82,9 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
         self.completed = completed
         self.heartRateSamples = heartRateSamples
         self.difficultyAnnotations = difficultyAnnotations
+        self.investmentTarget = investmentTarget
+        self.source = source
+        self.timeZoneIdentifier = timeZoneIdentifier
     }
 
     /// 自定义解码器:新字段用 decodeIfPresent 兜底,保证旧 JSON 兼容。
@@ -81,6 +93,7 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, startDate, durationSeconds, intensity, completed
         case heartRateSamples, difficultyAnnotations
+        case investmentTarget, source, timeZoneIdentifier
     }
 
     nonisolated init(from decoder: Decoder) throws {
@@ -92,6 +105,9 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
         completed = try c.decode(Bool.self, forKey: .completed)
         heartRateSamples = try c.decodeIfPresent([HeartRateSample].self, forKey: .heartRateSamples)
         difficultyAnnotations = try c.decodeIfPresent([DifficultyAnnotation].self, forKey: .difficultyAnnotations)
+        investmentTarget = try c.decodeIfPresent(InvestmentTarget.self, forKey: .investmentTarget)
+        source = try c.decodeIfPresent(StudySessionSource.self, forKey: .source) ?? .timer
+        timeZoneIdentifier = try c.decodeIfPresent(String.self, forKey: .timeZoneIdentifier)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -103,6 +119,9 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
         try c.encode(completed, forKey: .completed)
         try c.encodeIfPresent(heartRateSamples, forKey: .heartRateSamples)
         try c.encodeIfPresent(difficultyAnnotations, forKey: .difficultyAnnotations)
+        try c.encodeIfPresent(investmentTarget, forKey: .investmentTarget)
+        try c.encode(source, forKey: .source)
+        try c.encodeIfPresent(timeZoneIdentifier, forKey: .timeZoneIdentifier)
     }
 
     /// 专注会话强度档位。
@@ -179,16 +198,11 @@ nonisolated struct StudySession: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-/// 把已完成的专注会话持久化到 `~/Documents/study_sessions.json`。
-/// Persists completed study sessions to ~/Documents/study_sessions.json.
+/// Legacy JSON reader retained only for the idempotent SwiftData migration.
 enum StudySessionStore {
     /// 持久化文件名
     /// Persistence file name.
     nonisolated static let fileName = "study_sessions.json"
-    /// 最多保留 90 天的会话
-    /// Keep at most 90 days of sessions.
-    nonisolated static let retentionDays = 90
-
     /// 持久化文件 URL
     /// Persistence file URL.
     nonisolated static func fileURL() throws -> URL {
@@ -218,108 +232,6 @@ enum StudySessionStore {
         }
     }
 
-    /// 保存全部会话（自动剔除 retentionDays 之外的旧记录）
-    /// Save all sessions (auto-trims to retentionDays window).
-    nonisolated static func save(_ sessions: [StudySession]) {
-        guard let url = try? fileURL() else {
-            Log.app.error("StudySessionStore save failed: cannot resolve file URL")
-            return
-        }
-        let cutoff = Calendar.current.date(
-            byAdding: .day, value: -retentionDays, to: Date()
-        ) ?? Date()
-        let trimmed = sessions
-            .filter { $0.startDate >= cutoff }
-            .sorted { $0.startDate > $1.startDate }
-        do {
-            let data = try JSONEncoder().encode(trimmed)
-            try data.write(to: url, options: .atomic)
-            Log.app.debug("Saved study sessions: count=\(trimmed.count) bytes=\(data.count)")
-        } catch {
-            Log.app.error("StudySessionStore save failed: \(error.localizedDescription)")
-        }
-    }
-
-    /// 追加一条会话并落盘
-    /// Append a new session and persist.
-    @discardableResult
-    nonisolated static func append(_ session: StudySession) -> [StudySession] {
-        var sessions = load()
-        sessions.append(session)
-        save(sessions)
-        return sessions
-    }
-
-    /// 通用更新:按 id 替换会话并落盘
-    /// Replace a session by id and persist.
-    @discardableResult
-    nonisolated static func updateSession(_ updated: StudySession) -> [StudySession] {
-        var sessions = load()
-        guard let idx = sessions.firstIndex(where: { $0.id == updated.id }) else {
-            return sessions
-        }
-        sessions[idx] = updated
-        save(sessions)
-        return sessions
-    }
-
-    /// 仅更新某条会话的难题标注
-    /// Update only the difficulty annotations of a session by id.
-    @discardableResult
-    nonisolated static func updateAnnotations(sessionId: UUID, annotations: [DifficultyAnnotation]) -> [StudySession] {
-        var sessions = load()
-        guard let idx = sessions.firstIndex(where: { $0.id == sessionId }) else {
-            return sessions
-        }
-        sessions[idx] = StudySession(
-            id: sessions[idx].id,
-            startDate: sessions[idx].startDate,
-            durationSeconds: sessions[idx].durationSeconds,
-            intensity: sessions[idx].intensity,
-            completed: sessions[idx].completed,
-            heartRateSamples: sessions[idx].heartRateSamples,
-            difficultyAnnotations: annotations
-        )
-        save(sessions)
-        return sessions
-    }
-
-    /// 提取最近 N 天内所有会话的难题标注(扁平化)
-    /// Flatten all difficulty annotations from sessions within the last `days`.
-    nonisolated static func recentAnnotations(days: Int = 7) -> [DifficultyAnnotation] {
-        let cal = Calendar.current
-        let cutoff = cal.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-        return load()
-            .filter { $0.startDate >= cutoff }
-            .flatMap { $0.difficultyAnnotations ?? [] }
-    }
-
-    /// 今日已完成专注分钟数
-    /// Total completed minutes today.
-    nonisolated static func todayTotalMinutes() -> Int {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        return load()
-            .filter { $0.completed && cal.isDate($0.startDate, inSameDayAs: today) }
-            .reduce(0) { $0 + $1.durationSeconds / 60 }
-    }
-
-    /// 滚动 N 天每日已完成专注分钟数（含今日）
-    /// Total completed minutes over the last `days` (including today).
-    nonisolated static func rollingMinutes(days: Int) -> [(date: Date, minutes: Int)] {
-        let cal = Calendar.current
-        let all = load().filter(\.completed)
-        var result: [(Date, Int)] = []
-        for d in 0..<days {
-            guard let date = cal.date(byAdding: .day, value: -d, to: Date()) else { continue }
-            let dayStart = cal.startOfDay(for: date)
-            let mins = all
-                .filter { cal.isDate($0.startDate, inSameDayAs: dayStart) }
-                .reduce(0) { $0 + $1.durationSeconds / 60 }
-            result.append((date: dayStart, minutes: mins))
-        }
-        return result.reversed()
-    }
 }
 
 struct WeekdayHourSlotBucket: Sendable {
@@ -332,10 +244,20 @@ struct WeekdayHourSlotBucket: Sendable {
 }
 
 extension StudySessionStore {
-    nonisolated static func aggregateByWeekdayHourSlot(days: Int = 90) -> [WeekdayHourSlotBucket] {
+    nonisolated static func aggregateByWeekdayHourSlot(
+        sessions suppliedSessions: [StudySession],
+        days: Int = 90
+    ) -> [WeekdayHourSlotBucket] {
+        aggregateByWeekdayHourSlotImpl(sessions: suppliedSessions, days: days)
+    }
+
+    private nonisolated static func aggregateByWeekdayHourSlotImpl(
+        sessions suppliedSessions: [StudySession],
+        days: Int
+    ) -> [WeekdayHourSlotBucket] {
         let calendar = Calendar.current
         let cutoff = calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-        let sessions = load().filter { $0.startDate >= cutoff }
+        let sessions = suppliedSessions.filter { $0.startDate >= cutoff }
         var grouped: [String: [StudySession]] = [:]
         for session in sessions {
             let weekday = calendar.component(.weekday, from: session.startDate)
@@ -369,10 +291,5 @@ extension StudySessionStore {
                 peakIntensityRatio: Double(peakCount) / sampleCount
             )
         }
-    }
-
-    nonisolated static func sessionsForTodayWeekday(days: Int = 90) -> [StudySession] {
-        let weekday = Calendar.current.component(.weekday, from: Date())
-        return load().filter { Calendar.current.component(.weekday, from: $0.startDate) == weekday && $0.startDate >= (Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()) }
     }
 }

@@ -119,7 +119,7 @@ struct WeeklyReportSettingsView: View {
         isGenerating = true
         defer { isGenerating = false }
 
-        let sessions = StudySessionStore.load()
+        let sessions = container.studySessionRepo.sessions
         let reportData = WeeklyReportManager.aggregateData(
             period: period,
             sessions: sessions,

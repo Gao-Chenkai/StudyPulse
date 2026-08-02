@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct BackupManifest: Codable, Equatable, Sendable {
     static let expectedFormatIdentifier = "com.chenkai.gao.studypulse.backup"
     static let currentFormatVersion = 1
-    static let currentSchemaVersion = 3
+    static let currentSchemaVersion = 4
 
     var formatIdentifier: String
     var formatVersion: Int
@@ -43,7 +43,11 @@ nonisolated struct BackupManifest: Codable, Equatable, Sendable {
         self.appVersion = appVersion
         self.appBuild = appBuild
         self.schemaVersion = schemaVersion
-        self.createdAt = createdAt
+        // ISO-8601 backup dates are encoded with second precision. Normalize
+        // here so a manifest is stable across an encode/decode round trip.
+        self.createdAt = Date(
+            timeIntervalSince1970: createdAt.timeIntervalSince1970.rounded(.down)
+        )
         self.recordCounts = recordCounts
         self.includesMedia = includesMedia
         self.includesDerivedHealthData = includesDerivedHealthData

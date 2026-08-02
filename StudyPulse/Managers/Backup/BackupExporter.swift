@@ -18,6 +18,9 @@ private struct BackupSourceSnapshot: @unchecked Sendable {
     var routineInstances: [RoutineInstance]
     var diaryEntries: [DiaryEntry]
     var studySessions: [StudySession]
+    var timeInvestmentSubjects: [TimeInvestmentSubject]
+    var subTasks: [SubTask]
+    var goalRewards: [GoalReward]
     var profile: UserProfile
     var plantState: PlantState
     var achievements: AchievementsSnapshot
@@ -62,7 +65,10 @@ enum BackupExporter {
                 intensity: session.intensity,
                 completed: session.completed,
                 heartRateSamples: nil,
-                difficultyAnnotations: session.difficultyAnnotations
+                difficultyAnnotations: session.difficultyAnnotations,
+                investmentTarget: session.investmentTarget,
+                source: session.source,
+                timeZoneIdentifier: session.timeZoneIdentifier
             )
         }
         let source = BackupSourceSnapshot(
@@ -77,6 +83,9 @@ enum BackupExporter {
             routineInstances: container.routineInstanceRepo.allInstances,
             diaryEntries: container.diaryRepo.diaryEntries,
             studySessions: sessions,
+            timeInvestmentSubjects: container.timeInvestmentRepo.subjects,
+            subTasks: container.timeInvestmentRepo.subTasks,
+            goalRewards: container.timeInvestmentRepo.rewards,
             profile: container.profileRepo.profile,
             plantState: plant,
             achievements: AchievementManager.shared.snapshot,
@@ -122,6 +131,9 @@ enum BackupExporter {
         files["data/routine_instances.jsonl"] = try jsonl(source.routineInstances, updatedAt: { $0.completedAt ?? $0.date })
         files["data/diary_entries.jsonl"] = try jsonl(source.diaryEntries, updatedAt: { $0.updatedAt })
         files["data/study_sessions.jsonl"] = try jsonl(source.studySessions, updatedAt: { $0.startDate })
+        files["data/time_investment_subjects.jsonl"] = try jsonl(source.timeInvestmentSubjects, updatedAt: { $0.createdAt })
+        files["data/time_investment_subtasks.jsonl"] = try jsonl(source.subTasks, updatedAt: { $0.createdAt })
+        files["data/goal_rewards.jsonl"] = try jsonl(source.goalRewards, updatedAt: { $0.unlockedAt ?? $0.createdAt })
         files["data/profile.json"] = try encoder.encode(source.profile)
         files["data/plant_state.json"] = try encoder.encode(source.plantState)
         files["data/achievements.json"] = try encoder.encode(source.achievements)
@@ -248,6 +260,8 @@ enum BackupExporter {
             "tasks": s.tasks.count, "phases": s.phases.count, "routines": s.routines.count,
             "routineInstances": s.routineInstances.count, "diaryEntries": s.diaryEntries.count,
             "studySessions": s.studySessions.count, "profile": 1, "plantState": 1,
+            "timeInvestmentSubjects": s.timeInvestmentSubjects.count,
+            "subTasks": s.subTasks.count, "goalRewards": s.goalRewards.count,
             "achievements": 1, "coachGoals": s.coachGoals.count,
             "coachAnalyses": s.coachAnalyses.count, "coachProposals": s.coachProposals.count,
             "coachChats": s.coachChats.count, "coachMessages": s.coachMessages.count
