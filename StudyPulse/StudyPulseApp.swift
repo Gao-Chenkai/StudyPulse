@@ -126,6 +126,7 @@ struct StudyPulseApp: App {
                     // 主数据加载就绪后再去问 HealthKit，避免启动期 I/O 竞争
                     // Ask HealthKit only after the main data is ready to avoid I/O contention at launch
                     await hrvManager.bootstrap()
+                    refreshExamReadinessWarnings()
                     await MainActor.run {
                         AchievementManager.shared.bootstrap(container: container)
                     }
@@ -173,6 +174,7 @@ struct StudyPulseApp: App {
                         Task {
                             await hrvManager.refreshBodyStatus()
                             await hrvManager.refreshReadiness()
+                            refreshExamReadinessWarnings()
                             CoachRefreshSignal.markDirty()
                             await CoachCoordinator(container: container).refreshPlanForSignificantHealthChange()
                         }
@@ -237,5 +239,18 @@ struct StudyPulseApp: App {
             now: now
         )
         MemoryClimateHistoryStore.upsert(snapshot, now: now)
+    }
+
+    @MainActor
+    private func refreshExamReadinessWarnings() {
+        let readiness = ExamDayReadinessEngine.predict(
+            exams: container.examRepo.filteredExamSets,
+            snapshots: hrvManager.dailyHealthHistory,
+            sessions: container.studySessionRepo.sessions,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            todayHRVCategory: hrvManager.readiness.category
+        )
+        ExamReviewNotifications.shared.rescheduleReadinessWarnings(assessments: readiness)
     }
 }

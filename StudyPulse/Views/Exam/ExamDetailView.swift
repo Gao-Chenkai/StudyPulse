@@ -28,6 +28,7 @@ import os
 struct ExamDetailView: View {
     let examId: UUID
     @Environment(RepositoryContainer.self) private var container
+    @Environment(HealthKitManager.self) private var hrvManager
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     @State private var showingReviewEditor = false
@@ -47,6 +48,9 @@ struct ExamDetailView: View {
     @State private var showingChecklistEditor = false
     @State private var showingAutopsy = false
     @State private var showingReversePlanner = false
+    @State private var readinessAIAdvice: String?
+    @State private var readinessAIIsLoading = false
+    @State private var readinessAITask: Task<Void, Never>?
 
     /// 实时从 repo 拿最新版本的考试
     /// Live copy of the exam from the repo.
@@ -66,6 +70,18 @@ struct ExamDetailView: View {
     /// List of linked mistake IDs.
     private var linkedMistakeIds: [UUID] {
         liveExam?.examReview?.linkedMistakeIds ?? []
+    }
+
+    private var readinessForExam: ExamDayReadiness? {
+        guard let exam = liveExam else { return nil }
+        return ExamDayReadinessEngine.predict(
+            exams: [exam],
+            snapshots: hrvManager.dailyHealthHistory,
+            sessions: container.studySessionRepo.sessions,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            todayHRVCategory: hrvManager.readiness.category
+        ).first
     }
 
     var body: some View {
@@ -159,6 +175,7 @@ struct ExamDetailView: View {
 
             // Section 6:Review
             Section {
+                examReadinessContent(exam: exam)
                 reviewContent(exam: exam)
             } header: {
                 HStack {
@@ -317,6 +334,9 @@ struct ExamDetailView: View {
             withAnimation(.easeOut(duration: 0.4)) {
                 animateIn = true
             }
+        }
+        .onDisappear {
+            readinessAITask?.cancel()
         }
     }
 
@@ -529,6 +549,90 @@ struct ExamDetailView: View {
     }
 
     // MARK: - Review / 复盘
+
+    @ViewBuilder
+    private func examReadinessContent(exam: Exam) -> some View {
+        if let readiness = readinessForExam {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "heart.text.square.fill")
+                    .foregroundStyle(color(for: readiness.riskCategory))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("examReadiness.rowTitle".localized())
+                        .font(.subheadline.weight(.semibold))
+                    HStack(spacing: 8) {
+                        Text("riskCategory.\(readiness.riskCategory.rawValue)".localized())
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(color(for: readiness.riskCategory))
+                        if let score = readiness.predictedScore {
+                            Text(String(format: "examReadiness.predictedScoreLabel".localized(), score * 100))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text(readiness.advice)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let readinessAIAdvice {
+                        Text(readinessAIAdvice)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if container.envManager.llmConfig.isConfigured {
+                        Button {
+                            requestReadinessAI(readiness)
+                        } label: {
+                            Label(
+                                readinessAIIsLoading
+                                    ? "examReadiness.aiLoading".localized()
+                                    : "examReadiness.aiButton".localized(),
+                                systemImage: readinessAIIsLoading ? "hourglass" : "sparkles"
+                            )
+                            .font(.caption.weight(.medium))
+                        }
+                        .disabled(readinessAIIsLoading)
+                    }
+                }
+            }
+        } else {
+            Label("examReadiness.emptyHint".localized(), systemImage: "heart.text.square")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func color(for category: RiskCategory) -> Color {
+        switch category {
+        case .strong: return .green
+        case .steady: return .blue
+        case .atRisk: return .orange
+        case .critical: return .red
+        }
+    }
+
+    private func requestReadinessAI(_ readiness: ExamDayReadiness) {
+        readinessAITask?.cancel()
+        readinessAIAdvice = nil
+        readinessAIIsLoading = true
+        let prompt = ExamReadinessLLM.makePrompt(ExamReadinessLLM.context(from: readiness))
+        let config = container.envManager.llmConfig
+        readinessAITask = Task { @MainActor in
+            defer { readinessAIIsLoading = false }
+            do {
+                let output = try await LLMClient.shared.complete(
+                    prompt: prompt,
+                    config: config,
+                    caller: "ExamReadiness"
+                )
+                readinessAIAdvice = ExamReadinessLLM.parse(output)
+            } catch is CancellationError {
+                // The local result remains visible when the optional request is cancelled.
+            } catch {
+                // BYOK failures silently fall back to the local algorithm output.
+            }
+        }
+    }
 
     @ViewBuilder
     private func reviewContent(exam: Exam) -> some View {

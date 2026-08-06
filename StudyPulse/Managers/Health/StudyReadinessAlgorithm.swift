@@ -174,7 +174,7 @@ struct AgeReference: Equatable {
     /// signals that should trend low (RHR) keep `mid` near the lower
     /// end, while signals that should trend high (HRV, sleep) keep
     /// `mid` near the upper-middle of the range.
-    static let adult = AgeReference(
+    nonisolated static let adult = AgeReference(
         hrv:                    Range(low: 25, mid: 60,  high: 100),
         restingHeartRate:       Range(low: 45, mid: 60,  high: 90),
         respiratoryRate:        Range(low: 10, mid: 14,  high: 20),
@@ -192,7 +192,7 @@ struct AgeReference: Equatable {
     ///   - teens:           2.5–4.0 h of an 8–10 h night
     ///   - adults:         1.5–3.0 h of a 7–9 h night
     ///   - older adults:   1.0–2.5 h of a 6–8 h night
-    static func compute(age: Int) -> AgeReference {
+    nonisolated static func compute(age: Int) -> AgeReference {
         // HRV (SDNN) — generally higher in younger adults.
         let hrv: Range
         switch age {

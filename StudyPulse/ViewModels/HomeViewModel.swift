@@ -65,6 +65,13 @@ final class HomeViewModel {
     private(set) var memoryClimate: MemoryClimateSnapshot = .empty()
     private(set) var memoryClimateHistory: [MemoryClimateSnapshot] = []
 
+    /// 考前状态预测与最近 14 天恢复分曲线。
+    private(set) var examReadiness: [ExamDayReadiness] = []
+    private(set) var recoveryPoints: [DailyRecoveryPoint] = []
+    /// 最近 14 天倦怠评估；无健康授权或样本不足时仍返回 low + 引导文案。
+    private(set) var burnoutAssessment: BurnoutAssessment?
+    private(set) var burnoutSuggestion: StudySuggestion?
+
     /// 图表卡片的当前规则 + 选中科目 / Current chart rule & subject.
     private(set) var chartRule: SubjectSelectionRule = .lowestScore
     private(set) var chartSelectedSubject: String? = nil
@@ -105,11 +112,15 @@ final class HomeViewModel {
         let filteredExams = container.examRepo.filteredExamSets
         let taskItems = container.taskRepo.filteredTaskItems
         let routineInstances = container.routineInstanceRepo.allInstances
+        let sessions = container.studySessionRepo.sessions
+        let diaryEntries = container.diaryRepo.diaryEntries
+        let healthHistory = hrvManager.dailyHealthHistory
 
         // Dirty flag: 比对输入签名,相同则跳过重算。
         let sig = recomputeSignature(
             grades: grades, mistakes: mistakes, exams: filteredExams,
             tasks: taskItems, instances: routineInstances,
+            sessions: sessions, diaryEntries: diaryEntries, healthHistory: healthHistory,
             readiness: hrvManager.readiness, bodyStatus: hrvManager.bodyStatus,
             chartRule: chartRule
         )
@@ -132,6 +143,41 @@ final class HomeViewModel {
             endDaysAgo: -7,
             grades: grades,
             exams: filteredExams
+        )
+
+        let recovery = RecoveryTrendEngine.analyze(
+            snapshots: healthHistory,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            todayHRVCategory: hrvManager.readiness.category
+        )
+        recoveryPoints = recovery.points
+        examReadiness = ExamDayReadinessEngine.predict(
+            exams: filteredExams,
+            snapshots: healthHistory,
+            sessions: sessions,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            todayHRVCategory: hrvManager.readiness.category
+        )
+        let burnout = BurnoutDetectionEngine.assess(
+            snapshots: healthHistory,
+            sessions: sessions,
+            diaryEntries: diaryEntries,
+            baselines: hrvManager.personalBaselines,
+            age: container.profileRepo.profile.age,
+            healthAuthorized: hrvManager.hrvEnabled
+                && hrvManager.hrvOnboardingCompleted
+                && hrvManager.isAuthorized,
+            todayHRVCategory: hrvManager.readiness.category
+        )
+        burnoutAssessment = burnout
+        burnoutSuggestion = burnout.riskLevel == .low ? nil : StudySuggestion(
+            icon: "exclamationmark.triangle.fill",
+            title: "burnout.title".localized(),
+            description: ([burnout.advice] + burnout.triggers.map(\.detail)).joined(separator: " · "),
+            priority: .high,
+            color: .red
         )
 
         // 今日 Top-3 计划(2026-07-09) / Today's Top-3 plan.
@@ -177,6 +223,8 @@ final class HomeViewModel {
     private func recomputeSignature(
         grades: [Grade], mistakes: [MistakeNote], exams: [Exam],
         tasks: [TaskItem], instances: [RoutineInstance],
+        sessions: [StudySession], diaryEntries: [DiaryEntry],
+        healthHistory: [DailyHealthSnapshot],
         readiness: HRVReadiness, bodyStatus: BodyStatus,
         chartRule: SubjectSelectionRule
     ) -> Int {
@@ -200,6 +248,33 @@ final class HomeViewModel {
         for t in tasks { hasher.combine(t.id) }
         hasher.combine(instances.count)
         for i in instances { hasher.combine(i.id) }
+        hasher.combine(sessions.count)
+        for session in sessions {
+            hasher.combine(session.id)
+            hasher.combine(session.startDate)
+            hasher.combine(session.durationSeconds)
+            hasher.combine(session.intensity.rawValue)
+            hasher.combine(session.completed)
+        }
+        hasher.combine(diaryEntries.count)
+        for entry in diaryEntries {
+            hasher.combine(entry.id)
+            hasher.combine(entry.date)
+            hasher.combine(entry.moodScore)
+            hasher.combine(entry.energyScore)
+            hasher.combine(entry.updatedAt)
+        }
+        hasher.combine(healthHistory.count)
+        for snapshot in healthHistory {
+            hasher.combine(snapshot.date)
+            hasher.combine(snapshot.hrv)
+            hasher.combine(snapshot.restingHeartRate)
+            hasher.combine(snapshot.respiratoryRate)
+            hasher.combine(snapshot.sleepHours)
+            hasher.combine(snapshot.deepSleepHours)
+            hasher.combine(snapshot.remSleepHours)
+            hasher.combine(snapshot.exerciseMinutes)
+        }
         hasher.combine(readiness.zScore)
         hasher.combine(readiness.todayHRV)
         hasher.combine(readiness.baselineMean)
@@ -271,7 +346,9 @@ final class HomeViewModel {
     /// 生成学习建议列表 / Generate study suggestions.
     func generateSuggestions(limit: Int = 3) -> [StudySuggestion] {
         let context = buildSuggestionsContext()
-        return SuggestionEngine.generate(from: context, max: limit)
+        let localSuggestions = SuggestionEngine.generate(from: context, max: limit)
+        guard let burnoutSuggestion else { return localSuggestions }
+        return Array(([burnoutSuggestion] + localSuggestions).prefix(limit))
     }
 
     /// 构造学习建议上下文(供 LLM 增强使用)

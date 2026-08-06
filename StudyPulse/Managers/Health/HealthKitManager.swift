@@ -175,6 +175,10 @@ final class HealthKitManager {
     /// rather than just the population average.
     var personalBaselines: PersonalBaselines = .empty
 
+    /// In-memory copy of the persisted daily signal history. Prediction and
+    /// burnout detection read this snapshot without adding another store.
+    var dailyHealthHistory: [DailyHealthSnapshot] = []
+
     /// True when HealthKit has granted read access for the body-status
     /// types (heart rate, respiratory rate, sleep).
     var bodyStatusAuthorized: Bool = false
@@ -283,6 +287,7 @@ final class HealthKitManager {
             let b = PersonalBaselines.compute(from: h)
             return (h, b)
         }.value
+        self.dailyHealthHistory = history
         self.personalBaselines = baselines
         Log.healthKit.info("HealthKit baselines 已加载 / baselines loaded; historyCount=\(history.count, privacy: .public)")
         await checkAuthorizationStatus()
@@ -712,6 +717,7 @@ final class HealthKitManager {
             let history = HealthHistoryStore.upsert(snapshot: snapshot)
             let newBaselines = PersonalBaselines.compute(from: history)
             await MainActor.run {
+                self?.dailyHealthHistory = history
                 self?.personalBaselines = newBaselines
                 Log.healthKit.info("PersonalBaselines 后台重算完成 / background recompute done; samples=\(history.count, privacy: .public)")
             }
