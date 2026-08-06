@@ -27,6 +27,8 @@ enum HomeCardType: String, CaseIterable, Codable {
     case studySuggestions = "studySuggestions"
     case trendChart = "trendChart"
     case upcomingExams = "upcomingExams"
+    /// 考前状态预测卡片（默认关闭，用户可在主页布局设置中开启）。
+    case examDayReadiness = "examDayReadiness"
     case studyTimer = "studyTimer"
     case dailyQuote = "dailyQuote"
     case recentGrades = "recentGrades"
@@ -64,6 +66,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .studySuggestions: return "Study Suggestions".localized()
         case .trendChart: return "Trend Chart".localized()
         case .upcomingExams: return "Upcoming Exams".localized()
+        case .examDayReadiness: return "examReadiness.title".localized()
         case .dailyQuote: return "Daily Quote".localized()
         case .recentGrades: return "Recent Grades".localized()
         case .learningHeatmap: return "Learning Heatmap".localized()
@@ -92,6 +95,7 @@ enum HomeCardType: String, CaseIterable, Codable {
         case .streakProgress: return "flame.circle.fill"
         case .trendChart: return "chart.line.uptrend.xyaxis"
         case .upcomingExams: return "calendar.badge.exclamationmark"
+        case .examDayReadiness: return "chart.line.uptrend.xyaxis.circle.fill"
         case .dailyQuote: return "quote.bubble.fill"
         case .recentGrades: return "list.bullet.rectangle"
         case .learningHeatmap: return "square.grid.4x3.fill"
@@ -156,6 +160,7 @@ struct HomeLayoutPreference: Codable, Equatable {
         HomeCardItem(type: .studySuggestions, enabled: true),
         HomeCardItem(type: .trendChart, enabled: true),
         HomeCardItem(type: .upcomingExams, enabled: true),
+        HomeCardItem(type: .examDayReadiness, enabled: false),
         HomeCardItem(type: .dailyQuote, enabled: true),
         HomeCardItem(type: .recentGrades, enabled: true),
         HomeCardItem(type: .habitInsight, enabled: false),

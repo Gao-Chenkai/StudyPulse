@@ -170,6 +170,11 @@ struct HomeView: View {
             .recomputeOnRoutinesChange(viewModel: viewModel, routines: container.routineRepo.routines)
             .recomputeOnRoutineInstancesChange(viewModel: viewModel, instances: container.routineInstanceRepo.allInstances)
             .recomputeOnHRVChange(viewModel: viewModel, readiness: hrvManager.readiness)
+            .recomputeOnBodyStatusChange(
+                viewModel: viewModel,
+                bodyStatus: hrvManager.bodyStatus,
+                healthHistory: hrvManager.dailyHealthHistory
+            )
             .overlay {
                 if uiState.isRenderingReport {
                     ZStack {
@@ -327,6 +332,9 @@ struct HomeView: View {
                 UpcomingExamsCard()
                     .contextMenu { shareCardMenu(for: type) }
             }
+        case .examDayReadiness:
+            ExamDayReadinessCard(viewModel: viewModel)
+                .contextMenu { shareCardMenu(for: type) }
         case .dailyQuote:
             DailyQuoteCard(quote: QuoteProvider.dailyQuote())
                 .contextMenu { shareCardMenu(for: type) }
@@ -470,6 +478,7 @@ struct HomeView: View {
         case .studySuggestions: return "Study Suggestions".localized()
         case .trendChart: return "Trend Chart".localized()
         case .upcomingExams: return "Upcoming Exams".localized()
+        case .examDayReadiness: return "examReadiness.title".localized()
         case .dailyQuote: return "Daily Quote".localized()
         case .streakProgress: return "Streak Progress".localized()
         case .recentGrades: return "Recent Grades".localized()
@@ -536,6 +545,8 @@ struct HomeView: View {
                     } else {
                         Text("No data in this period".localized())
                     }
+                case .examDayReadiness:
+                    ExamDayReadinessCard(viewModel: viewModel)
                 case .dailyQuote: DailyQuoteCard(quote: QuoteProvider.dailyQuote())
                 case .streakProgress: StreakHomeCard()
                 case .recentGrades:

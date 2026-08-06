@@ -111,6 +111,66 @@ final class ExamReviewNotifications {
         }
     }
 
+    /// 考前 1–3 天预测为高风险时，在最近一个 20:00 调度一次温和的早睡提醒。
+    /// Rebuilds the separate readiness-warning namespace so ordinary exam
+    /// review reminders are unaffected.
+    nonisolated func rescheduleReadinessWarnings(
+        assessments: [ExamDayReadiness],
+        now: Date = Date()
+    ) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(Self.readinessWarningPrefix) }
+                .map(\.identifier)
+            if !ids.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: ids)
+            }
+
+            let calendar = Calendar.current
+            var triggerComponents = calendar.dateComponents([.year, .month, .day], from: now)
+            triggerComponents.hour = 20
+            triggerComponents.minute = 0
+            var triggerDate = calendar.date(from: triggerComponents) ?? now
+            if triggerDate <= now {
+                triggerDate = calendar.date(byAdding: .day, value: 1, to: triggerDate) ?? triggerDate
+            }
+
+            for assessment in assessments where assessment.daysRemaining >= 1
+                && assessment.daysRemaining <= 3
+                && (assessment.riskCategory == .atRisk || assessment.riskCategory == .critical)
+            {
+                guard triggerDate < assessment.examDate else { continue }
+                let content = UNMutableNotificationContent()
+                content.title = "examReadiness.notificationTitle".localized()
+                content.body = String(
+                    format: "examReadiness.notificationBody".localized(),
+                    assessment.examName
+                )
+                content.sound = .default
+                content.userInfo = [
+                    "examId": assessment.examID.uuidString,
+                    "type": "examReadiness"
+                ]
+                let components = calendar.dateComponents(
+                    [.year, .month, .day, .hour, .minute],
+                    from: triggerDate
+                )
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                let request = UNNotificationRequest(
+                    identifier: "\(Self.readinessWarningPrefix)\(assessment.examID.uuidString)",
+                    content: content,
+                    trigger: trigger
+                )
+                center.add(request) { [logger = self.logger] error in
+                    if let error {
+                        logger.error("考前状态提醒调度失败 / Failed to schedule readiness warning: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+            }
+        }
+    }
+
     /// 取消所有 ExamReview_ 通知(目前未使用,保留以备调试)/ Cancel all (kept for debugging).
     nonisolated func cancelAll() {
         let center = UNUserNotificationCenter.current()
@@ -130,6 +190,7 @@ final class ExamReviewNotifications {
 
     /// 通知标识符前缀,与 Exam_<name>_<day>Days / SRS_ 区分 / Identifier prefix.
     nonisolated private static let identifierPrefix = "ExamReview_"
+    nonisolated private static let readinessWarningPrefix = "ExamReadiness_"
 
     /// 算出"考后次日 09:00"的可触发 Date / Compute the trigger date.
     nonisolated private func computeTriggerDate(for exam: Exam) -> Date? {

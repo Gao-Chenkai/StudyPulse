@@ -101,6 +101,20 @@ struct RecomputeOnHRVChangeModifier: ViewModifier {
     }
 }
 
+/// 身体状态或恢复历史变化时触发重算，覆盖 HRV 以外的睡眠、心率与锻炼更新。
+/// Recompute when body status or its persisted daily snapshot changes.
+struct RecomputeOnBodyStatusChangeModifier: ViewModifier {
+    let viewModel: HomeViewModel
+    let bodyStatus: BodyStatus
+    let healthHistory: [DailyHealthSnapshot]
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: bodyStatus) { _, _ in viewModel.recompute() }
+            .onChange(of: healthHistory) { _, _ in viewModel.recompute() }
+    }
+}
+
 extension View {
     /// 触发 Home 数据聚合 + 计划重算 — onAppear 版本
     /// Trigger Home data aggregation + plan recompute — onAppear variant.
@@ -172,5 +186,18 @@ extension View {
         readiness: HRVReadiness
     ) -> some View {
         modifier(RecomputeOnHRVChangeModifier(viewModel: viewModel, readiness: readiness))
+    }
+
+    /// 身体状态/健康历史变化时触发 Home 重算。
+    func recomputeOnBodyStatusChange(
+        viewModel: HomeViewModel,
+        bodyStatus: BodyStatus,
+        healthHistory: [DailyHealthSnapshot]
+    ) -> some View {
+        modifier(RecomputeOnBodyStatusChangeModifier(
+            viewModel: viewModel,
+            bodyStatus: bodyStatus,
+            healthHistory: healthHistory
+        ))
     }
 }
